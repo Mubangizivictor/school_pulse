@@ -486,6 +486,24 @@ class ArchiveSubjectRequested extends StructureEvent {
   List<Object?> get props => [subjectId];
 }
 
+/// Reorders the tenant's subject catalogue. Applicability (which levels or
+/// classes a subject belongs to) is unaffected — this only changes display
+/// order, mirroring [ReorderClassesRequested].
+class ReorderSubjectsRequested extends StructureEvent {
+  final List<Subject> orderedSubjects;
+  const ReorderSubjectsRequested(this.orderedSubjects);
+  @override
+  List<Object?> get props => [orderedSubjects];
+}
+
+/// Reorders the tenant's departments. Mirrors [ReorderSubjectsRequested].
+class ReorderDepartmentsRequested extends StructureEvent {
+  final List<Department> orderedDepartments;
+  const ReorderDepartmentsRequested(this.orderedDepartments);
+  @override
+  List<Object?> get props => [orderedDepartments];
+}
+
 class SaveDepartmentRequested extends StructureEvent {
   final Department department;
   const SaveDepartmentRequested(this.department);

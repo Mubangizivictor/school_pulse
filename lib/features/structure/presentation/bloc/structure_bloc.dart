@@ -567,6 +567,12 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       (event, emit) async =>
           _write(emit, () => repository.archiveSubject(event.subjectId)),
     );
+    on<ReorderSubjectsRequested>((event, emit) async {
+      await _write(
+        emit,
+        () => repository.reorderSubjects(event.orderedSubjects),
+      );
+    });
 
     on<SaveDepartmentRequested>((event, emit) async {
       final error = _validator.validateDepartment(
@@ -606,6 +612,12 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       (event, emit) async =>
           _write(emit, () => repository.archiveDepartment(event.departmentId)),
     );
+    on<ReorderDepartmentsRequested>((event, emit) async {
+      await _write(
+        emit,
+        () => repository.reorderDepartments(event.orderedDepartments),
+      );
+    });
 
     on<SaveDesignationRequested>((event, emit) async {
       final error = _validator.validateDesignation(

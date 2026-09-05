@@ -105,8 +105,20 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
     List<TimetableLesson> lessons,
     StructureState structureState,
   ) async {
-    final built = await _buildPdf(timetable, config, lessons, structureState);
-    await TimetablePdfGenerator.print(built.pdfData);
+    try {
+      final built = await _buildPdf(
+        timetable,
+        config,
+        lessons,
+        structureState,
+      );
+      await TimetablePdfGenerator.print(built.pdfData);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not print timetable: $e')));
+    }
   }
 
   Future<void> _save(
@@ -115,16 +127,30 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
     List<TimetableLesson> lessons,
     StructureState structureState,
   ) async {
-    final built = await _buildPdf(timetable, config, lessons, structureState);
-    final fileName = '${built.classLabel.replaceAll(' ', '_')}_Timetable.pdf';
-    await TimetablePdfGenerator.save(built.pdfData, fileName);
+    try {
+      final built = await _buildPdf(
+        timetable,
+        config,
+        lessons,
+        structureState,
+      );
+      final fileName =
+          '${built.classLabel.replaceAll(' ', '_')}_Timetable.pdf';
+      await TimetablePdfGenerator.save(built.pdfData, fileName);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save timetable: $e')));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<TimetableBloc, TimetableState>(
       listenWhen: (previous, current) =>
-          previous.publishConflicts != current.publishConflicts,
+          previous.publishConflicts != current.publishConflicts ||
+          previous.errorMessage != current.errorMessage,
       listener: (context, state) {
         if (state.publishConflicts.isNotEmpty) {
           final total = state.publishConflicts.values.fold<int>(
@@ -138,6 +164,11 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
               ),
             ),
           );
+        }
+        if (state.errorMessage != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
         }
       },
       builder: (context, state) {

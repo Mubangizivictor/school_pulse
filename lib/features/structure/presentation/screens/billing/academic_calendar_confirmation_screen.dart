@@ -140,15 +140,19 @@ class _AcademicCalendarConfirmationScreenState
             validationIssues.isEmpty &&
             !state.isConfirmingCalendar;
 
+        final scheme = Theme.of(context).colorScheme;
         return Scaffold(
           appBar: const AdminAppBar(title: 'Academic Calendar'),
-          body: ListView(
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              const Text(
+              Text(
                 'Your confirmed term dates are used to prepare future '
                 'renewal cycles.',
-                style: TextStyle(fontSize: 13, color: Colors.black87),
+                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
               ),
               const SizedBox(height: 16),
               if (relevantYear == null) ...[
@@ -165,11 +169,14 @@ class _AcademicCalendarConfirmationScreenState
                         ),
                       ),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         'Generate a draft academic year with three terms '
                         'using placeholder dates. Review and adjust before '
                         'confirming - nothing is confirmed automatically.',
-                        style: TextStyle(fontSize: 13, color: Colors.black87),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       FilledButton(
@@ -204,9 +211,9 @@ class _AcademicCalendarConfirmationScreenState
                       Text(
                         '${_dateFmt.format(relevantYear.startDate)} - '
                         '${_dateFmt.format(relevantYear.endDate)}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
-                          color: Colors.black54,
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
                     ],
@@ -234,11 +241,11 @@ class _AcademicCalendarConfirmationScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Fix before confirming',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: Colors.red,
+                            color: scheme.error,
                             fontSize: 13.5,
                           ),
                         ),
@@ -248,9 +255,9 @@ class _AcademicCalendarConfirmationScreenState
                             padding: const EdgeInsets.only(bottom: 4),
                             child: Text(
                               '• ${issue.message}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12.5,
-                                color: Colors.black87,
+                                color: scheme.onSurfaceVariant,
                               ),
                             ),
                           ),
@@ -305,6 +312,8 @@ class _AcademicCalendarConfirmationScreenState
                 ),
               ],
             ],
+              ),
+            ),
           ),
         );
       },
@@ -503,7 +512,10 @@ class _TermCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${dateFmt.format(term.startDate)} - ${dateFmt.format(term.endDate)}',
-                  style: const TextStyle(fontSize: 12.5, color: Colors.black54),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

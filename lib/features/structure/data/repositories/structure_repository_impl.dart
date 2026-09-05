@@ -237,6 +237,10 @@ class StructureRepositoryImpl implements StructureRepository {
       remoteDataSource.archiveSubject(subjectId);
 
   @override
+  Future<void> reorderSubjects(List<Subject> orderedSubjects) =>
+      remoteDataSource.reorderSubjects(orderedSubjects);
+
+  @override
   Stream<List<Department>> watchDepartments(String schoolId) => _cached(
     localDataSource.getDepartments,
     remoteDataSource.watchDepartments(schoolId),
@@ -269,6 +273,10 @@ class StructureRepositoryImpl implements StructureRepository {
   @override
   Future<void> archiveDepartment(String departmentId) =>
       remoteDataSource.archiveDepartment(departmentId);
+
+  @override
+  Future<void> reorderDepartments(List<Department> orderedDepartments) =>
+      remoteDataSource.reorderDepartments(orderedDepartments);
 
   @override
   Stream<List<StaffDesignation>> watchDesignations(String schoolId) => _cached(

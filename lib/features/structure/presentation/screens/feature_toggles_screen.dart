@@ -255,6 +255,17 @@ class _FeatureTogglesScreenState extends State<FeatureTogglesScreen> {
       body: FutureBuilder<bool>(
         future: _hasSavedChoices,
         builder: (context, saved) {
+          if (saved.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Could not load feature choices: ${saved.error}',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
           if (!saved.hasData) {
             return const Center(child: CircularProgressIndicator());
           }

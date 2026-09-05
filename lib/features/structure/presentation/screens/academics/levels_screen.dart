@@ -452,7 +452,7 @@ class _LevelCard extends StatelessWidget {
           borderRadius: AppRadius.large,
           onTap: onTap,
           child: Container(
-            height: 98,
+            constraints: const BoxConstraints(minHeight: 98),
             decoration: BoxDecoration(
               border: Border.all(color: scheme.outlineVariant),
               borderRadius: AppRadius.large,
@@ -500,53 +500,18 @@ class _LevelCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 7),
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Code: ',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    level.code,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      color: scheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                      FutureBuilder<int>(
+                        future: studentsFuture,
+                        builder: (context, snapshot) => Text(
+                          'Code: ${level.code}  •  Classes: $classCount'
+                          '${snapshot.hasData ? '  •  Students: ${snapshot.data}' : ''}',
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            color: scheme.onSurfaceVariant,
                           ),
-                          Text(
-                            '  •  Classes: $classCount',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                          FutureBuilder<int>(
-                            future: studentsFuture,
-                            builder: (context, snapshot) => Text(
-                              snapshot.hasData
-                                  ? '  •  Students: ${snapshot.data}'
-                                  : '',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                   ),

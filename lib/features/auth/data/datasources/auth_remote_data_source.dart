@@ -432,6 +432,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     await firebaseAuth.signOut();
   }
 
+  /// Staff/parent sessions persist on the device indefinitely (Firebase
+  /// Auth's own default) and are never time-boxed by a token-expiry check -
+  /// the only thing that ends a session automatically is this idle window.
+  /// Anyone who opens the app again before it elapses stays signed in with
+  /// no re-login prompt; only a manual "Log out" or exceeding this window
+  /// forces one.
+  static const Duration _inactivityLimit = Duration(days: 120);
+
   @override
   Future<UserModel?> getCurrentUser() async {
     var user = firebaseAuth.currentUser;
@@ -449,7 +457,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
     final doc = await firestore.collection('users').doc(user.uid).get();
     if (doc.exists) {
-      final profile = UserModel.fromJson({...doc.data()!, 'id': doc.id});
+      final data = doc.data()!;
+      final profile = UserModel.fromJson({...data, 'id': doc.id});
       // A persisted Firebase Auth token is not proof that the school account
       // remains active. Re-check the profile on every session restore, just
       // as the interactive login path does, and revoke the local session if
@@ -458,6 +467,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         await firebaseAuth.signOut();
         throw const AuthFailure('This account has been disabled.');
       }
+      final lastActive = _parseDate(data['lastActiveAt']);
+      if (lastActive != null &&
+          DateTime.now().difference(lastActive) > _inactivityLimit) {
+        await firebaseAuth.signOut();
+        return null;
+      }
+      unawaited(_touchLastActive(user.uid));
       return profile;
     }
     // Session survives but the profile is missing (e.g. account created via
@@ -478,11 +494,30 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           'This account has been disabled.$reason\nPlease contact your school administrator.',
         );
       }
+      unawaited(_touchLastActive(uid));
       return user;
     }
     throw const AuthFailure(
       'No profile found for this account. Contact your school administrator.',
     );
+  }
+
+  /// Cheap heartbeat so the idle-timeout check above has a real timestamp to
+  /// compare against. Best-effort: a failed write here must never block or
+  /// fail a login/session-restore.
+  Future<void> _touchLastActive(String uid) async {
+    try {
+      await firestore.collection('users').doc(uid).update({
+        'lastActiveAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      // Non-fatal - the next successful login/restore will retry.
+    }
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    return null;
   }
 
   @override

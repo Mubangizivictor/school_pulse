@@ -53,6 +53,20 @@ class TeachingPlanRepositoryImpl implements TeachingPlanRepository {
   }
 
   @override
+  Stream<List<TeachingPlanSubject>> watchAllPlanSubjects() async* {
+    final schoolId = await tenantResolver.resolve();
+    yield* _planSubjects
+        .where('schoolId', isEqualTo: schoolId)
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => _subjectFromMap(doc.id, doc.data()))
+              .toList(growable: false),
+        );
+  }
+
+  @override
   Stream<List<ClassPlanOverride>> watchClassOverrides(String planId) async* {
     final schoolId = await tenantResolver.resolve();
     yield* _overrides
@@ -99,7 +113,33 @@ class TeachingPlanRepositoryImpl implements TeachingPlanRepository {
           : Timestamp.fromDate(plan.createdAt!),
       'updatedBy': plan.updatedBy,
       'updatedAt': FieldValue.serverTimestamp(),
+      'totalWeeklyHours': plan.totalWeeklyHours,
+      'defaultLessonDurationMinutes': plan.defaultLessonDurationMinutes,
     }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> savePlanSummary(
+    String planId, {
+    required int? totalWeeklyHours,
+    required int? defaultLessonDurationMinutes,
+  }) async {
+    final schoolId = await tenantResolver.resolve();
+    if (totalWeeklyHours != null && totalWeeklyHours <= 0) {
+      throw StateError('Total weekly hours must be a positive number when set.');
+    }
+    if (defaultLessonDurationMinutes != null && defaultLessonDurationMinutes <= 0) {
+      throw StateError('Default lesson duration must be a positive number when set.');
+    }
+    final snapshot = await _plans.doc(planId).get();
+    if (!snapshotBelongsToSchool(snapshot.exists, snapshot.data(), schoolId)) {
+      throw StateError('Teaching plan not found in the active school.');
+    }
+    await _plans.doc(planId).update({
+      'totalWeeklyHours': totalWeeklyHours,
+      'defaultLessonDurationMinutes': defaultLessonDurationMinutes,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   @override
@@ -350,6 +390,9 @@ class TeachingPlanRepositoryImpl implements TeachingPlanRepository {
         createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
         updatedBy: map['updatedBy']?.toString() ?? '',
         updatedAt: (map['updatedAt'] as Timestamp?)?.toDate(),
+        totalWeeklyHours: (map['totalWeeklyHours'] as num?)?.toInt(),
+        defaultLessonDurationMinutes:
+            (map['defaultLessonDurationMinutes'] as num?)?.toInt(),
       );
 
   TeachingPlanSubject _subjectFromMap(String id, Map<String, dynamic> map) =>

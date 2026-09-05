@@ -633,35 +633,51 @@ class _FormState extends State<_Form> {
     var selected = [...(_scope == 'levels' ? _levels : _classes)];
     await showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (c) => StatefulBuilder(
         builder: (c, set) => SafeArea(
-          child: SizedBox(
-            height: 500,
-            child: Column(
-              children: [
-                const ListTile(title: Text('Select applicability')),
-                Expanded(
-                  child: ListView(
-                    children: opts
-                        .map(
-                          (x) => CheckboxListTile(
-                            value: selected.contains(x.$1),
-                            title: Text(x.$2),
-                            onChanged: (v) => set(
-                              () => v!
-                                  ? selected.add(x.$1)
-                                  : selected.remove(x.$1),
+          child: Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.viewInsetsOf(c).bottom,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(c).height * 0.85,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const ListTile(title: Text('Select applicability')),
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: opts
+                          .map(
+                            (x) => CheckboxListTile(
+                              value: selected.contains(x.$1),
+                              title: Text(x.$2),
+                              onChanged: (v) => set(
+                                () => v!
+                                    ? selected.add(x.$1)
+                                    : selected.remove(x.$1),
+                              ),
                             ),
-                          ),
-                        )
-                        .toList(),
+                          )
+                          .toList(),
+                    ),
                   ),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(c),
-                  child: const Text('Apply'),
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(c),
+                        child: const Text('Apply'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

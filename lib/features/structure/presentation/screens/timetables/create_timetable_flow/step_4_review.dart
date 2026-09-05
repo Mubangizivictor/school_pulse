@@ -157,11 +157,16 @@ class _ReviewCard extends StatelessWidget {
                       color: colors.onSurfaceVariant,
                     ),
                   ),
-                  Text(
-                    e.value,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      e.value,
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],

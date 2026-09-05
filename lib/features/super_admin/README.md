@@ -28,7 +28,7 @@ super_admin/
 
 | Concern | File | Hook |
 | --- | --- | --- |
-| Routes | `lib/app/router.dart` | splices in `superAdminRoute` |
+| Routes | `lib/app/router.dart` | splices in `superAdminRoutes` |
 | DI     | `lib/injection_container.dart` | calls `registerSuperAdmin(sl)` |
 
 Add a new owner screen → add its `GoRoute` inside `super_admin_routes.dart`,

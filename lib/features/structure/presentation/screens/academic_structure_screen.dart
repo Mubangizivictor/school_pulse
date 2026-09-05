@@ -501,6 +501,8 @@ class AcademicStructureScreen extends StatelessWidget {
           context.read<StructureBloc>().add(SaveSubjectRequested(subject)),
       onArchive: (id) =>
           context.read<StructureBloc>().add(ArchiveSubjectRequested(id)),
+      onReorder: (subjects) =>
+          context.read<StructureBloc>().add(ReorderSubjectsRequested(subjects)),
     );
   }
 }
@@ -3524,6 +3526,90 @@ class _ClassCard extends StatelessWidget {
   }
 }
 
+/// One template's fixed suggestion set for a given level/programme name.
+/// Deliberately generic labels ("a common set") rather than any named
+/// curriculum/board - templates are optional, editable starting points, not
+/// an imposed syllabus. Matched case-insensitively against the active
+/// level's name so any custom or international level can opt in.
+class _SubjectTemplate {
+  final String levelNameMatch;
+  final String label;
+  final List<_SuggestedSubject> subjects;
+  const _SubjectTemplate(this.levelNameMatch, this.label, this.subjects);
+}
+
+class _SuggestedSubject {
+  final String name;
+  final String code;
+  const _SuggestedSubject(this.name, this.code);
+}
+
+const _kSubjectTemplates = <_SubjectTemplate>[
+  _SubjectTemplate('early years', 'Common early-years set', [
+    _SuggestedSubject('Numeracy', 'NUM'),
+    _SuggestedSubject('Literacy', 'LIT'),
+    _SuggestedSubject('Creative play', 'PLAY'),
+    _SuggestedSubject('Physical development', 'PHYS'),
+  ]),
+  _SubjectTemplate('primary', 'Common primary set', [
+    _SuggestedSubject('English', 'ENG'),
+    _SuggestedSubject('Mathematics', 'MATH'),
+    _SuggestedSubject('Science', 'SCI'),
+    _SuggestedSubject('Social studies', 'SS'),
+    _SuggestedSubject('Art', 'ART'),
+    _SuggestedSubject('Physical education', 'PE'),
+    _SuggestedSubject('Music', 'MUS'),
+    _SuggestedSubject('Design and technology', 'DT'),
+  ]),
+  _SubjectTemplate('secondary', 'Common secondary set', [
+    _SuggestedSubject('English', 'ENG'),
+    _SuggestedSubject('Mathematics', 'MATH'),
+    _SuggestedSubject('Biology', 'BIO'),
+    _SuggestedSubject('Chemistry', 'CHEM'),
+    _SuggestedSubject('Physics', 'PHY'),
+    _SuggestedSubject('History', 'HIST'),
+    _SuggestedSubject('Geography', 'GEO'),
+    _SuggestedSubject('Computing', 'COMP'),
+  ]),
+];
+
+/// Suggested subjects for the active level: the level's own opt-in
+/// `Subjects: Name|CODE, ...` configuration (see Step 4's description
+/// field) takes priority; otherwise falls back to a generic template
+/// matched by level name, and finally to nothing so a fully custom/
+/// international level starts blank rather than guessing.
+List<_SuggestedSubject> _suggestionsForLevel(EducationalLevel? level) {
+  if (level == null) return const [];
+  final match = RegExp(
+    r'^subjects\s*:',
+    caseSensitive: false,
+  ).firstMatch(level.description);
+  if (match != null) {
+    return level.description
+        .substring(match.end)
+        .split(RegExp(r'[,\n]'))
+        .map((raw) {
+          final parts = raw.trim().split('|');
+          final name = parts.first.trim();
+          return _SuggestedSubject(name, parts.length > 1 ? parts[1].trim() : '');
+        })
+        .where((s) => s.name.isNotEmpty)
+        .toList();
+  }
+  final template = _kSubjectTemplates
+      .where(
+        (t) => level.name.toLowerCase().contains(t.levelNameMatch),
+      )
+      .firstOrNull;
+  return template?.subjects ?? const [];
+}
+
+/// One entry in the Step 7 level/programme navigator: every active level
+/// from Step 4 (Early years, Primary, Secondary, any custom or
+/// international level), each showing its own configured-subject count.
+/// A subject counts toward a level once that level's id is in its
+/// [Subject.assignedLevelIds] - the same subject can count toward several
+/// levels at once, matching the multi-level applicability model.
 class _SubjectCatalogueSetup extends StatefulWidget {
   const _SubjectCatalogueSetup({
     required this.state,
@@ -3531,12 +3617,14 @@ class _SubjectCatalogueSetup extends StatefulWidget {
     required this.onBulkCreate,
     required this.onSave,
     required this.onArchive,
+    required this.onReorder,
   });
   final StructureState state;
   final String schoolId;
   final ValueChanged<List<Subject>> onBulkCreate;
   final ValueChanged<Subject> onSave;
   final ValueChanged<String> onArchive;
+  final ValueChanged<List<Subject>> onReorder;
   @override
   State<_SubjectCatalogueSetup> createState() => _SubjectCatalogueSetupState();
 }
@@ -3545,310 +3633,955 @@ class _SubjectCatalogueSetupState extends State<_SubjectCatalogueSetup> {
   String? _levelId;
   String _query = '';
   final Set<String> _selected = {};
+  final TextEditingController _searchController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    _levelId = widget.state.levels.where((l) => l.isActive).firstOrNull?.id;
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
-  List<Subject> get _suggestions {
-    // Subject suggestions are opt-in configuration on the selected level:
-    // `Subjects: English|ENG, Mathematics|MAT`. No external curriculum is
-    // imposed when a school has not supplied this catalogue.
-    final level = widget.state.levels
-        .where((l) => l.id == _levelId)
-        .firstOrNull;
-    final match = RegExp(
-      r'^subjects\s*:',
-      caseSensitive: false,
-    ).firstMatch(level?.description ?? '');
-    if (match == null) return const [];
-    final configured = (level!.description.substring(
-      match.end,
-    )).split(RegExp(r'[,\n]'));
+  List<EducationalLevel> get _levels =>
+      widget.state.levels.where((l) => l.isActive).toList()
+        ..sort((a, b) => a.order.compareTo(b.order));
+
+  EducationalLevel? get _level =>
+      _levels.where((l) => l.id == _levelId).firstOrNull;
+
+  int _subjectCountForLevel(String levelId) => widget.state.subjects
+      .where((s) => s.isActive && s.assignedLevelIds.contains(levelId))
+      .length;
+
+  List<Subject> _subjectsForLevel(String levelId) {
+    final items = widget.state.subjects
+        .where((s) => s.isActive && s.assignedLevelIds.contains(levelId))
+        .toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    return items;
+  }
+
+  void _selectLevel(String id) => setState(() {
+    _levelId = id;
+    _selected.clear();
+    _query = '';
+  });
+
+  List<_SuggestedSubject> _suggestions(EducationalLevel level) {
     final existing = widget.state.subjects
+        .where((s) => s.assignedLevelIds.contains(level.id))
         .map((s) => s.name.trim().toLowerCase())
         .toSet();
-    return configured
-        .map((raw) {
-          final parts = raw.trim().split('|');
-          return Subject(
-            id: 'suggestion:${parts.first.trim().toLowerCase()}',
-            schoolId: widget.schoolId,
-            name: parts.first.trim(),
-            code: parts.length > 1 ? parts[1].trim() : '',
-          );
-        })
-        .where(
-          (s) => s.name.isNotEmpty && !existing.contains(s.name.toLowerCase()),
-        )
+    return _suggestionsForLevel(level)
+        .where((s) => !existing.contains(s.name.toLowerCase()))
         .toList();
   }
 
-  Future<void> _custom([Subject? existing]) async {
+  Future<void> _addSelectedSuggestions(
+    EducationalLevel level,
+    List<_SuggestedSubject> suggestions,
+  ) async {
+    final chosen = suggestions
+        .where((s) => _selected.contains(s.name))
+        .map(
+          (s) => Subject(
+            id: const Uuid().v4(),
+            schoolId: widget.schoolId,
+            name: s.name,
+            code: s.code,
+            assignedLevelIds: [level.id],
+          ),
+        )
+        .toList();
+    if (chosen.isEmpty) return;
+    widget.onBulkCreate(chosen);
+    setState(() => _selected.clear());
+  }
+
+  Future<void> _custom({Subject? existing, String? defaultLevelId}) async {
     final name = TextEditingController(text: existing?.name);
     final code = TextEditingController(text: existing?.code);
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (context) => Padding(
-        padding: EdgeInsets.fromLTRB(
-          20,
-          8,
-          20,
-          MediaQuery.viewInsetsOf(context).bottom + 20,
+    final levels = _levels;
+    final initialLevelIds = existing?.assignedLevelIds.toList() ??
+        (defaultLevelId != null ? [defaultLevelId] : <String>[]);
+    final selectedLevelIds = {...initialLevelIds};
+
+    String? duplicateError(StateSetter setSheetState) {
+      final trimmedName = name.text.trim();
+      final trimmedCode = code.text.trim();
+      final nameLower = trimmedName.toLowerCase();
+      final codeLower = trimmedCode.toLowerCase();
+      final duplicateName = widget.state.subjects.any(
+        (s) =>
+            s.id != existing?.id &&
+            s.isActive &&
+            s.name.trim().toLowerCase() == nameLower,
+      );
+      if (trimmedName.isNotEmpty && duplicateName) {
+        return 'A subject named "$trimmedName" already exists.';
+      }
+      if (trimmedCode.isNotEmpty) {
+        final duplicateCode = widget.state.subjects.any(
+          (s) =>
+              s.id != existing?.id &&
+              s.isActive &&
+              s.code.trim().toLowerCase() == codeLower,
+        );
+        if (duplicateCode) {
+          return 'The code "$trimmedCode" is already in use.';
+        }
+      }
+      return null;
+    }
+
+    Widget buildLevelPicker(StateSetter setSheetState) {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: levels
+            .map(
+              (l) => FilterChip(
+                label: Text(l.name),
+                selected: selectedLevelIds.contains(l.id),
+                onSelected: (v) => setSheetState(
+                  () => v
+                      ? selectedLevelIds.add(l.id)
+                      : selectedLevelIds.remove(l.id),
+                ),
+              ),
+            )
+            .toList(),
+      );
+    }
+
+    void submit(BuildContext sheetContext, StateSetter setSheetState) {
+      final subjectName = name.text.trim();
+      if (subjectName.isEmpty) {
+        ScaffoldMessenger.of(sheetContext).showSnackBar(
+          const SnackBar(content: Text('Enter a subject name.')),
+        );
+        return;
+      }
+      final error = duplicateError(setSheetState);
+      if (error != null) {
+        ScaffoldMessenger.of(sheetContext).showSnackBar(
+          SnackBar(content: Text(error)),
+        );
+        return;
+      }
+      final subject = Subject(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: widget.schoolId,
+        name: subjectName,
+        code: code.text.trim(),
+        isActive: true,
+        assignedLevelIds: selectedLevelIds.toList(),
+        assignedClassIds: existing?.assignedClassIds ?? const [],
+        order: existing?.order ?? widget.state.subjects.length,
+      );
+      if (existing == null) {
+        widget.onBulkCreate([subject]);
+      } else {
+        widget.onSave(subject);
+      }
+      Navigator.pop(sheetContext);
+    }
+
+    final isWide = MediaQuery.sizeOf(context).width >= 900;
+    if (isWide) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, setSheetState) => AlertDialog(
+            title: Text(existing == null ? 'Add custom subject' : 'Edit subject'),
+            content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: name,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Subject name *',
+                        hintText: 'Enter subject name',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: code,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: const InputDecoration(
+                        labelText: 'Short code (optional)',
+                        hintText: 'e.g. ART',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Level / programme',
+                      style: Theme.of(dialogContext).textTheme.labelLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    buildLevelPicker(setSheetState),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => submit(dialogContext, setSheetState),
+                child: Text(existing == null ? 'Add subject' : 'Save'),
+              ),
+            ],
+          ),
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+      );
+    } else {
+      await showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (sheetContext) => StatefulBuilder(
+          builder: (sheetContext, setSheetState) => Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              8,
+              20,
+              MediaQuery.viewInsetsOf(sheetContext).bottom + 20,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    existing == null ? 'Add custom subject' : 'Edit subject',
+                    style: Theme.of(sheetContext).textTheme.headlineSmall
+                        ?.copyWith(fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'This subject will be assigned to classes in the next step.',
+                  ),
+                  const SizedBox(height: 18),
+                  TextField(
+                    controller: name,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: const InputDecoration(
+                      labelText: 'Subject name *',
+                      hintText: 'Enter subject name',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: code,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: const InputDecoration(
+                      labelText: 'Short code (optional)',
+                      hintText: 'e.g. ART',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Level / programme',
+                    style: Theme.of(sheetContext).textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  buildLevelPicker(setSheetState),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () => submit(sheetContext, setSheetState),
+                      child: Text(existing == null ? 'Add subject' : 'Save'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    name.dispose();
+    code.dispose();
+  }
+
+  Future<void> _delete(Subject subject) async {
+    final count = await di.sl<StructureDependencyService>().countSubjectReferences(
+      widget.schoolId,
+      subject.id,
+    );
+    if (!mounted) return;
+    if (count == 0) {
+      final confirmed = await showDeleteConfirmDialog(
+        context,
+        title: 'Delete subject',
+        message: 'Delete "${subject.name}"? This cannot be undone.',
+      );
+      if (confirmed == true && mounted) {
+        widget.onArchive(subject.id);
+      }
+      return;
+    }
+    final action = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Subject is in use'),
+        content: Text(
+          'This subject is referenced by $count teacher assignment(s) or '
+          'assessment(s). Deactivate it instead to preserve those records.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, 'archive'),
+            child: const Text('Deactivate'),
+          ),
+        ],
+      ),
+    );
+    if (action == 'archive' && mounted) {
+      widget.onArchive(subject.id);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final levels = _levels;
+    if (levels.isEmpty) {
+      return const Center(
+        child: Text('Add an education level before creating subjects.'),
+      );
+    }
+    final level = _level ?? levels.first;
+    if (_levelId != level.id) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _levelId = level.id);
+      });
+    }
+    final totalSubjects = widget.state.subjects
+        .where((s) => s.isActive)
+        .length;
+
+    return SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth >= 900;
+          final workspace = _SubjectLevelWorkspace(
+            level: level,
+            searchController: _searchController,
+            onQueryChanged: (v) => setState(() => _query = v),
+            selected: _selected,
+            suggestions: _suggestions(level),
+            onSelectAll: (names) => setState(() => _selected.addAll(names)),
+            onClearAll: () => setState(() => _selected.clear()),
+            onToggle: (name, value) => setState(
+              () => value ? _selected.add(name) : _selected.remove(name),
+            ),
+            onAddSelected: _selected.isEmpty
+                ? null
+                : () => _addSelectedSuggestions(level, _suggestions(level)),
+            onAddCustom: () => _custom(defaultLevelId: level.id),
+            configured: _subjectsForLevel(level.id)
+                .where(
+                  (s) => '${s.name} ${s.code}'.toLowerCase().contains(
+                    _query.toLowerCase(),
+                  ),
+                )
+                .toList(),
+            onEdit: (subject) => _custom(existing: subject),
+            onDelete: _delete,
+            onReorder: (reordered) => widget.onReorder([
+              for (var i = 0; i < reordered.length; i++)
+                reordered[i].copyWith(order: i),
+            ]),
+          );
+
+          if (isWide) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Choose the subjects your school teaches. You assign them to classes next.',
+                        ),
+                        const SizedBox(height: 16),
+                        _SubjectLevelSwitcher(
+                          levels: levels,
+                          selectedId: level.id,
+                          subjectCount: (l) => _subjectCountForLevel(l.id),
+                          onSelect: _selectLevel,
+                        ),
+                        const SizedBox(height: 20),
+                        Expanded(child: SingleChildScrollView(child: workspace)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  SizedBox(
+                    width: 300,
+                    child: _SubjectCatalogueSummary(
+                      levels: levels,
+                      selectedId: level.id,
+                      subjectCount: (l) => _subjectCountForLevel(l.id),
+                      totalSubjects: totalSubjects,
+                      onSelect: _selectLevel,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Choose the subjects your school teaches. You assign them to classes next.',
+                    ),
+                    const SizedBox(height: 12),
+                    _SubjectLevelSwitcher(
+                      levels: levels,
+                      selectedId: level.id,
+                      subjectCount: (l) => _subjectCountForLevel(l.id),
+                      onSelect: _selectLevel,
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+                  children: [workspace],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Horizontal, scrollable level/programme switcher for Step 7. Shows every
+/// active level chosen in Step 4 - including custom and international
+/// levels - none are hidden or specially ordered.
+class _SubjectLevelSwitcher extends StatelessWidget {
+  const _SubjectLevelSwitcher({
+    required this.levels,
+    required this.selectedId,
+    required this.subjectCount,
+    required this.onSelect,
+  });
+
+  final List<EducationalLevel> levels;
+  final String selectedId;
+  final int Function(EducationalLevel) subjectCount;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 64,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: levels.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final item = levels[index];
+          final selected = item.id == selectedId;
+          final count = subjectCount(item);
+          return Semantics(
+            button: true,
+            selected: selected,
+            label: '${item.name}, $count subject${count == 1 ? '' : 's'}',
+            child: InkWell(
+              onTap: () => onSelect(item.id),
+              borderRadius: BorderRadius.circular(12),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? scheme.primaryContainer
+                        : scheme.surface,
+                    border: Border.all(
+                      color: selected ? scheme.primary : scheme.outlineVariant,
+                      width: selected ? 1.5 : 1,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: selected
+                              ? scheme.onPrimaryContainer
+                              : scheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        count == 0 ? 'No subjects' : '$count subjects',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: selected
+                              ? scheme.onPrimaryContainer.withValues(alpha: 0.8)
+                              : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// The right-hand "Subject catalogue summary" card on wide (web) layouts:
+/// total subjects across all levels, with a completion tick per level.
+class _SubjectCatalogueSummary extends StatelessWidget {
+  const _SubjectCatalogueSummary({
+    required this.levels,
+    required this.selectedId,
+    required this.subjectCount,
+    required this.totalSubjects,
+    required this.onSelect,
+  });
+
+  final List<EducationalLevel> levels;
+  final String selectedId;
+  final int Function(EducationalLevel) subjectCount;
+  final int totalSubjects;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Subject catalogue summary',
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Total subjects across all levels.',
+            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+          ),
+          const SizedBox(height: 16),
+          for (final level in levels) ...[
+            _SubjectSummaryRow(
+              level: level,
+              count: subjectCount(level),
+              selected: level.id == selectedId,
+              onTap: () => onSelect(level.id),
+            ),
+            const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: scheme.primaryContainer.withValues(alpha: 0.35),
+              border: Border.all(color: scheme.primary.withValues(alpha: 0.4)),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, color: scheme.primary, size: 20),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'You assign subjects to classes in the next step.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubjectSummaryRow extends StatelessWidget {
+  const _SubjectSummaryRow({
+    required this.level,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final EducationalLevel level;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? scheme.primaryContainer : null,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  level.name,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ),
               Text(
-                existing == null ? 'Add custom subject' : 'Edit subject',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+                '$count subject${count == 1 ? '' : 's'}',
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(width: 6),
+              if (count > 0)
+                const Icon(Icons.check_circle, color: Colors.green, size: 18)
+              else
+                Icon(
+                  Icons.radio_button_unchecked,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'This subject will be assigned to classes in the next step.',
-              ),
-              const SizedBox(height: 18),
-              TextField(
-                controller: name,
-                autofocus: true,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(
-                  labelText: 'Subject name *',
-                  hintText: 'Enter subject name',
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: code,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(
-                  labelText: 'Short code (optional)',
-                  hintText: 'Enter short code',
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    final subjectName = name.text.trim();
-                    if (subjectName.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Enter a subject name.')),
-                      );
-                      return;
-                    }
-                    final subject = Subject(
-                      id: existing?.id ?? const Uuid().v4(),
-                      schoolId: widget.schoolId,
-                      name: subjectName,
-                      code: code.text.trim(),
-                      isActive: true,
-                      assignedLevelIds: existing?.assignedLevelIds ?? const [],
-                      assignedClassIds: existing?.assignedClassIds ?? const [],
-                    );
-                    if (existing == null) {
-                      widget.onBulkCreate([subject]);
-                    } else {
-                      widget.onSave(subject);
-                    }
-                    Navigator.pop(context);
-                  },
-                  child: Text(existing == null ? 'Add subject' : 'Save'),
-                ),
-              ),
             ],
           ),
         ),
       ),
     );
-    name.dispose();
-    code.dispose();
   }
+}
+
+/// The single-level/programme editor: search, suggested-subject chips with
+/// select-all/clear, add-custom action, and the reorderable "School
+/// subjects" list. Same widget tree on mobile and web.
+class _SubjectLevelWorkspace extends StatelessWidget {
+  const _SubjectLevelWorkspace({
+    required this.level,
+    required this.searchController,
+    required this.onQueryChanged,
+    required this.selected,
+    required this.suggestions,
+    required this.onSelectAll,
+    required this.onClearAll,
+    required this.onToggle,
+    required this.onAddSelected,
+    required this.onAddCustom,
+    required this.configured,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onReorder,
+  });
+
+  final EducationalLevel level;
+  final TextEditingController searchController;
+  final ValueChanged<String> onQueryChanged;
+  final Set<String> selected;
+  final List<_SuggestedSubject> suggestions;
+  final ValueChanged<List<String>> onSelectAll;
+  final VoidCallback onClearAll;
+  final void Function(String name, bool value) onToggle;
+  final VoidCallback? onAddSelected;
+  final VoidCallback onAddCustom;
+  final List<Subject> configured;
+  final ValueChanged<Subject> onEdit;
+  final ValueChanged<Subject> onDelete;
+  final ValueChanged<List<Subject>> onReorder;
 
   @override
   Widget build(BuildContext context) {
-    final levels = widget.state.levels.where((l) => l.isActive).toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-    final catalogue =
-        widget.state.subjects
-            .where(
-              (s) => '${s.name} ${s.code}'.toLowerCase().contains(
-                _query.toLowerCase(),
-              ),
-            )
-            .toList()
-          ..sort((a, b) => a.name.compareTo(b.name));
-    final suggestions = _suggestions
-        .where(
-          (s) => '${s.name} ${s.code}'.toLowerCase().contains(
-            _query.toLowerCase(),
+    final scheme = Theme.of(context).colorScheme;
+    final allSelected =
+        suggestions.isNotEmpty &&
+        suggestions.every((s) => selected.contains(s.name));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: searchController,
+          decoration: const InputDecoration(
+            prefixIcon: Icon(Icons.search),
+            hintText: 'Search subjects',
           ),
-        )
-        .toList();
-    return SafeArea(
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
-              children: [
-                const Text(
-                  'Choose the subjects your school teaches. You assign them to classes next.',
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _levelId,
-                  decoration: const InputDecoration(
-                    labelText: 'Education level',
-                  ),
-                  items: levels
-                      .map(
-                        (l) =>
-                            DropdownMenuItem(value: l.id, child: Text(l.name)),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() {
-                    _levelId = v;
-                    _selected.clear();
-                  }),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.search),
-                    hintText: 'Search subjects',
-                  ),
-                  onChanged: (v) => setState(() => _query = v),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  'Suggested subjects',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                if (suggestions.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: Text(
-                      'No configured suggestions for this level. Add the subjects your school uses.',
-                    ),
-                  ),
-                ...suggestions.map(
-                  (s) => CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(s.name),
-                    secondary: Text(s.code),
-                    value: _selected.contains(s.id),
-                    onChanged: (v) => setState(
-                      () => v == true
-                          ? _selected.add(s.id)
-                          : _selected.remove(s.id),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _custom,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Add a custom subject'),
-                  ),
-                ),
-                if (catalogue.isEmpty && suggestions.isEmpty && _query.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 28),
-                    child: EmptyState(
-                      icon: Icons.menu_book_outlined,
-                      title: 'No subjects yet',
-                      message: 'Add the subjects your school teaches.',
-                      ctaLabel: 'Add a custom subject',
-                      onCtaPressed: _custom,
-                    ),
-                  ),
-                if (catalogue.isEmpty && _query.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 28),
-                    child: Text(
-                      'No subjects match "$_query".',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                if (catalogue.isNotEmpty) ...[
-                  const SizedBox(height: 28),
+          onChanged: onQueryChanged,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${level.name} subjects',
+                style: Theme.of(
+                  context,
+                ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Add common subjects or search for more. You can edit these later.',
+          style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 20),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: scheme.outlineVariant),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.lightbulb_outline, size: 18, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: 8),
                   Text(
-                    '${catalogue.length} subjects in catalogue',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    'Suggested subjects',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  ...catalogue.map(
-                    (s) => ListTile(
-                      leading: const Icon(Icons.menu_book_outlined),
-                      title: Text(s.name),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(s.code),
-                          PopupMenuButton<String>(
-                            onSelected: (action) => action == 'archive'
-                                ? widget.onArchive(s.id)
-                                : _custom(s),
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(value: 'edit', child: Text('Edit')),
-                              PopupMenuItem(
-                                value: 'archive',
-                                child: Text('Archive'),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                  const Spacer(),
+                  if (suggestions.isNotEmpty)
+                    TextButton(
+                      onPressed: allSelected
+                          ? onClearAll
+                          : () => onSelectAll(
+                              suggestions.map((s) => s.name).toList(),
+                            ),
+                      child: Text(allSelected ? 'Clear all' : 'Select all'),
                     ),
-                  ),
                 ],
-              ],
-            ),
-          ),
-          if (_selected.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: FilledButton(
-                  onPressed: () {
-                    final selected = suggestions
-                        .where((s) => _selected.contains(s.id))
+              ),
+              if (suggestions.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'No configured suggestions for this level. Add the subjects your school uses.',
+                    style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: suggestions
                         .map(
-                          (s) => Subject(
-                            id: const Uuid().v4(),
-                            schoolId: widget.schoolId,
-                            name: s.name,
-                            code: s.code,
+                          (s) => FilterChip(
+                            label: Text(s.name),
+                            selected: selected.contains(s.name),
+                            onSelected: (value) => onToggle(s.name, value),
                           ),
                         )
-                        .toList();
-                    widget.onBulkCreate(selected);
-                    setState(() => _selected.clear());
-                  },
-                  child: Text('Add ${_selected.length} subjects'),
+                        .toList(),
+                  ),
                 ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 44,
+          child: OutlinedButton.icon(
+            onPressed: onAddCustom,
+            icon: const Icon(Icons.add),
+            label: const Text('Add custom subject'),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Catalogue setup only — subject-to-class assignment happens in the next step.',
+          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+        ),
+        if (onAddSelected != null) ...[
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: FilledButton(
+              onPressed: onAddSelected,
+              child: Text(
+                'Add ${selected.length} subject${selected.length == 1 ? '' : 's'}',
               ),
             ),
+          ),
         ],
+        const SizedBox(height: 28),
+        if (configured.isEmpty)
+          EmptyState(
+            icon: Icons.menu_book_outlined,
+            title: 'No subjects yet',
+            message: 'Add the subjects your school teaches at this level.',
+            ctaLabel: 'Add custom subject',
+            onCtaPressed: onAddCustom,
+          )
+        else ...[
+          Row(
+            children: [
+              Text(
+                'School subjects (${configured.length})',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const Spacer(),
+              Text(
+                'Drag to reorder',
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ReorderableListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            padding: EdgeInsets.zero,
+            itemCount: configured.length,
+            onReorder: (oldIndex, newIndex) {
+              final reordered = [...configured];
+              if (newIndex > oldIndex) newIndex -= 1;
+              final moved = reordered.removeAt(oldIndex);
+              reordered.insert(newIndex, moved);
+              onReorder(reordered);
+            },
+            itemBuilder: (context, index) => _SubjectCard(
+              key: ValueKey(configured[index].id),
+              index: index,
+              subject: configured[index],
+              onEdit: () => onEdit(configured[index]),
+              onAction: (action) {
+                if (action == 'delete') onDelete(configured[index]);
+              },
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _SubjectCard extends StatelessWidget {
+  const _SubjectCard({
+    super.key,
+    required this.index,
+    required this.subject,
+    required this.onEdit,
+    required this.onAction,
+  });
+
+  final int index;
+  final Subject subject;
+  final VoidCallback onEdit;
+  final ValueChanged<String> onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        decoration: BoxDecoration(
+          border: Border.all(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            ReorderableDragStartListener(
+              index: index,
+              child: Icon(Icons.drag_indicator, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                subject.name,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            if (subject.code.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Text(
+                  subject.code,
+                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                ),
+              ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              onPressed: onEdit,
+              tooltip: 'Edit',
+            ),
+            PopupMenuButton<String>(
+              onSelected: onAction,
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'delete', child: Text('Delete')),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

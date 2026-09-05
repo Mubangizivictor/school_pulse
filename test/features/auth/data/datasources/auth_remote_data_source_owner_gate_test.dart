@@ -111,6 +111,86 @@ void main() {
   );
 
   test(
+    'getCurrentUser signs out and returns null once lastActiveAt exceeds the '
+    '4-month idle window, but never before that - persistence is otherwise '
+    'indefinite',
+    () {
+      final start = source.indexOf('Future<UserModel?> getCurrentUser(');
+      expect(start, isNot(-1), reason: 'getCurrentUser must exist');
+      final nextMethod = source.indexOf('\n  Future<UserModel> _getUser(');
+      expect(nextMethod, isNot(-1));
+      final body = source.substring(start, nextMethod);
+
+      expect(
+        source.contains(
+          'static const Duration _inactivityLimit = Duration(days: 120);',
+        ),
+        isTrue,
+        reason:
+            'the idle window must be a fixed ~4-month constant, not a '
+            'shorter session/token-expiry check',
+      );
+      expect(
+        body.contains('_inactivityLimit'),
+        isTrue,
+        reason: 'getCurrentUser must compare against the idle window',
+      );
+      expect(
+        body.contains('firebaseAuth.signOut()'),
+        isTrue,
+        reason: 'exceeding the idle window must actually end the session',
+      );
+      expect(
+        body.contains('_touchLastActive('),
+        isTrue,
+        reason:
+            'every successful session restore must refresh the heartbeat, '
+            'so an actively-used device never approaches the idle window',
+      );
+    },
+  );
+
+  test(
+    '_getUser (every interactive login path) refreshes the lastActiveAt heartbeat',
+    () {
+      final start = source.indexOf('Future<UserModel> _getUser(');
+      expect(start, isNot(-1), reason: '_getUser must exist');
+      final nextMethod = source.indexOf('\n  @override', start + 1);
+      final body = source.substring(
+        start,
+        nextMethod == -1 ? source.length : nextMethod,
+      );
+      expect(
+        body.contains('_touchLastActive('),
+        isTrue,
+        reason:
+            'a fresh interactive login must reset the idle clock the same '
+            'way a session restore does',
+      );
+    },
+  );
+
+  test(
+    '_touchLastActive is best-effort and cannot fail a login/restore',
+    () {
+      final start = source.indexOf('Future<void> _touchLastActive(');
+      expect(start, isNot(-1), reason: '_touchLastActive must exist');
+      final nextMethod = source.indexOf('\n  static DateTime? _parseDate(');
+      final body = source.substring(
+        start,
+        nextMethod == -1 ? source.length : nextMethod,
+      );
+      expect(
+        body.contains('try {'),
+        isTrue,
+        reason:
+            'a failed heartbeat write must never surface as a login/restore '
+            'failure',
+      );
+    },
+  );
+
+  test(
     'the owner-only login paths (loginOwnerWithEmail/Google/Apple) still use the opposite gate (_assertOwnerAndGetUser), never _rejectIfOwner',
     () {
       final source = implSource;

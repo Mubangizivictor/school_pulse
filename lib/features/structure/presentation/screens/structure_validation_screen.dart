@@ -72,7 +72,9 @@ class _ValidationIssueCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isError = issue.severity == ValidationSeverity.error;
-    final color = isError ? Colors.black : Colors.black;
+    final color = isError
+        ? Theme.of(context).colorScheme.error
+        : const Color(0xFFF9A825);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),

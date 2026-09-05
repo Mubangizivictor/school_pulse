@@ -48,7 +48,16 @@ class _TimetablesListScreenState extends State<TimetablesListScreen> {
   Widget build(BuildContext context) => Scaffold(
     appBar: widget.showAppBar ? AppBar(title: const Text('Timetables')) : null,
     backgroundColor: widget.showAppBar ? null : Colors.transparent,
-    body: BlocBuilder<TimetableBloc, TimetableState>(
+    body: BlocConsumer<TimetableBloc, TimetableState>(
+      listenWhen: (previous, current) =>
+          previous.errorMessage != current.errorMessage,
+      listener: (context, state) {
+        if (state.errorMessage != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+        }
+      },
       builder: (context, state) {
         final s = context.watch<StructureBloc>().state;
         final years = s.academicYears.where((y) => !y.isArchived).toList();

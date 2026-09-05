@@ -788,9 +788,12 @@ class _MultiState extends State<_Multi> {
           16,
           16 + MediaQuery.viewInsetsOf(context).bottom,
         ),
-        child: SizedBox(
-          height: 480,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+          ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 widget.title,
@@ -808,8 +811,9 @@ class _MultiState extends State<_Multi> {
                 ),
               ),
               const SizedBox(height: 8),
-              Expanded(
+              Flexible(
                 child: ListView(
+                  shrinkWrap: true,
                   children: items
                       .map(
                         (x) => CheckboxListTile(
@@ -828,6 +832,7 @@ class _MultiState extends State<_Multi> {
                       .toList(),
                 ),
               ),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(

@@ -83,35 +83,13 @@ Future<String?> _superAdminRedirect(GoRouterState state) async {
 /// push targeted. The dashboard already derives its active section from the
 /// URL, and detail screens live on the nested Navigator, so a single
 /// persistent shell page is correct.
+///
+/// This key must never appear on more than one [Page] in the *same*
+/// Navigator's page list at once, or the Navigator throws "A GlobalKey was
+/// used multiple times". See [superAdminRoutes] for why every shell-
+/// rendering route below is a flat, non-nested sibling rather than a
+/// parent/child GoRoute tree.
 const ValueKey<String> _kConsoleShellPageKey = ValueKey('super-admin-shell');
-
-/// A shell route: renders [SuperAdminDashboard] under the shared shell key,
-/// so URL changes within the subtree don't rebuild it.
-GoRoute _shellRoute(String path, {List<RouteBase> routes = const []}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) => fadeThroughPage(
-      key: _kConsoleShellPageKey,
-      child: const SuperAdminDashboard(),
-    ),
-    routes: routes,
-  );
-}
-
-/// A standalone page route (its own screen, its own key) - used for the
-/// full-page owner screens wrapped in [SuperAdminMobileNavShell].
-GoRoute _fadeRoute(
-  String path, {
-  required Widget Function(BuildContext, GoRouterState) child,
-  List<RouteBase> routes = const [],
-}) {
-  return GoRoute(
-    path: path,
-    pageBuilder: (context, state) =>
-        fadeThroughPage(key: state.pageKey, child: child(context, state)),
-    routes: routes,
-  );
-}
 
 /// The `/super-admin` (SaaS owner console) route subtree, extracted whole
 /// from `lib/app/router.dart` so every owner-console screen, path and nested
@@ -123,134 +101,163 @@ GoRoute _fadeRoute(
 /// nav. Every route uses [fadeThroughPage] so switching sections via
 /// `context.go` is a single 180ms fade, with no platform slide/flicker and
 /// no animation when reselecting the current route.
-final RouteBase superAdminRoute = GoRoute(
-  path: '/super-admin',
-  redirect: (context, state) => _superAdminRedirect(state),
-  pageBuilder: (context, state) => fadeThroughPage(
-    key: _kConsoleShellPageKey,
-    child: const SuperAdminDashboard(),
+///
+/// This is a **list of top-level sibling routes**, not one GoRoute with
+/// children. GoRouter gives every matched *ancestor* GoRoute along a
+/// location its own Page when that ancestor has a pageBuilder - so a single
+/// `/super-admin` parent with a pageBuilder AND nested children would push
+/// two pages (parent + matched child) under the identical
+/// _kConsoleShellPageKey the moment a cached session resumed on any child
+/// URL (e.g. `/super-admin/settings`), crashing the Navigator with "A
+/// GlobalKey was used multiple times" and leaving it stuck (the debug
+/// assertion fires mid-`_updatePages`, which never gets to clear its
+/// re-entrancy flag, so no further rebuild - and no gesture - is ever
+/// processed again for the session). go_router also rejects an empty-string
+/// path for an index child, which rules out the usual index-route pattern.
+/// Flat siblings sidestep both problems: exactly one route ever matches a
+/// given location, so exactly one page is ever produced. GoRouter tries
+/// siblings in declaration order, so the specific `_fadeRoute` paths below
+/// (`notifications`, `settings/security`, ...) are declared before the
+/// `schools/:rest(.*)`-style catch-alls so they win first.
+final List<RouteBase> superAdminRoutes = [
+  GoRoute(
+    path: '/super-admin',
+    redirect: (context, state) => _superAdminRedirect(state),
+    pageBuilder: (context, state) => fadeThroughPage(
+      key: _kConsoleShellPageKey,
+      child: const SuperAdminDashboard(),
+    ),
   ),
-  routes: [
-    // Top-level sidebar/bottom-nav sections. Each renders the same
-    // SuperAdminDashboard, which reads the active section back out of the
-    // URL (see `superAdminSectionForPath`) - giving every section its own
-    // real, refreshable, back/forward-able address without duplicating the
-    // dashboard's IndexedStack/nested-Navigator shell per route.
-    //
-    // Detail screens (School Details, Application Review, Payment Review)
-    // are deliberately NOT full GoRoutes: they're pushed onto the section's
-    // own nested Navigator (SuperAdminTabNavigator) so the sidebar/bottom
-    // nav stays visible. Their :id child routes below exist only so the URL
-    // bar reflects that a detail screen is open and Back/Forward has a
-    // history entry to land on.
-    _shellRoute(
-      'schools',
-      routes: [
-        _shellRoute(
-          ':schoolId',
-          routes: [
-            _shellRoute('subscription'),
-            _shellRoute('modules'),
-            _shellRoute('admins'),
-          ],
-        ),
-        _shellRoute('applications/:applicationId'),
-      ],
-    ),
-    _shellRoute(
-      'payments',
-      routes: [
-        _shellRoute(':paymentId'),
-      ],
-    ),
-    _shellRoute('plans'),
-    _fadeRoute(
-      // Owner Notifications is reached from the Overview bell, not nested
-      // under Settings - the bottom nav highlights Overview while it's
-      // open (see superAdminSectionForPath).
-      'notifications',
-      child: (context, state) => const SuperAdminMobileNavShell(
+  // Top-level sidebar/bottom-nav sections, plus their detail children
+  // (School Details, Application Review, Payment Review), all collapse
+  // onto the identical SuperAdminDashboard, which reads the active
+  // section/detail back out of the URL (see `superAdminSectionForPath`) -
+  // giving every section its own real, refreshable, back/forward-able
+  // address without duplicating the dashboard's IndexedStack/nested-
+  // Navigator shell per route. Detail screens are pushed onto the
+  // section's own nested Navigator (SuperAdminTabNavigator); the URL
+  // segment past the section (:rest) exists only so the address bar
+  // reflects that a detail screen is open and Back/Forward has a history
+  // entry to land on - nothing here reads :rest as a path parameter.
+  _superAdminShellRoute('/super-admin/schools/:rest(.*)'),
+  _superAdminShellRoute('/super-admin/payments/:rest(.*)'),
+  _superAdminShellRoute('/super-admin/plans'),
+  GoRoute(
+    // Owner Notifications is reached from the Overview bell, not nested
+    // under Settings - the bottom nav highlights Overview while it's open
+    // (see superAdminSectionForPath).
+    path: '/super-admin/notifications',
+    redirect: (context, state) => _superAdminRedirect(state),
+    pageBuilder: (context, state) => fadeThroughPage(
+      key: state.pageKey,
+      child: const SuperAdminMobileNavShell(
         child: SuperAdminNotificationsScreen(),
       ),
-      routes: [
-        _fadeRoute(
-          'history',
-          child: (context, state) => const SuperAdminMobileNavShell(
-            child: OwnerNotificationHistoryScreen(),
-          ),
-        ),
-      ],
     ),
-    _shellRoute('audit-logs'),
-    _shellRoute('settings'),
-    _fadeRoute(
-      'settings/security',
-      child: (context, state) =>
-          const SuperAdminMobileNavShell(child: SecurityCenterScreen()),
-    ),
-    _fadeRoute(
-      'settings/custom-domains',
-      child: (context, state) =>
-          const SuperAdminMobileNavShell(child: CustomDomainsScreen()),
-    ),
-    _fadeRoute(
-      'settings/subdomain-requests',
-      child: (context, state) => const SuperAdminMobileNavShell(
-        child: SubdomainChangeRequestsScreen(),
+  ),
+  GoRoute(
+    path: '/super-admin/notifications/history',
+    redirect: (context, state) => _superAdminRedirect(state),
+    pageBuilder: (context, state) => fadeThroughPage(
+      key: state.pageKey,
+      child: const SuperAdminMobileNavShell(
+        child: OwnerNotificationHistoryScreen(),
       ),
     ),
-    _fadeRoute(
-      'platform-health',
-      child: (context, state) =>
-          const SuperAdminMobileNavShell(child: PlatformHealthScreen()),
+  ),
+  _superAdminShellRoute('/super-admin/audit-logs'),
+  _superAdminShellRoute('/super-admin/settings'),
+  _superAdminFadeRoute(
+    '/super-admin/settings/security',
+    child: (context, state) =>
+        const SuperAdminMobileNavShell(child: SecurityCenterScreen()),
+  ),
+  _superAdminFadeRoute(
+    '/super-admin/settings/custom-domains',
+    child: (context, state) =>
+        const SuperAdminMobileNavShell(child: CustomDomainsScreen()),
+  ),
+  _superAdminFadeRoute(
+    '/super-admin/settings/subdomain-requests',
+    child: (context, state) =>
+        const SuperAdminMobileNavShell(child: SubdomainChangeRequestsScreen()),
+  ),
+  _superAdminFadeRoute(
+    '/super-admin/platform-health',
+    child: (context, state) =>
+        const SuperAdminMobileNavShell(child: PlatformHealthScreen()),
+  ),
+  _superAdminFadeRoute(
+    '/super-admin/settings/support',
+    child: (context, state) =>
+        const SuperAdminMobileNavShell(child: HelpSupportHomeScreen()),
+  ),
+  _superAdminFadeRoute(
+    '/super-admin/settings/support/help-center',
+    child: (context, state) =>
+        const SuperAdminMobileNavShell(child: SupportHelpCenterScreen()),
+  ),
+  _superAdminFadeRoute(
+    '/super-admin/settings/support/faqs',
+    child: (context, state) =>
+        const SuperAdminMobileNavShell(child: SupportFaqsScreen()),
+  ),
+  _superAdminFadeRoute(
+    '/super-admin/settings/support/new',
+    child: (context, state) => SuperAdminMobileNavShell(
+      child: SubmitSupportRequestScreen(
+        args:
+            state.extra as SubmitSupportRequestArgs? ??
+            const SubmitSupportRequestArgs(origin: 'submit_request'),
+      ),
     ),
-    _fadeRoute(
-      'settings/support',
-      child: (context, state) =>
-          const SuperAdminMobileNavShell(child: HelpSupportHomeScreen()),
-      routes: [
-        _fadeRoute(
-          'help-center',
-          child: (context, state) => const SuperAdminMobileNavShell(
-            child: SupportHelpCenterScreen(),
-          ),
-        ),
-        _fadeRoute(
-          'faqs',
-          child: (context, state) =>
-              const SuperAdminMobileNavShell(child: SupportFaqsScreen()),
-        ),
-        _fadeRoute(
-          'new',
-          child: (context, state) => SuperAdminMobileNavShell(
-            child: SubmitSupportRequestScreen(
-              args:
-                  state.extra as SubmitSupportRequestArgs? ??
-                  const SubmitSupportRequestArgs(origin: 'submit_request'),
-            ),
-          ),
-        ),
-        _fadeRoute(
-          'ticket/:id',
-          child: (context, state) => SuperAdminMobileNavShell(
-            child: SupportTicketConversationScreen(
-              ticketId: state.pathParameters['id']!,
-            ),
-          ),
-        ),
-      ],
+  ),
+  _superAdminFadeRoute(
+    '/super-admin/settings/support/ticket/:id',
+    child: (context, state) => SuperAdminMobileNavShell(
+      child: SupportTicketConversationScreen(
+        ticketId: state.pathParameters['id']!,
+      ),
     ),
-    _fadeRoute(
-      'settings/about',
-      child: (context, state) =>
-          const SuperAdminMobileNavShell(child: ContactAboutScreen()),
-      routes: [
-        _fadeRoute(
-          'privacy-policy',
-          child: (context, state) =>
-              const SuperAdminMobileNavShell(child: PrivacyPolicyScreen()),
-        ),
-      ],
+  ),
+  _superAdminFadeRoute(
+    '/super-admin/settings/about',
+    child: (context, state) =>
+        const SuperAdminMobileNavShell(child: ContactAboutScreen()),
+  ),
+  _superAdminFadeRoute(
+    '/super-admin/settings/about/privacy-policy',
+    child: (context, state) =>
+        const SuperAdminMobileNavShell(child: PrivacyPolicyScreen()),
+  ),
+];
+
+/// A flat (non-nested) route that renders the shared console shell under
+/// the shared shell key, gated by the same async owner-security redirect
+/// every `/super-admin*` route needs.
+GoRoute _superAdminShellRoute(String path) {
+  return GoRoute(
+    path: path,
+    redirect: (context, state) => _superAdminRedirect(state),
+    pageBuilder: (context, state) => fadeThroughPage(
+      key: _kConsoleShellPageKey,
+      child: const SuperAdminDashboard(),
     ),
-  ],
-);
+  );
+}
+
+/// A flat (non-nested) standalone page route (its own screen, its own key),
+/// gated by the same async owner-security redirect every `/super-admin*`
+/// route needs - used for the full-page owner screens wrapped in
+/// [SuperAdminMobileNavShell].
+GoRoute _superAdminFadeRoute(
+  String path, {
+  required Widget Function(BuildContext, GoRouterState) child,
+}) {
+  return GoRoute(
+    path: path,
+    redirect: (context, state) => _superAdminRedirect(state),
+    pageBuilder: (context, state) =>
+        fadeThroughPage(key: state.pageKey, child: child(context, state)),
+  );
+}

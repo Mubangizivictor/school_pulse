@@ -7,11 +7,27 @@ import '../entities/teaching_plan.dart';
 abstract class TeachingPlanRepository {
   Stream<List<TeachingPlan>> watchPlans();
   Stream<List<TeachingPlanSubject>> watchPlanSubjects(String planId);
+
+  /// All active plan-subject rows across every plan for the current school -
+  /// used by the plans overview to show a subject count per level without
+  /// opening each plan individually.
+  Stream<List<TeachingPlanSubject>> watchAllPlanSubjects();
   Stream<List<ClassPlanOverride>> watchClassOverrides(String planId);
 
   /// Creates or updates a plan's own row (scope/template/version metadata).
   /// Does not touch its subjects - see [saveSubject]/[saveSubjects].
   Future<void> savePlan(TeachingPlan plan);
+
+  /// Updates only [TeachingPlan.totalWeeklyHours] and
+  /// [TeachingPlan.defaultLessonDurationMinutes] on an existing plan, from
+  /// the simplified "Set up plan" sheet. Does not touch subjects or bump
+  /// [TeachingPlan.templateVersion] - these are informational summary
+  /// fields, not the per-subject breakdown.
+  Future<void> savePlanSummary(
+    String planId, {
+    required int? totalWeeklyHours,
+    required int? defaultLessonDurationMinutes,
+  });
 
   /// Adds/updates one subject in a plan. Bumps the parent plan's
   /// [TeachingPlan.templateVersion] so version-sensitive consumers can tell

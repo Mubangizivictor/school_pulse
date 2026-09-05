@@ -69,10 +69,19 @@ class _CreateTimetableScreenState extends State<CreateTimetableScreen> {
   Widget build(BuildContext context) {
     return BlocListener<TimetableBloc, TimetableState>(
       listenWhen: (previous, current) =>
-          previous.current?.id != current.current?.id &&
-          current.current != null,
+          (previous.current?.id != current.current?.id &&
+              current.current != null) ||
+          previous.errorMessage != current.errorMessage,
       listener: (context, state) {
-        Navigator.of(context).pop(state.current!.id);
+        if (state.errorMessage != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+          return;
+        }
+        if (state.current != null) {
+          Navigator.of(context).pop(state.current!.id);
+        }
       },
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,

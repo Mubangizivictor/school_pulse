@@ -59,7 +59,7 @@ class SuperAdminSettingsScreen extends StatelessWidget {
       const _SecurityCard(),
     ];
 
-    final rightColumn = <Widget>[_PlatformConfigurationCard(wide: wide)];
+    final rightColumn = <Widget>[const _PlatformConfigurationCard()];
 
     if (wide) {
       return Scaffold(
@@ -78,32 +78,54 @@ class SuperAdminSettingsScreen extends StatelessWidget {
               const SizedBox(height: 24),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1180),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 380,
-                      child: Column(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Two columns only while there is room for both to
+                    // breathe; between the mobile breakpoint (760) and here
+                    // the columns would be too cramped, so stack instead.
+                    final sideBySide = constraints.maxWidth >= 900;
+                    if (!sideBySide) {
+                      return Column(
                         children: [
-                          for (final w in leftColumn) ...[
+                          for (final w in [...leftColumn, ...rightColumn]) ...[
                             w,
                             const SizedBox(height: 20),
                           ],
                         ],
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          for (final w in rightColumn) ...[
-                            w,
-                            const SizedBox(height: 20),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
+                      );
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 4,
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 460),
+                            child: Column(
+                              children: [
+                                for (final w in leftColumn) ...[
+                                  w,
+                                  const SizedBox(height: 20),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        Expanded(
+                          flex: 6,
+                          child: Column(
+                            children: [
+                              for (final w in rightColumn) ...[
+                                w,
+                                const SizedBox(height: 20),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -643,9 +665,7 @@ class _SecurityCard extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _PlatformConfigurationCard extends StatelessWidget {
-  const _PlatformConfigurationCard({required this.wide});
-
-  final bool wide;
+  const _PlatformConfigurationCard();
 
   @override
   Widget build(BuildContext context) {
@@ -654,16 +674,43 @@ class _PlatformConfigurationCard extends StatelessWidget {
       subtitle: 'Configure how your platform operates and integrates.',
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final entries = _entries(context);
+          // Wide enough for a real 2-up card grid; otherwise a compact
+          // single-row list (icon · title/subtitle · chevron) so the cards
+          // never grow tall on a phone.
           final twoUp = constraints.maxWidth >= 520;
-          final tileWidth = twoUp
-              ? (constraints.maxWidth - 16) / 2
-              : constraints.maxWidth;
-          return Wrap(
-            spacing: 16,
-            runSpacing: 16,
+          if (twoUp) {
+            final tileWidth = (constraints.maxWidth - 16) / 2;
+            return Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                for (final e in entries)
+                  SizedBox(
+                    width: tileWidth,
+                    child: _ConfigTile(
+                      icon: e.icon,
+                      title: e.title,
+                      description: e.description,
+                      status: e.status,
+                      onTap: e.onTap,
+                    ),
+                  ),
+              ],
+            );
+          }
+          return Column(
             children: [
-              for (final tile in _tiles(context))
-                SizedBox(width: tileWidth, child: tile),
+              for (final (i, e) in entries.indexed) ...[
+                if (i > 0) _Sep(),
+                _RowItem(
+                  icon: e.icon,
+                  title: e.title,
+                  subtitle: e.description,
+                  trailing: e.status,
+                  onTap: e.onTap,
+                ),
+              ],
             ],
           );
         },
@@ -671,49 +718,63 @@ class _PlatformConfigurationCard extends StatelessWidget {
     );
   }
 
-  List<Widget> _tiles(BuildContext context) => [
-    _ConfigTile(
+  List<_ConfigEntry> _entries(BuildContext context) => [
+    _ConfigEntry(
       icon: Icons.school_outlined,
       title: 'School onboarding',
       description:
           'Review applications and onboard new schools onto the platform.',
       onTap: () => context.push('/super-admin/schools'),
     ),
-    _ConfigTile(
+    _ConfigEntry(
       icon: Icons.language_outlined,
       title: 'Custom domains',
-      description:
-          "Verify and activate schools' custom portal hostnames.",
+      description: "Verify and activate schools' custom portal hostnames.",
       status: const _CustomDomainsStatus(),
       onTap: () => context.push('/super-admin/settings/custom-domains'),
     ),
-    _ConfigTile(
+    _ConfigEntry(
       icon: Icons.alternate_email_outlined,
       title: 'Subdomain change requests',
       description: "Review schools' requests to change their subdomain.",
-      onTap: () =>
-          context.push('/super-admin/settings/subdomain-requests'),
+      onTap: () => context.push('/super-admin/settings/subdomain-requests'),
     ),
-    _ConfigTile(
+    _ConfigEntry(
       icon: Icons.campaign_outlined,
       title: 'Branding & communications',
       description:
           'Platform branding, transactional emails and notifications.',
       onTap: () => context.push('/super-admin/settings/support'),
     ),
-    _ConfigTile(
+    _ConfigEntry(
       icon: Icons.monitor_heart_outlined,
       title: 'Platform health',
       description: 'Live service status and platform-wide diagnostics.',
       onTap: () => context.push('/super-admin/platform-health'),
     ),
-    _ConfigTile(
+    _ConfigEntry(
       icon: Icons.shield_outlined,
       title: 'Support & legal',
       description: 'Help center, terms of service and privacy policy.',
       onTap: () => context.push('/super-admin/settings/support'),
     ),
   ];
+}
+
+class _ConfigEntry {
+  const _ConfigEntry({
+    required this.icon,
+    required this.title,
+    required this.description,
+    this.status,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final Widget? status;
+  final VoidCallback onTap;
 }
 
 class _ConfigTile extends StatelessWidget {
@@ -871,12 +932,17 @@ class _RowItem extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.trailing,
     required this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+
+  /// Optional widget shown just before the chevron (e.g. a live status
+  /// dot). Kept small — it must not push the row taller than one line.
+  final Widget? trailing;
   final VoidCallback onTap;
 
   @override
@@ -885,7 +951,7 @@ class _RowItem extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
             Container(
@@ -905,6 +971,7 @@ class _RowItem extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     title,
@@ -929,6 +996,11 @@ class _RowItem extends StatelessWidget {
                 ],
               ),
             ),
+            if (trailing != null) ...[
+              const SizedBox(width: 8),
+              trailing!,
+            ],
+            const SizedBox(width: 4),
             Icon(
               Icons.chevron_right_rounded,
               color: AppColors.textMuted(context),

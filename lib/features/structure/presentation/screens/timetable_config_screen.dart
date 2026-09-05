@@ -36,7 +36,15 @@ class TimetableConfigScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const AdminAppBar(title: 'Timetable Configuration'),
-      body: BlocBuilder<StructureBloc, StructureState>(
+      body: BlocConsumer<StructureBloc, StructureState>(
+        listenWhen: (previous, current) =>
+            previous.errorMessage != current.errorMessage &&
+            current.errorMessage != null,
+        listener: (context, state) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+        },
         builder: (context, state) => _TimetableConfigBody(state: state),
       ),
     );

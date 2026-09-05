@@ -338,3 +338,55 @@ describe('clinic visit attachment storage rules', () => {
     await assertFails(deleteObject(ref(storageFor('nurseA'), p)));
   });
 });
+
+describe('institution branding uploads: School Admin-tier only', () => {
+  const LOGO_PATH = 'institutions/schoolA/branding/logo/logo.png';
+
+  test('a School Admin can upload and replace the school logo', async () => {
+    await assertSucceeds(
+      uploadBytes(ref(storageFor('adminA'), LOGO_PATH), PNG_BYTES, {
+        contentType: 'image/png',
+      }),
+    );
+  });
+
+  test('a general staff account (classTeacher) cannot upload the school logo', async () => {
+    await assertFails(
+      uploadBytes(ref(storageFor('staffA'), LOGO_PATH), PNG_BYTES, {
+        contentType: 'image/png',
+      }),
+    );
+    await assertFails(
+      uploadBytes(ref(storageFor('coworkerA'), LOGO_PATH), PNG_BYTES, {
+        contentType: 'image/png',
+      }),
+    );
+  });
+
+  test('a School Admin from a different school cannot upload into schoolA branding', async () => {
+    await assertFails(
+      uploadBytes(ref(storageFor('adminB'), LOGO_PATH), PNG_BYTES, {
+        contentType: 'image/png',
+      }),
+    );
+  });
+
+  test('any active same-school staff member can still read the logo', async () => {
+    await assertSucceeds(
+      uploadBytes(ref(storageFor('adminA'), LOGO_PATH), PNG_BYTES, {
+        contentType: 'image/png',
+      }),
+    );
+    const { getBytes } = require('firebase/storage');
+    await assertSucceeds(getBytes(ref(storageFor('staffA'), LOGO_PATH)));
+  });
+
+  test('a School Admin cannot delete another school\'s logo', async () => {
+    await assertSucceeds(
+      uploadBytes(ref(storageFor('adminA'), LOGO_PATH), PNG_BYTES, {
+        contentType: 'image/png',
+      }),
+    );
+    await assertFails(deleteObject(ref(storageFor('adminB'), LOGO_PATH)));
+  });
+});

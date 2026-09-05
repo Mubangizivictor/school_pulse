@@ -228,11 +228,11 @@ void main() {
     await tester.pumpWidget(wrap());
     await tester.pumpAndSettle();
 
-    expect(find.widgetWithText(FilledButton, 'Add staff'), findsNothing);
+    expect(find.widgetWithText(ElevatedButton, 'Add staff'), findsNothing);
   });
 
   testWidgets(
-    'narrow phone width collapses Add staff to an icon button with no overflow',
+    'narrow phone width (320) shows no overflow and keeps Add staff reachable',
     (tester) async {
       when(
         () => mockGetStaffMembers(any()),
@@ -246,31 +246,31 @@ void main() {
       await tester.pumpWidget(wrap());
       await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(FilledButton, 'Add staff'), findsNothing);
-      expect(find.widgetWithIcon(IconButton, Icons.add), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Add staff'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
 
-  testWidgets('tablet width (768) renders the dense table, not the card list', (
-    tester,
-  ) async {
-    when(
-      () => mockGetStaffMembers(any()),
-    ).thenAnswer((_) async => Right(staffList));
+  testWidgets(
+    'tablet width (768) still renders the compact card list, not the table',
+    (tester) async {
+      when(
+        () => mockGetStaffMembers(any()),
+      ).thenAnswer((_) async => Right(staffList));
 
-    tester.view.physicalSize = const Size(768, 1024);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+      tester.view.physicalSize = const Size(768, 1024);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(wrap());
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
 
-    expect(find.text('James Brown'), findsOneWidget);
-    expect(find.byType(Table), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('James Brown'), findsOneWidget);
+      expect(find.byType(Table), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('desktop width (1440) renders the dense table with pagination', (
     tester,
@@ -288,7 +288,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(Table), findsOneWidget);
-    expect(find.widgetWithText(FilledButton, 'Add staff'), findsOneWidget);
+    expect(find.widgetWithText(ElevatedButton, 'Add staff'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

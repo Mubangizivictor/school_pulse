@@ -5,13 +5,13 @@ import '../../domain/entities/attendance_config_entities.dart';
 import 'structure_ui_kit.dart';
 
 const List<Color> kAttendanceColorSwatches = [
-  Colors.black,
-  Colors.black,
-  Colors.black,
-  Colors.black,
-  Colors.black,
-  Colors.black,
-  Colors.black,
+  Color(0xFF43A047),
+  Color(0xFFE53935),
+  Color(0xFFFB8C00),
+  Color(0xFF1E88E5),
+  Color(0xFF8E24AA),
+  Color(0xFF00897B),
+  Color(0xFF757575),
 ];
 
 String _colorToHex(Color c) =>

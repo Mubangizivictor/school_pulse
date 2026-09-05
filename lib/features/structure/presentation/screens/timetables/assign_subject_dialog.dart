@@ -143,8 +143,15 @@ class _AssignSubjectSheetState extends State<_AssignSubjectSheet> {
     return BlocConsumer<TimetableBloc, TimetableState>(
       listenWhen: (previous, current) =>
           previous.lastSaveConflicts != current.lastSaveConflicts ||
-          previous.isSaving != current.isSaving,
+          previous.isSaving != current.isSaving ||
+          previous.errorMessage != current.errorMessage,
       listener: (context, state) {
+        if (state.errorMessage != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+          return;
+        }
         if (state.lastSaveConflicts.isNotEmpty) {
           setState(() => _conflicts = state.lastSaveConflicts);
         } else if (!state.isSaving && _conflicts != null) {

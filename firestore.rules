@@ -224,21 +224,29 @@ service cloud.firestore {
           // Self-service profile edits cannot alter identity, role, or school.
           (request.resource.data.diff(resource.data).affectedKeys().hasOnly([
             'name', 'phoneNumber', 'photoUrl'
-          ]))
+          ])) ||
+          // Login/session-restore heartbeat backing the 4-month idle-logout
+          // window - the client can only ever bump its own timestamp, never
+          // any other field, so this can't be used to touch anything else.
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastActiveAt']))
         )) ||
         // Admin console (User Management: edit details, toggle active/
         // inactive, reassign roles) manages OTHER staff profiles - staff
         // accounts only, never a parent's own profile. Restricted to
-        // role-admin staff (not blanket isStaff()) since this path can
-        // write role/roles - any signed-in staff member editing any other
-        // staff member's roles would be a privilege-escalation path.
+        // role-admin staff (not blanket isStaff(), and NOT hasAnyRole() -
+        // that helper was weakened to mean "any staff", which would let any
+        // teacher rewrite another staff member's roles/active status here)
+        // since this path can write role/roles - any signed-in staff member
+        // editing any other staff member's roles would be a privilege-
+        // escalation path.
         // schoolAdmin itself is never grantable here even by another
         // schoolAdmin - it is provisioned only through SaaS school
         // registration, mirroring the Add Staff wizard's role picker
         // (assignable_staff_roles.dart excludes it for the same reason).
         // A record that already had schoolAdmin may keep it across an
         // unrelated edit; this path may only ever remove it, never add it.
-        (hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+        ((myRole() in ['director', 'headTeacher', 'schoolAdmin'] ||
+          myUser().get('roles', []).hasAny(['director', 'headTeacher', 'schoolAdmin'])) &&
          resource.data.role != 'parent' &&
          isSameSchool(resource.data.schoolId) &&
          request.resource.data.schoolId == resource.data.schoolId &&
@@ -254,7 +262,8 @@ service cloud.firestore {
       // functions/index.js (createStaffAccount) - Deputy Head shares the
       // admin console UI but was never granted staff-invitation authority,
       // and editing another staff member's role is equally sensitive.
-      allow delete: if hasAnyRole(['director', 'headTeacher', 'schoolAdmin']) &&
+      allow delete: if (myRole() in ['director', 'headTeacher', 'schoolAdmin'] ||
+          myUser().get('roles', []).hasAny(['director', 'headTeacher', 'schoolAdmin'])) &&
         resource.data.role != 'parent' &&
         isSameSchool(resource.data.schoolId);
 
@@ -1677,10 +1686,12 @@ service cloud.firestore {
       allow read: if isSignedIn() && isSameSchool(schoolId);
       // The institution profile controls tenant identity, contact details and
       // branding. It is intentionally stricter than operational config so a
-      // general staff account cannot impersonate the institution.
+      // general staff account cannot impersonate the institution. Uses the
+      // REAL admin-role check, not hasAnyRole() - that helper was weakened
+      // to mean "any staff" for non-sensitive records (see its definition),
+      // which would let any teacher rewrite the school's identity.
       allow write: if isSameSchool(schoolId) && (
-        (document == 'institution_profile' &&
-          hasAnyRole(['schoolAdmin', 'headTeacher', 'deputyHead', 'director'])) ||
+        (document == 'institution_profile' && schoolAcademicAdmin()) ||
         (document != 'institution_profile' && isStaff())
       );
     }

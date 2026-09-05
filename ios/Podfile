@@ -67,4 +67,24 @@ post_install do |installer|
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
     end
   end
+
+  # The Google ML Kit / mobile_scanner chain ships no arm64 simulator slice,
+  # so those pod targets are forced to EXCLUDED_ARCHS=arm64 above (i.e. they
+  # only build x86_64 on the simulator SDK). Runner.xcodeproj itself has no
+  # arch override of its own, so on an Apple Silicon host it defaults to
+  # building arm64-native for the simulator — a hard mismatch against the
+  # x86_64-only mobile_scanner/GoogleMLKit modules it imports
+  # (GeneratedPluginRegistrant.m -> "Module 'mobile_scanner' not found").
+  # isar_flutter_libs supports both arm64 and x86_64 simulator slices in one
+  # fat archive, so it is not the constraint — the MLKit chain is. Force
+  # Runner (and RunnerTests) to the same x86_64-only simulator arch as the
+  # MLKit chain so every target in the workspace agrees on one arch.
+  installer.aggregate_targets.each do |aggregate_target|
+    aggregate_target.user_project.native_targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+      end
+    end
+    aggregate_target.user_project.save
+  end
 end

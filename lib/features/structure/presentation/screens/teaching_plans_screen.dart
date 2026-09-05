@@ -10,6 +10,7 @@ import '../../domain/entities/teaching_plan.dart';
 import '../../domain/repositories/teaching_plan_repository.dart';
 import '../../domain/services/structure_tenant_resolver.dart';
 import '../bloc/structure_bloc.dart';
+import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -73,25 +74,47 @@ class _TeachingPlansScreenState extends State<TeachingPlansScreen> {
           }
           return StreamBuilder<List<TeachingPlan>>(
             stream: _repository.watchPlans(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
+            builder: (context, plansSnapshot) {
+              if (plansSnapshot.hasError) {
                 return _Message(
                   title: 'Could not load teaching plans',
-                  body: '${snapshot.error}',
+                  body: '${plansSnapshot.error}',
                 );
               }
-              if (!snapshot.hasData) {
+              if (!plansSnapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
-              final plans = snapshot.data!
+              final plans = plansSnapshot.data!
                   .where((p) => p.academicYearId == currentYear.id)
                   .toList();
-              return _Overview(
-                repository: _repository,
-                structure: structure,
-                levels: levels,
-                plans: plans,
-                academicYearId: currentYear.id,
+              return StreamBuilder<List<TeachingPlanSubject>>(
+                stream: _repository.watchAllPlanSubjects(),
+                builder: (context, subjectsSnapshot) {
+                  if (subjectsSnapshot.hasError) {
+                    return _Message(
+                      title: 'Could not load teaching plans',
+                      body: '${subjectsSnapshot.error}',
+                    );
+                  }
+                  if (!subjectsSnapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final planIds = plans.map((p) => p.id).toSet();
+                  final subjectCountByPlanId = <String, int>{};
+                  for (final subject in subjectsSnapshot.data!) {
+                    if (!planIds.contains(subject.planId)) continue;
+                    subjectCountByPlanId[subject.planId] =
+                        (subjectCountByPlanId[subject.planId] ?? 0) + 1;
+                  }
+                  return _Overview(
+                    repository: _repository,
+                    structure: structure,
+                    levels: levels,
+                    plans: plans,
+                    subjectCountByPlanId: subjectCountByPlanId,
+                    academicYearId: currentYear.id,
+                  );
+                },
               );
             },
           );
@@ -107,6 +130,7 @@ class _Overview extends StatelessWidget {
     required this.structure,
     required this.levels,
     required this.plans,
+    required this.subjectCountByPlanId,
     required this.academicYearId,
   });
 
@@ -114,6 +138,7 @@ class _Overview extends StatelessWidget {
   final StructureState structure;
   final List<EducationalLevel> levels;
   final List<TeachingPlan> plans;
+  final Map<String, int> subjectCountByPlanId;
   final String academicYearId;
 
   @override
@@ -150,17 +175,16 @@ class _Overview extends StatelessWidget {
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final level = levels[index];
-                  final classCount = structure.classes
-                      .where((c) => c.levelId == level.id && c.isActive)
-                      .length;
                   final plan = plans
                       .where((p) => p.educationLevelId == level.id)
                       .firstOrNull;
+                  final assignedSubjectCount =
+                      plan == null ? 0 : (subjectCountByPlanId[plan.id] ?? 0);
                   return _LevelPlanCard(
                     level: level,
-                    classCount: classCount,
+                    assignedSubjectCount: assignedSubjectCount,
                     plan: plan,
-                    onSetUp: () => _openStartOrEdit(context, level, plan),
+                    onSetUp: () => _openSetupSheet(context, level, plan),
                   );
                 },
               ),
@@ -171,36 +195,56 @@ class _Overview extends StatelessWidget {
     );
   }
 
-  void _openStartOrEdit(
+  void _openSetupSheet(
     BuildContext context,
     EducationalLevel level,
     TeachingPlan? plan,
   ) {
-    if (plan != null) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => TeachingPlanEditorScreen(
-            repository: repository,
-            plan: plan,
-            level: level,
-            structure: structure,
+    final isWide = MediaQuery.sizeOf(context).width >= 900;
+    final assignedSubjectIds = plan == null
+        ? const <String>{}
+        : structure.subjects
+              .where((s) => s.isActive && s.assignedLevelIds.contains(level.id))
+              .map((s) => s.id)
+              .toSet();
+    final sheet = _SetUpPlanSheet(
+      repository: repository,
+      level: level,
+      plan: plan,
+      academicYearId: academicYearId,
+      structure: structure,
+      initiallyAssignedSubjectIds: assignedSubjectIds,
+      onOpenFullEditor: (savedPlan) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TeachingPlanEditorScreen(
+              repository: repository,
+              plan: savedPlan,
+              level: level,
+              structure: structure,
+            ),
+          ),
+        );
+      },
+    );
+    if (isWide) {
+      showDialog<void>(
+        context: context,
+        builder: (dialogContext) => Dialog(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: sheet,
           ),
         ),
       );
-      return;
+    } else {
+      showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        builder: (sheetContext) => sheet,
+      );
     }
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (sheetContext) => _StartPlanSheet(
-        repository: repository,
-        level: level,
-        academicYearId: academicYearId,
-        existingPlans: plans,
-        structure: structure,
-      ),
-    );
   }
 }
 
@@ -225,12 +269,12 @@ class _SubjectsPrerequisiteCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'School subjects',
+                    'Subject catalogue',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '$count subject${count == 1 ? '' : 's'} in catalogue',
+                    '$count subject${count == 1 ? '' : 's'} in your school catalogue',
                     style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
                   ),
                 ],
@@ -248,25 +292,36 @@ class _SubjectsPrerequisiteCard extends StatelessWidget {
   }
 }
 
+enum _PlanReadiness { ready, setUp, addSubjectsFirst }
+
 class _LevelPlanCard extends StatelessWidget {
   const _LevelPlanCard({
     required this.level,
-    required this.classCount,
+    required this.assignedSubjectCount,
     required this.plan,
     required this.onSetUp,
   });
 
   final EducationalLevel level;
-  final int classCount;
+  final int assignedSubjectCount;
   final TeachingPlan? plan;
   final VoidCallback onSetUp;
+
+  _PlanReadiness get _readiness {
+    if (plan != null && assignedSubjectCount > 0) return _PlanReadiness.ready;
+    if (assignedSubjectCount == 0) return _PlanReadiness.addSubjectsFirst;
+    return _PlanReadiness.setUp;
+  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final isSetUp = plan != null;
+    final readiness = _readiness;
+    final isReady = readiness == _PlanReadiness.ready;
     return AppCard(
       onTap: onSetUp,
+      color: isReady ? scheme.primaryContainer.withValues(alpha: 0.3) : null,
+      borderColor: isReady ? scheme.primary : null,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
@@ -281,16 +336,29 @@ class _LevelPlanCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '$classCount class${classCount == 1 ? '' : 'es'} · ${isSetUp ? 'Set up' : 'Not set up'}',
+                    '$assignedSubjectCount subject${assignedSubjectCount == 1 ? '' : 's'}'
+                    '${plan?.totalWeeklyHours != null ? ' · Weekly lesson load set' : ' · Weekly lesson load not set'}',
                     style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
                   ),
+                  const SizedBox(height: 8),
+                  switch (readiness) {
+                    _PlanReadiness.ready => StatusBadge(
+                      label: 'Ready',
+                      color: Colors.green.shade700,
+                    ),
+                    _PlanReadiness.setUp => StatusBadge(
+                      label: 'Set up plan',
+                      color: scheme.primary,
+                    ),
+                    _PlanReadiness.addSubjectsFirst => StatusBadge(
+                      label: 'Add subjects first',
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  },
                 ],
               ),
             ),
-            OutlinedButton(
-              onPressed: onSetUp,
-              child: Text(isSetUp ? 'Edit plan' : 'Set up plan'),
-            ),
+            Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
           ],
         ),
       ),
@@ -298,35 +366,71 @@ class _LevelPlanCard extends StatelessWidget {
   }
 }
 
-class _StartPlanSheet extends StatefulWidget {
-  const _StartPlanSheet({
+const List<int> _kLessonDurationPresets = [35, 40, 45];
+
+/// Simplified "Set up plan" sheet/dialog: pick which school subjects apply
+/// to this level, set one total weekly lesson load for the whole plan, and
+/// optionally a default lesson duration. Does not touch per-subject weekly
+/// lesson counts, class overrides, or timetables/staff allocation - those
+/// stay in [TeachingPlanEditorScreen], reachable via "Refine subjects".
+class _SetUpPlanSheet extends StatefulWidget {
+  const _SetUpPlanSheet({
     required this.repository,
     required this.level,
+    required this.plan,
     required this.academicYearId,
-    required this.existingPlans,
     required this.structure,
+    required this.initiallyAssignedSubjectIds,
+    required this.onOpenFullEditor,
   });
 
   final TeachingPlanRepository repository;
   final EducationalLevel level;
+  final TeachingPlan? plan;
   final String academicYearId;
-  final List<TeachingPlan> existingPlans;
   final StructureState structure;
+  final Set<String> initiallyAssignedSubjectIds;
+  final void Function(TeachingPlan plan) onOpenFullEditor;
 
   @override
-  State<_StartPlanSheet> createState() => _StartPlanSheetState();
+  State<_SetUpPlanSheet> createState() => _SetUpPlanSheetState();
 }
 
-class _StartPlanSheetState extends State<_StartPlanSheet> {
-  String? _templateSourceId;
+class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
+  late final Set<String> _selectedSubjectIds = {...widget.initiallyAssignedSubjectIds};
+  late final _totalWeeklyHours = TextEditingController(
+    text: widget.plan?.totalWeeklyHours?.toString() ?? '',
+  );
+  int? _durationMinutes;
+  bool _customDuration = false;
+  late final _customDurationController = TextEditingController();
   bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final existingDuration = widget.plan?.defaultLessonDurationMinutes;
+    if (existingDuration != null && !_kLessonDurationPresets.contains(existingDuration)) {
+      _customDuration = true;
+      _customDurationController.text = existingDuration.toString();
+    }
+    _durationMinutes = existingDuration;
+  }
+
+  @override
+  void dispose() {
+    _totalWeeklyHours.dispose();
+    _customDurationController.dispose();
+    super.dispose();
+  }
+
+  List<Subject> get _availableSubjects =>
+      widget.structure.subjects.where((s) => s.isActive).toList();
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final otherPlans = widget.existingPlans
-        .where((p) => p.educationLevelId != widget.level.id)
-        .toList();
     return Padding(
       padding: EdgeInsets.only(
         left: 20,
@@ -340,68 +444,184 @@ class _StartPlanSheetState extends State<_StartPlanSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Set up ${widget.level.name} plan',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Set up ${widget.level.name} plan',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
               ),
-              const SizedBox(height: 6),
               Text(
-                'This plan applies to every class in ${widget.level.name} and can be adjusted per class later.',
+                'This sets a starting plan for ${widget.level.name}. You can refine individual classes later.',
                 style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
               ),
-              const SizedBox(height: 18),
-              if (otherPlans.isNotEmpty) ...[
-                const Text(
-                  'Use curriculum template',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                ),
-                const SizedBox(height: 4),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Selected subjects',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                    ),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => context.push('/staff/admin/structure?section=subjects'),
+                    child: const Text('Manage subjects'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              if (_availableSubjects.isEmpty)
                 Text(
-                  'Copy the subjects from one of this school\'s existing plans.',
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _templateSourceId,
-                  decoration: const InputDecoration(hintText: 'Choose a plan to copy'),
-                  items: [
-                    for (final source in otherPlans)
-                      DropdownMenuItem(
-                        value: source.id,
-                        child: Text(
-                          widget.structure.levels
-                                  .where((l) => l.id == source.educationLevelId)
-                                  .firstOrNull
-                                  ?.name ??
-                              'Plan',
-                        ),
+                  'No subjects in your school catalogue yet. Add subjects first.',
+                  style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final subject in _availableSubjects)
+                      FilterChip(
+                        label: Text(subject.name),
+                        selected: _selectedSubjectIds.contains(subject.id),
+                        onSelected: (selected) => setState(() {
+                          if (selected) {
+                            _selectedSubjectIds.add(subject.id);
+                          } else {
+                            _selectedSubjectIds.remove(subject.id);
+                          }
+                        }),
+                        deleteIcon: _selectedSubjectIds.contains(subject.id)
+                            ? const Icon(Icons.close, size: 16)
+                            : null,
+                        onDeleted: _selectedSubjectIds.contains(subject.id)
+                            ? () => setState(() => _selectedSubjectIds.remove(subject.id))
+                            : null,
                       ),
                   ],
-                  onChanged: (value) => setState(() => _templateSourceId = value),
                 ),
-                const SizedBox(height: 20),
+              const SizedBox(height: 22),
+              const Text(
+                'Weekly lesson load',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Total weekly hours (all subjects)',
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 4),
+              TextField(
+                controller: _totalWeeklyHours,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(suffixText: 'hours'),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Default lesson duration (optional)',
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final preset in _kLessonDurationPresets)
+                    ChoiceChip(
+                      label: Text('$preset min'),
+                      selected: !_customDuration && _durationMinutes == preset,
+                      onSelected: (_) => setState(() {
+                        _customDuration = false;
+                        _durationMinutes = preset;
+                      }),
+                    ),
+                  ChoiceChip(
+                    label: const Text('Custom'),
+                    selected: _customDuration,
+                    onSelected: (_) => setState(() {
+                      _customDuration = true;
+                      _durationMinutes = int.tryParse(_customDurationController.text);
+                    }),
+                  ),
+                ],
+              ),
+              if (_customDuration) ...[
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _customDurationController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Custom duration',
+                    suffixText: 'min',
+                  ),
+                  onChanged: (value) => _durationMinutes = int.tryParse(value),
+                ),
               ],
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, size: 18, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'This is a school default, not a fixed timetable.',
+                        style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 10),
+                Text(_error!, style: TextStyle(color: scheme.error, fontSize: 12)),
+              ],
+              const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 height: 52,
                 child: FilledButton(
-                  onPressed: _saving || _templateSourceId == null
-                      ? null
-                      : () => _start(context, fromTemplate: true),
-                  child: const Text('Use curriculum template'),
+                  onPressed: _saving ? null : () => _save(context),
+                  child: _saving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Save plan'),
                 ),
               ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: _saving ? null : () => _start(context, fromTemplate: false),
-                  child: const Text('Build from school subjects'),
+              if (widget.plan != null) ...[
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      widget.onOpenFullEditor(widget.plan!);
+                    },
+                    child: const Text('Refine subjects & classes'),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -409,55 +629,108 @@ class _StartPlanSheetState extends State<_StartPlanSheet> {
     );
   }
 
-  Future<void> _start(BuildContext context, {required bool fromTemplate}) async {
-    setState(() => _saving = true);
+  Future<void> _save(BuildContext context) async {
+    if (_selectedSubjectIds.isEmpty) {
+      setState(() => _error = 'Select at least one subject for this plan.');
+      return;
+    }
+    final rawHours = _totalWeeklyHours.text.trim();
+    int? totalHours;
+    if (rawHours.isNotEmpty) {
+      totalHours = int.tryParse(rawHours);
+    }
+    if (totalHours == null || totalHours <= 0) {
+      setState(() => _error = 'Enter a positive number of total weekly hours.');
+      return;
+    }
+    if (_customDuration) {
+      final rawDuration = _customDurationController.text.trim();
+      _durationMinutes = rawDuration.isEmpty ? null : int.tryParse(rawDuration);
+      if (_durationMinutes != null && _durationMinutes! <= 0) {
+        setState(() => _error = 'Enter a positive custom duration, or leave it blank.');
+        return;
+      }
+    }
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
+    final structureBloc = context.read<StructureBloc>();
     final auth = context.read<AuthBloc>().state;
     final userId = auth is AuthAuthenticated ? auth.user.id : '';
     try {
-      final plan = TeachingPlan(
-        id: const Uuid().v4(),
-        schoolId: '',
-        educationLevelId: widget.level.id,
-        academicYearId: widget.academicYearId,
-        templateSourceId: fromTemplate ? (_templateSourceId ?? '') : '',
-        createdBy: userId,
-        updatedBy: userId,
-      );
-      await widget.repository.savePlan(plan);
-      if (fromTemplate && _templateSourceId != null) {
-        final sourceSubjects =
-            await widget.repository.watchPlanSubjects(_templateSourceId!).first;
-        if (sourceSubjects.isNotEmpty) {
-          await widget.repository.saveSubjects([
-            for (final subject in sourceSubjects)
-              TeachingPlanSubject(
-                id: const Uuid().v4(),
-                schoolId: '',
-                planId: plan.id,
-                subjectId: subject.subjectId,
-                isCore: subject.isCore,
-                weeklyLessons: subject.weeklyLessons,
-                order: subject.order,
-              ),
-          ]);
-        }
+      var plan = widget.plan;
+      if (plan == null) {
+        plan = TeachingPlan(
+          id: const Uuid().v4(),
+          schoolId: '',
+          educationLevelId: widget.level.id,
+          academicYearId: widget.academicYearId,
+          createdBy: userId,
+          updatedBy: userId,
+          totalWeeklyHours: totalHours,
+          defaultLessonDurationMinutes: _durationMinutes,
+        );
+        await widget.repository.savePlan(plan);
+      } else {
+        await widget.repository.savePlanSummary(
+          plan.id,
+          totalWeeklyHours: totalHours,
+          defaultLessonDurationMinutes: _durationMinutes,
+        );
+        plan = plan.copyWith(
+          totalWeeklyHours: totalHours,
+          defaultLessonDurationMinutes: _durationMinutes,
+        );
       }
+
+      final existingSubjects = await widget.repository.watchPlanSubjects(plan.id).first;
+      final existingBySubjectId = {for (final s in existingSubjects) s.subjectId: s};
+      final toAdd = _selectedSubjectIds
+          .where((id) => !existingBySubjectId.containsKey(id))
+          .toList();
+      if (toAdd.isNotEmpty) {
+        await widget.repository.saveSubjects([
+          for (final subjectId in toAdd)
+            TeachingPlanSubject(
+              id: const Uuid().v4(),
+              schoolId: '',
+              planId: plan.id,
+              subjectId: subjectId,
+              order: existingSubjects.length + toAdd.indexOf(subjectId),
+            ),
+        ]);
+      }
+      final toRemove = existingBySubjectId.keys
+          .where((id) => !_selectedSubjectIds.contains(id))
+          .toList();
+      for (final subjectId in toRemove) {
+        await widget.repository.removeSubject(plan.id, subjectId);
+      }
+
+      for (final subjectId in _selectedSubjectIds) {
+        final subject = widget.structure.subjects
+            .where((s) => s.id == subjectId)
+            .firstOrNull;
+        if (subject == null || subject.assignedLevelIds.contains(widget.level.id)) {
+          continue;
+        }
+        structureBloc.add(
+          SaveSubjectRequested(
+            subject.copyWith(
+              assignedLevelIds: [...subject.assignedLevelIds, widget.level.id],
+            ),
+          ),
+        );
+      }
+
       if (!mounted) return;
       navigator.pop();
-      navigator.push(
-        MaterialPageRoute(
-          builder: (_) => TeachingPlanEditorScreen(
-            repository: widget.repository,
-            plan: plan,
-            level: widget.level,
-            structure: widget.structure,
-          ),
-        ),
-      );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not start plan: $error')));
+      messenger.showSnackBar(SnackBar(content: Text('Could not save plan: $error')));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

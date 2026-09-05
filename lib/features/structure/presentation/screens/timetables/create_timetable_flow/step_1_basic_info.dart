@@ -92,8 +92,10 @@ class _Step1BasicInfoState extends State<Step1BasicInfo> {
           items: state.academicYears
               .map((y) => DropdownMenuItem(value: y.id, child: Text(y.name)))
               .toList(),
-          onChanged: (v) =>
-              setState(() => widget.draft.academicYearId = v ?? ''),
+          onChanged: (v) => setState(() {
+            widget.draft.academicYearId = v ?? '';
+            widget.draft.termId = '';
+          }),
         ),
         const SizedBox(height: AppSpacing.m),
         _Dropdown<String>(
@@ -186,8 +188,13 @@ class _Dropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Guard against a stale `value` that no longer appears in `items` (e.g.
+    // the class became inactive, or the term belongs to a different
+    // academic year) - DropdownButtonFormField asserts if the value isn't
+    // one of its items, which would otherwise crash this step.
+    final safeValue = items.any((item) => item.value == value) ? value : null;
     return DropdownButtonFormField<T>(
-      initialValue: value,
+      initialValue: safeValue,
       decoration: InputDecoration(label: Text(required ? '$label *' : label)),
       items: items,
       onChanged: onChanged,

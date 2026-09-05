@@ -268,4 +268,72 @@ void main() {
     overrides = await repo.watchClassOverrides('plan-1').first;
     expect(overrides, isEmpty);
   });
+
+  test('savePlanSummary sets total weekly hours and default lesson duration', () async {
+    final firestore = FakeFirebaseFirestore();
+    final repo = _repo(firestore, 'school-a');
+    await repo.savePlan(
+      const TeachingPlan(
+        id: 'plan-1',
+        schoolId: 'school-a',
+        educationLevelId: 'level-1',
+        academicYearId: 'year-1',
+      ),
+    );
+
+    await repo.savePlanSummary(
+      'plan-1',
+      totalWeeklyHours: 25,
+      defaultLessonDurationMinutes: 40,
+    );
+
+    final plan = (await repo.watchPlans().first).single;
+    expect(plan.totalWeeklyHours, 25);
+    expect(plan.defaultLessonDurationMinutes, 40);
+  });
+
+  test('savePlanSummary rejects a non-positive total weekly hours', () async {
+    final firestore = FakeFirebaseFirestore();
+    final repo = _repo(firestore, 'school-a');
+    await repo.savePlan(
+      const TeachingPlan(
+        id: 'plan-1',
+        schoolId: 'school-a',
+        educationLevelId: 'level-1',
+        academicYearId: 'year-1',
+      ),
+    );
+
+    expect(
+      () => repo.savePlanSummary(
+        'plan-1',
+        totalWeeklyHours: 0,
+        defaultLessonDurationMinutes: null,
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
+
+  test('savePlanSummary rejects a plan from another school', () async {
+    final firestore = FakeFirebaseFirestore();
+    final ownerRepo = _repo(firestore, 'school-a');
+    await ownerRepo.savePlan(
+      const TeachingPlan(
+        id: 'plan-1',
+        schoolId: 'school-a',
+        educationLevelId: 'level-1',
+        academicYearId: 'year-1',
+      ),
+    );
+
+    final otherSchoolRepo = _repo(firestore, 'school-b');
+    expect(
+      () => otherSchoolRepo.savePlanSummary(
+        'plan-1',
+        totalWeeklyHours: 20,
+        defaultLessonDurationMinutes: null,
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
 }

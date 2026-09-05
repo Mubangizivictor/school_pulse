@@ -54,13 +54,18 @@ service firebase.storage {
          firestore.get(/databases/(default)/documents/institution_memberships/$(request.auth.uid + '_' + institutionId)).data.status == 'active')
       );
     }
-    // Any active member of the institution (not just a fixed role list) can
-    // manage institution branding — role-based gating on top of tenant
-    // membership was dropped so this can't drift out of sync with who the
-    // Flutter app actually lets attempt the upload. Fine-grained role
-    // restrictions belong to the SaaS-owner tier, not per-tenant assets.
+    // School identity/branding (name, logo, badge) is School Admin-tier
+    // territory, not any-staff territory - a general teacher account must
+    // not be able to overwrite the institution's logo. Mirrors the Firestore
+    // side's schoolAcademicAdmin() gate on schools/{id}/config/institution_profile.
     function canManageInstitutionBranding(schoolId) {
-      return isActiveInstitutionMember(schoolId);
+      return isActiveInstitutionMember(schoolId) && (
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role in
+          ['schoolAdmin', 'headTeacher', 'deputyHead', 'director', 'deanOfStudies'] ||
+        (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles is list &&
+         firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.roles.hasAny(
+           ['schoolAdmin', 'headTeacher', 'deputyHead', 'director', 'deanOfStudies']))
+      );
     }
     function canAccessExamFiles(institutionId) {
       // Print officers may download controlled files too - that is the

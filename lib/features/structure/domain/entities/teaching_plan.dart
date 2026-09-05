@@ -26,6 +26,15 @@ class TeachingPlan extends Equatable {
   final String updatedBy;
   final DateTime? updatedAt;
 
+  /// Optional level-wide summary fields set from the simplified "Set up
+  /// plan" sheet: a single total weekly lesson load for the whole plan and
+  /// an optional default lesson duration, both purely informational school
+  /// defaults - not a fixed timetable. Independent of the per-subject
+  /// [TeachingPlanSubject.weeklyLessons] figures, which remain the
+  /// authoritative per-subject breakdown when set.
+  final int? totalWeeklyHours;
+  final int? defaultLessonDurationMinutes;
+
   const TeachingPlan({
     required this.id,
     required this.schoolId,
@@ -38,6 +47,8 @@ class TeachingPlan extends Equatable {
     this.createdAt,
     this.updatedBy = '',
     this.updatedAt,
+    this.totalWeeklyHours,
+    this.defaultLessonDurationMinutes,
   });
 
   TeachingPlan copyWith({
@@ -52,6 +63,10 @@ class TeachingPlan extends Equatable {
     DateTime? createdAt,
     String? updatedBy,
     DateTime? updatedAt,
+    int? totalWeeklyHours,
+    bool clearTotalWeeklyHours = false,
+    int? defaultLessonDurationMinutes,
+    bool clearDefaultLessonDurationMinutes = false,
   }) {
     return TeachingPlan(
       id: id ?? this.id,
@@ -65,6 +80,12 @@ class TeachingPlan extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       updatedBy: updatedBy ?? this.updatedBy,
       updatedAt: updatedAt ?? this.updatedAt,
+      totalWeeklyHours: clearTotalWeeklyHours
+          ? null
+          : (totalWeeklyHours ?? this.totalWeeklyHours),
+      defaultLessonDurationMinutes: clearDefaultLessonDurationMinutes
+          ? null
+          : (defaultLessonDurationMinutes ?? this.defaultLessonDurationMinutes),
     );
   }
 
@@ -81,6 +102,8 @@ class TeachingPlan extends Equatable {
     createdAt,
     updatedBy,
     updatedAt,
+    totalWeeklyHours,
+    defaultLessonDurationMinutes,
   ];
 }
 

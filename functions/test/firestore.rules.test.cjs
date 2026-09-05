@@ -1233,6 +1233,24 @@ describe('Structure Phase 2', () => {
     ));
   });
 
+  test('institution_profile: only School Admin-tier roles may write it, a general staff account cannot', async () => {
+    await assertSucceeds(setDoc(
+      doc(dbFor('adminA'), 'schools/schoolA/config/institution_profile'),
+      { name: 'Greenwood Primary' },
+    ));
+    // A plain teacher must not be able to rewrite the school's identity -
+    // institution_profile is deliberately stricter than the other config
+    // docs under schools/{schoolId}/config, which any staff may write.
+    await assertFails(setDoc(
+      doc(dbFor('teacherA'), 'schools/schoolA/config/institution_profile'),
+      { name: 'Hacked by teacher' },
+    ));
+    await assertFails(setDoc(
+      doc(dbFor('teacherB'), 'schools/schoolA/config/institution_profile'),
+      { name: 'Hacked cross-school' },
+    ));
+  });
+
   test('an unauthenticated read of config is denied', async () => {
     await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'schools/schoolA/config/feature_toggles')));
   });
@@ -1320,6 +1338,29 @@ describe('Phase 3.5 tenant-lock hardening', () => {
     await assertFails(setDoc(
       doc(dbFor('teacherB'), 'subjects', 'subjectB'),
       { schoolId: 'schoolA', name: 'Cross-tenant subject' },
+    ));
+  });
+});
+
+describe('users/{uid} self-service lastActiveAt heartbeat (4-month idle-logout window)', () => {
+  test('a staff member can bump only their own lastActiveAt', async () => {
+    await assertSucceeds(updateDoc(
+      doc(dbFor('teacherA'), 'users', 'teacherA'),
+      { lastActiveAt: new Date() },
+    ));
+  });
+
+  test('a staff member cannot bump another user\'s lastActiveAt', async () => {
+    await assertFails(updateDoc(
+      doc(dbFor('teacherA'), 'users', 'otherTeacherA'),
+      { lastActiveAt: new Date() },
+    ));
+  });
+
+  test('lastActiveAt cannot be combined with any other field in the same write', async () => {
+    await assertFails(updateDoc(
+      doc(dbFor('teacherA'), 'users', 'teacherA'),
+      { lastActiveAt: new Date(), roles: ['schoolAdmin'] },
     ));
   });
 });
