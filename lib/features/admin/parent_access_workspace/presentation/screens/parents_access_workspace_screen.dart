@@ -20,6 +20,7 @@ import '../widgets/parent_row_tile.dart';
 import '../widgets/summary_count_cards.dart';
 import '../widgets/web/codes_needing_attention_panel.dart';
 import '../widgets/web/parent_access_data_table.dart';
+import '../widgets/web/parent_access_pagination_footer.dart';
 import '../widgets/web/parent_access_side_rail.dart';
 import '../widgets/web/parent_access_toolbar.dart';
 
@@ -366,7 +367,7 @@ class _PhoneLayout extends StatelessWidget {
                 tabs: const [Tab(text: 'Parents'), Tab(text: 'Access codes')],
               ),
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: SummaryCountCards(
                   data: SummaryCountData(
                     linkedParents: state.linkedParentsCount,
@@ -375,11 +376,40 @@ class _PhoneLayout extends StatelessWidget {
                   ),
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: TextField(
+                  onChanged: (q) => context.read<ParentsAccessCubit>().setSearchQuery(q),
+                  decoration: InputDecoration(
+                    hintText: 'Search by name, phone, or learner...',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    isDense: true,
+                    filled: true,
+                    fillColor: AppColors.surfaceContainer(context),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: AppColors.border(context)),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: ParentAccessFilterChips(
+                    selected: state.filter,
+                    onChanged: (f) => context.read<ParentsAccessCubit>().setFilter(f),
+                  ),
+                ),
+              ),
               if (!bannerDismissed)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: ParentAccessInfoBanner(onDismiss: onDismissBanner),
                 ),
+              const SizedBox(height: 12),
               Expanded(
                 child: _StateBody(
                   state: state,
@@ -598,7 +628,7 @@ class _TabletLayout extends StatelessWidget {
                         GridView.builder(
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            childAspectRatio: 4,
+                            childAspectRatio: 3.0,
                           ),
                           itemCount: state.filteredRows.length,
                           itemBuilder: (context, index) =>
@@ -721,18 +751,32 @@ class _WebLayout extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
-                              child: rows.isEmpty
-                                  ? const _EmptyRows(message: 'No parents match your search or filter.')
-                                  : SingleChildScrollView(
-                                      child: ParentAccessDataTable(
-                                        rows: rows,
-                                        showCodeStatusColumn:
-                                            tabController.index == 1,
-                                        sortColumn: sortColumn,
-                                        sortAscending: sortAscending,
-                                        onSort: onSort,
-                                      ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: rows.isEmpty
+                                        ? const _EmptyRows(message: 'No parents match your search or filter.')
+                                        : SingleChildScrollView(
+                                            child: ParentAccessDataTable(
+                                              rows: rows,
+                                              sortColumn: sortColumn,
+                                              sortAscending: sortAscending,
+                                              onSort: onSort,
+                                            ),
+                                          ),
+                                  ),
+                                  if (rows.isNotEmpty)
+                                    ParentAccessPaginationFooter(
+                                      shownCount: rows.length,
+                                      totalCount: state.invites.length,
+                                      pageSize: ParentsAccessCubit.pageSize,
+                                      hasNextPage: state.nextCursor != null,
+                                      isLoadingMore: state.isLoadingMore,
+                                      onLoadMore: () => context.read<ParentsAccessCubit>().loadNextPage(),
                                     ),
+                                ],
+                              ),
                             ),
                             const SizedBox(width: 16),
                             CodesNeedingAttentionPanel(

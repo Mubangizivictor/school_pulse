@@ -24,6 +24,24 @@ class ParentRowTile extends StatelessWidget {
     return (first + last).toUpperCase();
   }
 
+  // A deterministic pastel per name (not per row index), so the same parent
+  // always gets the same avatar color across reloads/pagination - matches
+  // the reference screenshot's varied green/purple/amber/pink/blue avatars
+  // rather than one flat grey for every row.
+  static const _palette = [
+    Color(0xFFDCF5E3), // green
+    Color(0xFFE6E1F9), // purple
+    Color(0xFFFCEEDC), // amber
+    Color(0xFFFBE1E8), // pink
+    Color(0xFFDCEBFB), // blue
+  ];
+
+  Color _avatarColor(BuildContext context) {
+    if (invite.parentName.isEmpty) return AppColors.surfaceContainerHigh(context);
+    final index = invite.parentName.codeUnits.fold<int>(0, (a, b) => a + b) % _palette.length;
+    return _palette[index];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -38,7 +56,7 @@ class ParentRowTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: AppColors.surfaceContainerHigh(context),
+                backgroundColor: _avatarColor(context),
                 child: Text(
                   _initials,
                   style: TextStyle(
@@ -72,14 +90,12 @@ class ParentRowTile extends StatelessWidget {
                 ),
               ),
               ParentAccessStatusChip(invite: invite),
-              if (onTap != null) ...[
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.chevron_right,
-                  size: 20,
-                  color: AppColors.textMuted(context),
-                ),
-              ],
+              const SizedBox(width: 4),
+              Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: AppColors.textMuted(context),
+              ),
             ],
           ),
         ),

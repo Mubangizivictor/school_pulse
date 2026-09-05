@@ -7,14 +7,13 @@ import '../status_chip.dart';
 
 enum ParentAccessSortColumn { name, phone, learners, status }
 
-/// Sortable web table shared by both tabs - [showCodeStatusColumn] switches
-/// the trailing status label vocabulary between the Parents tab (simple
-/// Linked/Revoked) and the Access-codes tab (Linked/Pending/Expiring
-/// soon/Revoked), matching the two reference screenshots' distinct copy for
-/// the same underlying invite status.
+/// Sortable web table matching the reference screenshot's five columns:
+/// Parent | Phone | Linked learners | Portal access (pill badge) | Latest
+/// code status (dot + label). Both status columns always render - the
+/// reference shows both together, one summarizing sign-in access, the other
+/// the underlying invite's code state.
 class ParentAccessDataTable extends StatelessWidget {
   final List<ParentAccessInvite> rows;
-  final bool showCodeStatusColumn;
   final ParentAccessSortColumn sortColumn;
   final bool sortAscending;
   final ValueChanged<ParentAccessSortColumn> onSort;
@@ -23,7 +22,6 @@ class ParentAccessDataTable extends StatelessWidget {
   const ParentAccessDataTable({
     super.key,
     required this.rows,
-    this.showCodeStatusColumn = false,
     this.sortColumn = ParentAccessSortColumn.name,
     this.sortAscending = true,
     required this.onSort,
@@ -66,8 +64,9 @@ class ParentAccessDataTable extends StatelessWidget {
             label: const Text('Linked learners'),
             onSort: (_, __) => onSort(ParentAccessSortColumn.learners),
           ),
+          const DataColumn(label: Text('Portal access')),
           DataColumn(
-            label: Text(showCodeStatusColumn ? 'Latest code status' : 'Portal access'),
+            label: const Text('Latest code status'),
             onSort: (_, __) => onSort(ParentAccessSortColumn.status),
           ),
           const DataColumn(label: Text('')),
@@ -79,17 +78,57 @@ class ParentAccessDataTable extends StatelessWidget {
               DataCell(Text(invite.parentName)),
               DataCell(Text(invite.maskedPhone)),
               DataCell(Text('${invite.learnerCount} learner${invite.learnerCount == 1 ? '' : 's'}')),
-              DataCell(
-                showCodeStatusColumn
-                    ? AccessCodeStatusChip(invite: invite)
-                    : ParentAccessStatusChip(invite: invite),
-              ),
+              DataCell(_PortalAccessPill(invite: invite)),
+              DataCell(AccessCodeStatusChip(invite: invite)),
               DataCell(
                 Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted(context)),
               ),
             ],
           );
         }).toList(),
+      ),
+    );
+  }
+}
+
+/// Filled pill badge (Active/Pending/Revoked) for the "Portal access"
+/// column - visually distinct from the dot+label "Latest code status"
+/// column, matching the reference's two different status treatments.
+class _PortalAccessPill extends StatelessWidget {
+  final ParentAccessInvite invite;
+
+  const _PortalAccessPill({required this.invite});
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color, surface) = switch (invite.status) {
+      ParentInviteStatus.revoked => (
+          'Revoked',
+          AppColors.danger(context),
+          AppColors.dangerSurface(context),
+        ),
+      ParentInviteStatus.expired => (
+          'Revoked',
+          AppColors.danger(context),
+          AppColors.dangerSurface(context),
+        ),
+      ParentInviteStatus.active when invite.expiringSoon => (
+          'Pending',
+          AppColors.warning(context),
+          AppColors.warningSurface(context),
+        ),
+      ParentInviteStatus.active => (
+          'Active',
+          AppColors.success(context),
+          AppColors.successSurface(context),
+        ),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(999)),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
       ),
     );
   }

@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 
-/// Minimal web side rail for the workspace - a lightweight NavigationRail
-/// wrapper, not a repo-wide nav shell (this screen already sits inside
-/// StaffShell on mobile; on web width this rail is purely local chrome so
-/// the Parents/Access-codes surface reads like the reference desktop
-/// screenshot rather than reusing the mobile bottom nav at desktop width).
+/// Web side rail matching the reference desktop screenshot: branded header
+/// (shield + school name + "Academy" subtitle), Home/Students/Staff/
+/// Parents(active)/Reports/Notifications/Settings, then Help/Logout pinned
+/// to the bottom below a divider. This screen already sits inside StaffShell
+/// on mobile - this rail is purely local chrome so the workspace reads like
+/// the reference at desktop width rather than reusing the mobile bottom nav.
 class ParentAccessSideRail extends StatelessWidget {
   final String schoolName;
 
@@ -23,17 +24,37 @@ class ParentAccessSideRail extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.shield_outlined, color: AppColors.textPrimary(context)),
-              const SizedBox(width: 8),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.primary(context),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.shield_outlined, size: 18, color: AppColors.background(context)),
+              ),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  schoolName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary(context),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      schoolName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+                    Text(
+                      'Academy',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: AppColors.textMuted(context)),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -42,12 +63,14 @@ class ParentAccessSideRail extends StatelessWidget {
           _NavItem(icon: Icons.home_outlined, label: 'Home'),
           _NavItem(icon: Icons.groups_outlined, label: 'Students'),
           _NavItem(icon: Icons.badge_outlined, label: 'Staff'),
-          _NavItem(
-            icon: Icons.family_restroom_outlined,
-            label: 'Parents',
-            selected: true,
-          ),
+          _NavItem(icon: Icons.family_restroom_outlined, label: 'Parents', selected: true),
           _NavItem(icon: Icons.bar_chart_outlined, label: 'Reports'),
+          _NavItem(icon: Icons.notifications_outlined, label: 'Notifications'),
+          _NavItem(icon: Icons.settings_outlined, label: 'Settings'),
+          const Spacer(),
+          Divider(color: AppColors.border(context), height: 24),
+          _NavItem(icon: Icons.help_outline, label: 'Help'),
+          _NavItem(icon: Icons.logout, label: 'Logout'),
         ],
       ),
     );
@@ -80,13 +103,16 @@ class _NavItem extends StatelessWidget {
                 : AppColors.textSecondary(context),
           ),
           const SizedBox(width: 10),
-          Text(
-            label,
-            style: TextStyle(
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-              color: selected
-                  ? AppColors.background(context)
-                  : AppColors.textSecondary(context),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected
+                    ? AppColors.background(context)
+                    : AppColors.textSecondary(context),
+              ),
             ),
           ),
         ],

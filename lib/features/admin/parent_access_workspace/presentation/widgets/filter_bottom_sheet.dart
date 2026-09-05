@@ -27,10 +27,25 @@ class ParentAccessFilterChips extends StatelessWidget {
   Widget build(BuildContext context) {
     return Wrap(
       spacing: 8,
+      runSpacing: 8,
       children: kParentAccessFilterLabels.entries.map((entry) {
         final isSelected = entry.key == selected;
+        final dotColor = _dotColorFor(context, entry.key);
         return ChoiceChip(
-          label: Text(entry.value),
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (dotColor != null) ...[
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Text(entry.value),
+            ],
+          ),
           selected: isSelected,
           onSelected: (_) => onChanged(entry.key),
           selectedColor: AppColors.primary(context),
@@ -45,6 +60,18 @@ class ParentAccessFilterChips extends StatelessWidget {
         );
       }).toList(),
     );
+  }
+
+  Color? _dotColorFor(BuildContext context, ParentsAccessFilter filter) {
+    switch (filter) {
+      case ParentsAccessFilter.all:
+        return null;
+      case ParentsAccessFilter.linked:
+        return AppColors.success(context);
+      case ParentsAccessFilter.pending:
+      case ParentsAccessFilter.expiring:
+        return AppColors.warning(context);
+    }
   }
 }
 
