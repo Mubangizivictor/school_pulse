@@ -2771,53 +2771,63 @@ const AcademicTermIsarSchema = CollectionSchema(
       name: r'academicYearId',
       type: IsarType.string,
     ),
-    r'endDate': PropertySchema(
+    r'closureEndDate': PropertySchema(
       id: 1,
+      name: r'closureEndDate',
+      type: IsarType.dateTime,
+    ),
+    r'closureStartDate': PropertySchema(
+      id: 2,
+      name: r'closureStartDate',
+      type: IsarType.dateTime,
+    ),
+    r'endDate': PropertySchema(
+      id: 3,
       name: r'endDate',
       type: IsarType.dateTime,
     ),
     r'isArchived': PropertySchema(
-      id: 2,
+      id: 4,
       name: r'isArchived',
       type: IsarType.bool,
     ),
     r'isConfirmed': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'isConfirmed',
       type: IsarType.bool,
     ),
     r'isCurrent': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'isCurrent',
       type: IsarType.bool,
     ),
     r'name': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'name',
       type: IsarType.string,
     ),
     r'order': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'order',
       type: IsarType.long,
     ),
     r'periodType': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'periodType',
       type: IsarType.string,
     ),
     r'schoolId': PropertySchema(
-      id: 8,
+      id: 10,
       name: r'schoolId',
       type: IsarType.string,
     ),
     r'startDate': PropertySchema(
-      id: 9,
+      id: 11,
       name: r'startDate',
       type: IsarType.dateTime,
     ),
     r'termId': PropertySchema(
-      id: 10,
+      id: 12,
       name: r'termId',
       type: IsarType.string,
     )
@@ -2871,16 +2881,18 @@ void _academicTermIsarSerialize(
   Map<Type, List<int>> allOffsets,
 ) {
   writer.writeString(offsets[0], object.academicYearId);
-  writer.writeDateTime(offsets[1], object.endDate);
-  writer.writeBool(offsets[2], object.isArchived);
-  writer.writeBool(offsets[3], object.isConfirmed);
-  writer.writeBool(offsets[4], object.isCurrent);
-  writer.writeString(offsets[5], object.name);
-  writer.writeLong(offsets[6], object.order);
-  writer.writeString(offsets[7], object.periodType);
-  writer.writeString(offsets[8], object.schoolId);
-  writer.writeDateTime(offsets[9], object.startDate);
-  writer.writeString(offsets[10], object.termId);
+  writer.writeDateTime(offsets[1], object.closureEndDate);
+  writer.writeDateTime(offsets[2], object.closureStartDate);
+  writer.writeDateTime(offsets[3], object.endDate);
+  writer.writeBool(offsets[4], object.isArchived);
+  writer.writeBool(offsets[5], object.isConfirmed);
+  writer.writeBool(offsets[6], object.isCurrent);
+  writer.writeString(offsets[7], object.name);
+  writer.writeLong(offsets[8], object.order);
+  writer.writeString(offsets[9], object.periodType);
+  writer.writeString(offsets[10], object.schoolId);
+  writer.writeDateTime(offsets[11], object.startDate);
+  writer.writeString(offsets[12], object.termId);
 }
 
 AcademicTermIsar _academicTermIsarDeserialize(
@@ -2891,17 +2903,19 @@ AcademicTermIsar _academicTermIsarDeserialize(
 ) {
   final object = AcademicTermIsar();
   object.academicYearId = reader.readString(offsets[0]);
-  object.endDate = reader.readDateTime(offsets[1]);
+  object.closureEndDate = reader.readDateTimeOrNull(offsets[1]);
+  object.closureStartDate = reader.readDateTimeOrNull(offsets[2]);
+  object.endDate = reader.readDateTime(offsets[3]);
   object.id = id;
-  object.isArchived = reader.readBool(offsets[2]);
-  object.isConfirmed = reader.readBool(offsets[3]);
-  object.isCurrent = reader.readBool(offsets[4]);
-  object.name = reader.readString(offsets[5]);
-  object.order = reader.readLong(offsets[6]);
-  object.periodType = reader.readString(offsets[7]);
-  object.schoolId = reader.readString(offsets[8]);
-  object.startDate = reader.readDateTime(offsets[9]);
-  object.termId = reader.readString(offsets[10]);
+  object.isArchived = reader.readBool(offsets[4]);
+  object.isConfirmed = reader.readBool(offsets[5]);
+  object.isCurrent = reader.readBool(offsets[6]);
+  object.name = reader.readString(offsets[7]);
+  object.order = reader.readLong(offsets[8]);
+  object.periodType = reader.readString(offsets[9]);
+  object.schoolId = reader.readString(offsets[10]);
+  object.startDate = reader.readDateTime(offsets[11]);
+  object.termId = reader.readString(offsets[12]);
   return object;
 }
 
@@ -2915,24 +2929,28 @@ P _academicTermIsarDeserializeProp<P>(
     case 0:
       return (reader.readString(offset)) as P;
     case 1:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 2:
-      return (reader.readBool(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 3:
-      return (reader.readBool(offset)) as P;
+      return (reader.readDateTime(offset)) as P;
     case 4:
       return (reader.readBool(offset)) as P;
     case 5:
-      return (reader.readString(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 6:
-      return (reader.readLong(offset)) as P;
+      return (reader.readBool(offset)) as P;
     case 7:
       return (reader.readString(offset)) as P;
     case 8:
-      return (reader.readString(offset)) as P;
+      return (reader.readLong(offset)) as P;
     case 9:
-      return (reader.readDateTime(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 10:
+      return (reader.readString(offset)) as P;
+    case 11:
+      return (reader.readDateTime(offset)) as P;
+    case 12:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -3265,6 +3283,154 @@ extension AcademicTermIsarQueryFilter
       return query.addFilterCondition(FilterCondition.greaterThan(
         property: r'academicYearId',
         value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      closureEndDateIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'closureEndDate',
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      closureEndDateIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'closureEndDate',
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      closureEndDateEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'closureEndDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      closureEndDateGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'closureEndDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      closureEndDateLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'closureEndDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      closureEndDateBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'closureEndDate',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      closureStartDateIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'closureStartDate',
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      closureStartDateIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'closureStartDate',
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      closureStartDateEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'closureStartDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      closureStartDateGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'closureStartDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      closureStartDateLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'closureStartDate',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterFilterCondition>
+      closureStartDateBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'closureStartDate',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
       ));
     });
   }
@@ -4091,6 +4257,34 @@ extension AcademicTermIsarQuerySortBy
   }
 
   QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      sortByClosureEndDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'closureEndDate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      sortByClosureEndDateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'closureEndDate', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      sortByClosureStartDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'closureStartDate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      sortByClosureStartDateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'closureStartDate', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
       sortByEndDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'endDate', Sort.asc);
@@ -4242,6 +4436,34 @@ extension AcademicTermIsarQuerySortThenBy
       thenByAcademicYearIdDesc() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'academicYearId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      thenByClosureEndDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'closureEndDate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      thenByClosureEndDateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'closureEndDate', Sort.desc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      thenByClosureStartDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'closureStartDate', Sort.asc);
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QAfterSortBy>
+      thenByClosureStartDateDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'closureStartDate', Sort.desc);
     });
   }
 
@@ -4408,6 +4630,20 @@ extension AcademicTermIsarQueryWhereDistinct
   }
 
   QueryBuilder<AcademicTermIsar, AcademicTermIsar, QDistinct>
+      distinctByClosureEndDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'closureEndDate');
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QDistinct>
+      distinctByClosureStartDate() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'closureStartDate');
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, AcademicTermIsar, QDistinct>
       distinctByEndDate() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'endDate');
@@ -4490,6 +4726,20 @@ extension AcademicTermIsarQueryProperty
       academicYearIdProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'academicYearId');
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, DateTime?, QQueryOperations>
+      closureEndDateProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'closureEndDate');
+    });
+  }
+
+  QueryBuilder<AcademicTermIsar, DateTime?, QQueryOperations>
+      closureStartDateProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'closureStartDate');
     });
   }
 

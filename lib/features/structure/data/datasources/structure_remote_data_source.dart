@@ -59,6 +59,7 @@ abstract class StructureRemoteDataSource {
   Future<void> saveSubjects(List<Subject> subjects);
   Future<void> deleteSubject(String subjectId);
   Future<void> archiveSubject(String subjectId);
+  Future<void> reorderSubjects(List<Subject> orderedSubjects);
 
   Stream<List<Department>> watchDepartments(String schoolId);
   Future<void> saveDepartment(Department department);
@@ -73,6 +74,7 @@ abstract class StructureRemoteDataSource {
   );
   Future<void> deleteDepartment(String departmentId);
   Future<void> archiveDepartment(String departmentId);
+  Future<void> reorderDepartments(List<Department> orderedDepartments);
 
   Stream<List<StaffDesignation>> watchDesignations(String schoolId);
   Future<void> saveDesignation(StaffDesignation designation);
@@ -590,6 +592,8 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       ),
       isArchived: map['isArchived'] ?? false,
       isConfirmed: map['isConfirmed'] ?? false,
+      closureStartDate: (map['closureStartDate'] as Timestamp?)?.toDate(),
+      closureEndDate: (map['closureEndDate'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -609,6 +613,12 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'isCurrent': e.isCurrent,
     'periodType': e.periodType.name,
     'isArchived': e.isArchived,
+    'closureStartDate': e.closureStartDate == null
+        ? null
+        : Timestamp.fromDate(e.closureStartDate!),
+    'closureEndDate': e.closureEndDate == null
+        ? null
+        : Timestamp.fromDate(e.closureEndDate!),
   };
 
   // Classes
@@ -813,6 +823,15 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Future<void> archiveSubject(String subjectId) =>
       _subjects.doc(subjectId).update({'isActive': false});
 
+  @override
+  Future<void> reorderSubjects(List<Subject> orderedSubjects) async {
+    final batch = firestore.batch();
+    for (final subject in orderedSubjects) {
+      batch.update(_subjects.doc(subject.id), {'order': subject.order});
+    }
+    await batch.commit();
+  }
+
   Subject _subjectFromMap(String id, Map<String, dynamic> map) {
     return Subject(
       id: id,
@@ -831,6 +850,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       isActive: map['isActive'] ?? true,
       assignedLevelIds: List<String>.from(map['assignedLevelIds'] ?? const []),
       assignedClassIds: List<String>.from(map['assignedClassIds'] ?? const []),
+      order: map['order'] ?? 0,
     );
   }
 
@@ -848,6 +868,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'isActive': e.isActive,
     'assignedLevelIds': e.assignedLevelIds,
     'assignedClassIds': e.assignedClassIds,
+    'order': e.order,
   };
 
   // Departments
@@ -855,7 +876,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Stream<List<Department>> watchDepartments(String schoolId) {
     return _departments
         .where('schoolId', isEqualTo: schoolId)
-        .orderBy('name')
+        .orderBy('displayOrder')
         .snapshots()
         .map(
           (snap) =>
@@ -898,6 +919,17 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Future<void> archiveDepartment(String departmentId) =>
       _departments.doc(departmentId).update({'isActive': false});
 
+  @override
+  Future<void> reorderDepartments(List<Department> orderedDepartments) async {
+    final batch = firestore.batch();
+    for (final department in orderedDepartments) {
+      batch.update(_departments.doc(department.id), {
+        'displayOrder': department.displayOrder,
+      });
+    }
+    await batch.commit();
+  }
+
   Department _departmentFromMap(String id, Map<String, dynamic> map) {
     return Department(
       id: id,
@@ -906,6 +938,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       code: map['code'] ?? '',
       description: map['description'] ?? '',
       headOfDepartmentStaffId: map['headOfDepartmentStaffId'] ?? '',
+      displayOrder: map['displayOrder'] ?? 0,
       isActive: map['isActive'] ?? true,
     );
   }
@@ -916,6 +949,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'code': e.code,
     'description': e.description,
     'headOfDepartmentStaffId': e.headOfDepartmentStaffId,
+    'displayOrder': e.displayOrder,
     'isActive': e.isActive,
   };
 

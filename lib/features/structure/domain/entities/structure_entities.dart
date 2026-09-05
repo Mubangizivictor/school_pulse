@@ -149,6 +149,14 @@ class AcademicTerm extends Equatable {
   /// and newly-drafted terms are never silently treated as confirmed.
   final bool isConfirmed;
 
+  /// Optional single school-closure/holiday date range within this period
+  /// (e.g. a mid-term break). Both null when no closure is set; when set,
+  /// both must fall inside [startDate]..[endDate] (enforced by
+  /// [StructureIntegrityValidator]). Kept as a single pair - not a list -
+  /// because the reference UI only surfaces one closure block per period.
+  final DateTime? closureStartDate;
+  final DateTime? closureEndDate;
+
   const AcademicTerm({
     required this.id,
     required this.schoolId,
@@ -161,6 +169,8 @@ class AcademicTerm extends Equatable {
     this.periodType = AcademicPeriodType.term,
     this.isArchived = false,
     this.isConfirmed = false,
+    this.closureStartDate,
+    this.closureEndDate,
   });
 
   AcademicTerm copyWith({
@@ -175,6 +185,9 @@ class AcademicTerm extends Equatable {
     AcademicPeriodType? periodType,
     bool? isArchived,
     bool? isConfirmed,
+    DateTime? closureStartDate,
+    DateTime? closureEndDate,
+    bool clearClosure = false,
   }) {
     return AcademicTerm(
       id: id ?? this.id,
@@ -188,6 +201,12 @@ class AcademicTerm extends Equatable {
       periodType: periodType ?? this.periodType,
       isArchived: isArchived ?? this.isArchived,
       isConfirmed: isConfirmed ?? this.isConfirmed,
+      closureStartDate: clearClosure
+          ? null
+          : (closureStartDate ?? this.closureStartDate),
+      closureEndDate: clearClosure
+          ? null
+          : (closureEndDate ?? this.closureEndDate),
     );
   }
 
@@ -204,6 +223,8 @@ class AcademicTerm extends Equatable {
     periodType,
     isArchived,
     isConfirmed,
+    closureStartDate,
+    closureEndDate,
   ];
 }
 
@@ -346,6 +367,10 @@ class Subject extends Equatable {
   final List<String> assignedLevelIds;
   final List<String> assignedClassIds;
 
+  /// Display order within the tenant's subject catalogue. Zero is retained
+  /// for legacy documents, mirroring [SchoolClass.order].
+  final int order;
+
   const Subject({
     required this.id,
     required this.schoolId,
@@ -361,6 +386,7 @@ class Subject extends Equatable {
     this.isActive = true,
     this.assignedLevelIds = const [],
     this.assignedClassIds = const [],
+    this.order = 0,
   });
 
   Subject copyWith({
@@ -378,6 +404,7 @@ class Subject extends Equatable {
     bool? isActive,
     List<String>? assignedLevelIds,
     List<String>? assignedClassIds,
+    int? order,
   }) {
     return Subject(
       id: id ?? this.id,
@@ -394,6 +421,7 @@ class Subject extends Equatable {
       isActive: isActive ?? this.isActive,
       assignedLevelIds: assignedLevelIds ?? this.assignedLevelIds,
       assignedClassIds: assignedClassIds ?? this.assignedClassIds,
+      order: order ?? this.order,
     );
   }
 
@@ -413,6 +441,7 @@ class Subject extends Equatable {
     isActive,
     assignedLevelIds,
     assignedClassIds,
+    order,
   ];
 }
 

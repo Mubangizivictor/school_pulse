@@ -7,6 +7,7 @@ import '../bloc/structure_bloc.dart';
 import '../bloc/structure_state.dart';
 import '../widgets/institution_tab.dart';
 import 'institution_settings_screen.dart';
+import 'academic_calendar_step_screen.dart';
 import 'academic_structure_screen.dart';
 import 'academic_departments_screen.dart';
 import 'assessment_grading_screen.dart';
@@ -131,19 +132,12 @@ class _StructureScreenState extends State<StructureScreen> {
           );
         }
         if (_index == 2) {
-          return _WizardStepScreen(
-            title: 'Academic calendar',
-            stepNumber: _index + 1,
-            totalSteps: _steps.length,
-            continueEnabled: state.academicTerms.any(
-              (term) =>
-                  !term.isArchived &&
-                  state.academicYears.any(
-                    (year) => year.id == term.academicYearId && year.isCurrent,
-                  ),
-            ),
+          return AcademicCalendarStepScreen(
+            stepIndex: _index,
+            stepCount: _steps.length,
             onBack: () async {
               if (!await _confirmLeaveCurrentStep()) return;
+              if (!mounted) return;
               setState(() => _index--);
             },
             onContinue: () async {
@@ -151,10 +145,6 @@ class _StructureScreenState extends State<StructureScreen> {
               if (!mounted) return;
               setState(() => _index++);
             },
-            child: const AcademicStructureScreen(
-              section: 'terms',
-              showAppBar: false,
-            ),
           );
         }
         if (_index == 3) {

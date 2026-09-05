@@ -102,6 +102,24 @@ class StructureIntegrityValidator {
     return null;
   }
 
+  /// Validates an optional school-closure/holiday range within a period.
+  /// Returns null when [closureStart]/[closureEnd] are a valid range fully
+  /// inside [period]'s own start/end dates.
+  String? validateClosureRange(
+    DateTime closureStart,
+    DateTime closureEnd,
+    AcademicTerm period,
+  ) {
+    if (closureEnd.isBefore(closureStart)) {
+      return 'Closure end date must be on or after the closure start date.';
+    }
+    if (closureStart.isBefore(period.startDate) ||
+        closureEnd.isAfter(period.endDate)) {
+      return 'The closure range must fall inside ${period.name}.';
+    }
+    return null;
+  }
+
   String? validateClass(
     SchoolClass candidate, {
     required List<EducationalLevel> levels,
