@@ -24,7 +24,8 @@ class HttpsError extends Error {
 }
 const fns = require("../staff_attendance_corrections")({
   admin,
-  onCall: (h) => h,
+  onCall: (optsOrHandler, maybeHandler) =>
+    typeof optsOrHandler === "function" ? optsOrHandler : maybeHandler,
   HttpsError,
 });
 

@@ -21,6 +21,11 @@ module.exports = ({ admin, onCall, HttpsError }) => {
   const db = admin.firestore();
   const serverTime = () => admin.firestore.FieldValue.serverTimestamp();
 
+  // Every callable in this app is europe-west1; the Flutter client reaches
+  // it via FirebaseFunctions.instanceFor(region: 'europe-west1'). Must stay
+  // in sync or calls 404.
+  const CALLABLE_OPTS = { region: "europe-west1" };
+
   // HR/admin leadership only. Deputy Head can VIEW staff attendance (route
   // gate) but not correct it - same narrowing payroll uses.
   const CORRECTOR_ROLES = new Set([
@@ -252,7 +257,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
   }
 
   return {
-    correctStaffAttendance: onCall(handler),
+    correctStaffAttendance: onCall(CALLABLE_OPTS, handler),
     __test__: { CORRECTOR_ROLES, SETTABLE_STATUS, requireCorrector, handler },
   };
 };

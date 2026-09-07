@@ -15,7 +15,8 @@ admin.firestore.Timestamp = { fromDate: (d) => ({ __date: d }) };
 
 const api = moduleFactory({
   admin,
-  onCall: (handler) => handler,
+  onCall: (optsOrHandler, maybeHandler) =>
+    typeof optsOrHandler === "function" ? optsOrHandler : maybeHandler,
   HttpsError: class extends Error {
     constructor(code, message) {
       super(message);
