@@ -3,11 +3,11 @@ import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/admin/admin_dashboard_screen.dart';
 import 'package:school_pulse/features/admin/admin_staff_attendance_screen.dart';
-import 'package:school_pulse/features/admin/parent_access_workspace/presentation/screens/parents_access_workspace_screen.dart';
-import 'package:school_pulse/features/admin/presentation/pages/staff_list_page.dart';
+import 'package:school_pulse/features/admin/presentation/shell/admin_parents_section_body.dart';
 import 'package:school_pulse/features/admin/presentation/screens/admin_more_screen.dart';
 import 'package:school_pulse/features/admin/presentation/shell/admin_section.dart';
 import 'package:school_pulse/features/admin/presentation/shell/admin_fees_screen.dart';
+import 'package:school_pulse/features/admin/presentation/shell/admin_staff_section_body.dart';
 import 'package:school_pulse/features/admin/presentation/shell/admin_web_shell.dart';
 import 'package:school_pulse/features/approvals/presentation/screens/approval_center_screen.dart';
 import 'package:school_pulse/features/appointments/presentation/screens/appointments_workspace_screen.dart';
@@ -15,9 +15,10 @@ import 'package:school_pulse/features/admin/presentation/shell/admin_students_se
 
 /// Width-adaptive shell for the School Admin console.
 ///
-/// - `< 600` (mobile): the 4-tab bottom-navigation shell
-///   (**Home | Students | Attendance | More**). Sections without their own
-///   tab (including Fees) open on **More** with the section screen pushed.
+/// - `< 600` (mobile): the 5-tab bottom-navigation shell
+///   (**Home | Students | Parents | Attendance | More**). Sections without
+///   their own tab (including Fees) open on **More** with the section screen
+///   pushed. The desktop sidebar is never rendered on mobile.
 /// - `600–1023` (tablet): the two-column console with a labelled rail.
 /// - `>= 1024` (desktop): the full [AdminWebShell] — sidebar + top bar +
 ///   8 in-shell sections (including Fees) + More.
@@ -58,7 +59,8 @@ class _AdminMobileShell extends StatefulWidget {
 }
 
 /// Lets a descendant switch the visible mobile tab instead of pushing a
-/// duplicate screen. Tab indices: 0 Home · 1 Students · 2 Attendance · 3 More.
+/// duplicate screen. Tab indices:
+/// 0 Home · 1 Students · 2 Parents · 3 Attendance · 4 More.
 class AdminShellNav {
   const AdminShellNav._();
   static void goToTab(BuildContext context, int index) {
@@ -73,9 +75,9 @@ class AdminShellNav {
 Widget _mobileSectionScreen(AdminSection s) {
   switch (s) {
     case AdminSection.staff:
-      return const StaffListPage();
+      return const AdminStaffSectionBody();
     case AdminSection.parents:
-      return const ParentsAccessWorkspaceScreen();
+      return const AdminParentsSectionBody();
     case AdminSection.approvals:
       return const ApprovalCenterScreen();
     case AdminSection.appointments:
@@ -136,7 +138,7 @@ class _AdminMobileShellState extends State<_AdminMobileShell> {
   }
 
   final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(
-    4,
+    5,
     (_) => GlobalKey<NavigatorState>(),
   );
 
@@ -146,6 +148,11 @@ class _AdminMobileShellState extends State<_AdminMobileShell> {
       Icons.people_outline_rounded,
       Icons.people_alt_rounded,
       'Students',
+    ),
+    _TabSpec(
+      Icons.family_restroom_outlined,
+      Icons.family_restroom_rounded,
+      'Parents',
     ),
     _TabSpec(
       Icons.event_available_outlined,
@@ -162,8 +169,10 @@ class _AdminMobileShellState extends State<_AdminMobileShell> {
       case 1:
         return const AdminStudentsSectionBody();
       case 2:
-        return const AdminStaffAttendanceScreen();
+        return const AdminParentsSectionBody();
       case 3:
+        return const AdminStaffAttendanceScreen();
+      case 4:
       default:
         return const AdminMoreScreen();
     }
@@ -219,7 +228,7 @@ class _AdminMobileShellState extends State<_AdminMobileShell> {
         backgroundColor: AppColors.background(context),
         body: IndexedStack(
           index: _selectedIndex,
-          children: List.generate(4, _buildTabNavigator),
+          children: List.generate(_tabs.length, _buildTabNavigator),
         ),
         bottomNavigationBar: Container(
           decoration: BoxDecoration(

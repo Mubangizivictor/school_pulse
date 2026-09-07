@@ -137,7 +137,7 @@ void main() {
   });
 
   group('AdminSection mobile-tab mapping', () {
-    test('exactly the four bottom-nav sections carry a mobileTab', () {
+    test('exactly the five bottom-nav sections carry a mobileTab', () {
       final withTab = AdminSection.values
           .where((s) => s.mobileTab != null)
           .toList();
@@ -146,33 +146,54 @@ void main() {
         containsAll(<AdminSection>[
           AdminSection.home,
           AdminSection.students,
+          AdminSection.parents,
           AdminSection.attendance,
           AdminSection.more,
         ]),
       );
-      expect(withTab.length, 4);
+      expect(withTab.length, 5);
     });
 
-    test('mobileTab indices are unique and within the 4-tab bar', () {
+    test('mobileTab indices are unique and match Home/Students/Parents/'
+        'Attendance/More order', () {
+      expect(AdminSection.home.mobileTab, 0);
+      expect(AdminSection.students.mobileTab, 1);
+      expect(AdminSection.parents.mobileTab, 2);
+      expect(AdminSection.attendance.mobileTab, 3);
+      expect(AdminSection.more.mobileTab, 4);
       final tabs = AdminSection.values
           .map((s) => s.mobileTab)
           .whereType<int>()
           .toList();
       expect(tabs.toSet().length, tabs.length, reason: 'no duplicate index');
-      expect(tabs.every((t) => t >= 0 && t < 4), isTrue);
-      expect(AdminSection.moreTabIndex, 3);
+      expect(tabs.every((t) => t >= 0 && t < 5), isTrue);
+      expect(AdminSection.moreTabIndex, 4);
     });
 
     test('non-tabbed sections fall back to More', () {
       for (final s in [
         AdminSection.staff,
-        AdminSection.parents,
         AdminSection.fees,
         AdminSection.approvals,
         AdminSection.appointments,
       ]) {
         expect(s.mobileTab, isNull, reason: '$s must fall back to More');
       }
+    });
+
+    test('Parents resolves from its directory, link, and detail URLs', () {
+      expect(
+        AdminSection.fromLocation('/staff/admin/parents'),
+        AdminSection.parents,
+      );
+      expect(
+        AdminSection.fromLocation('/staff/admin/parents/link'),
+        AdminSection.parents,
+      );
+      expect(
+        AdminSection.fromLocation('/staff/admin/parents/abc123'),
+        AdminSection.parents,
+      );
     });
   });
 

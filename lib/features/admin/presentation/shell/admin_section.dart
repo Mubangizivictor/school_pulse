@@ -11,9 +11,9 @@ import 'package:flutter/material.dart';
 /// Modeled directly on `BursarSection` (lib/features/finance/presentation/
 /// shell/bursar_section.dart) — same shape, same conventions.
 ///
-/// `mobileTab` is the bottom-nav index for the four sections with a
-/// dedicated tab (Home/Students/Attendance/More). Sections with a `null`
-/// `mobileTab` are reached on mobile by opening **More** (index 3) and
+/// `mobileTab` is the bottom-nav index for the five sections with a
+/// dedicated tab (Home/Students/Parents/Attendance/More). Sections with a
+/// `null` `mobileTab` are reached on mobile by opening **More** (index 4) and
 /// pushing the section screen — so every desktop sidebar item also resolves
 /// on a phone, exactly as Bursar's own non-tabbed sections do.
 ///
@@ -44,6 +44,7 @@ enum AdminSection {
     slug: 'parents',
     label: 'Parents',
     icon: Icons.family_restroom_outlined,
+    mobileTab: 2,
   ),
   // Same divergence as staff above: the router mounts this at
   // /staff/admin/staff-attendance, not /staff/admin/attendance.
@@ -51,7 +52,7 @@ enum AdminSection {
     slug: 'attendance',
     label: 'Attendance',
     icon: Icons.event_available_outlined,
-    mobileTab: 2,
+    mobileTab: 3,
     routeSegment: 'staff-attendance',
   ),
   fees(slug: 'fees', label: 'Fees', icon: Icons.payments_outlined),
@@ -69,7 +70,7 @@ enum AdminSection {
     slug: 'more',
     label: 'More',
     icon: Icons.grid_view_outlined,
-    mobileTab: 3,
+    mobileTab: 4,
   );
 
   const AdminSection({
@@ -93,9 +94,10 @@ enum AdminSection {
 
   /// The Admin bottom-nav "More" tab index — the fallback host for sections
   /// without their own tab.
-  static const int moreTabIndex = 3;
+  static const int moreTabIndex = 4;
 
-  /// Resolve a section from a router path like `/staff/admin/parents` or
+  /// Resolve a section from a router path like `/staff/admin/parents`,
+  /// `/staff/admin/parents/link`, `/staff/admin/parents/<id>`, or
   /// `/staff/admin/students/abc123`. Returns [AdminSection.home] for the
   /// bare `/staff/admin` and [AdminSection.more] for every other admin
   /// destination (school-setup, structure/*, integrations, etc.) — the
@@ -112,7 +114,10 @@ enum AdminSection {
     if (path == '/staff/admin/users' || path.startsWith('/staff/admin/users/')) {
       return AdminSection.staff;
     }
-    if (path == '/staff/admin/parents') return AdminSection.parents;
+    if (path == '/staff/admin/parents' ||
+        path.startsWith('/staff/admin/parents/')) {
+      return AdminSection.parents;
+    }
     if (path == '/staff/admin/staff-attendance') return AdminSection.attendance;
     if (path == '/staff/admin/fees') return AdminSection.fees;
     if (path == '/staff/admin/approvals' ||

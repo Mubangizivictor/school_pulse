@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/features/admin/presentation/link_parent_wizard/link_parent_wizard_page.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/parent_offline/presentation/widgets/parent_offline_banner.dart';
@@ -21,7 +21,6 @@ import '../widgets/summary_count_cards.dart';
 import '../widgets/web/codes_needing_attention_panel.dart';
 import '../widgets/web/parent_access_data_table.dart';
 import '../widgets/web/parent_access_pagination_footer.dart';
-import '../widgets/web/parent_access_side_rail.dart';
 import '../widgets/web/parent_access_toolbar.dart';
 
 /// Two-tab "Parents & access" workspace, replacing the legacy
@@ -99,11 +98,11 @@ class _WorkspaceViewState extends State<_WorkspaceView>
   }
 
   void _openAddParentWizard(BuildContext context, String schoolId) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => LinkParentWizardPage(schoolId: schoolId),
-      ),
-    );
+    // Push the router route (not a bare MaterialPageRoute) so the Link Parent
+    // flow renders inside AdminShell's content pane - the canonical sidebar
+    // (desktop/tablet) and the Parents bottom-nav tab (mobile) stay mounted
+    // and selected across every step, Back, and the review page.
+    context.push('/staff/admin/parents/link');
   }
 
   @override
@@ -692,10 +691,12 @@ class _WebLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // No inner side rail: this body renders inside AdminWebShell's content
+    // pane, which already provides the one canonical admin sidebar. A second
+    // rail here was duplicate navigation.
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const ParentAccessSideRail(schoolName: 'School Pulse'),
         Expanded(
           child: BlocBuilder<ParentsAccessCubit, ParentsAccessState>(
             builder: (context, state) {

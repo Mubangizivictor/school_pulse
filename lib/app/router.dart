@@ -50,11 +50,7 @@ import 'package:school_pulse/features/teacher/presentation/screens/staff_panel_h
 import 'package:school_pulse/features/teacher/presentation/screens/class_teacher_more_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/class_activities_screen.dart';
 import 'package:school_pulse/core/user_roles.dart';
-import 'package:school_pulse/features/admin/presentation/pages/user_management_page.dart';
-import 'package:school_pulse/features/admin/parent_access_workspace/presentation/screens/parents_access_workspace_screen.dart';
 import 'package:school_pulse/features/admin/presentation/screens/school_setup_screen.dart';
-import 'package:school_pulse/features/admin/presentation/pages/staff_detail_screen.dart';
-import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_staff_wizard_page.dart';
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
 import 'package:school_pulse/features/admin/system_config_screen.dart';
 import 'package:school_pulse/features/integrations/presentation/integrations_center_screen.dart';
@@ -2406,6 +2402,27 @@ final router = GoRouter(
               path: 'parents',
               builder: (context, state) =>
                   const AdminShell(section: AdminSection.parents),
+              routes: [
+                // All Parents sub-screens render through AdminShell
+                // (AdminParentsSectionBody resolves the live URL) so the
+                // canonical sidebar / bottom nav stays mounted with Parents
+                // highlighted across the directory, the Link Parent flow
+                // (both steps, Back, Save draft, refresh), the review page,
+                // and the parent detail/access screen - never as a bare
+                // standalone page.
+                GoRoute(
+                  path: 'link',
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.parents),
+                ),
+                // Must stay below the literal 'link' route - declaration
+                // order matters, this wildcard would otherwise capture it.
+                GoRoute(
+                  path: ':inviteId',
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.parents),
+                ),
+              ],
             ),
             GoRoute(
               path: 'users',
@@ -2414,12 +2431,12 @@ final router = GoRouter(
               routes: [
                 GoRoute(
                   path: 'overview',
-                  builder: (context, state) => const UserManagementPage(),
-                ),
-                GoRoute(
-                  path: 'access-codes',
+                  // Renders through AdminShell (AdminStaffSectionBody
+                  // resolves the URL to UserManagementPage) so the
+                  // persistent sidebar/bottom-nav stays mounted with Staff
+                  // highlighted, instead of opening as a bare standalone page.
                   builder: (context, state) =>
-                      const ParentsAccessWorkspaceScreen(),
+                      const AdminShell(section: AdminSection.staff),
                 ),
                 GoRoute(
                   path: 'add-staff',
@@ -2441,15 +2458,26 @@ final router = GoRouter(
                     }
                     return null;
                   },
-                  builder: (context, state) => const AddStaffWizardPage(),
+                  // Renders through AdminShell (AdminStaffSectionBody
+                  // resolves the URL to AddStaffWizardPage) so the
+                  // persistent sidebar/bottom-nav stays mounted with Staff
+                  // highlighted across every wizard step, Back, Continue,
+                  // Save draft, and refresh - instead of the wizard opening
+                  // as a bare standalone page with no shell chrome.
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.staff),
                 ),
                 // Must stay below the literal 'overview'/'add-staff' routes -
                 // go_router matches path segments in declaration order, and
                 // this wildcard would otherwise capture them as a :uid.
                 GoRoute(
                   path: ':uid',
+                  // Renders through AdminShell (AdminStaffSectionBody
+                  // resolves the uid from the live URL) so the persistent
+                  // sidebar/bottom-nav stays mounted with Staff highlighted,
+                  // instead of the profile opening as a bare standalone page.
                   builder: (context, state) =>
-                      StaffDetailScreen(uid: state.pathParameters['uid']!),
+                      const AdminShell(section: AdminSection.staff),
                 ),
               ],
             ),

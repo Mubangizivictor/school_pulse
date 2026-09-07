@@ -5,11 +5,11 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/features/admin/admin_dashboard_screen.dart';
 import 'package:school_pulse/features/admin/admin_staff_attendance_screen.dart';
-import 'package:school_pulse/features/admin/parent_access_workspace/presentation/screens/parents_access_workspace_screen.dart';
-import 'package:school_pulse/features/admin/presentation/pages/staff_list_page.dart';
+import 'package:school_pulse/features/admin/presentation/shell/admin_parents_section_body.dart';
 import 'package:school_pulse/features/admin/presentation/screens/admin_more_screen.dart';
 import 'package:school_pulse/features/admin/presentation/shell/admin_fees_screen.dart';
 import 'package:school_pulse/features/admin/presentation/shell/admin_section.dart';
+import 'package:school_pulse/features/admin/presentation/shell/admin_staff_section_body.dart';
 import 'package:school_pulse/features/approvals/presentation/screens/approval_center_screen.dart';
 import 'package:school_pulse/features/appointments/presentation/screens/appointments_workspace_screen.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -85,9 +85,9 @@ class _AdminWebShellState extends State<AdminWebShell> {
       case _Section.students:
         return const AdminStudentsSectionBody();
       case _Section.staff:
-        return const StaffListPage();
+        return const AdminStaffSectionBody();
       case _Section.parents:
-        return const ParentsAccessWorkspaceScreen();
+        return const AdminParentsSectionBody();
       case _Section.attendance:
         return const AdminStaffAttendanceScreen();
       case _Section.fees:

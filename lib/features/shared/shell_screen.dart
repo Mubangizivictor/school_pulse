@@ -339,9 +339,14 @@ class StaffShell extends StatelessWidget {
       '/staff/admin/admissions/review',
       '/staff/admin/admissions/review/enroll',
     };
-    final isAdminSection = adminShellPaths.contains(
-      GoRouterState.of(context).uri.path,
-    );
+    // The Staff subtree (overview/add-staff/:uid) now renders through
+    // AdminShell too (AdminStaffSectionBody resolves the exact screen), so
+    // every path under it needs the shell's own chrome.
+    final staffSectionPath = GoRouterState.of(context).uri.path;
+    final isStaffShellSubroute =
+        staffSectionPath.startsWith('/staff/admin/users/');
+    final isAdminSection =
+        adminShellPaths.contains(staffSectionPath) || isStaffShellSubroute;
     final isNurseSection = GoRouterState.of(
       context,
     ).uri.path.startsWith('/staff/nurse');
@@ -354,13 +359,6 @@ class StaffShell extends StatelessWidget {
     // are regular management screens and keep the shared nav.
     final isStructureWizardSection =
         GoRouterState.of(context).uri.path == '/staff/admin/structure';
-    // The Add Staff wizard owns its own 5-stage header (Profile/Work/
-    // Roles/Access/Review) and sticky Back/Continue footer, same reasoning
-    // as the Structure wizard above - the shared bottom nav must not render
-    // on top of it.
-    final isAddStaffWizardRoute =
-        GoRouterState.of(context).uri.path == '/staff/admin/users/add-staff';
-
     // The Bursar section owns a full-screen responsive shell of its own
     // (BursarShell: mobile bottom nav < 600, desktop sidebar console >=
     // 1024). Rendering this shell's chrome around it stacks two bottom navs
@@ -642,18 +640,15 @@ class StaffShell extends StatelessWidget {
                         child: IntrinsicHeight(
                           child: NavigationRail(
                             backgroundColor: Colors.transparent,
-                            extended:
-                                MediaQuery.of(context).size.width > 1200,
+                            extended: MediaQuery.of(context).size.width > 1200,
                             selectedIndex: _calculateSelectedIndex(context),
                             onDestinationSelected: (idx) =>
                                 _onItemTapped(idx, context),
                             minExtendedWidth: 280,
-                            labelType:
-                                MediaQuery.of(context).size.width > 1200
+                            labelType: MediaQuery.of(context).size.width > 1200
                                 ? NavigationRailLabelType.none
                                 : NavigationRailLabelType.all,
-                            unselectedLabelTextStyle: AppTypography
-                                .labelMedium
+                            unselectedLabelTextStyle: AppTypography.labelMedium
                                 .copyWith(color: AppColors.textMuted(context)),
                             selectedLabelTextStyle: AppTypography.labelMedium
                                 .copyWith(
@@ -728,7 +723,6 @@ class StaffShell extends StatelessWidget {
               !isBursarSection &&
               !isNurseSection &&
               !isStructureWizardSection &&
-              !isAddStaffWizardRoute &&
               !isDirectEnrolmentRoute)
           ? Container(
               decoration: BoxDecoration(
