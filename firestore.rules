@@ -104,6 +104,36 @@ service cloud.firestore {
       );
     }
 
+    // Server-side backstop for the admin-lockout guard: schools/{id}/meta/
+    // admin_count is maintained by the onStaffAdminStatusChanged Cloud
+    // Function trigger (functions/staff_admin_count.js) as a running count of
+    // active director/headTeacher/schoolAdmin holders. Mirrors the client's
+    // StaffAdminLockoutGuard (fast UI feedback) but this is what actually
+    // stops a direct write or compromised client from zeroing a school's
+    // admin seats out - rules can't cheaply count "how many other admins
+    // exist" per write, so a maintained counter is the only affordable check.
+    // Defaults to a large number when absent (a school predating this
+    // trigger, or not yet touched by it) so this never locks out a school
+    // that has a real counter but hasn't seen a relevant write yet - it only
+    // blocks once the counter is known and would hit zero.
+    function schoolAdminCount(schoolId) {
+      return get(/databases/$(database)/documents/schools/$(schoolId)/meta/admin_count).data.get('count', 999);
+    }
+
+    // True if this write would remove the LAST active admin seat: the
+    // target currently holds an admin role, the school's known admin count
+    // is exactly 1, and the write either deactivates the target or leaves
+    // them with no admin role. Only ever tightens the existing update rule
+    // (this is ANDed in, never a standalone allow) - a write with no admin
+    // impact is unaffected regardless of the counter's value.
+    function wouldDropLastAdmin(schoolId, before, after) {
+      let wasAdmin = before.get('isActive', true) != false &&
+        before.get('roles', []).hasAny(['director', 'headTeacher', 'schoolAdmin']);
+      let staysAdmin = after.get('isActive', true) != false &&
+        after.get('roles', []).hasAny(['director', 'headTeacher', 'schoolAdmin']);
+      return wasAdmin && !staysAdmin && schoolAdminCount(schoolId) <= 1;
+    }
+
     // Subscription write-lock. accessMode is server-authoritative (written
     // by payment approval/rejection and the hourly lifecycle sweep in
     // public_functions/). The two-arg get() defaults to 'full' when the
@@ -253,7 +283,9 @@ service cloud.firestore {
          ('schoolAdmin' in resource.data.get('roles', []) ||
           !('schoolAdmin' in request.resource.data.get('roles', []))) &&
          (resource.data.get('role', '') == 'schoolAdmin' ||
-          request.resource.data.get('role', '') != 'schoolAdmin'))
+          request.resource.data.get('role', '') != 'schoolAdmin') &&
+         // Admin-lockout backstop - see wouldDropLastAdmin() above.
+         !wouldDropLastAdmin(resource.data.schoolId, resource.data, request.resource.data))
       );
       // "Delete Account" in User Management removes the Firestore profile
       // (the paired Firebase Auth account persists - removing that needs
@@ -541,6 +573,15 @@ service cloud.firestore {
     // that the dedicated schools/{schoolId}/counters/receiptNumber block
     // further down (allow read, write: if false) is supposed to lock down
     // entirely.
+    // Server-only maintenance data - admin_count is written exclusively by
+    // the onStaffAdminStatusChanged trigger (Admin SDK bypasses rules), and
+    // is read only via the schoolAdminCount() get() above. No client read or
+    // write path should ever exist for it: a client that could write its own
+    // count could defeat the admin-lockout backstop entirely.
+    match /schools/{schoolId}/meta/{metaId} {
+      allow read, write: if false;
+    }
+
     match /schools/{schoolId}/counters/{counterId} {
       allow read: if counterId != 'receiptNumber' && isStaff() && isSameSchool(schoolId);
       allow write: if counterId != 'receiptNumber' && isSameSchool(schoolId) && (
@@ -1998,18 +2039,24 @@ service cloud.firestore {
       allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
     }
 
-    // Staff clock-in/out records for the attendance monitor. Phase 5
-    // security gate: no isSameSchool check existed. No client write path
-    // exists yet (StaffAttendanceRepository is read-only today), so this
-    // is a straight tightening rather than an OR-fallback migration.
+    // Staff clock-in/out records for the attendance monitor. Reads are
+    // staff-wide within the tenant. ALL writes go through the
+    // `correctStaffAttendance` callable (Admin SDK, bypasses rules) - there
+    // is no trusted client writer, and a manual client write could rewrite
+    // another staff member's clock time or flip a `late` status, so direct
+    // writes are denied outright. A dedicated clock-in path (later slice)
+    // will also run server-side.
     match /staff_attendance/{id} {
       allow read: if isStaff() && isSameSchool(resource.data.schoolId);
-      allow create: if isStaff() && isSameSchool(request.resource.data.schoolId) &&
-        schoolCanWrite(request.resource.data.schoolId);
-      allow update: if isStaff() && isSameSchool(resource.data.schoolId) &&
-        request.resource.data.schoolId == resource.data.schoolId &&
-        schoolCanWrite(resource.data.schoolId);
-      allow delete: if isStaff() && isSameSchool(resource.data.schoolId);
+      allow write: if false;
+    }
+
+    // Immutable correction trail for staff_attendance, written only by the
+    // `correctStaffAttendance` callable. Readable by staff in the tenant so
+    // an admin can audit who changed what and why.
+    match /institutions/{schoolId}/staff_attendance_corrections/{id} {
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow write: if false;
     }
 
     // Per-role dashboard summary docs (e.g. stats/attendance_summary,

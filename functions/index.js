@@ -14,6 +14,8 @@ const enrollmentAuditFunctions = require("./enrollment_audit")({ admin, onCall, 
 const { maybeAutoUpdateReportCardFinancialAccess } = require("./report_card_financial_gate")({ admin });
 Object.assign(exports, require("./student_fee_billing")({ admin, onCall, HttpsError, maybeAutoUpdateReportCardFinancialAccess }));
 Object.assign(exports, require("./staff_payroll_structure")({ admin, onCall, HttpsError }));
+const staffAttendanceCorrectionFunctions = require("./staff_attendance_corrections")({ admin, onCall, HttpsError });
+exports.correctStaffAttendance = staffAttendanceCorrectionFunctions.correctStaffAttendance;
 Object.assign(exports, require("./payroll_compliance")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./payment_codes")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./payment_vouchers")({ admin, onCall, HttpsError }));
@@ -27,6 +29,7 @@ Object.assign(exports, require("./exam_factory")({ admin, onCall, HttpsError }))
 Object.assign(exports, require("./exam_factory_operations")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./exam_factory_reminders")({ admin, onSchedule }));
 const { recordJobRun, recordJobFailure } = require("./platform_health_instrumentation")({ admin });
+Object.assign(exports, require("./staff_admin_count")({ admin, onDocumentWritten }));
 Object.assign(exports, require("./parent_invitations")({ admin, onCall, HttpsError, enqueueTransactionalEmail }));
 
 /**

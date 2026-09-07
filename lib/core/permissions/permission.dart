@@ -124,6 +124,8 @@ class Permission {
   static const attendanceClassScan = 'attendance.class.scan';
   static const attendanceSubjectScan = 'attendance.subject.scan';
   static const attendanceStaffScan = 'attendance.staff.scan';
+  static const attendanceStaffExport = 'attendance.staff.export';
+  static const attendanceStaffCorrect = 'attendance.staff.correct';
   static const attendanceBoardingScan = 'attendance.boarding.scan';
   static const attendanceGateScan = 'attendance.gate.scan';
   static const attendanceMealsScan = 'attendance.meals.scan';
@@ -481,6 +483,8 @@ class Permission {
     ('Attendance', attendanceClassScan),
     ('Attendance', attendanceSubjectScan),
     ('Attendance', attendanceStaffScan),
+    ('Attendance', attendanceStaffExport),
+    ('Attendance', attendanceStaffCorrect),
     ('Attendance', attendanceBoardingScan),
     ('Attendance', attendanceGateScan),
     ('Attendance', attendanceMealsScan),

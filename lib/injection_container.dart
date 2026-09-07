@@ -2123,7 +2123,9 @@ Future<void> init() async {
   sl.registerLazySingleton(() => SaveRolePermissionOverride(sl()));
 
   // Admin - Staff Attendance / Subscription
-  sl.registerLazySingleton(() => StaffAttendanceRepository());
+  sl.registerLazySingleton<StaffAttendanceRepository>(
+    () => StaffAttendanceRepositoryImpl(),
+  );
   sl.registerLazySingleton(() => SubscriptionRepository());
 
   // Subscription Payment - MTN Mobile Money
