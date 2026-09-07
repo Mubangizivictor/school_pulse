@@ -189,9 +189,12 @@ class _StateBody extends StatelessWidget {
     }
     if (state.errorMessage != null && state.invites.isEmpty) {
       return _CenteredMessage(
-        icon: Icons.error_outline,
-        title: 'Could not load parents',
+        icon: state.isOffline ? Icons.wifi_off_outlined : Icons.error_outline,
+        title: state.isOffline
+            ? 'You are offline'
+            : 'Could not load parents',
         message: state.errorMessage!,
+        onRetry: () => context.read<ParentsAccessCubit>().retry(),
       );
     }
     return Column(
@@ -208,17 +211,19 @@ class _CenteredMessage extends StatelessWidget {
   final IconData icon;
   final String title;
   final String message;
+  final VoidCallback? onRetry;
 
   const _CenteredMessage({
     required this.icon,
     required this.title,
     required this.message,
+    this.onRetry,
   });
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -238,6 +243,14 @@ class _CenteredMessage extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.textMuted(context), fontSize: 13),
             ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Retry'),
+              ),
+            ],
           ],
         ),
       ),
@@ -406,7 +419,10 @@ class _PhoneLayout extends StatelessWidget {
               if (!bannerDismissed)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: ParentAccessInfoBanner(onDismiss: onDismissBanner),
+                  child: ParentAccessInfoBanner(
+                    onDismiss: onDismissBanner,
+                    maxGuardians: state.maxGuardians,
+                  ),
                 ),
               const SizedBox(height: 12),
               Expanded(
@@ -615,7 +631,10 @@ class _TabletLayout extends StatelessWidget {
                 ),
                 if (!bannerDismissed) ...[
                   const SizedBox(height: 12),
-                  ParentAccessInfoBanner(onDismiss: onDismissBanner),
+                  ParentAccessInfoBanner(
+                    onDismiss: onDismissBanner,
+                    maxGuardians: state.maxGuardians,
+                  ),
                 ],
                 const SizedBox(height: 12),
                 Expanded(
@@ -742,7 +761,10 @@ class _WebLayout extends StatelessWidget {
                     ),
                     if (!bannerDismissed) ...[
                       const SizedBox(height: 12),
-                      ParentAccessInfoBanner(onDismiss: onDismissBanner),
+                      ParentAccessInfoBanner(
+                    onDismiss: onDismissBanner,
+                    maxGuardians: state.maxGuardians,
+                  ),
                     ],
                     const SizedBox(height: 16),
                     Expanded(

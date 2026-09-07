@@ -42,7 +42,7 @@ class SummaryCountCards extends StatelessWidget {
             iconColor: AppColors.warning(context),
             iconSurface: AppColors.warningSurface(context),
             value: data.codesPending,
-            label: 'codes pending',
+            label: 'invitations pending',
           ),
         ),
         const SizedBox(width: 10),

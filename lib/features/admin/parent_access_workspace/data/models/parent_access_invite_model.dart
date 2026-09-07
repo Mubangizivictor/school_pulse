@@ -5,12 +5,16 @@ class ParentAccessInvitesPage {
   final String? nextCursor;
   final int pendingCount;
   final int expiringSoonCount;
+  final int linkedParentCount;
+  final int maxGuardians;
 
   const ParentAccessInvitesPage({
     required this.rows,
     required this.nextCursor,
     required this.pendingCount,
     required this.expiringSoonCount,
+    this.linkedParentCount = 0,
+    this.maxGuardians = 2,
   });
 
   factory ParentAccessInvitesPage.fromCallableData(Map<String, dynamic> data) {
@@ -22,6 +26,8 @@ class ParentAccessInvitesPage {
       nextCursor: data['nextCursor'] as String?,
       pendingCount: (data['pendingCount'] as num?)?.toInt() ?? 0,
       expiringSoonCount: (data['expiringSoonCount'] as num?)?.toInt() ?? 0,
+      linkedParentCount: (data['linkedParentCount'] as num?)?.toInt() ?? 0,
+      maxGuardians: (data['maxGuardians'] as num?)?.toInt() ?? 2,
     );
   }
 
@@ -41,8 +47,14 @@ class ParentAccessInvitesPage {
       inviteId: row['inviteId'] as String? ?? '',
       parentName: row['parentName'] as String? ?? '',
       maskedPhone: row['maskedPhone'] as String? ?? '***',
+      maskedEmail: row['maskedEmail'] as String? ?? '',
+      hasEmail: row['hasEmail'] as bool? ?? false,
       learnerCount: (row['learnerCount'] as num?)?.toInt() ?? 0,
       status: status,
+      invitationStatus:
+          parentInvitationDeliveryFromString(row['invitationStatus'] as String?),
+      invitationSentAt: _millisToDate(row['invitationSentAt']),
+      canResendAt: _millisToDate(row['canResendAt']),
       createdAt: _millisToDate(row['createdAt']),
       expiresAt: _millisToDate(row['expiresAt']),
       expiringSoon: row['expiringSoon'] as bool? ?? false,

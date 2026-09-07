@@ -24,6 +24,15 @@ class ParentsAccessState extends Equatable {
   final int pendingCount;
   final int expiringSoonCount;
 
+  /// Count of parents who have completed portal sign-up, from the server
+  /// aggregate (not just this page).
+  final int linkedParentCount;
+
+  /// The tenant's configured maximum guardians per learner (people_policies,
+  /// default 2). Surfaced in the info banner and enforced client-side in the
+  /// Link Parent flow.
+  final int maxGuardians;
+
   final String searchQuery;
   final ParentsAccessFilter filter;
 
@@ -42,6 +51,8 @@ class ParentsAccessState extends Equatable {
     this.nextCursor,
     this.pendingCount = 0,
     this.expiringSoonCount = 0,
+    this.linkedParentCount = 0,
+    this.maxGuardians = 2,
     this.searchQuery = '',
     this.filter = ParentsAccessFilter.all,
     this.actionInFlight = false,
@@ -49,8 +60,9 @@ class ParentsAccessState extends Equatable {
     this.actionSuccessMessage,
   });
 
-  int get linkedParentsCount =>
-      invites.where((i) => i.status == ParentInviteStatus.active).length;
+  /// Server aggregate - the count of parents who have completed sign-up
+  /// across the whole school, never a per-page count and never hard-coded.
+  int get linkedParentsCount => linkedParentCount;
 
   List<ParentAccessInvite> get filteredRows {
     final query = searchQuery.trim().toLowerCase();
@@ -58,16 +70,17 @@ class ParentsAccessState extends Equatable {
       final matchesQuery =
           query.isEmpty ||
           invite.parentName.toLowerCase().contains(query) ||
-          invite.maskedPhone.toLowerCase().contains(query);
+          invite.maskedPhone.toLowerCase().contains(query) ||
+          invite.maskedEmail.toLowerCase().contains(query);
       if (!matchesQuery) return false;
       switch (filter) {
         case ParentsAccessFilter.all:
           return true;
         case ParentsAccessFilter.linked:
-          return invite.status == ParentInviteStatus.active &&
-              !invite.expiringSoon;
+          return invite.isAccepted &&
+              invite.status == ParentInviteStatus.active;
         case ParentsAccessFilter.pending:
-          return invite.status == ParentInviteStatus.active;
+          return invite.isPendingAcceptance;
         case ParentsAccessFilter.expiring:
           return invite.expiringSoon;
       }
@@ -85,6 +98,8 @@ class ParentsAccessState extends Equatable {
     String? Function()? nextCursor,
     int? pendingCount,
     int? expiringSoonCount,
+    int? linkedParentCount,
+    int? maxGuardians,
     String? searchQuery,
     ParentsAccessFilter? filter,
     bool? actionInFlight,
@@ -102,6 +117,8 @@ class ParentsAccessState extends Equatable {
       nextCursor: nextCursor != null ? nextCursor() : this.nextCursor,
       pendingCount: pendingCount ?? this.pendingCount,
       expiringSoonCount: expiringSoonCount ?? this.expiringSoonCount,
+      linkedParentCount: linkedParentCount ?? this.linkedParentCount,
+      maxGuardians: maxGuardians ?? this.maxGuardians,
       searchQuery: searchQuery ?? this.searchQuery,
       filter: filter ?? this.filter,
       actionInFlight: actionInFlight ?? this.actionInFlight,
@@ -124,6 +141,8 @@ class ParentsAccessState extends Equatable {
     nextCursor,
     pendingCount,
     expiringSoonCount,
+    linkedParentCount,
+    maxGuardians,
     searchQuery,
     filter,
     actionInFlight,

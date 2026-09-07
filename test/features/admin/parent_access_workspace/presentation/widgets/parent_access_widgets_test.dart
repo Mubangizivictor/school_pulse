@@ -28,9 +28,24 @@ void main() {
   );
 
   group('ParentAccessInfoBanner', () {
-    testWidgets('shows the pale-blue two-parent copy', (tester) async {
+    testWidgets('shows the configured guardian limit, not a hard-coded number',
+        (tester) async {
+      await tester.pumpWidget(
+        wrap(const ParentAccessInfoBanner(maxGuardians: 3)),
+      );
+      expect(
+        find.textContaining('up to 3 parents or guardians'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('defaults to 2 when no policy override is passed',
+        (tester) async {
       await tester.pumpWidget(wrap(const ParentAccessInfoBanner()));
-      expect(find.text('A learner can have up to 2 parents'), findsOneWidget);
+      expect(
+        find.textContaining('up to 2 parents or guardians'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('dismiss button calls onDismiss', (tester) async {

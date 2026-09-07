@@ -2,16 +2,16 @@ import 'package:cloud_functions/cloud_functions.dart';
 
 import '../models/parent_access_invite_model.dart';
 
-/// Thin wrapper around the four parent-access Cloud Functions
-/// (createParentAccessCode, reallocateParentLink, revokeParentAccessCode,
-/// listParentAccessInvites). Kept free of Either/Failure mapping - that
-/// happens one layer up in ParentAccessRepositoryImpl - so this class stays
-/// a plain, easily-mocked boundary around FirebaseFunctions.
+/// Thin wrapper around the parent-access Cloud Functions. Kept free of
+/// Either/Failure mapping - that happens one layer up in
+/// [ParentAccessRepositoryImpl] - so this class stays a plain, easily-mocked
+/// boundary around FirebaseFunctions.
 abstract class ParentAccessRemoteDataSource {
   Future<Map<String, dynamic>> createParentAccessCode({
     required String parentName,
     required String phoneNumber,
-    required List<Map<String, String>> learners,
+    String? email,
+    required List<Map<String, dynamic>> learners,
   });
 
   Future<Map<String, dynamic>> reallocateParentLink({
@@ -27,6 +27,35 @@ abstract class ParentAccessRemoteDataSource {
     required int pageSize,
     String? cursor,
   });
+
+  /// parent_invitations.js
+  Future<Map<String, dynamic>> createParentInvitation({
+    required String inviteId,
+    String? rawCode,
+  });
+
+  Future<void> cancelParentInvitation({required String inviteId});
+
+  Future<Map<String, dynamic>> getParentAccessRecord({required String inviteId});
+
+  /// [email] is only sent when non-null; pass an empty string to clear the
+  /// address, a non-empty string to set it, and null to leave it unchanged.
+  Future<void> updateParentInvitationDetails({
+    required String inviteId,
+    String? parentName,
+    String? phoneNumber,
+    String? email,
+  });
+
+  Future<Map<String, dynamic>> linkLearnersToExistingParent({
+    required String inviteId,
+    required List<Map<String, dynamic>> learners,
+  });
+
+  Future<List<Map<String, dynamic>>> listParentLinkAudit({
+    String? inviteId,
+    String? studentId,
+  });
 }
 
 class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
@@ -39,11 +68,13 @@ class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
   Future<Map<String, dynamic>> createParentAccessCode({
     required String parentName,
     required String phoneNumber,
-    required List<Map<String, String>> learners,
+    String? email,
+    required List<Map<String, dynamic>> learners,
   }) async {
     final result = await functions.httpsCallable('createParentAccessCode').call({
       'parentName': parentName,
       'phoneNumber': phoneNumber,
+      if (email != null && email.isNotEmpty) 'email': email,
       'learners': learners,
     });
     return Map<String, dynamic>.from(result.data as Map);
@@ -84,5 +115,80 @@ class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
     return ParentAccessInvitesPage.fromCallableData(
       Map<String, dynamic>.from(result.data as Map),
     );
+  }
+
+  @override
+  Future<Map<String, dynamic>> createParentInvitation({
+    required String inviteId,
+    String? rawCode,
+  }) async {
+    final result = await functions.httpsCallable('createParentInvitation').call({
+      'inviteId': inviteId,
+      if (rawCode != null) 'rawCode': rawCode,
+    });
+    return Map<String, dynamic>.from(result.data as Map);
+  }
+
+  @override
+  Future<void> cancelParentInvitation({required String inviteId}) async {
+    await functions.httpsCallable('cancelParentInvitation').call({
+      'inviteId': inviteId,
+    });
+  }
+
+  @override
+  Future<Map<String, dynamic>> getParentAccessRecord({
+    required String inviteId,
+  }) async {
+    final result = await functions.httpsCallable('getParentAccessRecord').call({
+      'inviteId': inviteId,
+    });
+    return Map<String, dynamic>.from(result.data as Map);
+  }
+
+  @override
+  Future<void> updateParentInvitationDetails({
+    required String inviteId,
+    String? parentName,
+    String? phoneNumber,
+    String? email,
+  }) async {
+    await functions.httpsCallable('updateParentInvitationDetails').call({
+      'inviteId': inviteId,
+      if (parentName != null) 'parentName': parentName,
+      if (phoneNumber != null) 'phoneNumber': phoneNumber,
+      // null => key omitted => unchanged. '' => clear. non-empty => set.
+      if (email != null) 'email': email,
+    });
+  }
+
+  @override
+  Future<Map<String, dynamic>> linkLearnersToExistingParent({
+    required String inviteId,
+    required List<Map<String, dynamic>> learners,
+  }) async {
+    final result =
+        await functions.httpsCallable('linkLearnersToExistingParent').call({
+      'inviteId': inviteId,
+      'learners': learners,
+    });
+    return Map<String, dynamic>.from(result.data as Map);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> listParentLinkAudit({
+    String? inviteId,
+    String? studentId,
+  }) async {
+    final result = await functions.httpsCallable('listParentLinkAudit').call({
+      if (inviteId != null) 'inviteId': inviteId,
+      if (studentId != null) 'studentId': studentId,
+    });
+    final entries = (Map<String, dynamic>.from(result.data as Map)['entries']
+            as List?) ??
+        const [];
+    return entries
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
   }
 }

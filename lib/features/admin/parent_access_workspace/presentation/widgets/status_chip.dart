@@ -38,12 +38,16 @@ class ParentAccessStatusChip extends StatelessWidget {
       return ('Revoked', AppColors.danger(context));
     }
     if (i.status == ParentInviteStatus.expired) {
-      return ('Revoked', AppColors.danger(context));
+      return ('Expired', AppColors.danger(context));
     }
     if (i.expiringSoon) {
       return ('Expiring soon', AppColors.warning(context));
     }
-    return ('Linked', AppColors.success(context));
+    // Active code but the parent has not completed portal sign-up yet.
+    if (!i.isAccepted) {
+      return ('Pending', AppColors.warning(context));
+    }
+    return ('Active', AppColors.success(context));
   }
 }
 
@@ -89,6 +93,9 @@ class AccessCodeStatusChip extends StatelessWidget {
     }
     if (i.expiringSoon) {
       return ('Expiring soon', AppColors.warning(context));
+    }
+    if (!i.isAccepted) {
+      return ('Pending', AppColors.warning(context));
     }
     return ('Linked', AppColors.success(context));
   }

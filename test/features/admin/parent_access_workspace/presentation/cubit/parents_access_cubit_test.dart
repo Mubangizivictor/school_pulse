@@ -15,12 +15,23 @@ void main() {
   late ParentsAccessCubit cubit;
 
   final invites = [
+    // Active code, parent has completed sign-up -> a linked parent.
     const ParentAccessInvite(
       inviteId: 'inv-1',
       parentName: 'Amanda Carter',
       maskedPhone: '***1234',
       learnerCount: 2,
       status: ParentInviteStatus.active,
+      invitationStatus: ParentInvitationDelivery.accepted,
+    ),
+    // Active code, parent has NOT signed up yet -> pending acceptance.
+    const ParentAccessInvite(
+      inviteId: 'inv-4',
+      parentName: 'Priya Nair',
+      maskedPhone: '***5555',
+      learnerCount: 1,
+      status: ParentInviteStatus.active,
+      invitationStatus: ParentInvitationDelivery.sent,
     ),
     const ParentAccessInvite(
       inviteId: 'inv-2',
@@ -166,9 +177,17 @@ void main() {
       expect(cubit.state.filteredRows.map((r) => r.inviteId), ['inv-2']);
     });
 
-    test('filter=linked excludes expiring and revoked', () {
+    test('filter=linked returns only accepted, non-expiring, active parents', () {
       cubit.setFilter(ParentsAccessFilter.linked);
       expect(cubit.state.filteredRows.map((r) => r.inviteId), ['inv-1']);
+    });
+
+    test('filter=pending returns active codes the parent has not accepted', () {
+      cubit.setFilter(ParentsAccessFilter.pending);
+      expect(
+        cubit.state.filteredRows.map((r) => r.inviteId).toSet(),
+        {'inv-4', 'inv-2'},
+      );
     });
 
     test('filter=expiring only returns expiringSoon rows', () {
@@ -178,7 +197,7 @@ void main() {
 
     test('filter=all returns every row', () {
       cubit.setFilter(ParentsAccessFilter.all);
-      expect(cubit.state.filteredRows.length, 3);
+      expect(cubit.state.filteredRows.length, 4);
     });
   });
 

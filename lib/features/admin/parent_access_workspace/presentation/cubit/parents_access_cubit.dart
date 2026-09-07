@@ -19,6 +19,11 @@ class ParentsAccessCubit extends Cubit<ParentsAccessState> {
   ParentsAccessCubit({required this.repository})
     : super(const ParentsAccessState());
 
+  /// Re-fetches the first page. Doubles as retry (after an error) and
+  /// pull-to-refresh.
+  Future<void> retry() => loadFirstPage();
+  Future<void> refresh() => loadFirstPage();
+
   Future<void> loadFirstPage() async {
     emit(
       state.copyWith(
@@ -26,6 +31,9 @@ class ParentsAccessCubit extends Cubit<ParentsAccessState> {
         errorMessage: () => null,
         isOffline: false,
         isPermissionDenied: false,
+        // Deliberately keep actionError / actionSuccessMessage: a reload
+        // triggered by a successful action (revoke/resend/reallocate) must
+        // not wipe the "done" toast the UI is about to show.
       ),
     );
     final result = await repository.listParentAccessInvites(
@@ -73,6 +81,8 @@ class ParentsAccessCubit extends Cubit<ParentsAccessState> {
       nextCursor: () => page.nextCursor,
       pendingCount: page.pendingCount,
       expiringSoonCount: page.expiringSoonCount,
+      linkedParentCount: page.linkedParentCount,
+      maxGuardians: page.maxGuardians,
     );
   }
 
@@ -156,6 +166,38 @@ class ParentsAccessCubit extends Cubit<ParentsAccessState> {
           state.copyWith(
             actionInFlight: false,
             actionSuccessMessage: () => 'Parent link reallocated.',
+          ),
+        );
+        loadFirstPage();
+        return true;
+      },
+    );
+  }
+
+  Future<bool> resendInvitation(String inviteId) async {
+    emit(
+      state.copyWith(
+        actionInFlight: true,
+        actionError: () => null,
+        actionSuccessMessage: () => null,
+      ),
+    );
+    final result = await repository.resendParentInvitation(inviteId: inviteId);
+    return result.fold(
+      (failure) {
+        emit(
+          state.copyWith(
+            actionInFlight: false,
+            actionError: () => failure.message,
+          ),
+        );
+        return false;
+      },
+      (_) {
+        emit(
+          state.copyWith(
+            actionInFlight: false,
+            actionSuccessMessage: () => 'Invitation sent.',
           ),
         );
         loadFirstPage();

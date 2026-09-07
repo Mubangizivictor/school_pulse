@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 
-/// Pale-blue informational banner: "A learner can have up to 2 parents."
-/// Dismissible per-session only (not persisted) - re-shown on next app
-/// launch, matching the reference screenshots' lightweight, non-modal tone.
+/// Pale-blue informational banner. Dismissible per-session only (not
+/// persisted) - re-shown on next app launch, matching the reference
+/// screenshots' lightweight, non-modal tone. The guardian limit is the
+/// tenant's configured [maxGuardians] (people_policies), never a hard-coded
+/// number.
 class ParentAccessInfoBanner extends StatelessWidget {
   final VoidCallback? onDismiss;
+  final int maxGuardians;
 
-  const ParentAccessInfoBanner({super.key, this.onDismiss});
+  const ParentAccessInfoBanner({
+    super.key,
+    this.onDismiss,
+    this.maxGuardians = 2,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +35,8 @@ class ParentAccessInfoBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'A learner can have up to 2 parents',
+              'A parent can be linked to more than one learner. Each learner '
+              'can have up to $maxGuardians parents or guardians.',
               style: TextStyle(
                 fontSize: 13,
                 color: AppColors.information(context),
