@@ -28,19 +28,22 @@ void main() {
   );
 
   group('ParentAccessInfoBanner', () {
-    testWidgets('shows the configured guardian limit, not a hard-coded number',
-        (tester) async {
-      await tester.pumpWidget(
-        wrap(const ParentAccessInfoBanner(maxGuardians: 3)),
-      );
-      expect(
-        find.textContaining('up to 3 parents or guardians'),
-        findsOneWidget,
-      );
-    });
+    testWidgets(
+      'shows the configured guardian limit, not a hard-coded number',
+      (tester) async {
+        await tester.pumpWidget(
+          wrap(const ParentAccessInfoBanner(maxGuardians: 3)),
+        );
+        expect(
+          find.textContaining('up to 3 parents or guardians'),
+          findsOneWidget,
+        );
+      },
+    );
 
-    testWidgets('defaults to 2 when no policy override is passed',
-        (tester) async {
+    testWidgets('defaults to 2 when no policy override is passed', (
+      tester,
+    ) async {
       await tester.pumpWidget(wrap(const ParentAccessInfoBanner()));
       expect(
         find.textContaining('up to 2 parents or guardians'),
@@ -59,11 +62,17 @@ void main() {
   });
 
   group('SummaryCountCards', () {
-    testWidgets('renders the live counts passed in, not hardcoded values', (tester) async {
+    testWidgets('renders the live counts passed in, not hardcoded values', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         wrap(
           const SummaryCountCards(
-            data: SummaryCountData(linkedParents: 1036, codesPending: 18, expiringSoon: 6),
+            data: SummaryCountData(
+              linkedParents: 1036,
+              codesPending: 18,
+              expiringSoon: 6,
+            ),
           ),
         ),
       );
@@ -90,7 +99,9 @@ void main() {
   });
 
   group('ParentRowTile', () {
-    testWidgets('renders masked phone, never a raw code or full number', (tester) async {
+    testWidgets('renders masked phone, never a raw code or full number', (
+      tester,
+    ) async {
       await tester.pumpWidget(wrap(ParentRowTile(invite: invite)));
       expect(find.textContaining('***1234'), findsOneWidget);
       expect(find.textContaining(RegExp(r'\+\d{8,}')), findsNothing);
@@ -119,7 +130,13 @@ void main() {
 
     testWidgets('revoke/reallocate hidden when not permitted', (tester) async {
       await tester.pumpWidget(
-        wrap(AccessCodeRowTile(invite: invite, canRevoke: false, canReallocate: false)),
+        wrap(
+          AccessCodeRowTile(
+            invite: invite,
+            canRevoke: false,
+            canReallocate: false,
+          ),
+        ),
       );
       await tester.tap(find.byIcon(Icons.more_vert));
       await tester.pumpAndSettle();

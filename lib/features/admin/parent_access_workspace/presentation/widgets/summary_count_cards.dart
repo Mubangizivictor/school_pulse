@@ -109,10 +109,7 @@ class _SummaryCard extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              color: AppColors.textMuted(context),
-            ),
+            style: TextStyle(fontSize: 11, color: AppColors.textMuted(context)),
           ),
         ],
       ),

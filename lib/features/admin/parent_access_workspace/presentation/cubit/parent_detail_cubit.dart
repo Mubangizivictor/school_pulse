@@ -54,7 +54,9 @@ class ParentDetailState extends Equatable {
       auditLoading: auditLoading ?? this.auditLoading,
       actionInFlight: actionInFlight ?? this.actionInFlight,
       actionError: actionError != null ? actionError() : this.actionError,
-      actionSuccess: actionSuccess != null ? actionSuccess() : this.actionSuccess,
+      actionSuccess: actionSuccess != null
+          ? actionSuccess()
+          : this.actionSuccess,
     );
   }
 
@@ -81,20 +83,24 @@ class ParentDetailCubit extends Cubit<ParentDetailState> {
     : super(const ParentDetailState());
 
   Future<void> load() async {
-    emit(state.copyWith(
-      loading: true,
-      error: () => null,
-      isOffline: false,
-      isPermissionDenied: false,
-    ));
+    emit(
+      state.copyWith(
+        loading: true,
+        error: () => null,
+        isOffline: false,
+        isPermissionDenied: false,
+      ),
+    );
     final result = await repository.getParentAccessRecord(inviteId: inviteId);
     result.fold(
-      (failure) => emit(state.copyWith(
-        loading: false,
-        error: () => failure.message,
-        isOffline: failure is NetworkFailure,
-        isPermissionDenied: failure is PermissionDeniedFailure,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          loading: false,
+          error: () => failure.message,
+          isOffline: failure is NetworkFailure,
+          isPermissionDenied: failure is PermissionDeniedFailure,
+        ),
+      ),
       (record) {
         emit(state.copyWith(loading: false, record: record));
         _loadAudit();
@@ -117,53 +123,60 @@ class ParentDetailCubit extends Cubit<ParentDetailState> {
     Future<Either<Failure, dynamic>> Function() action,
     String successMessage,
   ) async {
-    emit(state.copyWith(
-      actionInFlight: true,
-      actionError: () => null,
-      actionSuccess: () => null,
-    ));
+    emit(
+      state.copyWith(
+        actionInFlight: true,
+        actionError: () => null,
+        actionSuccess: () => null,
+      ),
+    );
     final result = await action();
     return result.fold(
       (failure) {
-        emit(state.copyWith(
-          actionInFlight: false,
-          actionError: () => failure.message,
-        ));
+        emit(
+          state.copyWith(
+            actionInFlight: false,
+            actionError: () => failure.message,
+          ),
+        );
         return false;
       },
       (_) {
-        emit(state.copyWith(
-          actionInFlight: false,
-          actionSuccess: () => successMessage,
-        ));
+        emit(
+          state.copyWith(
+            actionInFlight: false,
+            actionSuccess: () => successMessage,
+          ),
+        );
         load();
         return true;
       },
     );
   }
 
-  Future<bool> resendInvitation() =>
-      _run(() => repository.resendParentInvitation(inviteId: inviteId),
-          'Invitation sent.');
+  Future<bool> resendInvitation() => _run(
+    () => repository.resendParentInvitation(inviteId: inviteId),
+    'Invitation sent.',
+  );
 
-  Future<bool> revoke() =>
-      _run(() => repository.revokeParentAccessCode(inviteId: inviteId),
-          'Parent access revoked.');
+  Future<bool> revoke() => _run(
+    () => repository.revokeParentAccessCode(inviteId: inviteId),
+    'Parent access revoked.',
+  );
 
   Future<bool> updateDetails({
     String? parentName,
     String? phoneNumber,
     String? email,
-  }) =>
-      _run(
-        () => repository.updateParentDetails(
-          inviteId: inviteId,
-          parentName: parentName,
-          phoneNumber: phoneNumber,
-          email: email,
-        ),
-        'Parent details updated.',
-      );
+  }) => _run(
+    () => repository.updateParentDetails(
+      inviteId: inviteId,
+      parentName: parentName,
+      phoneNumber: phoneNumber,
+      email: email,
+    ),
+    'Parent details updated.',
+  );
 
   /// Unlinks one learner (reallocateParentLink removal mode). The caller is
   /// responsible for the "last remaining guardian" confirmation - this just
@@ -171,16 +184,12 @@ class ParentDetailCubit extends Cubit<ParentDetailState> {
   Future<bool> unlinkLearner({
     required String linkId,
     required String reason,
-  }) =>
-      _run(
-        () => repository.reallocateParentLink(linkId: linkId, reason: reason),
-        'Learner unlinked.',
-      );
+  }) => _run(
+    () => repository.reallocateParentLink(linkId: linkId, reason: reason),
+    'Learner unlinked.',
+  );
 
   void clearActionFeedback() {
-    emit(state.copyWith(
-      actionError: () => null,
-      actionSuccess: () => null,
-    ));
+    emit(state.copyWith(actionError: () => null, actionSuccess: () => null));
   }
 }

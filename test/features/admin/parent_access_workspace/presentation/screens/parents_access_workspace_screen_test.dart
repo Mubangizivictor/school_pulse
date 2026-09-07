@@ -21,7 +21,8 @@ import 'package:school_pulse/injection_container.dart' as di;
 
 class MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
 
-class MockParentAccessRepository extends Mock implements ParentAccessRepository {}
+class MockParentAccessRepository extends Mock
+    implements ParentAccessRepository {}
 
 /// ParentsAccessWorkspaceScreen resolves its Cubit from the real DI
 /// container internally (matching how the app wires it in production via
@@ -65,7 +66,8 @@ void main() {
 
     repository = MockParentAccessRepository();
     when(
-      () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
+      () =>
+          repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
     ).thenAnswer(
       (_) async => Right(
         ParentAccessInvitesPage(
@@ -95,20 +97,25 @@ void main() {
   }
 
   group('responsive tiers render without overflow', () {
-    testWidgets('390x844 (phone reference) shows TabBar + bottom-sheet filter affordance', (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+    testWidgets(
+      '390x844 (phone reference) shows TabBar + bottom-sheet filter affordance',
+      (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(buildAt());
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(buildAt());
+        await tester.pumpAndSettle();
 
-      expect(find.text('Parents & access'), findsOneWidget);
-      expect(find.byIcon(Icons.filter_list), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
+        expect(find.text('Parents & access'), findsOneWidget);
+        expect(find.byIcon(Icons.filter_list), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
-    testWidgets('768x1024 (tablet reference) shows two-column grid', (tester) async {
+    testWidgets('768x1024 (tablet reference) shows two-column grid', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(768, 1024);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -121,71 +128,93 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('1440x900 (desktop reference) shows side rail + table + attention panel', (tester) async {
-      tester.view.physicalSize = const Size(1440, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+    testWidgets(
+      '1440x900 (desktop reference) shows side rail + table + attention panel',
+      (tester) async {
+        tester.view.physicalSize = const Size(1440, 900);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(buildAt());
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(buildAt());
+        await tester.pumpAndSettle();
 
-      expect(find.text('Parents & access'), findsOneWidget);
-      expect(find.text('Codes needing attention'), findsOneWidget);
-      expect(find.byType(DataTable), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
+        expect(find.text('Parents & access'), findsOneWidget);
+        expect(find.text('Codes needing attention'), findsOneWidget);
+        expect(find.byType(DataTable), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 
   group('states render distinctly', () {
-    testWidgets('permission-denied state shows its own message, not a generic error', (tester) async {
-      when(
-        () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
-      ).thenAnswer((_) async => const Left(PermissionDeniedFailure('nope')));
+    testWidgets(
+      'permission-denied state shows its own message, not a generic error',
+      (tester) async {
+        when(
+          () => repository.listParentAccessInvites(
+            pageSize: any(named: 'pageSize'),
+          ),
+        ).thenAnswer((_) async => const Left(PermissionDeniedFailure('nope')));
 
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(buildAt());
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(buildAt());
+        await tester.pumpAndSettle();
 
-      expect(find.text('You do not have permission'), findsOneWidget);
-    });
+        expect(find.text('You do not have permission'), findsOneWidget);
+      },
+    );
 
-    testWidgets('error state shows a message distinct from the permission-denied one', (tester) async {
-      when(
-        () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
-      ).thenAnswer((_) async => const Left(ServerFailure('Could not load parent access codes.')));
+    testWidgets(
+      'error state shows a message distinct from the permission-denied one',
+      (tester) async {
+        when(
+          () => repository.listParentAccessInvites(
+            pageSize: any(named: 'pageSize'),
+          ),
+        ).thenAnswer(
+          (_) async =>
+              const Left(ServerFailure('Could not load parent access codes.')),
+        );
 
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(buildAt());
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(buildAt());
+        await tester.pumpAndSettle();
 
-      expect(find.text('Could not load parents'), findsOneWidget);
-      expect(find.text('You do not have permission'), findsNothing);
-    });
+        expect(find.text('Could not load parents'), findsOneWidget);
+        expect(find.text('You do not have permission'), findsNothing);
+      },
+    );
   });
 
   group('keyboard accessibility', () {
-    testWidgets('search field and add-parent button are reachable and labeled', (tester) async {
-      tester.view.physicalSize = const Size(1440, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
+    testWidgets(
+      'search field and add-parent button are reachable and labeled',
+      (tester) async {
+        tester.view.physicalSize = const Size(1440, 900);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(buildAt());
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(buildAt());
+        await tester.pumpAndSettle();
 
-      expect(find.text('Add / link parent'), findsOneWidget);
-      expect(find.byType(TextField), findsWidgets);
+        expect(find.text('Add / link parent'), findsOneWidget);
+        expect(find.byType(TextField), findsWidgets);
 
-      final addButtonFinder = find.widgetWithText(ElevatedButton, 'Add / link parent');
-      final data = tester.getSemantics(addButtonFinder).getSemanticsData();
-      expect(data.hasFlag(ui.SemanticsFlag.isButton), true);
-      expect(data.hasFlag(ui.SemanticsFlag.isEnabled), true);
-      expect(data.hasAction(ui.SemanticsAction.tap), true);
-    });
+        final addButtonFinder = find.widgetWithText(
+          ElevatedButton,
+          'Add / link parent',
+        );
+        final data = tester.getSemantics(addButtonFinder).getSemanticsData();
+        expect(data.hasFlag(ui.SemanticsFlag.isButton), true);
+        expect(data.hasFlag(ui.SemanticsFlag.isEnabled), true);
+        expect(data.hasAction(ui.SemanticsAction.tap), true);
+      },
+    );
   });
 }

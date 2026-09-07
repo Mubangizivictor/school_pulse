@@ -70,16 +70,20 @@ class LinkParentDraft {
     'sendInvitation': sendInvitation,
   };
 
-  factory LinkParentDraft.fromJson(Map<String, dynamic> json) => LinkParentDraft(
-    parentName: json['parentName'] as String? ?? '',
-    relationship: json['relationship'] as String? ?? 'Mother',
-    dialCode: json['dialCode'] as String? ?? '+256',
-    nationalNumber: json['nationalNumber'] as String? ?? '',
-    email: json['email'] as String? ?? '',
-    learners: ((json['learners'] as List?) ?? const [])
-        .map((e) =>
-            LinkParentDraftLearner.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList(),
-    sendInvitation: json['sendInvitation'] as bool? ?? true,
-  );
+  factory LinkParentDraft.fromJson(Map<String, dynamic> json) =>
+      LinkParentDraft(
+        parentName: json['parentName'] as String? ?? '',
+        relationship: json['relationship'] as String? ?? 'Mother',
+        dialCode: json['dialCode'] as String? ?? '+256',
+        nationalNumber: json['nationalNumber'] as String? ?? '',
+        email: json['email'] as String? ?? '',
+        learners: ((json['learners'] as List?) ?? const [])
+            .map(
+              (e) => LinkParentDraftLearner.fromJson(
+                Map<String, dynamic>.from(e as Map),
+              ),
+            )
+            .toList(),
+        sendInvitation: json['sendInvitation'] as bool? ?? true,
+      );
 }

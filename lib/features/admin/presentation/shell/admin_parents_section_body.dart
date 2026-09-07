@@ -38,8 +38,7 @@ class AdminParentsSectionBody extends StatelessWidget {
       return LinkParentWizardPage(schoolId: _schoolId(context));
     }
 
-    final idMatch =
-        RegExp(r'^/staff/admin/parents/([^/]+)$').firstMatch(path);
+    final idMatch = RegExp(r'^/staff/admin/parents/([^/]+)$').firstMatch(path);
     if (idMatch != null && idMatch.group(1) != 'link') {
       return ParentDetailScreen(inviteId: idMatch.group(1)!);
     }

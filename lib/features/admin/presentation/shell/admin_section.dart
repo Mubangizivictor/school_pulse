@@ -111,7 +111,8 @@ enum AdminSection {
         path == '/staff/admin/student-id-card') {
       return AdminSection.students;
     }
-    if (path == '/staff/admin/users' || path.startsWith('/staff/admin/users/')) {
+    if (path == '/staff/admin/users' ||
+        path.startsWith('/staff/admin/users/')) {
       return AdminSection.staff;
     }
     if (path == '/staff/admin/parents' ||

@@ -51,8 +51,9 @@ class ParentAccessInvitesPage {
       hasEmail: row['hasEmail'] as bool? ?? false,
       learnerCount: (row['learnerCount'] as num?)?.toInt() ?? 0,
       status: status,
-      invitationStatus:
-          parentInvitationDeliveryFromString(row['invitationStatus'] as String?),
+      invitationStatus: parentInvitationDeliveryFromString(
+        row['invitationStatus'] as String?,
+      ),
       invitationSentAt: _millisToDate(row['invitationSentAt']),
       canResendAt: _millisToDate(row['canResendAt']),
       createdAt: _millisToDate(row['createdAt']),

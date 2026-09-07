@@ -36,9 +36,7 @@ class ParentsAccessCubit extends Cubit<ParentsAccessState> {
         // not wipe the "done" toast the UI is about to show.
       ),
     );
-    final result = await repository.listParentAccessInvites(
-      pageSize: pageSize,
-    );
+    final result = await repository.listParentAccessInvites(pageSize: pageSize);
     result.fold(
       (failure) => emit(
         state.copyWith(
@@ -106,9 +104,7 @@ class ParentsAccessCubit extends Cubit<ParentsAccessState> {
         actionSuccessMessage: () => null,
       ),
     );
-    final result = await repository.revokeParentAccessCode(
-      inviteId: inviteId,
-    );
+    final result = await repository.revokeParentAccessCode(inviteId: inviteId);
     return result.fold(
       (failure) {
         emit(
@@ -208,10 +204,7 @@ class ParentsAccessCubit extends Cubit<ParentsAccessState> {
 
   void clearActionFeedback() {
     emit(
-      state.copyWith(
-        actionError: () => null,
-        actionSuccessMessage: () => null,
-      ),
+      state.copyWith(actionError: () => null, actionSuccessMessage: () => null),
     );
   }
 }

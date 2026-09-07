@@ -44,16 +44,18 @@ void main() {
 
   setUp(() {
     repo = _MockRepo();
-    when(() => repo.listParentLinkAudit(inviteId: any(named: 'inviteId')))
-        .thenAnswer((_) async => const Right([]));
+    when(
+      () => repo.listParentLinkAudit(inviteId: any(named: 'inviteId')),
+    ).thenAnswer((_) async => const Right([]));
   });
 
   ParentDetailCubit build() =>
       ParentDetailCubit(repository: repo, inviteId: 'inv-1');
 
   test('load populates the record and then the audit list', () async {
-    when(() => repo.getParentAccessRecord(inviteId: 'inv-1'))
-        .thenAnswer((_) async => Right(_record()));
+    when(
+      () => repo.getParentAccessRecord(inviteId: 'inv-1'),
+    ).thenAnswer((_) async => Right(_record()));
     when(() => repo.listParentLinkAudit(inviteId: 'inv-1')).thenAnswer(
       (_) async => Right([
         const ParentLinkAuditEntry(
@@ -77,9 +79,9 @@ void main() {
   });
 
   test('a permission-denied load surfaces isPermissionDenied', () async {
-    when(() => repo.getParentAccessRecord(inviteId: 'inv-1')).thenAnswer(
-      (_) async => const Left(PermissionDeniedFailure('nope')),
-    );
+    when(
+      () => repo.getParentAccessRecord(inviteId: 'inv-1'),
+    ).thenAnswer((_) async => const Left(PermissionDeniedFailure('nope')));
     final cubit = build();
     await cubit.load();
     expect(cubit.state.isPermissionDenied, isTrue);
@@ -88,14 +90,14 @@ void main() {
 
   test('an offline load surfaces isOffline + retry re-fetches', () async {
     var calls = 0;
-    when(() => repo.getParentAccessRecord(inviteId: 'inv-1')).thenAnswer(
-      (_) async {
-        calls++;
-        return calls == 1
-            ? const Left(NetworkFailure('offline'))
-            : Right(_record());
-      },
-    );
+    when(() => repo.getParentAccessRecord(inviteId: 'inv-1')).thenAnswer((
+      _,
+    ) async {
+      calls++;
+      return calls == 1
+          ? const Left(NetworkFailure('offline'))
+          : Right(_record());
+    });
     final cubit = build();
     await cubit.load();
     expect(cubit.state.isOffline, isTrue);
@@ -105,10 +107,12 @@ void main() {
   });
 
   test('resendInvitation surfaces success + reloads', () async {
-    when(() => repo.getParentAccessRecord(inviteId: 'inv-1'))
-        .thenAnswer((_) async => Right(_record()));
-    when(() => repo.resendParentInvitation(inviteId: 'inv-1'))
-        .thenAnswer((_) async => const Right(null));
+    when(
+      () => repo.getParentAccessRecord(inviteId: 'inv-1'),
+    ).thenAnswer((_) async => Right(_record()));
+    when(
+      () => repo.resendParentInvitation(inviteId: 'inv-1'),
+    ).thenAnswer((_) async => const Right(null));
 
     final cubit = build();
     await cubit.load();
@@ -119,8 +123,9 @@ void main() {
   });
 
   test('resendInvitation failure surfaces actionError, no reload', () async {
-    when(() => repo.getParentAccessRecord(inviteId: 'inv-1'))
-        .thenAnswer((_) async => Right(_record()));
+    when(
+      () => repo.getParentAccessRecord(inviteId: 'inv-1'),
+    ).thenAnswer((_) async => Right(_record()));
     when(() => repo.resendParentInvitation(inviteId: 'inv-1')).thenAnswer(
       (_) async => const Left(ServerFailure('Please wait before resending.')),
     );
@@ -133,42 +138,51 @@ void main() {
   });
 
   test('unlinkLearner calls reallocateParentLink in removal mode', () async {
-    when(() => repo.getParentAccessRecord(inviteId: 'inv-1')).thenAnswer(
-      (_) async => Right(_record(learners: [_learner('l1')])),
-    );
-    when(() => repo.reallocateParentLink(
-          linkId: any(named: 'linkId'),
-          reason: any(named: 'reason'),
-        )).thenAnswer((_) async => const Right(null));
+    when(
+      () => repo.getParentAccessRecord(inviteId: 'inv-1'),
+    ).thenAnswer((_) async => Right(_record(learners: [_learner('l1')])));
+    when(
+      () => repo.reallocateParentLink(
+        linkId: any(named: 'linkId'),
+        reason: any(named: 'reason'),
+      ),
+    ).thenAnswer((_) async => const Right(null));
 
     final cubit = build();
     await cubit.load();
-    final ok = await cubit.unlinkLearner(linkId: 'l1', reason: 'custody transfer');
+    final ok = await cubit.unlinkLearner(
+      linkId: 'l1',
+      reason: 'custody transfer',
+    );
     expect(ok, isTrue);
-    verify(() => repo.reallocateParentLink(
-          linkId: 'l1',
-          reason: 'custody transfer',
-        )).called(1);
+    verify(
+      () => repo.reallocateParentLink(linkId: 'l1', reason: 'custody transfer'),
+    ).called(1);
   });
 
   test('updateDetails passes only the changed fields', () async {
-    when(() => repo.getParentAccessRecord(inviteId: 'inv-1'))
-        .thenAnswer((_) async => Right(_record()));
-    when(() => repo.updateParentDetails(
-          inviteId: any(named: 'inviteId'),
-          parentName: any(named: 'parentName'),
-          phoneNumber: any(named: 'phoneNumber'),
-          email: any(named: 'email'),
-        )).thenAnswer((_) async => const Right(null));
+    when(
+      () => repo.getParentAccessRecord(inviteId: 'inv-1'),
+    ).thenAnswer((_) async => Right(_record()));
+    when(
+      () => repo.updateParentDetails(
+        inviteId: any(named: 'inviteId'),
+        parentName: any(named: 'parentName'),
+        phoneNumber: any(named: 'phoneNumber'),
+        email: any(named: 'email'),
+      ),
+    ).thenAnswer((_) async => const Right(null));
 
     final cubit = build();
     await cubit.load();
     await cubit.updateDetails(parentName: 'New Name');
-    verify(() => repo.updateParentDetails(
-          inviteId: 'inv-1',
-          parentName: 'New Name',
-          phoneNumber: null,
-          email: null,
-        )).called(1);
+    verify(
+      () => repo.updateParentDetails(
+        inviteId: 'inv-1',
+        parentName: 'New Name',
+        phoneNumber: null,
+        email: null,
+      ),
+    ).called(1);
   });
 }

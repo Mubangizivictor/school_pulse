@@ -24,8 +24,7 @@ class ParentDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) =>
-          di.sl<ParentDetailCubit>(param1: inviteId)..load(),
+      create: (_) => di.sl<ParentDetailCubit>(param1: inviteId)..load(),
       child: const _ParentDetailView(),
     );
   }
@@ -102,10 +101,7 @@ class _ParentDetailView extends StatelessWidget {
                   busy: state.actionInFlight,
                 ),
                 const SizedBox(height: 16),
-                _InvitationCard(
-                  record: record,
-                  busy: state.actionInFlight,
-                ),
+                _InvitationCard(record: record, busy: state.actionInFlight),
                 const SizedBox(height: 16),
                 _LearnersCard(
                   record: record,
@@ -113,10 +109,7 @@ class _ParentDetailView extends StatelessWidget {
                   busy: state.actionInFlight,
                 ),
                 const SizedBox(height: 16),
-                _AuditCard(
-                  entries: state.audit,
-                  loading: state.auditLoading,
-                ),
+                _AuditCard(entries: state.audit, loading: state.auditLoading),
               ],
             ),
           );
@@ -133,11 +126,7 @@ class _SectionCard extends StatelessWidget {
   final Widget child;
   final Widget? trailing;
 
-  const _SectionCard({
-    required this.title,
-    required this.child,
-    this.trailing,
-  });
+  const _SectionCard({required this.title, required this.child, this.trailing});
 
   @override
   Widget build(BuildContext context) {
@@ -273,10 +262,12 @@ class _EditGuardianSheet extends StatefulWidget {
 }
 
 class _EditGuardianSheetState extends State<_EditGuardianSheet> {
-  late final TextEditingController _name =
-      TextEditingController(text: widget.record.parentName);
-  late final TextEditingController _email =
-      TextEditingController(text: widget.record.email);
+  late final TextEditingController _name = TextEditingController(
+    text: widget.record.parentName,
+  );
+  late final TextEditingController _email = TextEditingController(
+    text: widget.record.email,
+  );
   late String _dial;
   late String _national;
   bool _saving = false;
@@ -286,10 +277,9 @@ class _EditGuardianSheetState extends State<_EditGuardianSheet> {
     super.initState();
     final phone = widget.record.phoneNumber;
     // Split an E.164 number into a best-effort dial/national pair.
-    final match = kPhoneCountries
-        .where((c) => phone.startsWith(c.dialCode))
-        .toList()
-      ..sort((a, b) => b.dialCode.length.compareTo(a.dialCode.length));
+    final match =
+        kPhoneCountries.where((c) => phone.startsWith(c.dialCode)).toList()
+          ..sort((a, b) => b.dialCode.length.compareTo(a.dialCode.length));
     if (match.isNotEmpty) {
       _dial = match.first.dialCode;
       _national = phone.substring(_dial.length);
@@ -316,14 +306,12 @@ class _EditGuardianSheetState extends State<_EditGuardianSheet> {
     setState(() => _saving = true);
     final original = widget.record;
     final ok = await context.read<ParentDetailCubit>().updateDetails(
-          parentName: _name.text.trim() == original.parentName
-              ? null
-              : _name.text.trim(),
-          phoneNumber: e164 == original.phoneNumber ? null : e164,
-          email: _email.text.trim() == original.email
-              ? null
-              : _email.text.trim(),
-        );
+      parentName: _name.text.trim() == original.parentName
+          ? null
+          : _name.text.trim(),
+      phoneNumber: e164 == original.phoneNumber ? null : e164,
+      email: _email.text.trim() == original.email ? null : _email.text.trim(),
+    );
     if (!mounted) return;
     setState(() => _saving = false);
     if (ok) Navigator.of(context).pop();
@@ -408,10 +396,10 @@ class _InvitationCard extends StatelessWidget {
     final (label, color) = revoked
         ? ('Revoked', AppColors.danger(context))
         : expired
-            ? ('Expired', AppColors.danger(context))
-            : record.invitationStatus == ParentInvitationDelivery.accepted
-                ? ('Active', AppColors.success(context))
-                : ('Pending', AppColors.warning(context));
+        ? ('Expired', AppColors.danger(context))
+        : record.invitationStatus == ParentInvitationDelivery.accepted
+        ? ('Active', AppColors.success(context))
+        : ('Pending', AppColors.warning(context));
 
     return _SectionCard(
       title: 'Invitation & access',
@@ -455,15 +443,14 @@ class _InvitationCard extends StatelessWidget {
                 OutlinedButton.icon(
                   onPressed: busy || !canResend
                       ? null
-                      : () =>
-                          context.read<ParentDetailCubit>().resendInvitation(),
+                      : () => context
+                            .read<ParentDetailCubit>()
+                            .resendInvitation(),
                   icon: const Icon(Icons.refresh, size: 16),
                   label: Text(canResend ? 'Resend invitation' : 'Resend soon'),
                 ),
                 OutlinedButton.icon(
-                  onPressed: busy
-                      ? null
-                      : () => _confirmRevoke(context),
+                  onPressed: busy ? null : () => _confirmRevoke(context),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.danger(context),
                     side: BorderSide(color: AppColors.danger(context)),
@@ -609,10 +596,10 @@ class _LearnersCard extends StatelessWidget {
                 Text(
                   canOverride
                       ? 'If this is the learner’s only guardian, they '
-                          'will have no linked parent until another is added. '
-                          'Provide a reason (kept in the audit log).'
+                            'will have no linked parent until another is added. '
+                            'Provide a reason (kept in the audit log).'
                       : 'Only a school admin can unlink a guardian. Ask an '
-                          'admin to perform this change.',
+                            'admin to perform this change.',
                   style: TextStyle(
                     color: AppColors.textSecondary(context),
                     fontSize: 13,
@@ -675,43 +662,43 @@ class _AuditCard extends StatelessWidget {
               child: Center(child: CircularProgressIndicator()),
             )
           : entries.isEmpty
-              ? Text(
-                  'No reallocation or removal events recorded.',
-                  style: TextStyle(
-                    color: AppColors.textMuted(context),
-                    fontSize: 12.5,
-                  ),
-                )
-              : Column(
-                  children: [
-                    for (final e in entries)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(
-                              Icons.history,
-                              size: 14,
-                              color: AppColors.textMuted(context),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '${e.action} by ${e.actorRole}'
-                                '${e.reason.isEmpty ? '' : ' — ${e.reason}'}'
-                                '${e.createdAt == null ? '' : ' (${e.createdAt!.toLocal().toString().split('.').first})'}',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary(context),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
+          ? Text(
+              'No reallocation or removal events recorded.',
+              style: TextStyle(
+                color: AppColors.textMuted(context),
+                fontSize: 12.5,
+              ),
+            )
+          : Column(
+              children: [
+                for (final e in entries)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.history,
+                          size: 14,
+                          color: AppColors.textMuted(context),
                         ),
-                      ),
-                  ],
-                ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '${e.action} by ${e.actorRole}'
+                            '${e.reason.isEmpty ? '' : ' — ${e.reason}'}'
+                            '${e.createdAt == null ? '' : ' (${e.createdAt!.toLocal().toString().split('.').first})'}',
+                            style: TextStyle(
+                              color: AppColors.textSecondary(context),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 }
@@ -750,8 +737,10 @@ class _Centered extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style:
-                  TextStyle(color: AppColors.textMuted(context), fontSize: 13),
+              style: TextStyle(
+                color: AppColors.textMuted(context),
+                fontSize: 13,
+              ),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: 16),

@@ -36,7 +36,9 @@ abstract class ParentAccessRemoteDataSource {
 
   Future<void> cancelParentInvitation({required String inviteId});
 
-  Future<Map<String, dynamic>> getParentAccessRecord({required String inviteId});
+  Future<Map<String, dynamic>> getParentAccessRecord({
+    required String inviteId,
+  });
 
   /// [email] is only sent when non-null; pass an empty string to clear the
   /// address, a non-empty string to set it, and null to leave it unchanged.
@@ -71,12 +73,14 @@ class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
     String? email,
     required List<Map<String, dynamic>> learners,
   }) async {
-    final result = await functions.httpsCallable('createParentAccessCode').call({
-      'parentName': parentName,
-      'phoneNumber': phoneNumber,
-      if (email != null && email.isNotEmpty) 'email': email,
-      'learners': learners,
-    });
+    final result = await functions
+        .httpsCallable('createParentAccessCode')
+        .call({
+          'parentName': parentName,
+          'phoneNumber': phoneNumber,
+          if (email != null && email.isNotEmpty) 'email': email,
+          'learners': learners,
+        });
     return Map<String, dynamic>.from(result.data as Map);
   }
 
@@ -108,10 +112,9 @@ class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
     required int pageSize,
     String? cursor,
   }) async {
-    final result = await functions.httpsCallable('listParentAccessInvites').call({
-      'pageSize': pageSize,
-      if (cursor != null) 'cursor': cursor,
-    });
+    final result = await functions
+        .httpsCallable('listParentAccessInvites')
+        .call({'pageSize': pageSize, if (cursor != null) 'cursor': cursor});
     return ParentAccessInvitesPage.fromCallableData(
       Map<String, dynamic>.from(result.data as Map),
     );
@@ -122,10 +125,9 @@ class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
     required String inviteId,
     String? rawCode,
   }) async {
-    final result = await functions.httpsCallable('createParentInvitation').call({
-      'inviteId': inviteId,
-      if (rawCode != null) 'rawCode': rawCode,
-    });
+    final result = await functions.httpsCallable('createParentInvitation').call(
+      {'inviteId': inviteId, if (rawCode != null) 'rawCode': rawCode},
+    );
     return Map<String, dynamic>.from(result.data as Map);
   }
 
@@ -167,11 +169,9 @@ class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
     required String inviteId,
     required List<Map<String, dynamic>> learners,
   }) async {
-    final result =
-        await functions.httpsCallable('linkLearnersToExistingParent').call({
-      'inviteId': inviteId,
-      'learners': learners,
-    });
+    final result = await functions
+        .httpsCallable('linkLearnersToExistingParent')
+        .call({'inviteId': inviteId, 'learners': learners});
     return Map<String, dynamic>.from(result.data as Map);
   }
 
@@ -184,11 +184,9 @@ class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
       if (inviteId != null) 'inviteId': inviteId,
       if (studentId != null) 'studentId': studentId,
     });
-    final entries = (Map<String, dynamic>.from(result.data as Map)['entries']
-            as List?) ??
+    final entries =
+        (Map<String, dynamic>.from(result.data as Map)['entries'] as List?) ??
         const [];
-    return entries
-        .map((e) => Map<String, dynamic>.from(e as Map))
-        .toList();
+    return entries.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 }

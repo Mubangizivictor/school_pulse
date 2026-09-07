@@ -148,8 +148,7 @@ class LinkParentWizardController extends ChangeNotifier {
   bool get isPhoneValid => phoneToE164(_dialCode, nationalNumber) != null;
   bool get isNameValid => parentName.isNotEmpty;
   bool get isEmailValid =>
-      email.isEmpty ||
-      RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+      email.isEmpty || RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
 
   bool get canProceedFromDetails =>
       isNameValid &&
@@ -186,9 +185,8 @@ class LinkParentWizardController extends ChangeNotifier {
   }
 
   void setLearnerRelationship(String studentId, String relationship) {
-    selectedLearners
-        .firstWhere((l) => l.student.id == studentId)
-        .relationship = relationship;
+    selectedLearners.firstWhere((l) => l.student.id == studentId).relationship =
+        relationship;
     _onFieldChanged();
   }
 
@@ -236,9 +234,9 @@ class LinkParentWizardController extends ChangeNotifier {
       final phoneTail = e164Phone.replaceAll(RegExp(r'\D'), '');
       for (final row in page.rows) {
         final rowTail = row.maskedPhone.replaceAll(RegExp(r'\D'), '');
-        final phoneMatch =
-            rowTail.isNotEmpty && phoneTail.endsWith(rowTail);
-        final emailMatch = email.isNotEmpty &&
+        final phoneMatch = rowTail.isNotEmpty && phoneTail.endsWith(rowTail);
+        final emailMatch =
+            email.isNotEmpty &&
             row.hasEmail &&
             row.maskedEmail.split('@').last.toLowerCase() ==
                 email.split('@').last.toLowerCase() &&
@@ -264,11 +262,13 @@ class LinkParentWizardController extends ChangeNotifier {
   String? _idempotencyKey;
 
   List<LearnerLinkRequest> _learnerRequests() => selectedLearners
-      .map((l) => LearnerLinkRequest(
-            studentId: l.student.id,
-            relationship: l.relationship,
-            isPrimaryContact: l.isPrimaryContact,
-          ))
+      .map(
+        (l) => LearnerLinkRequest(
+          studentId: l.student.id,
+          relationship: l.relationship,
+          isPrimaryContact: l.isPrimaryContact,
+        ),
+      )
       .toList();
 
   /// Creates a brand-new parent record + verified invitation. Idempotent
@@ -357,8 +357,9 @@ class LinkParentWizardController extends ChangeNotifier {
 
   Future<bool> revoke() async {
     if (resultInviteId == null) return false;
-    final result =
-        await repository.revokeParentAccessCode(inviteId: resultInviteId!);
+    final result = await repository.revokeParentAccessCode(
+      inviteId: resultInviteId!,
+    );
     return result.isRight();
   }
 
@@ -385,13 +386,15 @@ class LinkParentWizardController extends ChangeNotifier {
     email: email,
     sendInvitation: sendInvitation,
     learners: selectedLearners
-        .map((l) => LinkParentDraftLearner(
-              studentId: l.student.id,
-              studentName: l.student.name,
-              studentCode: l.student.studentCode,
-              relationship: l.relationship,
-              isPrimaryContact: l.isPrimaryContact,
-            ))
+        .map(
+          (l) => LinkParentDraftLearner(
+            studentId: l.student.id,
+            studentName: l.student.name,
+            studentCode: l.student.studentCode,
+            relationship: l.relationship,
+            isPrimaryContact: l.isPrimaryContact,
+          ),
+        )
         .toList(),
   );
 
@@ -464,11 +467,13 @@ class LinkParentWizardController extends ChangeNotifier {
       for (final l in draft.learners) {
         final student = resolveStudent(l.studentId);
         if (student == null) continue;
-        selectedLearners.add(SelectedLearner(
-          student: student,
-          relationship: l.relationship,
-          isPrimaryContact: l.isPrimaryContact,
-        ));
+        selectedLearners.add(
+          SelectedLearner(
+            student: student,
+            relationship: l.relationship,
+            isPrimaryContact: l.isPrimaryContact,
+          ),
+        );
       }
       _restoring = false;
       notifyListeners();

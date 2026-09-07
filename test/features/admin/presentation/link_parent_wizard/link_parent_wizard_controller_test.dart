@@ -13,7 +13,11 @@ import 'package:school_pulse/features/student/domain/entities/student_enums.dart
 
 class _MockRepo extends Mock implements ParentAccessRepository {}
 
-Student _student(String id, {String name = 'Akol Kevin', String code = 'ADM0014'}) {
+Student _student(
+  String id, {
+  String name = 'Akol Kevin',
+  String code = 'ADM0014',
+}) {
   return Student(
     id: id,
     schoolId: 'schoolA',
@@ -29,7 +33,10 @@ Student _student(String id, {String name = 'Akol Kevin', String code = 'ADM0014'
   );
 }
 
-ParentAccessInvitesPage _page({List<ParentAccessInvite> rows = const [], int maxGuardians = 2}) {
+ParentAccessInvitesPage _page({
+  List<ParentAccessInvite> rows = const [],
+  int maxGuardians = 2,
+}) {
   return ParentAccessInvitesPage(
     rows: rows,
     nextCursor: null,
@@ -49,15 +56,16 @@ void main() {
   setUp(() {
     repo = _MockRepo();
     SharedPreferences.setMockInitialValues({});
-    when(() => repo.listParentAccessInvites(pageSize: any(named: 'pageSize')))
-        .thenAnswer((_) async => Right(_page()));
+    when(
+      () => repo.listParentAccessInvites(pageSize: any(named: 'pageSize')),
+    ).thenAnswer((_) async => Right(_page()));
   });
 
   LinkParentWizardController build() => LinkParentWizardController(
-        schoolId: 'schoolA',
-        adminUid: 'admin1',
-        repository: repo,
-      );
+    schoolId: 'schoolA',
+    adminUid: 'admin1',
+    repository: repo,
+  );
 
   group('validation', () {
     test('canProceedFromDetails needs name, valid phone, >=1 learner', () {
@@ -91,19 +99,22 @@ void main() {
   });
 
   group('per-learner primary contact + relationship', () {
-    test('setPrimaryContact and setLearnerRelationship mutate the right row', () {
-      final c = build()
-        ..addLearner(_student('s1'))
-        ..addLearner(_student('s2', name: 'Akol Natalie'));
-      c.setPrimaryContact('s1', true);
-      c.setLearnerRelationship('s2', 'Guardian');
+    test(
+      'setPrimaryContact and setLearnerRelationship mutate the right row',
+      () {
+        final c = build()
+          ..addLearner(_student('s1'))
+          ..addLearner(_student('s2', name: 'Akol Natalie'));
+        c.setPrimaryContact('s1', true);
+        c.setLearnerRelationship('s2', 'Guardian');
 
-      final s1 = c.selectedLearners.firstWhere((l) => l.student.id == 's1');
-      final s2 = c.selectedLearners.firstWhere((l) => l.student.id == 's2');
-      expect(s1.isPrimaryContact, isTrue);
-      expect(s2.isPrimaryContact, isFalse);
-      expect(s2.relationship, 'Guardian');
-    });
+        final s1 = c.selectedLearners.firstWhere((l) => l.student.id == 's1');
+        final s2 = c.selectedLearners.firstWhere((l) => l.student.id == 's2');
+        expect(s1.isPrimaryContact, isTrue);
+        expect(s2.isPrimaryContact, isFalse);
+        expect(s2.relationship, 'Guardian');
+      },
+    );
 
     test('removeLearner drops it', () {
       final c = build()..addLearner(_student('s1'));
@@ -114,8 +125,9 @@ void main() {
 
   group('policy', () {
     test('loadPolicy pulls maxGuardians from the directory payload', () async {
-      when(() => repo.listParentAccessInvites(pageSize: 1))
-          .thenAnswer((_) async => Right(_page(maxGuardians: 4)));
+      when(
+        () => repo.listParentAccessInvites(pageSize: 1),
+      ).thenAnswer((_) async => Right(_page(maxGuardians: 4)));
       final c = build();
       await c.loadPolicy();
       expect(c.maxGuardians, 4);
@@ -123,28 +135,35 @@ void main() {
   });
 
   group('duplicate detection', () {
-    test('next() surfaces an existing parent with a matching phone tail', () async {
-      when(() => repo.listParentAccessInvites(pageSize: 100)).thenAnswer(
-        (_) async => Right(_page(rows: [
-          const ParentAccessInvite(
-            inviteId: 'inv-existing',
-            parentName: 'Naluwagga Sarah',
-            maskedPhone: '***5678',
-            learnerCount: 1,
-            status: ParentInviteStatus.active,
+    test(
+      'next() surfaces an existing parent with a matching phone tail',
+      () async {
+        when(() => repo.listParentAccessInvites(pageSize: 100)).thenAnswer(
+          (_) async => Right(
+            _page(
+              rows: [
+                const ParentAccessInvite(
+                  inviteId: 'inv-existing',
+                  parentName: 'Naluwagga Sarah',
+                  maskedPhone: '***5678',
+                  learnerCount: 1,
+                  status: ParentInviteStatus.active,
+                ),
+              ],
+            ),
           ),
-        ])),
-      );
-      final c = build()
-        ..parentNameController.text = 'Naluwagga Sarah'
-        ..nationalNumber = '712345678'
-        ..addLearner(_student('s9'));
+        );
+        final c = build()
+          ..parentNameController.text = 'Naluwagga Sarah'
+          ..nationalNumber = '712345678'
+          ..addLearner(_student('s9'));
 
-      await c.next();
-      expect(c.stage, LinkParentStage.review);
-      expect(c.duplicateMatch, isNotNull);
-      expect(c.duplicateMatch!.inviteId, 'inv-existing');
-    });
+        await c.next();
+        expect(c.stage, LinkParentStage.review);
+        expect(c.duplicateMatch, isNotNull);
+        expect(c.duplicateMatch!.inviteId, 'inv-existing');
+      },
+    );
 
     test('no match leaves duplicateMatch null', () async {
       final c = build()
@@ -158,20 +177,24 @@ void main() {
 
   group('submit', () {
     setUp(() {
-      when(() => repo.issueParentAccessCode(
-            parentName: any(named: 'parentName'),
-            phoneNumber: any(named: 'phoneNumber'),
-            email: any(named: 'email'),
-            learners: any(named: 'learners'),
-          )).thenAnswer((_) async => Right(
-            IssuedParentAccessCode(
-              inviteId: 'inv-new',
-              code: 'SP123456',
-              expiresAt: DateTime.now().add(const Duration(days: 7)),
-              invitationStatus: 'sent',
-              invitationDelivered: true,
-            ),
-          ));
+      when(
+        () => repo.issueParentAccessCode(
+          parentName: any(named: 'parentName'),
+          phoneNumber: any(named: 'phoneNumber'),
+          email: any(named: 'email'),
+          learners: any(named: 'learners'),
+        ),
+      ).thenAnswer(
+        (_) async => Right(
+          IssuedParentAccessCode(
+            inviteId: 'inv-new',
+            code: 'SP123456',
+            expiresAt: DateTime.now().add(const Duration(days: 7)),
+            invitationStatus: 'sent',
+            invitationDelivered: true,
+          ),
+        ),
+      );
     });
 
     test('submitNewParent advances to sent and clears the draft', () async {
@@ -201,21 +224,27 @@ void main() {
     });
 
     test('submitLinkToExisting uses the duplicate match', () async {
-      when(() => repo.linkLearnersToExistingParent(
-            inviteId: any(named: 'inviteId'),
-            learners: any(named: 'learners'),
-          )).thenAnswer((_) async => const Right(null));
+      when(
+        () => repo.linkLearnersToExistingParent(
+          inviteId: any(named: 'inviteId'),
+          learners: any(named: 'learners'),
+        ),
+      ).thenAnswer((_) async => const Right(null));
 
       when(() => repo.listParentAccessInvites(pageSize: 100)).thenAnswer(
-        (_) async => Right(_page(rows: [
-          const ParentAccessInvite(
-            inviteId: 'inv-existing',
-            parentName: 'Naluwagga Sarah',
-            maskedPhone: '***5678',
-            learnerCount: 1,
-            status: ParentInviteStatus.active,
+        (_) async => Right(
+          _page(
+            rows: [
+              const ParentAccessInvite(
+                inviteId: 'inv-existing',
+                parentName: 'Naluwagga Sarah',
+                maskedPhone: '***5678',
+                learnerCount: 1,
+                status: ParentInviteStatus.active,
+              ),
+            ],
           ),
-        ])),
+        ),
       );
 
       final c = build()
@@ -226,21 +255,23 @@ void main() {
       final ok = await c.submitLinkToExisting();
       expect(ok, isTrue);
       expect(c.stage, LinkParentStage.sent);
-      verify(() => repo.linkLearnersToExistingParent(
-            inviteId: 'inv-existing',
-            learners: any(named: 'learners'),
-          )).called(1);
+      verify(
+        () => repo.linkLearnersToExistingParent(
+          inviteId: 'inv-existing',
+          learners: any(named: 'learners'),
+        ),
+      ).called(1);
     });
 
     test('a failed submit surfaces submitError and stays on review', () async {
-      when(() => repo.issueParentAccessCode(
-            parentName: any(named: 'parentName'),
-            phoneNumber: any(named: 'phoneNumber'),
-            email: any(named: 'email'),
-            learners: any(named: 'learners'),
-          )).thenAnswer(
-        (_) async => const Left(ServerFailure('boom')),
-      );
+      when(
+        () => repo.issueParentAccessCode(
+          parentName: any(named: 'parentName'),
+          phoneNumber: any(named: 'phoneNumber'),
+          email: any(named: 'email'),
+          learners: any(named: 'learners'),
+        ),
+      ).thenAnswer((_) async => const Left(ServerFailure('boom')));
       final c = build()
         ..parentNameController.text = 'X'
         ..nationalNumber = '712345678'
@@ -253,30 +284,30 @@ void main() {
   });
 
   group('draft persistence', () {
-    test('a filled draft is written and restored, learners resolved via roster',
-        () async {
-      final c = build()
-        ..parentNameController.text = 'Naluwagga Sarah'
-        ..nationalNumber = '712345678'
-        ..relationship = 'Mother';
-      c.addLearner(_student('s1', name: 'Akol Kevin'));
-      c.setPrimaryContact('s1', true);
-      await c.flushDraft();
+    test(
+      'a filled draft is written and restored, learners resolved via roster',
+      () async {
+        final c = build()
+          ..parentNameController.text = 'Naluwagga Sarah'
+          ..nationalNumber = '712345678'
+          ..relationship = 'Mother';
+        c.addLearner(_student('s1', name: 'Akol Kevin'));
+        c.setPrimaryContact('s1', true);
+        await c.flushDraft();
 
-      final roster = [_student('s1', name: 'Akol Kevin')];
-      final fresh = build();
-      final restored = await fresh.restoreDraftIfPresent(
-        (id) {
+        final roster = [_student('s1', name: 'Akol Kevin')];
+        final fresh = build();
+        final restored = await fresh.restoreDraftIfPresent((id) {
           final matches = roster.where((s) => s.id == id);
           return matches.isEmpty ? null : matches.first;
-        },
-      );
-      expect(restored, isTrue);
-      expect(fresh.parentName, 'Naluwagga Sarah');
-      expect(fresh.nationalNumber, '712345678');
-      expect(fresh.selectedLearners.single.student.id, 's1');
-      expect(fresh.selectedLearners.single.isPrimaryContact, isTrue);
-    });
+        });
+        expect(restored, isTrue);
+        expect(fresh.parentName, 'Naluwagga Sarah');
+        expect(fresh.nationalNumber, '712345678');
+        expect(fresh.selectedLearners.single.student.id, 's1');
+        expect(fresh.selectedLearners.single.isPrimaryContact, isTrue);
+      },
+    );
 
     test('a stale (>24h) draft is dropped', () async {
       SharedPreferences.setMockInitialValues({
@@ -299,4 +330,3 @@ String _staleDraftJson() {
       '"dialCode":"+256","email":"","relationship":"Mother","learners":[],'
       '"sendInvitation":true}}';
 }
-

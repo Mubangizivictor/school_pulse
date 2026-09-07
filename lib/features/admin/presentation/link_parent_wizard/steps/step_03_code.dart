@@ -33,9 +33,9 @@ class _LinkParentStepSentState extends State<LinkParentStepSent> {
   Future<void> _copy(String code) async {
     await Clipboard.setData(ClipboardData(text: code));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Code copied to clipboard')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Code copied to clipboard')));
   }
 
   Future<void> _share(String code, String name) async {
@@ -55,8 +55,9 @@ class _LinkParentStepSentState extends State<LinkParentStepSent> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(ok ? 'Invitation re-sent' : 'Could not resend'),
-        backgroundColor:
-            ok ? AppColors.success(context) : AppColors.danger(context),
+        backgroundColor: ok
+            ? AppColors.success(context)
+            : AppColors.danger(context),
       ),
     );
   }
@@ -72,8 +73,9 @@ class _LinkParentStepSentState extends State<LinkParentStepSent> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(ok ? 'Access revoked' : 'Could not revoke'),
-        backgroundColor:
-            ok ? AppColors.success(context) : AppColors.danger(context),
+        backgroundColor: ok
+            ? AppColors.success(context)
+            : AppColors.danger(context),
       ),
     );
   }
@@ -106,8 +108,8 @@ class _LinkParentStepSentState extends State<LinkParentStepSent> {
                       _revoked
                           ? Icons.block
                           : delivered
-                              ? Icons.mark_email_read_outlined
-                              : Icons.verified_user_outlined,
+                          ? Icons.mark_email_read_outlined
+                          : Icons.verified_user_outlined,
                       size: 40,
                       color: _revoked
                           ? AppColors.danger(context)
@@ -118,8 +120,8 @@ class _LinkParentStepSentState extends State<LinkParentStepSent> {
                       _revoked
                           ? 'This parent access has been revoked'
                           : delivered
-                              ? 'Invitation sent to $target'
-                              : 'Parent record created',
+                          ? 'Invitation sent to $target'
+                          : 'Parent record created',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.textPrimary(context),
@@ -132,10 +134,10 @@ class _LinkParentStepSentState extends State<LinkParentStepSent> {
                       _revoked
                           ? 'The parent can no longer use this invitation.'
                           : delivered
-                              ? 'The parent verifies their phone/email and '
-                                  'sets their own PIN. No password is stored.'
-                              : 'Share the one-time code below with the '
-                                  'parent. No password is stored.',
+                          ? 'The parent verifies their phone/email and '
+                                'sets their own PIN. No password is stored.'
+                          : 'Share the one-time code below with the '
+                                'parent. No password is stored.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: AppColors.textMuted(context),
@@ -161,7 +163,8 @@ class _LinkParentStepSentState extends State<LinkParentStepSent> {
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.danger(context),
                                 side: BorderSide(
-                                    color: AppColors.danger(context)),
+                                  color: AppColors.danger(context),
+                                ),
                               ),
                               icon: const Icon(Icons.block, size: 16),
                               label: const Text('Revoke'),
@@ -184,9 +187,7 @@ class _LinkParentStepSentState extends State<LinkParentStepSent> {
                         child: Row(
                           children: [
                             Icon(
-                              _showCode
-                                  ? Icons.expand_less
-                                  : Icons.expand_more,
+                              _showCode ? Icons.expand_less : Icons.expand_more,
                               size: 18,
                               color: AppColors.textMuted(context),
                             ),
@@ -222,20 +223,20 @@ class _LinkParentStepSentState extends State<LinkParentStepSent> {
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: () =>
-                                    _copy(_formatCode(code)),
-                                icon:
-                                    const Icon(Icons.copy_outlined, size: 16),
+                                onPressed: () => _copy(_formatCode(code)),
+                                icon: const Icon(Icons.copy_outlined, size: 16),
                                 label: const Text('Copy'),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: () => _share(
-                                    _formatCode(code), c.parentName),
-                                icon: const Icon(Icons.ios_share_outlined,
-                                    size: 16),
+                                onPressed: () =>
+                                    _share(_formatCode(code), c.parentName),
+                                icon: const Icon(
+                                  Icons.ios_share_outlined,
+                                  size: 16,
+                                ),
                                 label: const Text('Share'),
                               ),
                             ),

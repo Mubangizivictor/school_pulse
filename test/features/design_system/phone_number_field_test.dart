@@ -66,8 +66,9 @@ void main() {
       expect(find.text('Enter a valid phone number'), findsOneWidget);
     });
 
-    testWidgets('opens the searchable country picker and reports selection',
-        (tester) async {
+    testWidgets('opens the searchable country picker and reports selection', (
+      tester,
+    ) async {
       String? picked;
       await tester.pumpWidget(host(onDial: (v) => picked = v));
       await tester.tap(find.text('+256'));

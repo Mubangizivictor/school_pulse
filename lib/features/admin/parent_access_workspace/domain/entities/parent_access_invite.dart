@@ -10,7 +10,13 @@ enum ParentInviteStatus { active, revoked, expired }
 /// parent record (parent_invitations.js). Distinct from [ParentInviteStatus]
 /// which is the code's own lifecycle. `accepted` = the parent has completed
 /// sign-up; anything else = still awaiting them.
-enum ParentInvitationDelivery { sent, pendingManual, failed, cancelled, accepted }
+enum ParentInvitationDelivery {
+  sent,
+  pendingManual,
+  failed,
+  cancelled,
+  accepted,
+}
 
 ParentInvitationDelivery parentInvitationDeliveryFromString(String? raw) {
   switch (raw) {
@@ -60,8 +66,7 @@ class ParentAccessInvite extends Equatable {
   });
 
   /// The parent has completed portal sign-up.
-  bool get isAccepted =>
-      invitationStatus == ParentInvitationDelivery.accepted;
+  bool get isAccepted => invitationStatus == ParentInvitationDelivery.accepted;
 
   /// Active code, parent has not yet accepted - i.e. an invitation still
   /// awaiting the parent.

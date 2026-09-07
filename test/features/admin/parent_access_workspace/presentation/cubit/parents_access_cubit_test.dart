@@ -8,7 +8,8 @@ import 'package:school_pulse/features/admin/parent_access_workspace/domain/repos
 import 'package:school_pulse/features/admin/parent_access_workspace/presentation/cubit/parents_access_cubit.dart';
 import 'package:school_pulse/features/admin/parent_access_workspace/presentation/cubit/parents_access_state.dart';
 
-class MockParentAccessRepository extends Mock implements ParentAccessRepository {}
+class MockParentAccessRepository extends Mock
+    implements ParentAccessRepository {}
 
 void main() {
   late MockParentAccessRepository repository;
@@ -83,9 +84,12 @@ void main() {
   group('loadFirstPage', () {
     test('emits loaded rows and counts on success', () async {
       when(
-        () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
+        () => repository.listParentAccessInvites(
+          pageSize: any(named: 'pageSize'),
+        ),
       ).thenAnswer(
-        (_) async => Right(page(rows: invites, pendingCount: 2, expiringSoonCount: 1)),
+        (_) async =>
+            Right(page(rows: invites, pendingCount: 2, expiringSoonCount: 1)),
       );
 
       await cubit.loadFirstPage();
@@ -99,8 +103,13 @@ void main() {
 
     test('surfaces failure as errorMessage, not a raw exception', () async {
       when(
-        () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
-      ).thenAnswer((_) async => const Left(ServerFailure('Could not load parent access codes.')));
+        () => repository.listParentAccessInvites(
+          pageSize: any(named: 'pageSize'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            const Left(ServerFailure('Could not load parent access codes.')),
+      );
 
       await cubit.loadFirstPage();
 
@@ -110,8 +119,12 @@ void main() {
 
     test('marks isOffline true for NetworkFailure', () async {
       when(
-        () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
-      ).thenAnswer((_) async => const Left(NetworkFailure('No internet connection.')));
+        () => repository.listParentAccessInvites(
+          pageSize: any(named: 'pageSize'),
+        ),
+      ).thenAnswer(
+        (_) async => const Left(NetworkFailure('No internet connection.')),
+      );
 
       await cubit.loadFirstPage();
 
@@ -120,7 +133,9 @@ void main() {
 
     test('marks isPermissionDenied true for PermissionDeniedFailure', () async {
       when(
-        () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
+        () => repository.listParentAccessInvites(
+          pageSize: any(named: 'pageSize'),
+        ),
       ).thenAnswer((_) async => const Left(PermissionDeniedFailure('nope')));
 
       await cubit.loadFirstPage();
@@ -132,8 +147,12 @@ void main() {
   group('pagination', () {
     test('loadNextPage appends rows and advances cursor', () async {
       when(
-        () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
-      ).thenAnswer((_) async => Right(page(rows: [invites[0]], nextCursor: 'inv-1')));
+        () => repository.listParentAccessInvites(
+          pageSize: any(named: 'pageSize'),
+        ),
+      ).thenAnswer(
+        (_) async => Right(page(rows: [invites[0]], nextCursor: 'inv-1')),
+      );
       await cubit.loadFirstPage();
 
       when(
@@ -141,7 +160,9 @@ void main() {
           pageSize: any(named: 'pageSize'),
           cursor: any(named: 'cursor'),
         ),
-      ).thenAnswer((_) async => Right(page(rows: [invites[1]], nextCursor: null)));
+      ).thenAnswer(
+        (_) async => Right(page(rows: [invites[1]], nextCursor: null)),
+      );
       await cubit.loadNextPage();
 
       expect(cubit.state.invites, [invites[0], invites[1]]);
@@ -162,7 +183,9 @@ void main() {
   group('search + filter', () {
     setUp(() async {
       when(
-        () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
+        () => repository.listParentAccessInvites(
+          pageSize: any(named: 'pageSize'),
+        ),
       ).thenAnswer((_) async => Right(page(rows: invites)));
       await cubit.loadFirstPage();
     });
@@ -177,17 +200,20 @@ void main() {
       expect(cubit.state.filteredRows.map((r) => r.inviteId), ['inv-2']);
     });
 
-    test('filter=linked returns only accepted, non-expiring, active parents', () {
-      cubit.setFilter(ParentsAccessFilter.linked);
-      expect(cubit.state.filteredRows.map((r) => r.inviteId), ['inv-1']);
-    });
+    test(
+      'filter=linked returns only accepted, non-expiring, active parents',
+      () {
+        cubit.setFilter(ParentsAccessFilter.linked);
+        expect(cubit.state.filteredRows.map((r) => r.inviteId), ['inv-1']);
+      },
+    );
 
     test('filter=pending returns active codes the parent has not accepted', () {
       cubit.setFilter(ParentsAccessFilter.pending);
-      expect(
-        cubit.state.filteredRows.map((r) => r.inviteId).toSet(),
-        {'inv-4', 'inv-2'},
-      );
+      expect(cubit.state.filteredRows.map((r) => r.inviteId).toSet(), {
+        'inv-4',
+        'inv-2',
+      });
     });
 
     test('filter=expiring only returns expiringSoon rows', () {
@@ -202,28 +228,43 @@ void main() {
   });
 
   group('revoke', () {
-    test('failed-precondition (two-parent max) surfaces as clean actionError', () async {
-      when(
-        () => repository.revokeParentAccessCode(inviteId: any(named: 'inviteId')),
-      ).thenAnswer(
-        (_) async => const Left(ServerFailure('A learner can have a maximum of two parents.')),
-      );
-      when(
-        () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
-      ).thenAnswer((_) async => Right(page()));
+    test(
+      'failed-precondition (two-parent max) surfaces as clean actionError',
+      () async {
+        when(
+          () => repository.revokeParentAccessCode(
+            inviteId: any(named: 'inviteId'),
+          ),
+        ).thenAnswer(
+          (_) async => const Left(
+            ServerFailure('A learner can have a maximum of two parents.'),
+          ),
+        );
+        when(
+          () => repository.listParentAccessInvites(
+            pageSize: any(named: 'pageSize'),
+          ),
+        ).thenAnswer((_) async => Right(page()));
 
-      final success = await cubit.revokeAccessCode('inv-1');
+        final success = await cubit.revokeAccessCode('inv-1');
 
-      expect(success, false);
-      expect(cubit.state.actionError, 'A learner can have a maximum of two parents.');
-    });
+        expect(success, false);
+        expect(
+          cubit.state.actionError,
+          'A learner can have a maximum of two parents.',
+        );
+      },
+    );
 
     test('success clears actionInFlight and reloads', () async {
       when(
-        () => repository.revokeParentAccessCode(inviteId: any(named: 'inviteId')),
+        () =>
+            repository.revokeParentAccessCode(inviteId: any(named: 'inviteId')),
       ).thenAnswer((_) async => const Right(null));
       when(
-        () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
+        () => repository.listParentAccessInvites(
+          pageSize: any(named: 'pageSize'),
+        ),
       ).thenAnswer((_) async => Right(page(rows: invites)));
 
       final success = await cubit.revokeAccessCode('inv-1');
@@ -235,54 +276,77 @@ void main() {
   });
 
   group('reallocate permission denial', () {
-    test('permission-denied failure is handled gracefully, not thrown', () async {
-      when(
-        () => repository.reallocateParentLink(
-          linkId: any(named: 'linkId'),
-          parentName: any(named: 'parentName'),
-          phoneNumber: any(named: 'phoneNumber'),
-          reason: any(named: 'reason'),
-        ),
-      ).thenAnswer(
-        (_) async => const Left(
-          PermissionDeniedFailure('Only a school admin may reallocate an existing parent link.'),
-        ),
-      );
+    test(
+      'permission-denied failure is handled gracefully, not thrown',
+      () async {
+        when(
+          () => repository.reallocateParentLink(
+            linkId: any(named: 'linkId'),
+            parentName: any(named: 'parentName'),
+            phoneNumber: any(named: 'phoneNumber'),
+            reason: any(named: 'reason'),
+          ),
+        ).thenAnswer(
+          (_) async => const Left(
+            PermissionDeniedFailure(
+              'Only a school admin may reallocate an existing parent link.',
+            ),
+          ),
+        );
 
-      final success = await cubit.reallocateLink(linkId: 'inv-1', reason: 'test');
+        final success = await cubit.reallocateLink(
+          linkId: 'inv-1',
+          reason: 'test',
+        );
 
-      expect(success, false);
-      expect(cubit.state.actionError, contains('school admin'));
-    });
+        expect(success, false);
+        expect(cubit.state.actionError, contains('school admin'));
+      },
+    );
   });
 
   group('masking / tenant isolation', () {
-    test('state never carries anything but the pre-masked phone from the repository', () async {
-      when(
-        () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
-      ).thenAnswer((_) async => Right(page(rows: invites)));
-      await cubit.loadFirstPage();
+    test(
+      'state never carries anything but the pre-masked phone from the repository',
+      () async {
+        when(
+          () => repository.listParentAccessInvites(
+            pageSize: any(named: 'pageSize'),
+          ),
+        ).thenAnswer((_) async => Right(page(rows: invites)));
+        await cubit.loadFirstPage();
 
-      for (final invite in cubit.state.invites) {
-        expect(invite.maskedPhone, startsWith('***'));
-        expect(invite.maskedPhone.replaceAll('*', '').length, lessThanOrEqualTo(4));
-      }
-    });
+        for (final invite in cubit.state.invites) {
+          expect(invite.maskedPhone, startsWith('***'));
+          expect(
+            invite.maskedPhone.replaceAll('*', '').length,
+            lessThanOrEqualTo(4),
+          );
+        }
+      },
+    );
 
-    test('listParentAccessInvites is always called with no client-supplied schoolId', () async {
-      when(
-        () => repository.listParentAccessInvites(pageSize: any(named: 'pageSize')),
-      ).thenAnswer((_) async => Right(page()));
+    test(
+      'listParentAccessInvites is always called with no client-supplied schoolId',
+      () async {
+        when(
+          () => repository.listParentAccessInvites(
+            pageSize: any(named: 'pageSize'),
+          ),
+        ).thenAnswer((_) async => Right(page()));
 
-      await cubit.loadFirstPage();
+        await cubit.loadFirstPage();
 
-      final captured = verify(
-        () => repository.listParentAccessInvites(pageSize: captureAny(named: 'pageSize')),
-      ).captured;
-      expect(captured.single, ParentsAccessCubit.pageSize);
-      // The repository interface has no schoolId parameter at all - tenant
-      // scoping happens server-side from the authenticated user, never from
-      // client state (see functions/index.js listParentAccessInvites).
-    });
+        final captured = verify(
+          () => repository.listParentAccessInvites(
+            pageSize: captureAny(named: 'pageSize'),
+          ),
+        ).captured;
+        expect(captured.single, ParentsAccessCubit.pageSize);
+        // The repository interface has no schoolId parameter at all - tenant
+        // scoping happens server-side from the authenticated user, never from
+        // client state (see functions/index.js listParentAccessInvites).
+      },
+    );
   });
 }

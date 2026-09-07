@@ -68,12 +68,16 @@ void main() {
 
   setUp(() {
     authBloc = MockAuthBloc();
-    whenListen(authBloc, const Stream<AuthState>.empty(),
-        initialState: const AuthAuthenticated(user));
+    whenListen(
+      authBloc,
+      const Stream<AuthState>.empty(),
+      initialState: const AuthAuthenticated(user),
+    );
 
     repo = MockRepo();
-    when(() => repo.listParentLinkAudit(inviteId: any(named: 'inviteId')))
-        .thenAnswer((_) async => const Right([]));
+    when(
+      () => repo.listParentLinkAudit(inviteId: any(named: 'inviteId')),
+    ).thenAnswer((_) async => const Right([]));
 
     if (di.sl.isRegistered<ParentAccessRepository>()) {
       di.sl.unregister<ParentAccessRepository>();
@@ -87,17 +91,16 @@ void main() {
   });
 
   Widget host() => BlocProvider<AuthBloc>.value(
-        value: authBloc,
-        child: const MaterialApp(
-          home: ParentDetailScreen(inviteId: 'inv-1'),
-        ),
-      );
+    value: authBloc,
+    child: const MaterialApp(home: ParentDetailScreen(inviteId: 'inv-1')),
+  );
 
-  testWidgets('renders guardian identity, masked phone, and learners',
-      (tester) async {
-    when(() => repo.getParentAccessRecord(inviteId: 'inv-1')).thenAnswer(
-      (_) async => Right(_record(learners: [_learner('l1')])),
-    );
+  testWidgets('renders guardian identity, masked phone, and learners', (
+    tester,
+  ) async {
+    when(
+      () => repo.getParentAccessRecord(inviteId: 'inv-1'),
+    ).thenAnswer((_) async => Right(_record(learners: [_learner('l1')])));
 
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
@@ -109,7 +112,9 @@ void main() {
     expect(find.text('sarah@example.com'), findsNothing);
   });
 
-  testWidgets('resend is disabled while the cooldown is active', (tester) async {
+  testWidgets('resend is disabled while the cooldown is active', (
+    tester,
+  ) async {
     when(() => repo.getParentAccessRecord(inviteId: 'inv-1')).thenAnswer(
       (_) async => Right(
         _record(canResendAt: DateTime.now().add(const Duration(minutes: 1))),
@@ -124,11 +129,12 @@ void main() {
     expect(tester.widget<OutlinedButton>(resend).onPressed, isNull);
   });
 
-  testWidgets('unlink dialog requires a reason before it enables Unlink',
-      (tester) async {
-    when(() => repo.getParentAccessRecord(inviteId: 'inv-1')).thenAnswer(
-      (_) async => Right(_record(learners: [_learner('l1')])),
-    );
+  testWidgets('unlink dialog requires a reason before it enables Unlink', (
+    tester,
+  ) async {
+    when(
+      () => repo.getParentAccessRecord(inviteId: 'inv-1'),
+    ).thenAnswer((_) async => Right(_record(learners: [_learner('l1')])));
 
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
@@ -146,9 +152,9 @@ void main() {
   });
 
   testWidgets('a permission-denied load shows its own message', (tester) async {
-    when(() => repo.getParentAccessRecord(inviteId: 'inv-1')).thenAnswer(
-      (_) async => const Left(PermissionDeniedFailure('nope')),
-    );
+    when(
+      () => repo.getParentAccessRecord(inviteId: 'inv-1'),
+    ).thenAnswer((_) async => const Left(PermissionDeniedFailure('nope')));
 
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();

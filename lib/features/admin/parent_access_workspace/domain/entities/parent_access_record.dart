@@ -59,7 +59,14 @@ class ParentLinkAuditEntry extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, action, actorRole, studentId, reason, createdAt];
+  List<Object?> get props => [
+    id,
+    action,
+    actorRole,
+    studentId,
+    reason,
+    createdAt,
+  ];
 }
 
 /// Full parent record for the detail/access-management screen. Unlike the

@@ -43,15 +43,17 @@ void main() {
     expect(const LinkParentDraft().isEmpty, isTrue);
     expect(const LinkParentDraft(parentName: 'X').isEmpty, isFalse);
     expect(
-      const LinkParentDraft(learners: [
-        LinkParentDraftLearner(
-          studentId: 's1',
-          studentName: 'n',
-          studentCode: 'c',
-          relationship: 'Son',
-          isPrimaryContact: false,
-        ),
-      ]).isEmpty,
+      const LinkParentDraft(
+        learners: [
+          LinkParentDraftLearner(
+            studentId: 's1',
+            studentName: 'n',
+            studentCode: 'c',
+            relationship: 'Son',
+            isPrimaryContact: false,
+          ),
+        ],
+      ).isEmpty,
       isFalse,
     );
   });

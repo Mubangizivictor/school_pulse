@@ -28,11 +28,13 @@ class ParentAccessRepositoryImpl implements ParentAccessRepository {
         phoneNumber: phoneNumber,
         email: email,
         learners: learners
-            .map((l) => {
-                  'studentId': l.studentId,
-                  'relationship': l.relationship,
-                  'isPrimaryContact': l.isPrimaryContact,
-                })
+            .map(
+              (l) => {
+                'studentId': l.studentId,
+                'relationship': l.relationship,
+                'isPrimaryContact': l.isPrimaryContact,
+              },
+            )
             .toList(),
       );
       final invitation = data['invitation'] is Map
@@ -45,8 +47,7 @@ class ParentAccessRepositoryImpl implements ParentAccessRepository {
           expiresAt: DateTime.fromMillisecondsSinceEpoch(
             (data['expiresAt'] as num).toInt(),
           ),
-          invitationStatus:
-              invitation['status'] as String? ?? 'pending_manual',
+          invitationStatus: invitation['status'] as String? ?? 'pending_manual',
           invitationDelivered: invitation['delivered'] as bool? ?? false,
         ),
       );
@@ -55,7 +56,9 @@ class ParentAccessRepositoryImpl implements ParentAccessRepository {
     } on FirebaseFunctionsException catch (e) {
       return Left(_mapException(e));
     } catch (_) {
-      return const Left(ServerFailure('Could not create the parent access code.'));
+      return const Left(
+        ServerFailure('Could not create the parent access code.'),
+      );
     }
   }
 
@@ -73,7 +76,8 @@ class ParentAccessRepositoryImpl implements ParentAccessRepository {
         phoneNumber: phoneNumber,
         reason: reason,
       );
-      if (data['removed'] == true || data['code'] == null) return const Right(null);
+      if (data['removed'] == true || data['code'] == null)
+        return const Right(null);
       return Right(
         IssuedParentAccessCode(
           inviteId: data['inviteId'] as String,
@@ -215,11 +219,13 @@ class ParentAccessRepositoryImpl implements ParentAccessRepository {
       await remoteDataSource.linkLearnersToExistingParent(
         inviteId: inviteId,
         learners: learners
-            .map((l) => {
-                  'studentId': l.studentId,
-                  'relationship': l.relationship,
-                  'isPrimaryContact': l.isPrimaryContact,
-                })
+            .map(
+              (l) => {
+                'studentId': l.studentId,
+                'relationship': l.relationship,
+                'isPrimaryContact': l.isPrimaryContact,
+              },
+            )
             .toList(),
       );
       return const Right(null);
@@ -252,9 +258,8 @@ class ParentAccessRepositoryImpl implements ParentAccessRepository {
     }
   }
 
-  static DateTime? _ms(dynamic v) => v is num
-      ? DateTime.fromMillisecondsSinceEpoch(v.toInt())
-      : null;
+  static DateTime? _ms(dynamic v) =>
+      v is num ? DateTime.fromMillisecondsSinceEpoch(v.toInt()) : null;
 
   ParentAccessRecord _recordFromData(Map<String, dynamic> data) {
     ParentInviteStatus status;
@@ -315,8 +320,9 @@ class ParentAccessRepositoryImpl implements ParentAccessRepository {
     switch (error.code) {
       case 'failed-precondition':
         return ServerFailure(
-          error.message ?? 'This learner already has the maximum number of '
-              'linked parents.',
+          error.message ??
+              'This learner already has the maximum number of '
+                  'linked parents.',
         );
       case 'resource-exhausted':
         return ServerFailure(
@@ -336,9 +342,13 @@ class ParentAccessRepositoryImpl implements ParentAccessRepository {
       case 'deadline-exceeded':
         return const NetworkFailure('No internet connection.');
       case 'invalid-argument':
-        return ServerFailure(error.message ?? 'Check the details and try again.');
+        return ServerFailure(
+          error.message ?? 'Check the details and try again.',
+        );
       case 'not-found':
-        return ServerFailure(error.message ?? 'That parent link no longer exists.');
+        return ServerFailure(
+          error.message ?? 'That parent link no longer exists.',
+        );
       default:
         return ServerFailure(
           error.message ?? 'Something went wrong. Please try again.',

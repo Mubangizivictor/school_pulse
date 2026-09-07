@@ -28,24 +28,59 @@ const List<PhoneCountry> kPhoneCountries = [
   PhoneCountry(flag: '🇹🇿', dialCode: '+255', name: 'Tanzania', isoCode: 'TZ'),
   PhoneCountry(flag: '🇷🇼', dialCode: '+250', name: 'Rwanda', isoCode: 'RW'),
   PhoneCountry(flag: '🇧🇮', dialCode: '+257', name: 'Burundi', isoCode: 'BI'),
-  PhoneCountry(flag: '🇸🇸', dialCode: '+211', name: 'South Sudan', isoCode: 'SS'),
+  PhoneCountry(
+    flag: '🇸🇸',
+    dialCode: '+211',
+    name: 'South Sudan',
+    isoCode: 'SS',
+  ),
   PhoneCountry(flag: '🇨🇩', dialCode: '+243', name: 'DR Congo', isoCode: 'CD'),
   PhoneCountry(flag: '🇪🇹', dialCode: '+251', name: 'Ethiopia', isoCode: 'ET'),
   PhoneCountry(flag: '🇳🇬', dialCode: '+234', name: 'Nigeria', isoCode: 'NG'),
   PhoneCountry(flag: '🇬🇭', dialCode: '+233', name: 'Ghana', isoCode: 'GH'),
-  PhoneCountry(flag: '🇿🇦', dialCode: '+27', name: 'South Africa', isoCode: 'ZA'),
-  PhoneCountry(flag: '🇬🇧', dialCode: '+44', name: 'United Kingdom', isoCode: 'GB'),
-  PhoneCountry(flag: '🇺🇸', dialCode: '+1', name: 'United States', isoCode: 'US'),
+  PhoneCountry(
+    flag: '🇿🇦',
+    dialCode: '+27',
+    name: 'South Africa',
+    isoCode: 'ZA',
+  ),
+  PhoneCountry(
+    flag: '🇬🇧',
+    dialCode: '+44',
+    name: 'United Kingdom',
+    isoCode: 'GB',
+  ),
+  PhoneCountry(
+    flag: '🇺🇸',
+    dialCode: '+1',
+    name: 'United States',
+    isoCode: 'US',
+  ),
   PhoneCountry(flag: '🇮🇳', dialCode: '+91', name: 'India', isoCode: 'IN'),
-  PhoneCountry(flag: '🇦🇪', dialCode: '+971', name: 'United Arab Emirates', isoCode: 'AE'),
+  PhoneCountry(
+    flag: '🇦🇪',
+    dialCode: '+971',
+    name: 'United Arab Emirates',
+    isoCode: 'AE',
+  ),
   PhoneCountry(flag: '🇨🇦', dialCode: '+1', name: 'Canada', isoCode: 'CA'),
   PhoneCountry(flag: '🇦🇺', dialCode: '+61', name: 'Australia', isoCode: 'AU'),
   PhoneCountry(flag: '🇩🇪', dialCode: '+49', name: 'Germany', isoCode: 'DE'),
   PhoneCountry(flag: '🇫🇷', dialCode: '+33', name: 'France', isoCode: 'FR'),
-  PhoneCountry(flag: '🇳🇱', dialCode: '+31', name: 'Netherlands', isoCode: 'NL'),
+  PhoneCountry(
+    flag: '🇳🇱',
+    dialCode: '+31',
+    name: 'Netherlands',
+    isoCode: 'NL',
+  ),
   PhoneCountry(flag: '🇨🇳', dialCode: '+86', name: 'China', isoCode: 'CN'),
   PhoneCountry(flag: '🇵🇰', dialCode: '+92', name: 'Pakistan', isoCode: 'PK'),
-  PhoneCountry(flag: '🇧🇩', dialCode: '+880', name: 'Bangladesh', isoCode: 'BD'),
+  PhoneCountry(
+    flag: '🇧🇩',
+    dialCode: '+880',
+    name: 'Bangladesh',
+    isoCode: 'BD',
+  ),
   PhoneCountry(flag: '🇪🇬', dialCode: '+20', name: 'Egypt', isoCode: 'EG'),
 ];
 
@@ -96,8 +131,9 @@ class PhoneNumberField extends StatefulWidget {
 }
 
 class _PhoneNumberFieldState extends State<PhoneNumberField> {
-  late final TextEditingController _numberController =
-      TextEditingController(text: widget.nationalNumber);
+  late final TextEditingController _numberController = TextEditingController(
+    text: widget.nationalNumber,
+  );
 
   @override
   void didUpdateWidget(covariant PhoneNumberField oldWidget) {
@@ -114,14 +150,14 @@ class _PhoneNumberFieldState extends State<PhoneNumberField> {
   }
 
   PhoneCountry get _selected => kPhoneCountries.firstWhere(
-        (c) => c.dialCode == widget.dialCode,
-        orElse: () => const PhoneCountry(
-          flag: '🌐',
-          dialCode: kDefaultDialCode,
-          name: 'International',
-          isoCode: '',
-        ),
-      );
+    (c) => c.dialCode == widget.dialCode,
+    orElse: () => const PhoneCountry(
+      flag: '🌐',
+      dialCode: kDefaultDialCode,
+      name: 'International',
+      isoCode: '',
+    ),
+  );
 
   Future<void> _pickCountry() async {
     final picked = await showModalBottomSheet<PhoneCountry>(
@@ -144,7 +180,8 @@ class _PhoneNumberFieldState extends State<PhoneNumberField> {
           children: [
             Semantics(
               button: true,
-              label: 'Country dial code, currently ${_selected.name} '
+              label:
+                  'Country dial code, currently ${_selected.name} '
                   '${_selected.dialCode}',
               child: InkWell(
                 onTap: widget.enabled ? _pickCountry : null,
@@ -159,7 +196,10 @@ class _PhoneNumberFieldState extends State<PhoneNumberField> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(_selected.flag, style: const TextStyle(fontSize: 16)),
+                      Text(
+                        _selected.flag,
+                        style: const TextStyle(fontSize: 16),
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         _selected.dialCode,
@@ -168,8 +208,10 @@ class _PhoneNumberFieldState extends State<PhoneNumberField> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      Icon(Icons.arrow_drop_down,
-                          color: AppColors.textMuted(context)),
+                      Icon(
+                        Icons.arrow_drop_down,
+                        color: AppColors.textMuted(context),
+                      ),
                     ],
                   ),
                 ),
@@ -215,11 +257,13 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
     final matches = q.isEmpty
         ? kPhoneCountries
         : kPhoneCountries
-            .where((c) =>
-                c.name.toLowerCase().contains(q) ||
-                c.dialCode.contains(q) ||
-                c.isoCode.toLowerCase() == q)
-            .toList();
+              .where(
+                (c) =>
+                    c.name.toLowerCase().contains(q) ||
+                    c.dialCode.contains(q) ||
+                    c.isoCode.toLowerCase() == q,
+              )
+              .toList();
 
     return Padding(
       padding: EdgeInsets.only(
@@ -256,12 +300,13 @@ class _CountryPickerSheetState extends State<_CountryPickerSheet> {
                   itemBuilder: (_, i) {
                     final c = matches[i];
                     return ListTile(
-                      leading: Text(c.flag,
-                          style: const TextStyle(fontSize: 20)),
+                      leading: Text(
+                        c.flag,
+                        style: const TextStyle(fontSize: 20),
+                      ),
                       title: Text(
                         c.name,
-                        style: TextStyle(
-                            color: AppColors.textPrimary(context)),
+                        style: TextStyle(color: AppColors.textPrimary(context)),
                       ),
                       trailing: Text(
                         c.dialCode,

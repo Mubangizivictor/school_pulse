@@ -190,9 +190,7 @@ class _StateBody extends StatelessWidget {
     if (state.errorMessage != null && state.invites.isEmpty) {
       return _CenteredMessage(
         icon: state.isOffline ? Icons.wifi_off_outlined : Icons.error_outline,
-        title: state.isOffline
-            ? 'You are offline'
-            : 'Could not load parents',
+        title: state.isOffline ? 'You are offline' : 'Could not load parents',
         message: state.errorMessage!,
         onRetry: () => context.read<ParentsAccessCubit>().retry(),
       );
@@ -241,7 +239,10 @@ class _CenteredMessage extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textMuted(context), fontSize: 13),
+              style: TextStyle(
+                color: AppColors.textMuted(context),
+                fontSize: 13,
+              ),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
@@ -349,7 +350,9 @@ class _PhoneLayout extends StatelessWidget {
                           current: state.filter,
                         );
                         if (selected != null && context.mounted) {
-                          context.read<ParentsAccessCubit>().setFilter(selected);
+                          context.read<ParentsAccessCubit>().setFilter(
+                            selected,
+                          );
                         }
                       },
                     ),
@@ -376,7 +379,10 @@ class _PhoneLayout extends StatelessWidget {
               TabBar(
                 controller: tabController,
                 labelColor: AppColors.textPrimary(context),
-                tabs: const [Tab(text: 'Parents'), Tab(text: 'Access codes')],
+                tabs: const [
+                  Tab(text: 'Parents'),
+                  Tab(text: 'Access codes'),
+                ],
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -391,7 +397,8 @@ class _PhoneLayout extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                 child: TextField(
-                  onChanged: (q) => context.read<ParentsAccessCubit>().setSearchQuery(q),
+                  onChanged: (q) =>
+                      context.read<ParentsAccessCubit>().setSearchQuery(q),
                   decoration: InputDecoration(
                     hintText: 'Search by name, phone, or learner...',
                     prefixIcon: const Icon(Icons.search, size: 20),
@@ -412,7 +419,8 @@ class _PhoneLayout extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: ParentAccessFilterChips(
                     selected: state.filter,
-                    onChanged: (f) => context.read<ParentsAccessCubit>().setFilter(f),
+                    onChanged: (f) =>
+                        context.read<ParentsAccessCubit>().setFilter(f),
                   ),
                 ),
               ),
@@ -431,8 +439,16 @@ class _PhoneLayout extends StatelessWidget {
                   child: TabBarView(
                     controller: tabController,
                     children: [
-                      _RowListView(rows: state.filteredRows, tab: ParentsAccessTab.parents, canReallocate: canReallocate),
-                      _RowListView(rows: state.filteredRows, tab: ParentsAccessTab.accessCodes, canReallocate: canReallocate),
+                      _RowListView(
+                        rows: state.filteredRows,
+                        tab: ParentsAccessTab.parents,
+                        canReallocate: canReallocate,
+                      ),
+                      _RowListView(
+                        rows: state.filteredRows,
+                        tab: ParentsAccessTab.accessCodes,
+                        canReallocate: canReallocate,
+                      ),
                     ],
                   ),
                 ),
@@ -459,19 +475,21 @@ class _RowListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (rows.isEmpty) {
-      return const _EmptyRows(message: 'No parents match your search or filter.');
+      return const _EmptyRows(
+        message: 'No parents match your search or filter.',
+      );
     }
     return ListView.separated(
       itemCount: rows.length,
-      separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.border(context)),
+      separatorBuilder: (_, __) =>
+          Divider(height: 1, color: AppColors.border(context)),
       itemBuilder: (context, index) {
         final invite = rows[index];
         if (tab == ParentsAccessTab.parents) {
           return ParentRowTile(
             invite: invite,
-            onTap: () => context.push(
-              '/staff/admin/parents/${invite.inviteId}',
-            ),
+            onTap: () =>
+                context.push('/staff/admin/parents/${invite.inviteId}'),
           );
         }
         return AccessCodeRowTile(
@@ -479,24 +497,37 @@ class _RowListView extends StatelessWidget {
           canRevoke: true,
           canReallocate: canReallocate,
           onRevoke: () => _confirmRevoke(context, invite),
-          onReallocate: canReallocate ? () => _confirmReallocate(context, invite) : null,
+          onReallocate: canReallocate
+              ? () => _confirmReallocate(context, invite)
+              : null,
         );
       },
     );
   }
 }
 
-Future<void> _confirmRevoke(BuildContext context, ParentAccessInvite invite) async {
+Future<void> _confirmRevoke(
+  BuildContext context,
+  ParentAccessInvite invite,
+) async {
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(
       title: const Text('Revoke access code?'),
-      content: Text('This immediately invalidates the code issued to ${invite.parentName}.'),
+      content: Text(
+        'This immediately invalidates the code issued to ${invite.parentName}.',
+      ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('Cancel'),
+        ),
         TextButton(
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: Text('Revoke', style: TextStyle(color: AppColors.danger(dialogContext))),
+          child: Text(
+            'Revoke',
+            style: TextStyle(color: AppColors.danger(dialogContext)),
+          ),
         ),
       ],
     ),
@@ -506,11 +537,20 @@ Future<void> _confirmRevoke(BuildContext context, ParentAccessInvite invite) asy
   final success = await cubit.revokeAccessCode(invite.inviteId);
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(success ? 'Access code revoked.' : (cubit.state.actionError ?? 'Could not revoke the code.'))),
+    SnackBar(
+      content: Text(
+        success
+            ? 'Access code revoked.'
+            : (cubit.state.actionError ?? 'Could not revoke the code.'),
+      ),
+    ),
   );
 }
 
-Future<void> _confirmReallocate(BuildContext context, ParentAccessInvite invite) async {
+Future<void> _confirmReallocate(
+  BuildContext context,
+  ParentAccessInvite invite,
+) async {
   final reasonController = TextEditingController();
   final confirmed = await showDialog<bool>(
     context: context,
@@ -520,30 +560,52 @@ Future<void> _confirmReallocate(BuildContext context, ParentAccessInvite invite)
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('This revokes ${invite.parentName}\'s current link. Only a school admin may do this.'),
+          Text(
+            'This revokes ${invite.parentName}\'s current link. Only a school admin may do this.',
+          ),
           const SizedBox(height: 12),
           TextField(
             controller: reasonController,
-            decoration: const InputDecoration(labelText: 'Reason', hintText: 'Required'),
+            decoration: const InputDecoration(
+              labelText: 'Reason',
+              hintText: 'Required',
+            ),
           ),
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: const Text('Cancel')),
-        TextButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: const Text('Continue')),
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: const Text('Continue'),
+        ),
       ],
     ),
   );
   if (confirmed != true || !context.mounted) return;
   if (reasonController.text.trim().isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A reason is required to reallocate.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('A reason is required to reallocate.')),
+    );
     return;
   }
   final cubit = context.read<ParentsAccessCubit>();
-  final success = await cubit.reallocateLink(linkId: invite.inviteId, reason: reasonController.text.trim());
+  final success = await cubit.reallocateLink(
+    linkId: invite.inviteId,
+    reason: reasonController.text.trim(),
+  );
   if (!context.mounted) return;
   ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(success ? 'Parent link reallocated.' : (cubit.state.actionError ?? 'Could not reallocate.'))),
+    SnackBar(
+      content: Text(
+        success
+            ? 'Parent link reallocated.'
+            : (cubit.state.actionError ?? 'Could not reallocate.'),
+      ),
+    ),
   );
 }
 
@@ -554,8 +616,10 @@ class _ParentAccessSearchDelegate extends SearchDelegate<void> {
   ];
 
   @override
-  Widget buildLeading(BuildContext context) =>
-      IconButton(onPressed: () => close(context, null), icon: const Icon(Icons.arrow_back));
+  Widget buildLeading(BuildContext context) => IconButton(
+    onPressed: () => close(context, null),
+    icon: const Icon(Icons.arrow_back),
+  );
 
   @override
   Widget buildResults(BuildContext context) => const SizedBox.shrink();
@@ -624,7 +688,10 @@ class _TabletLayout extends StatelessWidget {
                   controller: tabController,
                   isScrollable: true,
                   labelColor: AppColors.textPrimary(context),
-                  tabs: const [Tab(text: 'Parents'), Tab(text: 'Access codes')],
+                  tabs: const [
+                    Tab(text: 'Parents'),
+                    Tab(text: 'Access codes'),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 SummaryCountCards(
@@ -649,10 +716,11 @@ class _TabletLayout extends StatelessWidget {
                       controller: tabController,
                       children: [
                         GridView.builder(
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 3.0,
-                          ),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 3.0,
+                              ),
                           itemCount: state.filteredRows.length,
                           itemBuilder: (context, index) => ParentRowTile(
                             invite: state.filteredRows[index],
@@ -663,18 +731,25 @@ class _TabletLayout extends StatelessWidget {
                           ),
                         ),
                         GridView.builder(
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 3.4,
-                          ),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 3.4,
+                              ),
                           itemCount: state.filteredRows.length,
                           itemBuilder: (context, index) => AccessCodeRowTile(
                             invite: state.filteredRows[index],
                             canRevoke: true,
                             canReallocate: canReallocate,
-                            onRevoke: () => _confirmRevoke(context, state.filteredRows[index]),
+                            onRevoke: () => _confirmRevoke(
+                              context,
+                              state.filteredRows[index],
+                            ),
                             onReallocate: canReallocate
-                                ? () => _confirmReallocate(context, state.filteredRows[index])
+                                ? () => _confirmReallocate(
+                                    context,
+                                    state.filteredRows[index],
+                                  )
                                 : null,
                           ),
                         ),
@@ -752,7 +827,10 @@ class _WebLayout extends StatelessWidget {
                       controller: tabController,
                       isScrollable: true,
                       labelColor: AppColors.textPrimary(context),
-                      tabs: const [Tab(text: 'Parents'), Tab(text: 'Access codes')],
+                      tabs: const [
+                        Tab(text: 'Parents'),
+                        Tab(text: 'Access codes'),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     SummaryCountCards(
@@ -765,16 +843,18 @@ class _WebLayout extends StatelessWidget {
                     const SizedBox(height: 16),
                     ParentAccessToolbar(
                       selectedFilter: state.filter,
-                      onFilterChanged: (f) => context.read<ParentsAccessCubit>().setFilter(f),
-                      onSearchChanged: (q) => context.read<ParentsAccessCubit>().setSearchQuery(q),
+                      onFilterChanged: (f) =>
+                          context.read<ParentsAccessCubit>().setFilter(f),
+                      onSearchChanged: (q) =>
+                          context.read<ParentsAccessCubit>().setSearchQuery(q),
                       onAddParent: onAddParent,
                     ),
                     if (!bannerDismissed) ...[
                       const SizedBox(height: 12),
                       ParentAccessInfoBanner(
-                    onDismiss: onDismissBanner,
-                    maxGuardians: state.maxGuardians,
-                  ),
+                        onDismiss: onDismissBanner,
+                        maxGuardians: state.maxGuardians,
+                      ),
                     ],
                     const SizedBox(height: 16),
                     Expanded(
@@ -789,17 +869,21 @@ class _WebLayout extends StatelessWidget {
                                 children: [
                                   Expanded(
                                     child: rows.isEmpty
-                                        ? const _EmptyRows(message: 'No parents match your search or filter.')
+                                        ? const _EmptyRows(
+                                            message:
+                                                'No parents match your search or filter.',
+                                          )
                                         : SingleChildScrollView(
                                             child: ParentAccessDataTable(
                                               rows: rows,
                                               sortColumn: sortColumn,
                                               sortAscending: sortAscending,
                                               onSort: onSort,
-                                              onRowTap: (invite) => context.push(
-                                                '/staff/admin/parents/'
-                                                '${invite.inviteId}',
-                                              ),
+                                              onRowTap: (invite) =>
+                                                  context.push(
+                                                    '/staff/admin/parents/'
+                                                    '${invite.inviteId}',
+                                                  ),
                                             ),
                                           ),
                                   ),
@@ -810,7 +894,9 @@ class _WebLayout extends StatelessWidget {
                                       pageSize: ParentsAccessCubit.pageSize,
                                       hasNextPage: state.nextCursor != null,
                                       isLoadingMore: state.isLoadingMore,
-                                      onLoadMore: () => context.read<ParentsAccessCubit>().loadNextPage(),
+                                      onLoadMore: () => context
+                                          .read<ParentsAccessCubit>()
+                                          .loadNextPage(),
                                     ),
                                 ],
                               ),
@@ -819,9 +905,13 @@ class _WebLayout extends StatelessWidget {
                             CodesNeedingAttentionPanel(
                               expiringSoonCount: state.expiringSoonCount,
                               revokedCount: state.invites
-                                  .where((i) => i.status == ParentInviteStatus.revoked)
+                                  .where(
+                                    (i) =>
+                                        i.status == ParentInviteStatus.revoked,
+                                  )
                                   .length,
-                              onViewAccessCodes: () => tabController.animateTo(1),
+                              onViewAccessCodes: () =>
+                                  tabController.animateTo(1),
                             ),
                           ],
                         ),

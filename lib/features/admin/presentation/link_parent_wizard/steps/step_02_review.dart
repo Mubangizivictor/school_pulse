@@ -63,8 +63,11 @@ class LinkParentStepReview extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.merge_type,
-                      size: 18, color: AppColors.warning(context)),
+                  Icon(
+                    Icons.merge_type,
+                    size: 18,
+                    color: AppColors.warning(context),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -93,8 +96,10 @@ class LinkParentStepReview extends StatelessWidget {
                     CircleAvatar(
                       radius: 20,
                       backgroundColor: AppColors.textPrimary(context),
-                      child: Icon(Icons.person_outline,
-                          color: AppColors.background(context)),
+                      child: Icon(
+                        Icons.person_outline,
+                        color: AppColors.background(context),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -143,8 +148,11 @@ class LinkParentStepReview extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
-                        Icon(Icons.person_outline,
-                            size: 16, color: AppColors.textMuted(context)),
+                        Icon(
+                          Icons.person_outline,
+                          size: 16,
+                          color: AppColors.textMuted(context),
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -219,11 +227,11 @@ class _InviteChoice extends StatelessWidget {
           Text(
             hasEmail
                 ? 'A verified, single-use invitation link is emailed to the '
-                    'parent, and a one-time code is shown here as a fallback. '
-                    'No password is ever set or stored.'
+                      'parent, and a one-time code is shown here as a fallback. '
+                      'No password is ever set or stored.'
                 : 'No email on file - a one-time code is shown here to share '
-                    'with the parent directly. Add an email on the previous '
-                    'step to email a verified link instead.',
+                      'with the parent directly. Add an email on the previous '
+                      'step to email a verified link instead.',
             style: TextStyle(
               color: AppColors.information(context),
               fontSize: 12,

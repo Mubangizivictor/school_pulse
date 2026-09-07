@@ -30,12 +30,16 @@ class _LinkParentStepDetailsState extends State<LinkParentStepDetails> {
     final controller = context.watch<LinkParentWizardController>();
     final q = _query.trim().toLowerCase();
     final available = widget.roster
-        .where((s) => !controller.selectedLearners.any((l) => l.student.id == s.id))
-        .where((s) =>
-            q.isEmpty ||
-            s.name.toLowerCase().contains(q) ||
-            s.studentCode.toLowerCase().contains(q) ||
-            s.admissionNumber.toLowerCase().contains(q))
+        .where(
+          (s) => !controller.selectedLearners.any((l) => l.student.id == s.id),
+        )
+        .where(
+          (s) =>
+              q.isEmpty ||
+              s.name.toLowerCase().contains(q) ||
+              s.studentCode.toLowerCase().contains(q) ||
+              s.admissionNumber.toLowerCase().contains(q),
+        )
         .take(50)
         .toList();
 
@@ -92,8 +96,9 @@ class _LinkParentStepDetailsState extends State<LinkParentStepDetails> {
                     DropdownButtonFormField<String>(
                       initialValue: controller.relationship,
                       items: kLinkParentRelationships
-                          .map((r) =>
-                              DropdownMenuItem(value: r, child: Text(r)))
+                          .map(
+                            (r) => DropdownMenuItem(value: r, child: Text(r)),
+                          )
                           .toList(),
                       onChanged: (v) {
                         if (v != null) controller.relationship = v;
@@ -164,7 +169,9 @@ class _LinkParentStepDetailsState extends State<LinkParentStepDetails> {
               child: Text(
                 'Select at least one learner to link.',
                 style: TextStyle(
-                    color: AppColors.danger(context), fontSize: 12),
+                  color: AppColors.danger(context),
+                  fontSize: 12,
+                ),
               ),
             ),
           if (_query.isNotEmpty) ...[
@@ -180,7 +187,9 @@ class _LinkParentStepDetailsState extends State<LinkParentStepDetails> {
                       child: Text(
                         'No matching learners.',
                         style: TextStyle(
-                            color: AppColors.textMuted(context), fontSize: 13),
+                          color: AppColors.textMuted(context),
+                          fontSize: 13,
+                        ),
                       ),
                     )
                   : ListView.builder(
@@ -192,9 +201,10 @@ class _LinkParentStepDetailsState extends State<LinkParentStepDetails> {
                           dense: true,
                           title: Text(s.name),
                           subtitle: Text(
-                            [s.studentCode, s.admissionNumber]
-                                .where((v) => v.isNotEmpty)
-                                .join(' · '),
+                            [
+                              s.studentCode,
+                              s.admissionNumber,
+                            ].where((v) => v.isNotEmpty).join(' · '),
                           ),
                           trailing: const Icon(Icons.add, size: 18),
                           onTap: () {
@@ -245,9 +255,7 @@ class _SelectedLearnerRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         border: Border.all(
-          color: atCap
-              ? AppColors.danger(context)
-              : AppColors.border(context),
+          color: atCap ? AppColors.danger(context) : AppColors.border(context),
         ),
         borderRadius: BorderRadius.circular(8),
       ),
@@ -284,9 +292,10 @@ class _SelectedLearnerRow extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      [learner.student.studentCode, learner.student.admissionNumber]
-                          .where((v) => v.isNotEmpty)
-                          .join(' · '),
+                      [
+                        learner.student.studentCode,
+                        learner.student.admissionNumber,
+                      ].where((v) => v.isNotEmpty).join(' · '),
                       style: TextStyle(
                         color: AppColors.textMuted(context),
                         fontSize: 11,
@@ -296,8 +305,11 @@ class _SelectedLearnerRow extends StatelessWidget {
                 ),
               ),
               IconButton(
-                icon: Icon(Icons.close,
-                    size: 18, color: AppColors.textMuted(context)),
+                icon: Icon(
+                  Icons.close,
+                  size: 18,
+                  color: AppColors.textMuted(context),
+                ),
                 onPressed: onRemove,
                 tooltip: 'Remove learner',
               ),
@@ -315,11 +327,15 @@ class _SelectedLearnerRow extends StatelessWidget {
                     isDense: true,
                   ),
                   items: kLinkParentRelationships
-                      .map((r) => DropdownMenuItem(
-                            value: r,
-                            child: Text(r,
-                                style: const TextStyle(fontSize: 12.5)),
-                          ))
+                      .map(
+                        (r) => DropdownMenuItem(
+                          value: r,
+                          child: Text(
+                            r,
+                            style: const TextStyle(fontSize: 12.5),
+                          ),
+                        ),
+                      )
                       .toList(),
                   onChanged: (v) {
                     if (v != null) onRelationshipChanged(v);
@@ -351,7 +367,9 @@ class _SelectedLearnerRow extends StatelessWidget {
                 'This learner already has the maximum number of linked '
                 'parents. Remove it or reallocate an existing link.',
                 style: TextStyle(
-                    color: AppColors.danger(context), fontSize: 11.5),
+                  color: AppColors.danger(context),
+                  fontSize: 11.5,
+                ),
               ),
             ),
         ],
@@ -375,8 +393,11 @@ class _InfoNote extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline,
-              size: 16, color: AppColors.information(context)),
+          Icon(
+            Icons.info_outline,
+            size: 16,
+            color: AppColors.information(context),
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
