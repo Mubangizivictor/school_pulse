@@ -12,10 +12,13 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/features/teacher/domain/services/subject_sync_service.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
-class _MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
+class _MockAuthBloc extends MockBloc<AuthEvent, AuthState>
+    implements AuthBloc {}
 
 class _MockSubjectSyncService extends Mock implements SubjectSyncService {}
 
@@ -50,8 +53,9 @@ void main() {
   setUp(() {
     mockAuthBloc = _MockAuthBloc();
     mockSyncService = _MockSubjectSyncService();
-    when(() => mockSyncService.pending(schoolId: any(named: 'schoolId')))
-        .thenAnswer((_) async => []);
+    when(
+      () => mockSyncService.pending(schoolId: any(named: 'schoolId')),
+    ).thenAnswer((_) async => []);
 
     if (di.sl.isRegistered<SubjectSyncService>()) {
       di.sl.unregister<SubjectSyncService>();
@@ -189,14 +193,54 @@ void main() {
   };
 
   for (final entry in widths.entries) {
-    testWidgets('no overflow or render errors at ${entry.key}', (
-      tester,
-    ) async {
+    testWidgets('no overflow or render errors at ${entry.key}', (tester) async {
       await tester.pumpWidget(buildApp(schoolAdmin, size: entry.value));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });
   }
+
+  Widget buildAppWithState(AuthState state) {
+    when(() => mockAuthBloc.state).thenReturn(state);
+    return MediaQuery(
+      data: const MediaQueryData(size: Size(390, 844)),
+      child: MultiProvider(
+        providers: [ChangeNotifierProvider(create: (_) => ThemeProvider())],
+        child: BlocProvider<AuthBloc>.value(
+          value: mockAuthBloc,
+          child: MaterialApp(
+            theme: AppTheme.light(),
+            home: const AdminMoreScreen(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  testWidgets(
+    'shows a loader (not a blank screen) while auth is still resolving',
+    (tester) async {
+      await tester.pumpWidget(buildAppWithState(AuthLoading()));
+      await tester.pump();
+      expect(find.byType(SchoolPulseLoader), findsOneWidget);
+      expect(find.text('School structure'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'shows an error state with a working Retry when the session is unavailable',
+    (tester) async {
+      await tester.pumpWidget(buildAppWithState(AuthUnauthenticated()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EmptyState), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+      verify(() => mockAuthBloc.add(any())).called(1);
+    },
+  );
 
   testWidgets('long name and school name do not overflow the account card', (
     tester,

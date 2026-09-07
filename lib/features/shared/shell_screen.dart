@@ -329,6 +329,7 @@ class StaffShell extends StatelessWidget {
       '/staff/admin/users',
       '/staff/admin/staff-attendance',
       '/staff/admin/fees',
+      '/staff/admin/more',
       '/staff/admin/students',
       '/staff/admin/students/list',
       '/staff/admin/students/directory',
@@ -343,8 +344,9 @@ class StaffShell extends StatelessWidget {
     // AdminShell too (AdminStaffSectionBody resolves the exact screen), so
     // every path under it needs the shell's own chrome.
     final staffSectionPath = GoRouterState.of(context).uri.path;
-    final isStaffShellSubroute =
-        staffSectionPath.startsWith('/staff/admin/users/');
+    final isStaffShellSubroute = staffSectionPath.startsWith(
+      '/staff/admin/users/',
+    );
     final isAdminSection =
         adminShellPaths.contains(staffSectionPath) || isStaffShellSubroute;
     final isNurseSection = GoRouterState.of(

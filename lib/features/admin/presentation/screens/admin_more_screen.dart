@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -29,8 +30,26 @@ class AdminMoreScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AuthBloc>().state;
-    if (state is! AuthAuthenticated) return const SizedBox.shrink();
-    return _AdminMorePage(user: state.user);
+    if (state is AuthAuthenticated) {
+      return _AdminMorePage(user: state.user);
+    }
+    // Deep-linking / refreshing straight onto /staff/admin/more can land here
+    // before auth resolves, or after a session drop - show a real
+    // loading / error+retry state instead of a blank screen.
+    if (state is AuthLoading || state is AuthInitial) {
+      return const Scaffold(body: Center(child: SchoolPulseLoader()));
+    }
+    return Scaffold(
+      body: EmptyState(
+        icon: Icons.lock_outline,
+        title: 'Session unavailable',
+        message:
+            'We could not confirm your account. Check your connection and try '
+            'again.',
+        ctaLabel: 'Retry',
+        onCtaPressed: () => context.read<AuthBloc>().add(AuthCheckRequested()),
+      ),
+    );
   }
 }
 
@@ -278,7 +297,11 @@ class _MobileMore extends StatelessWidget {
 }
 
 class _WideMore extends StatelessWidget {
-  const _WideMore({required this.user, required this.layout, required this.tools});
+  const _WideMore({
+    required this.user,
+    required this.layout,
+    required this.tools,
+  });
   final UserEntity user;
   final ResponsiveLayout layout;
   final List<_AdminTool> tools;
@@ -305,7 +328,12 @@ class _WideMore extends StatelessWidget {
       ],
     );
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(isDesktop ? 32 : 20, 24, isDesktop ? 32 : 20, 48),
+      padding: EdgeInsets.fromLTRB(
+        isDesktop ? 32 : 20,
+        24,
+        isDesktop ? 32 : 20,
+        48,
+      ),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1120),
@@ -442,10 +470,12 @@ class _AccountCardState extends State<_AccountCard> {
           CircleAvatar(
             radius: widget.wide ? 28 : 24,
             backgroundColor: AppColors.surfaceContainer(context),
-            backgroundImage: user.photoUrl?.isNotEmpty == true && !_photoLoadFailed
+            backgroundImage:
+                user.photoUrl?.isNotEmpty == true && !_photoLoadFailed
                 ? NetworkImage(user.photoUrl!)
                 : null,
-            onBackgroundImageError: user.photoUrl?.isNotEmpty == true && !_photoLoadFailed
+            onBackgroundImageError:
+                user.photoUrl?.isNotEmpty == true && !_photoLoadFailed
                 ? (_, _) {
                     if (mounted) setState(() => _photoLoadFailed = true);
                   }
@@ -454,7 +484,10 @@ class _AccountCardState extends State<_AccountCard> {
                 ? null
                 : Text(
                     initials.isEmpty ? '?' : initials,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
           ),
           const SizedBox(width: AppSpacing.m),
@@ -472,10 +505,15 @@ class _AccountCardState extends State<_AccountCard> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  user.schoolName?.isNotEmpty == true ? user.schoolName! : 'Active school',
+                  user.schoolName?.isNotEmpty == true
+                      ? user.schoolName!
+                      : 'Active school',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary(context)),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary(context),
+                  ),
                 ),
                 if (user.isActive) ...[
                   const SizedBox(height: 4),
@@ -493,7 +531,10 @@ class _AccountCardState extends State<_AccountCard> {
                       const SizedBox(width: 6),
                       Text(
                         'Active',
-                        style: TextStyle(fontSize: 12, color: AppColors.success(context)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.success(context),
+                        ),
                       ),
                     ],
                   ),
@@ -574,10 +615,18 @@ class _ToolCard extends StatelessWidget {
                 color: AppColors.informationSurface(context),
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: Icon(tool.icon, size: 18, color: AppColors.information(context)),
+              child: Icon(
+                tool.icon,
+                size: 18,
+                color: AppColors.information(context),
+              ),
             ),
             const Spacer(),
-            Icon(Icons.chevron_right, size: 18, color: AppColors.textSecondary(context)),
+            Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: AppColors.textSecondary(context),
+            ),
           ],
         ),
         const SizedBox(height: AppSpacing.m),
@@ -594,7 +643,10 @@ class _ToolCard extends StatelessWidget {
           tool.subtitle,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.textSecondary(context),
+          ),
         ),
       ],
     ),
@@ -628,7 +680,8 @@ class _RowGroup extends StatelessWidget {
         (index) => Column(
           children: [
             rows[index],
-            if (index < rows.length - 1) Divider(height: 1, color: AppColors.border(context)),
+            if (index < rows.length - 1)
+              Divider(height: 1, color: AppColors.border(context)),
           ],
         ),
       ),
@@ -691,14 +744,23 @@ class _MoreRow extends StatelessWidget {
                       subtitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary(context),
+                      ),
                     ),
                   ],
                 ],
               ),
             ),
             if (value != null) ...[
-              Text(value!, style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context))),
+              Text(
+                value!,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
               const SizedBox(width: 4),
             ],
             Icon(
@@ -760,7 +822,10 @@ class _AboutRowState extends State<_AboutRow> {
   );
 }
 
-Future<void> _appearancePicker(BuildContext context, ThemeProvider theme) async {
+Future<void> _appearancePicker(
+  BuildContext context,
+  ThemeProvider theme,
+) async {
   final mode = await showModalBottomSheet<ThemeMode>(
     context: context,
     builder: (context) => SafeArea(
@@ -828,7 +893,10 @@ class _LogoutRow extends StatelessWidget {
                     const SizedBox(height: 1),
                     Text(
                       'Sign out of School Pulse',
-                      style: TextStyle(fontSize: 12, color: danger.withValues(alpha: 0.8)),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: danger.withValues(alpha: 0.8),
+                      ),
                     ),
                   ],
                 ),
@@ -865,7 +933,9 @@ class _SupportRow extends StatelessWidget {
 }
 
 Future<void> _signOut(BuildContext context, UserEntity user) async {
-  final pending = await di.sl<SubjectSyncService>().pending(schoolId: user.schoolId);
+  final pending = await di.sl<SubjectSyncService>().pending(
+    schoolId: user.schoolId,
+  );
   if (!context.mounted) return;
   final message = pending.isEmpty
       ? 'Sign out of this device? Local tenant data will be securely cleared.'
@@ -878,11 +948,16 @@ Future<void> _signOut(BuildContext context, UserEntity user) async {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: Text('Cancel', style: TextStyle(color: AppColors.textPrimary(context))),
+          child: Text(
+            'Cancel',
+            style: TextStyle(color: AppColors.textPrimary(context)),
+          ),
         ),
         FilledButton(
           onPressed: () => Navigator.pop(context, true),
-          style: FilledButton.styleFrom(backgroundColor: AppColors.danger(context)),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.danger(context),
+          ),
           child: const Text('Log out'),
         ),
       ],

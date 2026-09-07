@@ -52,10 +52,7 @@ void main() {
         AdminSection.fromLocation('/staff/admin/staff-attendance'),
         AdminSection.attendance,
       );
-      expect(
-        AdminSection.fromLocation('/staff/admin/fees'),
-        AdminSection.fees,
-      );
+      expect(AdminSection.fromLocation('/staff/admin/fees'), AdminSection.fees);
       expect(
         AdminSection.fromLocation('/staff/admin/approvals'),
         AdminSection.approvals,
@@ -94,6 +91,13 @@ void main() {
           reason: '$path should fall back to More',
         );
       }
+    });
+
+    test('the dedicated /staff/admin/more path resolves to More', () {
+      // The desktop sidebar's More item and the mobile More tab both drive
+      // this exact URL - lock it explicitly rather than relying on the
+      // catch-all above.
+      expect(AdminSection.fromLocation('/staff/admin/more'), AdminSection.more);
     });
   });
 
@@ -204,25 +208,28 @@ void main() {
       source = File('lib/app/router.dart').readAsStringSync();
     });
 
-    test('every in-shell section has a matching AdminShell(section: ...) call', () {
-      for (final s in [
-        AdminSection.home,
-        AdminSection.students,
-        AdminSection.staff,
-        AdminSection.parents,
-        AdminSection.attendance,
-        AdminSection.fees,
-        AdminSection.approvals,
-        AdminSection.appointments,
-      ]) {
-        final enumRef = 'AdminSection.${s.name}';
-        expect(
-          source.contains('AdminShell(section: $enumRef)'),
-          isTrue,
-          reason: 'router must build AdminShell(section: $enumRef) somewhere',
-        );
-      }
-    });
+    test(
+      'every in-shell section has a matching AdminShell(section: ...) call',
+      () {
+        for (final s in [
+          AdminSection.home,
+          AdminSection.students,
+          AdminSection.staff,
+          AdminSection.parents,
+          AdminSection.attendance,
+          AdminSection.fees,
+          AdminSection.approvals,
+          AdminSection.appointments,
+        ]) {
+          final enumRef = 'AdminSection.${s.name}';
+          expect(
+            source.contains('AdminShell(section: $enumRef)'),
+            isTrue,
+            reason: 'router must build AdminShell(section: $enumRef) somewhere',
+          );
+        }
+      },
+    );
 
     test('the fees route is gated to schoolAdmin/headTeacher/director', () {
       final feesBlockStart = source.indexOf("path: 'fees'");
@@ -232,6 +239,48 @@ void main() {
       expect(block.contains('UserRole.schoolAdmin'), isTrue);
       expect(block.contains('UserRole.headTeacher'), isTrue);
       expect(block.contains('UserRole.director'), isTrue);
+    });
+
+    test('there is a deep-linkable /staff/admin/more route building the '
+        'More section, gated to the admin console roles', () {
+      // Anchor to the admin subtree: the `more` route sits just after the
+      // attendance route inside the `/staff/admin` GoRoute's `routes:` list.
+      final anchor = source.indexOf(
+        "AdminShell(section: AdminSection.attendance)",
+      );
+      expect(anchor, greaterThan(-1));
+      final start = source.indexOf("path: 'more'", anchor);
+      expect(
+        start,
+        greaterThan(-1),
+        reason:
+            "the sidebar's More item drives context.go('/staff/admin/more') - "
+            'that path must be a registered GoRoute, or it 404s on refresh',
+      );
+      final block = source.substring(start, start + 600);
+      expect(
+        block.contains('AdminShell(section: AdminSection.more)'),
+        isTrue,
+        reason: 'the more route must build the canonical AdminShell',
+      );
+      expect(
+        block.contains('adminConsoleRoles'),
+        isTrue,
+        reason: 'the more route must carry the admin-console role guard',
+      );
+    });
+  });
+
+  group('shell_screen.dart wiring', () {
+    test('/staff/admin/more is in the adminShellPaths allowlist so StaffShell '
+        'hands it to AdminShell bare', () {
+      final source = File(
+        'lib/features/shared/shell_screen.dart',
+      ).readAsStringSync();
+      final start = source.indexOf('const adminShellPaths');
+      expect(start, greaterThan(-1));
+      final block = source.substring(start, source.indexOf('};', start));
+      expect(block.contains("'/staff/admin/more'"), isTrue);
     });
   });
 

@@ -2825,6 +2825,25 @@ final router = GoRouter(
               builder: (context, state) =>
                   const AdminShell(section: AdminSection.attendance),
             ),
+            // The desktop/tablet sidebar's "More" item and the mobile More
+            // tab both need this to be a real, deep-linkable, refresh-safe
+            // route - not just an AdminMoreScreen widget reached in-memory.
+            // Same admin-console gate as the Structure/settings hubs.
+            GoRoute(
+              path: 'more',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                if (!auth.user.roles.any(
+                  UserRoleDisplay.adminConsoleRoles.contains,
+                )) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.more),
+            ),
             GoRoute(
               path: 'fees',
               redirect: (context, state) {

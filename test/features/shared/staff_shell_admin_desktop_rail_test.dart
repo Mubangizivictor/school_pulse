@@ -27,15 +27,10 @@ class _MockBrandingBloc extends MockBloc<BrandingEvent, BrandingState>
     implements BrandingBloc {}
 
 class _MockSubjectTeacherContextBloc
-    extends
-        MockBloc<
-          SubjectTeacherContextEvent,
-          SubjectTeacherContextState
-        >
+    extends MockBloc<SubjectTeacherContextEvent, SubjectTeacherContextState>
     implements SubjectTeacherContextBloc {}
 
-class _FakeAppRoleSessionService extends Fake
-    implements AppRoleSessionService {
+class _FakeAppRoleSessionService extends Fake implements AppRoleSessionService {
   _FakeAppRoleSessionService(this._current);
   final UserRole? _current;
 
@@ -106,6 +101,11 @@ Widget _wrap({required String initialLocation}) {
                 const Scaffold(body: Text('Structure wizard body')),
           ),
           GoRoute(
+            path: '/staff/admin/more',
+            builder: (context, state) =>
+                const Scaffold(body: Text('AdminShell more body')),
+          ),
+          GoRoute(
             path: '/staff/bursar',
             builder: (context, state) =>
                 const Scaffold(body: Text('Finance body')),
@@ -139,7 +139,11 @@ Widget _wrap({required String initialLocation}) {
   );
 }
 
-Future<void> _setViewSize(WidgetTester tester, double width, double height) async {
+Future<void> _setViewSize(
+  WidgetTester tester,
+  double width,
+  double height,
+) async {
   tester.view.physicalSize = Size(width, height);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
@@ -156,9 +160,7 @@ void main() {
     'StaffShell renders AdminShell-owned routes bare, with no rail of its own, on desktop',
     (tester) async {
       await _setViewSize(tester, 1440, 900);
-      await tester.pumpWidget(
-        _wrap(initialLocation: '/staff/admin/users'),
-      );
+      await tester.pumpWidget(_wrap(initialLocation: '/staff/admin/users'));
       await tester.pumpAndSettle();
 
       expect(find.byType(NavigationRail), findsNothing);
@@ -172,9 +174,7 @@ void main() {
     'StaffShell renders AdminShell-owned routes bare, with no bottom nav of its own, on mobile',
     (tester) async {
       await _setViewSize(tester, 390, 900);
-      await tester.pumpWidget(
-        _wrap(initialLocation: '/staff/admin/users'),
-      );
+      await tester.pumpWidget(_wrap(initialLocation: '/staff/admin/users'));
       await tester.pumpAndSettle();
 
       expect(find.byType(NavigationBar), findsNothing);
@@ -209,6 +209,27 @@ void main() {
 
       expect(find.byType(NavigationRail), findsOneWidget);
       expect(find.text('Settings body'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'StaffShell renders the More hub bare (no double chrome) on desktop and mobile',
+    (tester) async {
+      await _setViewSize(tester, 1440, 900);
+      await tester.pumpWidget(_wrap(initialLocation: '/staff/admin/more'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.text('AdminShell more body'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await _setViewSize(tester, 390, 900);
+      await tester.pumpWidget(_wrap(initialLocation: '/staff/admin/more'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(NavigationRail), findsNothing);
+      expect(find.text('AdminShell more body'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );
