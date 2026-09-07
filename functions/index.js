@@ -27,6 +27,7 @@ Object.assign(exports, require("./exam_factory")({ admin, onCall, HttpsError }))
 Object.assign(exports, require("./exam_factory_operations")({ admin, onCall, HttpsError }));
 Object.assign(exports, require("./exam_factory_reminders")({ admin, onSchedule }));
 const { recordJobRun, recordJobFailure } = require("./platform_health_instrumentation")({ admin });
+Object.assign(exports, require("./parent_invitations")({ admin, onCall, HttpsError, enqueueTransactionalEmail }));
 
 /**
  * Enqueue a templated transactional email for the `public_functions`
@@ -2469,6 +2470,22 @@ const PARENT_INVITE_ADMIN_ROLES = new Set([
 function normalizedParentInviteCode(value) {
   return String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
+// Tenant-configurable maximum number of standard parent/guardian links a
+// single learner may have. Stored on people_policies/{schoolId}
+// (maxStandardGuardians); defaults to 2 when the doc or field is absent,
+// matching the historical hard-coded rule. Read outside any transaction so
+// callers must pass the resolved number into transaction bodies.
+async function resolveMaxGuardians(db, schoolId) {
+  try {
+    const snap = await db.collection("people_policies").doc(String(schoolId)).get();
+    const raw = snap.exists ? snap.data().maxStandardGuardians : null;
+    const value = Number(raw);
+    if (Number.isInteger(value) && value >= 1 && value <= 10) return value;
+  } catch (err) {
+    console.error("resolveMaxGuardians failed; defaulting to 2", schoolId, err);
+  }
+  return 2;
+}
 function parentInviteHash(value) {
   // An HMAC prevents a six-digit invitation hash from being brute-forced if
   // an invitation document were ever exposed. Production must configure the
@@ -2509,11 +2526,13 @@ async function parentInviteAdmin(request) {
   return data;
 }
 
-/** Admin-only: links one parent to up to two-parent learners and returns the
- * raw, one-time code exactly once.
+/** Admin-only: links one parent to a learner (up to the tenant's configured
+ * guardian cap, default two) and returns the raw, one-time code exactly once.
+ * When an `email` is supplied a verified invitation is also enqueued.
  *
  * INITIAL-LINK ONLY. This callable only ever adds a new `parent_learner_links`
- * doc for a learner that still has room (fewer than two active links) - it
+ * doc for a learner that still has room (fewer than the configured max active
+ * links) - it
  * never revokes or mutates an existing active link, so all six
  * PARENT_INVITE_ADMIN_ROLES (director, headTeacher, deputyHead, schoolAdmin,
  * admissions, registrar) can safely use it to onboard a learner's first or
@@ -2523,11 +2542,18 @@ async function parentInviteAdmin(request) {
  * so the two paths stay auditable and distinguishable in the data itself. */
 exports.createParentAccessCode = onCall({ secrets: ["PARENT_ACCESS_CODE_PEPPER"] }, async (request) => {
   const actor = await parentInviteAdmin(request);
-  const { parentName, phoneNumber, learners } = request.data || {};
+  const { parentName, phoneNumber, learners, email } = request.data || {};
   const schoolId = String(actor.schoolId || "");
   const normalizedPhone = String(phoneNumber || "").replace(/\s/g, "");
   if (!schoolId || !String(parentName || "").trim() || !/^\+\d{8,15}$/.test(normalizedPhone) || !Array.isArray(learners) || !learners.length) {
     throw new HttpsError("invalid-argument", "Parent details and at least one learner are required.");
+  }
+  let normalizedEmail = null;
+  if (email !== undefined && email !== null && String(email).trim() !== "") {
+    normalizedEmail = String(email).trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalizedEmail)) {
+      throw new HttpsError("invalid-argument", "Enter a valid email address.");
+    }
   }
   const learnerIds = [...new Set(learners.map((learner) => String(learner.studentId || "")).filter(Boolean))];
   if (learnerIds.length !== learners.length) throw new HttpsError("invalid-argument", "Each learner may be linked once.");
@@ -2553,27 +2579,63 @@ exports.createParentAccessCode = onCall({ secrets: ["PARENT_ACCESS_CODE_PEPPER"]
     }
   }
   if (!code) throw new HttpsError("internal", "Could not generate a unique access code. Try again.");
+  const maxGuardians = await resolveMaxGuardians(db, schoolId);
   const now = Date.now();
   const inviteRef = db.collection("parent_access_code_invites").doc(randomUUID());
   await db.runTransaction(async (transaction) => {
     for (const studentId of learnerIds) {
       const links = await transaction.get(db.collection("parent_learner_links").where("schoolId", "==", schoolId).where("studentId", "==", studentId));
       const active = links.docs.filter((link) => link.data().status !== "revoked");
-      if (active.length >= 2) throw new HttpsError("failed-precondition", "A learner can have a maximum of two parents.");
+      if (active.length >= maxGuardians) throw new HttpsError("failed-precondition", `A learner can have a maximum of ${maxGuardians} parents.`);
       if (active.some((link) => link.data().phoneNumber === normalizedPhone)) throw new HttpsError("already-exists", "This parent is already linked to the learner.");
     }
     transaction.set(inviteRef, {
       schoolId, codeHash, parentName: String(parentName).trim(), phoneNumber: normalizedPhone,
-      learnerIds, learnerRelationships: learners.map((learner) => ({ studentId: String(learner.studentId), relationship: String(learner.relationship || "Guardian") })),
+      ...(normalizedEmail ? { email: normalizedEmail } : {}),
+      learnerIds, learnerRelationships: learners.map((learner) => ({ studentId: String(learner.studentId), relationship: String(learner.relationship || "Guardian"), isPrimaryContact: learner.isPrimaryContact === true })),
       status: "active", createdBy: request.auth.uid, createdAt: admin.firestore.FieldValue.serverTimestamp(), expiresAt: admin.firestore.Timestamp.fromMillis(now + PARENT_INVITE_TTL_MS),
     });
     for (const learner of learners) transaction.set(db.collection("parent_learner_links").doc(), {
       schoolId, studentId: String(learner.studentId), parentInviteId: inviteRef.id, phoneNumber: normalizedPhone,
-      relationship: String(learner.relationship || "Guardian"), status: "pending", linkType: "initial", createdBy: request.auth.uid, createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      relationship: String(learner.relationship || "Guardian"), isPrimaryContact: learner.isPrimaryContact === true, status: "pending", linkType: "initial", createdBy: request.auth.uid, createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   });
   await db.collection("audit_logs").add({ schoolId, actorId: request.auth.uid, module: "parent_access", action: "code_generated", targetType: "parent_access_invite", targetId: inviteRef.id, createdAt: admin.firestore.FieldValue.serverTimestamp() });
-  return { inviteId: inviteRef.id, code, expiresAt: now + PARENT_INVITE_TTL_MS };
+  // Kick off a verified invitation email when an address is on file. The raw
+  // code is passed through so the first email carries it; failure here never
+  // fails the link (the admin can still share the code returned below).
+  let invitation = { status: "pending_manual", delivered: false };
+  if (normalizedEmail) {
+    try {
+      const now2 = Date.now();
+      const recordRef = db.collection("parent_invitations").doc();
+      const canResendAt = admin.firestore.Timestamp.fromMillis(now2 + 60 * 1000);
+      const expAt = admin.firestore.Timestamp.fromMillis(now2 + PARENT_INVITE_TTL_MS);
+      const schoolName = schoolSnap.exists ? (schoolSnap.data().name || "") : "";
+      await recordRef.set({
+        schoolId, parentInviteId: inviteRef.id, channel: "email",
+        maskedTarget: normalizedEmail.replace(/^(.).*(@.*)$/, "$1***$2"),
+        status: "sent", createdBy: request.auth.uid,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(), expiresAt: expAt,
+      });
+      await enqueueTransactionalEmail({
+        eventId: `parent_invite_${recordRef.id}`,
+        templateId: "parent_account_created",
+        to: normalizedEmail,
+        data: { schoolName, parentName: String(parentName).trim(), code, learnerCount: learnerIds.length },
+      });
+      await inviteRef.set({
+        invitationId: recordRef.id, invitationStatus: "sent", invitationChannel: "email",
+        invitationSentAt: admin.firestore.FieldValue.serverTimestamp(),
+        invitationCanResendAt: canResendAt, invitationExpiresAt: expAt,
+      }, { merge: true });
+      invitation = { invitationId: recordRef.id, status: "sent", delivered: true, canResendAt: canResendAt.toMillis(), expiresAt: expAt.toMillis() };
+    } catch (err) {
+      console.error("createParentAccessCode: invitation email failed", inviteRef.id, err);
+      invitation = { status: "failed", delivered: false };
+    }
+  }
+  return { inviteId: inviteRef.id, code, expiresAt: now + PARENT_INVITE_TTL_MS, invitation };
 });
 
 /** schoolAdmin-only: reassigns/replaces/removes an EXISTING active (or
@@ -2611,6 +2673,7 @@ exports.reallocateParentLink = onCall({ secrets: ["PARENT_ACCESS_CODE_PEPPER"] }
 
   const db = admin.firestore();
   const oldLinkRef = db.collection("parent_learner_links").doc(String(linkId));
+  const maxGuardians = await resolveMaxGuardians(db, actorSchoolId);
 
   const result = await db.runTransaction(async (transaction) => {
     const oldLinkSnap = await transaction.get(oldLinkRef);
@@ -2642,7 +2705,7 @@ exports.reallocateParentLink = onCall({ secrets: ["PARENT_ACCESS_CODE_PEPPER"] }
         db.collection("parent_learner_links").where("schoolId", "==", actorSchoolId).where("studentId", "==", studentId)
       );
       const stillActive = otherLinksSnap.docs.filter((doc) => doc.id !== oldLinkRef.id && doc.data().status !== "revoked");
-      if (stillActive.length >= 2) throw new HttpsError("failed-precondition", "A learner can have a maximum of two parents.");
+      if (stillActive.length >= maxGuardians) throw new HttpsError("failed-precondition", `A learner can have a maximum of ${maxGuardians} parents.`);
       if (stillActive.some((doc) => doc.data().phoneNumber === normalizedPhone)) {
         throw new HttpsError("already-exists", "This parent is already linked to the learner.");
       }
@@ -2735,6 +2798,12 @@ exports.listParentAccessInvites = onCall(async (request) => {
 
   const now = Date.now();
   const expiringSoonMs = 48 * 60 * 60 * 1000;
+  const maskInviteEmail = (v) => {
+    const s = String(v || "").trim().toLowerCase();
+    const at = s.indexOf("@");
+    if (at < 1) return "";
+    return `${s[0]}***${s.slice(at)}`;
+  };
   const rows = snap.docs.map((doc) => {
     const data = doc.data();
     const expiresAtMs = data.expiresAt?.toMillis?.() ?? 0;
@@ -2744,8 +2813,17 @@ exports.listParentAccessInvites = onCall(async (request) => {
       inviteId: doc.id,
       parentName: data.parentName || "",
       maskedPhone: maskPhoneNumber(data.phoneNumber),
+      maskedEmail: maskInviteEmail(data.email),
+      hasEmail: !!data.email,
       learnerCount: Array.isArray(data.learnerIds) ? data.learnerIds.length : 0,
       status,
+      // Delivery/acceptance state of the verified invitation, distinct from
+      // the code's own active/expired/revoked status. "accepted" is written
+      // by the parent redeem flow; anything else means the parent has not
+      // signed up yet.
+      invitationStatus: data.invitationStatus || (data.email ? "sent" : "pending_manual"),
+      invitationSentAt: data.invitationSentAt?.toMillis?.() ?? null,
+      canResendAt: data.invitationCanResendAt?.toMillis?.() ?? null,
       createdAt: data.createdAt?.toMillis?.() ?? null,
       expiresAt: expiresAtMs || null,
       expiringSoon: status === "active" && expiresAtMs > 0 && expiresAtMs - now <= expiringSoonMs,
@@ -2757,20 +2835,94 @@ exports.listParentAccessInvites = onCall(async (request) => {
   const allSnap = await db.collection("parent_access_code_invites").where("schoolId", "==", schoolId).get();
   let pendingCount = 0;
   let expiringSoonCount = 0;
+  let linkedParentCount = 0;
   allSnap.docs.forEach((doc) => {
     const data = doc.data();
     if (data.status === "revoked") return;
     const expiresAtMs = data.expiresAt?.toMillis?.() ?? 0;
     if (expiresAtMs > 0 && expiresAtMs < now) return; // expired, not pending
-    pendingCount += 1;
+    if (data.invitationStatus === "accepted") {
+      linkedParentCount += 1;
+    } else {
+      pendingCount += 1;
+    }
     if (expiresAtMs > 0 && expiresAtMs - now <= expiringSoonMs) expiringSoonCount += 1;
   });
+
+  const maxGuardians = await resolveMaxGuardians(db, schoolId);
 
   return {
     rows,
     nextCursor: snap.docs.length === pageSize ? snap.docs[snap.docs.length - 1].id : null,
     pendingCount,
     expiringSoonCount,
+    linkedParentCount,
+    maxGuardians,
+  };
+});
+
+/** Admin-gated, tenant-scoped single parent record with resolved learner
+ * names + per-learner link ids/relationships/primary-contact flags. Backs
+ * the parent detail/access-management screen. Never returns a raw code or
+ * codeHash; phone/email are returned in full here (not masked) because the
+ * caller is an authenticated same-school admin editing the record - the list
+ * endpoint stays masked for the directory view. */
+exports.getParentAccessRecord = onCall(async (request) => {
+  const actor = await parentInviteAdmin(request);
+  const schoolId = String(actor.schoolId || "");
+  if (!schoolId) throw new HttpsError("failed-precondition", "Your account is not assigned to a school.");
+  const inviteId = String(request.data?.inviteId || "").trim();
+  if (!inviteId) throw new HttpsError("invalid-argument", "An invitation id is required.");
+
+  const db = admin.firestore();
+  const ref = db.collection("parent_access_code_invites").doc(inviteId);
+  const snap = await ref.get();
+  if (!snap.exists || String(snap.data().schoolId || "") !== schoolId) {
+    throw new HttpsError("not-found", "Parent record not found.");
+  }
+  const data = snap.data();
+  const now = Date.now();
+  const expiresAtMs = data.expiresAt?.toMillis?.() ?? 0;
+  const isExpired = expiresAtMs > 0 && expiresAtMs < now;
+  const status = data.status === "revoked" ? "revoked" : isExpired ? "expired" : "active";
+
+  const linksSnap = await db.collection("parent_learner_links")
+    .where("schoolId", "==", schoolId)
+    .where("parentInviteId", "==", inviteId)
+    .get();
+  const linkDocs = linksSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const studentIds = [...new Set(linkDocs.map((l) => String(l.studentId)).filter(Boolean))];
+  const studentSnaps = await Promise.all(studentIds.map((id) => db.collection("students").doc(id).get()));
+  const nameById = {};
+  studentSnaps.forEach((s) => {
+    if (s.exists) nameById[s.id] = { name: s.data().name || "", className: s.data().className || s.data().classId || "" };
+  });
+
+  return {
+    inviteId,
+    parentName: data.parentName || "",
+    phoneNumber: data.phoneNumber || "",
+    email: data.email || "",
+    status,
+    invitationStatus: data.invitationStatus || (data.email ? "sent" : "pending_manual"),
+    invitationSentAt: data.invitationSentAt?.toMillis?.() ?? null,
+    canResendAt: data.invitationCanResendAt?.toMillis?.() ?? null,
+    createdAt: data.createdAt?.toMillis?.() ?? null,
+    expiresAt: expiresAtMs || null,
+    revokedAt: data.revokedAt?.toMillis?.() ?? null,
+    maxGuardians: await resolveMaxGuardians(db, schoolId),
+    learners: linkDocs
+      .filter((l) => l.status !== "revoked")
+      .map((l) => ({
+        linkId: l.id,
+        studentId: String(l.studentId),
+        studentName: nameById[String(l.studentId)]?.name || "",
+        className: nameById[String(l.studentId)]?.className || "",
+        relationship: l.relationship || "Guardian",
+        isPrimaryContact: l.isPrimaryContact === true,
+        linkStatus: l.status || "pending",
+        linkType: l.linkType || "initial",
+      })),
   };
 });
 
@@ -2779,7 +2931,14 @@ exports.revokeParentAccessCode = onCall(async (request) => {
   const ref = admin.firestore().collection("parent_access_code_invites").doc(String(request.data?.inviteId || ""));
   const invite = await ref.get();
   if (!invite.exists || invite.data().schoolId !== actor.schoolId) throw new HttpsError("not-found", "Access code not found.");
-  await ref.update({ status: "revoked", revokedAt: admin.firestore.FieldValue.serverTimestamp(), revokedBy: request.auth.uid });
+  await ref.update({ status: "revoked", revokedAt: admin.firestore.FieldValue.serverTimestamp(), revokedBy: request.auth.uid, invitationStatus: "cancelled" });
+  const invitationId = invite.data().invitationId;
+  if (invitationId) {
+    await admin.firestore().collection("parent_invitations").doc(invitationId).set(
+      { status: "cancelled", cancelledAt: admin.firestore.FieldValue.serverTimestamp(), cancelledBy: request.auth.uid },
+      { merge: true },
+    );
+  }
   await admin.firestore().collection("audit_logs").add({ schoolId: actor.schoolId, actorId: request.auth.uid, module: "parent_access", action: "code_revoked", targetType: "parent_access_invite", targetId: ref.id, createdAt: admin.firestore.FieldValue.serverTimestamp() });
   return { success: true };
 });

@@ -3477,3 +3477,17 @@ describe('Guardian consent (direct enrolment Step 6)', () => {
   });
 });
 
+describe('Parent invitations (parent_invitations.js) are server-only', () => {
+  test('no client - not even a school admin - may read or write parent_invitations', async () => {
+    await assertFails(getDoc(doc(dbFor('adminA'), 'parent_invitations', 'inv1')));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'parent_invitations', 'forged'), {
+      schoolId: 'schoolA', parentInviteId: 'x', status: 'sent',
+    }));
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'parent_invitations', 'inv1'), { status: 'accepted' }));
+    await assertFails(deleteDoc(doc(dbFor('adminA'), 'parent_invitations', 'inv1')));
+    await assertFails(getDoc(
+      doc(testEnv.unauthenticatedContext().firestore(), 'parent_invitations', 'inv1'),
+    ));
+  });
+});
+

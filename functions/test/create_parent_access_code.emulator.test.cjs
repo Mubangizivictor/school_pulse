@@ -181,7 +181,7 @@ describe("createParentAccessCode", () => {
       () => createParentAccessCode.run(request(ADMIN_UID, basePayload())),
       (err) => {
         assert.equal(err.code, "failed-precondition");
-        assert.match(err.message, /maximum of two parents/i);
+        assert.match(err.message, /maximum of \d+ parents/i);
         return true;
       }
     );
@@ -211,6 +211,58 @@ describe("createParentAccessCode", () => {
     // One active + one revoked = room for one more.
     const result = await createParentAccessCode.run(request(ADMIN_UID, basePayload()));
     assert.ok(result.code);
+  });
+
+  test("the configurable guardian cap (people_policies.maxStandardGuardians) is honoured", async () => {
+    await db.doc(`people_policies/${SCHOOL}`).set({ maxStandardGuardians: 3 });
+    // Two active links already; policy allows 3, so a third is permitted.
+    await db.collection("parent_learner_links").add({ schoolId: SCHOOL, studentId: STUDENT_ID, phoneNumber: "+256700001111", status: "active" });
+    await db.collection("parent_learner_links").add({ schoolId: SCHOOL, studentId: STUDENT_ID, phoneNumber: "+256700002222", status: "active" });
+
+    const ok = await createParentAccessCode.run(request(ADMIN_UID, basePayload()));
+    assert.ok(ok.code, "a third link is allowed when policy max is 3");
+
+    // Now three active links; a fourth must be rejected with the policy number.
+    await db.collection("parent_learner_links").add({ schoolId: SCHOOL, studentId: STUDENT_ID, phoneNumber: "+256700003333", status: "active" });
+    await assert.rejects(
+      () => createParentAccessCode.run(request(ADMIN_UID, basePayload())),
+      (err) => {
+        assert.equal(err.code, "failed-precondition");
+        assert.match(err.message, /maximum of 3 parents/i);
+        return true;
+      }
+    );
+  });
+
+  test("createParentAccessCode with an email enqueues a verified invitation and mirrors status", async () => {
+    const result = await createParentAccessCode.run(
+      request(ADMIN_UID, basePayload({ email: "parent@example.com" }))
+    );
+    assert.ok(result.invitation);
+    assert.equal(result.invitation.delivered, true);
+    assert.equal(result.invitation.status, "sent");
+
+    const invite = await db.collection("parent_access_code_invites").doc(result.inviteId).get();
+    assert.equal(invite.data().email, "parent@example.com");
+    assert.equal(invite.data().invitationStatus, "sent");
+    assert.ok(invite.data().invitationCanResendAt);
+
+    const queued = await db.collection("transactional_email_queue")
+      .where("templateId", "==", "parent_account_created").get();
+    assert.equal(queued.size, 1);
+    assert.equal(queued.docs[0].data().to, "parent@example.com");
+
+    const rec = await db.collection("parent_invitations")
+      .where("parentInviteId", "==", result.inviteId).get();
+    assert.equal(rec.size, 1);
+    assert.equal(rec.docs[0].data().channel, "email");
+  });
+
+  test("an invalid email is rejected before any link is written", async () => {
+    await assert.rejects(
+      () => createParentAccessCode.run(request(ADMIN_UID, basePayload({ email: "not-an-email" }))),
+      (err) => { assert.equal(err.code, "invalid-argument"); return true; }
+    );
   });
 
   for (const role of INITIAL_LINK_ROLES) {

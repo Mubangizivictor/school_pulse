@@ -443,6 +443,13 @@ service cloud.firestore {
     // status via the `invitationStatus` field mirrored onto users/{uid}.
     match /staff_invitations/{inviteId} { allow read, write: if false; }
 
+    // Parent sign-in invitations (parent_invitations.js). Server-only, same
+    // reasoning as staff_invitations: no code or token is stored here, only
+    // delivery status. Clients read invitation status via the
+    // `invitationStatus` field mirrored onto parent_access_code_invites and
+    // surfaced through the listParentAccessInvites callable.
+    match /parent_invitations/{inviteId} { allow read, write: if false; }
+
     // Immutable audit trail for parent-learner link reallocations
     // (reallocateParentLink in functions/index.js). Server-only: written
     // exclusively via the Admin SDK, never mutated after creation, and not

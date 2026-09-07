@@ -117,6 +117,29 @@ describe("listParentAccessInvites", () => {
     assert.equal(row.code, undefined);
   });
 
+  test("rows carry invitation status fields and the payload carries maxGuardians", async () => {
+    await db.collection("parent_access_code_invites").add(invite({
+      email: "parent@example.com",
+      invitationStatus: "sent",
+      invitationSentAt: admin.firestore.FieldValue.serverTimestamp(),
+      invitationCanResendAt: admin.firestore.Timestamp.fromMillis(Date.now() + 30000),
+    }));
+    const result = await listParentAccessInvites.run(request(ADMIN_UID, {}));
+    const row = result.rows[0];
+    assert.equal(row.invitationStatus, "sent");
+    assert.equal(row.hasEmail, true);
+    assert.equal(row.maskedEmail, "p***@example.com");
+    assert.ok(row.canResendAt);
+    assert.equal(result.maxGuardians, 2);
+  });
+
+  test("maxGuardians reflects the tenant policy when set", async () => {
+    await db.doc(`people_policies/${SCHOOL}`).set({ maxStandardGuardians: 4 });
+    await db.collection("parent_access_code_invites").add(invite());
+    const result = await listParentAccessInvites.run(request(ADMIN_UID, {}));
+    assert.equal(result.maxGuardians, 4);
+  });
+
   test("cross-tenant data is never returned - only the caller's own school", async () => {
     await db.collection("parent_access_code_invites").add(invite({ schoolId: SCHOOL_B, parentName: "Other School Parent" }));
     await db.collection("parent_access_code_invites").add(invite({ parentName: "My School Parent" }));
