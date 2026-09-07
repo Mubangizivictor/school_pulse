@@ -467,7 +467,12 @@ class _RowListView extends StatelessWidget {
       itemBuilder: (context, index) {
         final invite = rows[index];
         if (tab == ParentsAccessTab.parents) {
-          return ParentRowTile(invite: invite);
+          return ParentRowTile(
+            invite: invite,
+            onTap: () => context.push(
+              '/staff/admin/parents/${invite.inviteId}',
+            ),
+          );
         }
         return AccessCodeRowTile(
           invite: invite,
@@ -649,8 +654,13 @@ class _TabletLayout extends StatelessWidget {
                             childAspectRatio: 3.0,
                           ),
                           itemCount: state.filteredRows.length,
-                          itemBuilder: (context, index) =>
-                              ParentRowTile(invite: state.filteredRows[index]),
+                          itemBuilder: (context, index) => ParentRowTile(
+                            invite: state.filteredRows[index],
+                            onTap: () => context.push(
+                              '/staff/admin/parents/'
+                              '${state.filteredRows[index].inviteId}',
+                            ),
+                          ),
                         ),
                         GridView.builder(
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -786,6 +796,10 @@ class _WebLayout extends StatelessWidget {
                                               sortColumn: sortColumn,
                                               sortAscending: sortAscending,
                                               onSort: onSort,
+                                              onRowTap: (invite) => context.push(
+                                                '/staff/admin/parents/'
+                                                '${invite.inviteId}',
+                                              ),
                                             ),
                                           ),
                                   ),

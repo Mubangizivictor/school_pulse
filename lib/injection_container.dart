@@ -9,6 +9,7 @@ import 'package:school_pulse/features/relationships/domain/usecases/get_relation
 import 'package:school_pulse/features/admin/parent_access_workspace/data/datasources/parent_access_remote_data_source.dart';
 import 'package:school_pulse/features/admin/parent_access_workspace/data/repositories/parent_access_repository_impl.dart';
 import 'package:school_pulse/features/admin/parent_access_workspace/domain/repositories/parent_access_repository.dart';
+import 'package:school_pulse/features/admin/parent_access_workspace/presentation/cubit/parent_detail_cubit.dart';
 import 'package:school_pulse/features/admin/parent_access_workspace/presentation/cubit/parents_access_cubit.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/get_relationships_for_student.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/reallocate_relationship.dart';
@@ -2168,6 +2169,9 @@ Future<void> init() async {
     () => ParentAccessRepositoryImpl(remoteDataSource: sl()),
   );
   sl.registerFactory(() => ParentsAccessCubit(repository: sl()));
+  sl.registerFactoryParam<ParentDetailCubit, String, void>(
+    (inviteId, _) => ParentDetailCubit(repository: sl(), inviteId: inviteId),
+  );
 
   // Features - Parent Access (module visibility resolver, consumes
   // relationship access flags + structure feature toggles + people policy).
