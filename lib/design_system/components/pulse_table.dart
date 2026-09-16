@@ -25,12 +25,17 @@ class PulseTable<T> extends StatelessWidget {
   final bool isLoading;
   final String emptyMessage;
 
+  /// Optional row-tap hook (e.g. opening a detail panel). Existing callers
+  /// that omit it keep today's non-interactive rows.
+  final void Function(T)? onRowTap;
+
   const PulseTable({
     super.key,
     required this.items,
     required this.columns,
     this.isLoading = false,
     this.emptyMessage = 'No data available',
+    this.onRowTap,
   });
 
   @override
@@ -98,6 +103,9 @@ class PulseTable<T> extends StatelessWidget {
           rows: items
               .map(
                 (item) => DataRow(
+                  onSelectChanged: onRowTap != null
+                      ? (_) => onRowTap!(item)
+                      : null,
                   cells: columns
                       .map((col) => DataCell(col.cellBuilder(item)))
                       .toList(),

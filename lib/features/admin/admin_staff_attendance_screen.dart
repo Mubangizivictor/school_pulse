@@ -15,6 +15,7 @@ import 'package:school_pulse/features/admin/presentation/bloc/staff_attendance/s
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/mark_staff_attendance_sheet.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/staff_attendance_correction_sheet.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/staff_attendance_detail_panel.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/staff_attendance_export.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
@@ -124,10 +125,34 @@ class StaffAttendanceView extends StatelessWidget {
                       else ...[
                         _SummaryCards(summary: state.summary),
                         const SizedBox(height: 20),
-                        _AttendanceLog(
-                          state: state,
-                          canManage: _canManage,
-                          schoolId: user.schoolId,
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final log = _AttendanceLog(
+                              state: state,
+                              canManage: _canManage,
+                              schoolId: user.schoolId,
+                            );
+                            // Below this width the right panel would starve
+                            // the table of room for its own columns - fall
+                            // back to the log alone and let selection open
+                            // the correction sheet directly, same as mobile.
+                            if (constraints.maxWidth < 1080) return log;
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(flex: 2, child: log),
+                                const SizedBox(width: 20),
+                                SizedBox(
+                                  width: 320,
+                                  child: _DetailPanelSlot(
+                                    state: state,
+                                    canManage: _canManage,
+                                    schoolId: user.schoolId,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ],
                     ],
@@ -291,6 +316,9 @@ String _statusWord(StaffAttendanceStatus s) => switch (s) {
   StaffAttendanceStatus.absent => 'Absent',
 };
 
+/// Green is reserved for Present, amber for Late, red for Absent/Not clocked
+/// in - on-leave gets the pale-blue info semantic since the spec doesn't
+/// call out a leave color explicitly.
 Color _statusColor(BuildContext context, StaffAttendanceStatus s) {
   final semantic = Theme.of(context).extension<SemanticColors>()!;
   return switch (s) {
@@ -298,7 +326,7 @@ Color _statusColor(BuildContext context, StaffAttendanceStatus s) {
     StaffAttendanceStatus.late => semantic.warning,
     StaffAttendanceStatus.onLeave => semantic.info,
     StaffAttendanceStatus.absent => Theme.of(context).colorScheme.error,
-    StaffAttendanceStatus.notClockedIn => Theme.of(context).colorScheme.outline,
+    StaffAttendanceStatus.notClockedIn => Theme.of(context).colorScheme.error,
   };
 }
 
@@ -488,6 +516,95 @@ class _SummaryCards extends StatelessWidget {
   }
 }
 
+// --- Desktop right-hand detail panel ---------------------------------------
+
+class _DetailPanelSlot extends StatelessWidget {
+  const _DetailPanelSlot({
+    required this.state,
+    required this.canManage,
+    required this.schoolId,
+  });
+
+  final StaffAttendanceState state;
+  final bool canManage;
+  final String schoolId;
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<StaffAttendanceCubit>();
+    final staff = state.selectedStaff;
+    if (staff == null) {
+      return AppCard(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.badge_outlined,
+              size: 40,
+              color: Theme.of(context).colorScheme.outline,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'No staff selected',
+              style: TextStyle(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Select a staff member from the attendance log to view more '
+              'details, edit their record or add a note.',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.outline,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+    final byStaff = {for (final r in state.records) r.staffId: r};
+    final shiftsByStaff = {for (final s in state.shifts) s.staffId: s};
+    final row = StaffAttendanceRow(
+      staff: staff,
+      record: byStaff[staff.id],
+      shift: shiftsByStaff[staff.id],
+    );
+    return StaffAttendanceDetailPanel(
+      row: row,
+      canManage: canManage,
+      onClose: () => cubit.selectStaff(null),
+      onMarkAttendance: () async {
+        final ok = await MarkStaffAttendanceSheet.show(
+          context,
+          cubit: cubit,
+          staff: staff,
+        );
+        if (ok == true && context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Attendance marked')));
+        }
+      },
+      onCorrect: () async {
+        final ok = await StaffAttendanceCorrectionSheet.show(
+          context,
+          cubit: cubit,
+          schoolId: schoolId,
+          day: state.day,
+          row: row,
+        );
+        if (ok == true && context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Attendance corrected')));
+        }
+      },
+    );
+  }
+}
+
 // --- Attendance log ------------------------------------------------------
 
 class _AttendanceLog extends StatelessWidget {
@@ -549,6 +666,9 @@ class _AttendanceLog extends StatelessWidget {
                   rows: rows,
                   canManage: canManage,
                   onCorrect: (r) => _openCorrection(context, r),
+                  onRowTap: (r) => context
+                      .read<StaffAttendanceCubit>()
+                      .selectStaff(r.staff.id),
                 );
               },
             ),
@@ -582,17 +702,20 @@ class _DesktopTable extends StatelessWidget {
     required this.rows,
     required this.canManage,
     required this.onCorrect,
+    this.onRowTap,
   });
 
   final List<StaffAttendanceRow> rows;
   final bool canManage;
   final void Function(StaffAttendanceRow) onCorrect;
+  final void Function(StaffAttendanceRow)? onRowTap;
 
   @override
   Widget build(BuildContext context) {
     final timeFmt = DateFormat('hh:mm a');
     return PulseTable<StaffAttendanceRow>(
       items: rows,
+      onRowTap: onRowTap,
       columns: [
         PulseTableColumn(
           title: 'Staff',
@@ -695,9 +818,11 @@ class _StaffTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          StatusBadge(
-            label: _statusWord(row.status),
-            color: _statusColor(context, row.status),
+          Flexible(
+            child: StatusBadge(
+              label: _statusWord(row.status),
+              color: _statusColor(context, row.status),
+            ),
           ),
           if (canManage)
             IconButton(
@@ -725,14 +850,18 @@ class _Pager extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            'Showing $start–$end of ${state.filteredCount}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.outline,
+          Flexible(
+            child: Text(
+              'Showing $start–$end of ${state.filteredCount}',
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.outline,
+              ),
             ),
           ),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
                 icon: const Icon(Icons.chevron_left),

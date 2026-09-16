@@ -61,6 +61,7 @@ void main() {
     when(() => cubit.setPage(any())).thenReturn(null);
     when(cubit.previousPage).thenReturn(null);
     when(cubit.nextPage).thenReturn(null);
+    when(() => cubit.selectStaff(any())).thenReturn(null);
   });
 
   StaffAttendanceState stateWith({
@@ -70,6 +71,7 @@ void main() {
     bool isLoadingRecords = false,
     String? error,
     bool isOffline = false,
+    String? selectedStaffId,
   }) {
     return StaffAttendanceState(
       day: day,
@@ -79,10 +81,15 @@ void main() {
       isLoadingRecords: isLoadingRecords,
       error: error,
       isOffline: isOffline,
+      selectedStaffId: selectedStaffId,
     );
   }
 
-  Widget pump(UserEntity user, StaffAttendanceState state, {Size? size}) {
+  // MediaQuery alone does not affect actual layout constraints (LayoutBuilder
+  // reads the real test viewport, not an injected MediaQueryData) - callers
+  // that need a specific width must additionally set tester.view.physicalSize
+  // (see setViewSize below).
+  Widget pump(UserEntity user, StaffAttendanceState state) {
     when(() => cubit.state).thenReturn(state);
     whenListen(
       cubit,
@@ -91,14 +98,18 @@ void main() {
     );
     return MaterialApp(
       theme: AppTheme.light(),
-      home: MediaQuery(
-        data: MediaQueryData(size: size ?? const Size(1200, 900)),
-        child: BlocProvider<StaffAttendanceCubit>.value(
-          value: cubit,
-          child: StaffAttendanceView(user: user),
-        ),
+      home: BlocProvider<StaffAttendanceCubit>.value(
+        value: cubit,
+        child: StaffAttendanceView(user: user),
       ),
     );
+  }
+
+  void setViewSize(WidgetTester tester, Size size) {
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
   }
 
   testWidgets('renders summary cards and the attendance table', (tester) async {
@@ -211,12 +222,92 @@ void main() {
     expect(find.textContaining('Offline'), findsOneWidget);
   });
 
+  testWidgets(
+    'not-clocked-in status uses the error/red semantic, not a muted outline',
+    (tester) async {
+      await tester.pumpWidget(
+        pump(
+          _user(const [UserRole.schoolAdmin]),
+          stateWith(roster: [_staff('1')]),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 2));
+
+      final context = tester.element(find.byType(StaffAttendanceView));
+      final theme = Theme.of(context);
+      final semantic = theme.extension<SemanticColors>()!;
+
+      final badgeFinder = find.text('NOT CLOCKED IN');
+      expect(badgeFinder, findsWidgets);
+      final badge = tester.widget<Text>(badgeFinder.first);
+      expect(badge.style?.color, theme.colorScheme.error);
+      expect(badge.style?.color, isNot(semantic.success));
+      expect(badge.style?.color, isNot(theme.colorScheme.outline));
+    },
+  );
+
   testWidgets('empty roster shows the "No staff yet" state', (tester) async {
     await tester.pumpWidget(
       pump(_user(const [UserRole.schoolAdmin]), stateWith()),
     );
     await tester.pump(const Duration(seconds: 2));
     expect(find.text('No staff yet'), findsOneWidget);
+  });
+
+  testWidgets(
+    'wide layout shows the "No staff selected" prompt when nothing is selected',
+    (tester) async {
+      setViewSize(tester, const Size(1440, 960));
+      await tester.pumpWidget(
+        pump(
+          _user(const [UserRole.schoolAdmin]),
+          stateWith(
+            roster: [_staff('1')],
+            records: [_rec('1', StaffAttendanceStatus.onTime)],
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.text('No staff selected'), findsOneWidget);
+    },
+  );
+
+  testWidgets('wide layout shows staff details after selecting a row', (
+    tester,
+  ) async {
+    setViewSize(tester, const Size(1440, 960));
+    await tester.pumpWidget(
+      pump(
+        _user(const [UserRole.schoolAdmin]),
+        stateWith(
+          roster: [_staff('1')],
+          records: [_rec('1', StaffAttendanceStatus.onTime)],
+          selectedStaffId: '1',
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Staff details'), findsOneWidget);
+    expect(find.text('No staff selected'), findsNothing);
+  });
+
+  testWidgets('below 1080w the log renders without a detail panel', (
+    tester,
+  ) async {
+    setViewSize(tester, const Size(1024, 800));
+    await tester.pumpWidget(
+      pump(
+        _user(const [UserRole.schoolAdmin]),
+        stateWith(
+          roster: [_staff('1')],
+          records: [_rec('1', StaffAttendanceStatus.onTime)],
+          selectedStaffId: '1',
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text('Staff details'), findsNothing);
+    expect(find.text('No staff selected'), findsNothing);
   });
 
   for (final size in const [
@@ -227,6 +318,7 @@ void main() {
     Size(1440, 960),
   ]) {
     testWidgets('no overflow at ${size.width.toInt()}w', (tester) async {
+      setViewSize(tester, size);
       await tester.pumpWidget(
         pump(
           _user(const [UserRole.schoolAdmin]),
@@ -237,7 +329,6 @@ void main() {
               _rec('1', StaffAttendanceStatus.onTime),
             ],
           ),
-          size: size,
         ),
       );
       await tester.pump(const Duration(seconds: 2));
