@@ -10,6 +10,9 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/exam_factory/domain/repositories/exam_factory_repository.dart';
 import 'package:school_pulse/features/exam_factory/domain/services/exam_factory_offline_queue_service.dart';
 import 'package:school_pulse/features/exam_factory/domain/services/exam_factory_queue_replay.dart';
+import 'package:school_pulse/features/admin/domain/repositories/staff_attendance_repository.dart';
+import 'package:school_pulse/features/admin/domain/services/staff_attendance_offline_queue_service.dart';
+import 'package:school_pulse/features/admin/domain/services/staff_attendance_queue_replay.dart';
 import 'package:school_pulse/features/matron/domain/repositories/matron_repository.dart';
 import 'package:school_pulse/features/patron/domain/repositories/patron_repository.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -123,19 +126,35 @@ class _AttendanceSyncLifecycleGateState
     // queue. Guarded by isRegistered so test setups that stub only the
     // attendance/boarding DI surface (this gate predates Exam Factory)
     // are not forced to also register it.
-    if (!di.sl.isRegistered<ExamFactoryOfflineQueueService>() ||
-        !di.sl.isRegistered<ExamFactoryRepository>()) {
-      return;
+    if (di.sl.isRegistered<ExamFactoryOfflineQueueService>() &&
+        di.sl.isRegistered<ExamFactoryRepository>()) {
+      unawaited(
+        di.sl<ExamFactoryOfflineQueueService>().syncPending(
+          institutionId: authState.user.schoolId,
+          actorId: authState.user.id,
+          send: ExamFactoryQueueReplay(
+            repository: di.sl<ExamFactoryRepository>(),
+          ).replay,
+        ),
+      );
     }
-    unawaited(
-      di.sl<ExamFactoryOfflineQueueService>().syncPending(
-        institutionId: authState.user.schoolId,
-        actorId: authState.user.id,
-        send: ExamFactoryQueueReplay(
-          repository: di.sl<ExamFactoryRepository>(),
-        ).replay,
-      ),
-    );
+
+    // Staff attendance's offline queue (same-day clock-in, correction)
+    // shares these same lifecycle triggers - see
+    // StaffAttendanceOfflineQueueService doc for what is and is not safe to
+    // queue.
+    if (di.sl.isRegistered<StaffAttendanceOfflineQueueService>() &&
+        di.sl.isRegistered<StaffAttendanceRepository>()) {
+      unawaited(
+        di.sl<StaffAttendanceOfflineQueueService>().syncPending(
+          institutionId: authState.user.schoolId,
+          actorId: authState.user.id,
+          send: StaffAttendanceQueueReplay(
+            repository: di.sl<StaffAttendanceRepository>(),
+          ).replay,
+        ),
+      );
+    }
   }
 
   @override

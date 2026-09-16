@@ -137,6 +137,9 @@ import 'package:school_pulse/features/exam_factory/data/repositories/exam_factor
 import 'package:school_pulse/features/exam_factory/data/datasources/exam_factory_queue_data_source.dart';
 import 'package:school_pulse/features/exam_factory/data/datasources/exam_factory_queue_data_source_factory.dart';
 import 'package:school_pulse/features/exam_factory/domain/services/exam_factory_offline_queue_service.dart';
+import 'package:school_pulse/features/admin/data/datasources/staff_attendance_queue_data_source.dart';
+import 'package:school_pulse/features/admin/data/datasources/staff_attendance_queue_data_source_factory.dart';
+import 'package:school_pulse/features/admin/domain/services/staff_attendance_offline_queue_service.dart';
 
 // Academic
 import 'package:school_pulse/features/academic/domain/repositories/academic_repository.dart';
@@ -2126,6 +2129,18 @@ Future<void> init() async {
   sl.registerLazySingleton<StaffAttendanceRepository>(
     () => StaffAttendanceRepositoryImpl(),
   );
+
+  // Offline queue for the two safe-to-queue staff attendance actions
+  // (same-day clock-in, correction) - mirrors ExamFactoryOfflineQueueService's
+  // registration.
+  sl.registerLazySingleton<StaffAttendanceQueueDataSource>(
+    () =>
+        createStaffAttendanceQueueDataSource(isar: kIsWeb ? null : sl<Isar>()),
+  );
+  sl.registerLazySingleton(
+    () => StaffAttendanceOfflineQueueService(dataSource: sl()),
+  );
+
   sl.registerLazySingleton(() => SubscriptionRepository());
 
   // Subscription Payment - MTN Mobile Money

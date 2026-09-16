@@ -9,6 +9,7 @@ import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/design_system/components/pulse_table.dart';
 import 'package:school_pulse/features/admin/data/models/staff_attendance_record.dart';
 import 'package:school_pulse/features/admin/domain/repositories/staff_attendance_repository.dart';
+import 'package:school_pulse/features/admin/domain/services/staff_attendance_offline_queue_service.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/staff_attendance/staff_attendance_cubit.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/staff_attendance/staff_attendance_state.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
@@ -45,6 +46,8 @@ class AdminStaffAttendanceScreen extends StatelessWidget {
         getStaffMembers: di.sl<GetStaffMembers>(),
         structureRepository: di.sl<StructureRepository>(),
         schoolId: user.schoolId,
+        actorId: user.id,
+        offlineQueue: di.sl<StaffAttendanceOfflineQueueService>(),
       )..init(),
       child: StaffAttendanceView(user: user),
     );
@@ -561,6 +564,7 @@ class _AttendanceLog extends StatelessWidget {
   ) async {
     final ok = await StaffAttendanceCorrectionSheet.show(
       context,
+      cubit: context.read<StaffAttendanceCubit>(),
       schoolId: schoolId,
       day: state.day,
       row: row,

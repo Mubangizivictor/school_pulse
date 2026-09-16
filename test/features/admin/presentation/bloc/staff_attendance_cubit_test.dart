@@ -1,14 +1,17 @@
 import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
+import 'package:school_pulse/features/admin/data/datasources/staff_attendance_queue_data_source.dart';
 import 'package:school_pulse/features/admin/data/models/staff_attendance_record.dart';
 import 'package:school_pulse/features/admin/domain/repositories/staff_attendance_repository.dart';
+import 'package:school_pulse/features/admin/domain/services/staff_attendance_offline_queue_service.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/staff_attendance/staff_attendance_cubit.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/staff_attendance/staff_attendance_state.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -20,6 +23,9 @@ class _MockRepo extends Mock implements StaffAttendanceRepository {}
 class _MockGetStaffMembers extends Mock implements GetStaffMembers {}
 
 class _MockStructureRepository extends Mock implements StructureRepository {}
+
+class _MockQueueDataSource extends Mock
+    implements StaffAttendanceQueueDataSource {}
 
 UserEntity _staff(String id, {String? campusId}) => UserEntity(
   id: id,
@@ -54,6 +60,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(DateTime(2026));
     registerFallbackValue(NoParams());
+    registerFallbackValue(StaffAttendanceQueueActionType.clockIn);
   });
 
   setUp(() {
@@ -103,6 +110,7 @@ void main() {
       getStaffMembers: getStaff,
       structureRepository: structure,
       schoolId: 'school-a',
+      actorId: 'actor-1',
       today: today,
     );
   }
@@ -309,51 +317,57 @@ void main() {
   });
 
   group('markAttendance', () {
-    test('calls repo.clockIn and clears isSubmittingAction on success', () async {
-      final cubit = build(roster: const [], records: const []);
-      await cubit.init();
-      when(
-        () => repo.clockIn(
-          schoolId: any(named: 'schoolId'),
-          staffId: any(named: 'staffId'),
-          day: any(named: 'day'),
-          location: any(named: 'location'),
-        ),
-      ).thenAnswer((_) async {});
+    test(
+      'calls repo.clockIn and clears isSubmittingAction on success',
+      () async {
+        final cubit = build(roster: const [], records: const []);
+        await cubit.init();
+        when(
+          () => repo.clockIn(
+            schoolId: any(named: 'schoolId'),
+            staffId: any(named: 'staffId'),
+            day: any(named: 'day'),
+            location: any(named: 'location'),
+          ),
+        ).thenAnswer((_) async {});
 
-      final ok = await cubit.markAttendance('staff-1');
-      expect(ok, isTrue);
-      expect(cubit.state.isSubmittingAction, isFalse);
-      expect(cubit.state.actionError, isNull);
-      verify(
-        () => repo.clockIn(
-          schoolId: 'school-a',
-          staffId: 'staff-1',
-          day: today,
-          location: null,
-        ),
-      ).called(1);
-      await cubit.close();
-    });
+        final ok = await cubit.markAttendance('staff-1');
+        expect(ok, isTrue);
+        expect(cubit.state.isSubmittingAction, isFalse);
+        expect(cubit.state.actionError, isNull);
+        verify(
+          () => repo.clockIn(
+            schoolId: 'school-a',
+            staffId: 'staff-1',
+            day: today,
+            location: null,
+          ),
+        ).called(1);
+        await cubit.close();
+      },
+    );
 
-    test('surfaces actionError and clears isSubmittingAction on failure', () async {
-      final cubit = build(roster: const [], records: const []);
-      await cubit.init();
-      when(
-        () => repo.clockIn(
-          schoolId: any(named: 'schoolId'),
-          staffId: any(named: 'staffId'),
-          day: any(named: 'day'),
-          location: any(named: 'location'),
-        ),
-      ).thenThrow(Exception('network'));
+    test(
+      'surfaces actionError and clears isSubmittingAction on failure',
+      () async {
+        final cubit = build(roster: const [], records: const []);
+        await cubit.init();
+        when(
+          () => repo.clockIn(
+            schoolId: any(named: 'schoolId'),
+            staffId: any(named: 'staffId'),
+            day: any(named: 'day'),
+            location: any(named: 'location'),
+          ),
+        ).thenThrow(Exception('network'));
 
-      final ok = await cubit.markAttendance('staff-1');
-      expect(ok, isFalse);
-      expect(cubit.state.isSubmittingAction, isFalse);
-      expect(cubit.state.actionError, isNotNull);
-      await cubit.close();
-    });
+        final ok = await cubit.markAttendance('staff-1');
+        expect(ok, isFalse);
+        expect(cubit.state.isSubmittingAction, isFalse);
+        expect(cubit.state.actionError, isNotNull);
+        await cubit.close();
+      },
+    );
 
     test('a second call while submitting is a no-op', () async {
       final cubit = build(roster: const [], records: const []);
@@ -381,6 +395,156 @@ void main() {
           location: any(named: 'location'),
         ),
       ).called(1);
+      await cubit.close();
+    });
+  });
+
+  group('offline queueing', () {
+    late _MockQueueDataSource queueDataSource;
+    late StaffAttendanceOfflineQueueService offlineQueue;
+
+    setUp(() {
+      queueDataSource = _MockQueueDataSource();
+      offlineQueue = StaffAttendanceOfflineQueueService(
+        dataSource: queueDataSource,
+      );
+      when(
+        () => queueDataSource.enqueue(
+          idempotencyKey: any(named: 'idempotencyKey'),
+          institutionId: any(named: 'institutionId'),
+          actorId: any(named: 'actorId'),
+          actionType: any(named: 'actionType'),
+          payloadJson: any(named: 'payloadJson'),
+        ),
+      ).thenAnswer((_) async {});
+    });
+
+    StaffAttendanceCubit buildWithQueue() {
+      when(() => getStaff(any())).thenAnswer((_) async => const Right([]));
+      when(
+        () => repo.watchDay(
+          schoolId: any(named: 'schoolId'),
+          day: any(named: 'day'),
+          campusId: any(named: 'campusId'),
+        ),
+      ).thenAnswer((_) => Stream.value(const []));
+      return StaffAttendanceCubit(
+        repository: repo,
+        getStaffMembers: getStaff,
+        structureRepository: structure,
+        schoolId: 'school-a',
+        actorId: 'actor-1',
+        offlineQueue: offlineQueue,
+        today: today,
+      );
+    }
+
+    test(
+      'markAttendance queues the action on an unavailable FirebaseException',
+      () async {
+        final cubit = buildWithQueue();
+        await cubit.init();
+        when(
+          () => repo.clockIn(
+            schoolId: any(named: 'schoolId'),
+            staffId: any(named: 'staffId'),
+            day: any(named: 'day'),
+            location: any(named: 'location'),
+          ),
+        ).thenThrow(FirebaseException(plugin: 'test', code: 'unavailable'));
+
+        final ok = await cubit.markAttendance('staff-1');
+        expect(ok, isTrue);
+        expect(cubit.state.actionError, isNull);
+        expect(cubit.state.queuedActionCount, 1);
+        verify(
+          () => queueDataSource.enqueue(
+            idempotencyKey: any(named: 'idempotencyKey'),
+            institutionId: 'school-a',
+            actorId: 'actor-1',
+            actionType: StaffAttendanceQueueActionType.clockIn,
+            payloadJson: any(named: 'payloadJson'),
+          ),
+        ).called(1);
+        await cubit.close();
+      },
+    );
+
+    test('markAttendance does not queue a non-network failure', () async {
+      final cubit = buildWithQueue();
+      await cubit.init();
+      when(
+        () => repo.clockIn(
+          schoolId: any(named: 'schoolId'),
+          staffId: any(named: 'staffId'),
+          day: any(named: 'day'),
+          location: any(named: 'location'),
+        ),
+      ).thenThrow(Exception('boom'));
+
+      final ok = await cubit.markAttendance('staff-1');
+      expect(ok, isFalse);
+      expect(cubit.state.actionError, isNotNull);
+      expect(cubit.state.queuedActionCount, 0);
+      verifyNever(
+        () => queueDataSource.enqueue(
+          idempotencyKey: any(named: 'idempotencyKey'),
+          institutionId: any(named: 'institutionId'),
+          actorId: any(named: 'actorId'),
+          actionType: any(named: 'actionType'),
+          payloadJson: any(named: 'payloadJson'),
+        ),
+      );
+      await cubit.close();
+    });
+
+    test('submitCorrection queues on unavailable and returns true', () async {
+      final cubit = buildWithQueue();
+      await cubit.init();
+      when(
+        () => repo.correct(
+          schoolId: any(named: 'schoolId'),
+          staffId: any(named: 'staffId'),
+          day: any(named: 'day'),
+          reason: any(named: 'reason'),
+          patch: any(named: 'patch'),
+        ),
+      ).thenThrow(FirebaseException(plugin: 'test', code: 'unavailable'));
+
+      final queued = await cubit.submitCorrection(
+        staffId: 'staff-1',
+        day: today,
+        reason: 'test',
+        patch: const {'status': 'late'},
+      );
+      expect(queued, isTrue);
+      expect(cubit.state.queuedActionCount, 1);
+      await cubit.close();
+    });
+
+    test('submitCorrection rethrows a non-network failure', () async {
+      final cubit = buildWithQueue();
+      await cubit.init();
+      when(
+        () => repo.correct(
+          schoolId: any(named: 'schoolId'),
+          staffId: any(named: 'staffId'),
+          day: any(named: 'day'),
+          reason: any(named: 'reason'),
+          patch: any(named: 'patch'),
+        ),
+      ).thenThrow(Exception('boom'));
+
+      await expectLater(
+        cubit.submitCorrection(
+          staffId: 'staff-1',
+          day: today,
+          reason: 'test',
+          patch: const {'status': 'late'},
+        ),
+        throwsException,
+      );
+      expect(cubit.state.queuedActionCount, 0);
       await cubit.close();
     });
   });

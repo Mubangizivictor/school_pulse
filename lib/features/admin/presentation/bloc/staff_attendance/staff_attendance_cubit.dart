@@ -1,11 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:school_pulse/core/usecases/usecase.dart';
+import 'package:school_pulse/features/admin/data/datasources/staff_attendance_queue_data_source.dart';
 import 'package:school_pulse/features/admin/data/models/staff_attendance_record.dart';
 import 'package:school_pulse/features/admin/domain/repositories/staff_attendance_repository.dart';
+import 'package:school_pulse/features/admin/domain/services/staff_attendance_offline_queue_service.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 
@@ -21,11 +24,15 @@ class StaffAttendanceCubit extends Cubit<StaffAttendanceState> {
     required GetStaffMembers getStaffMembers,
     required StructureRepository structureRepository,
     required String schoolId,
+    required String actorId,
+    StaffAttendanceOfflineQueueService? offlineQueue,
     DateTime? today,
   }) : _repo = repository,
        _getStaffMembers = getStaffMembers,
        _structure = structureRepository,
        _schoolId = schoolId,
+       _actorId = actorId,
+       _offlineQueue = offlineQueue,
        _today = _dateOnly(today ?? DateTime.now()),
        super(StaffAttendanceState(day: _dateOnly(today ?? DateTime.now())));
 
@@ -36,6 +43,11 @@ class StaffAttendanceCubit extends Cubit<StaffAttendanceState> {
   final GetStaffMembers _getStaffMembers;
   final StructureRepository _structure;
   final String _schoolId;
+  final String _actorId;
+
+  /// Null in tests that don't exercise offline queueing - a mark/correction
+  /// then simply surfaces the network failure instead of queueing it.
+  final StaffAttendanceOfflineQueueService? _offlineQueue;
 
   /// "Today" as this cubit was constructed - the upper bound for day
   /// navigation. Injectable so tests are deterministic.
@@ -239,10 +251,15 @@ class StaffAttendanceCubit extends Cubit<StaffAttendanceState> {
     );
   }
 
+  static bool _isOffline(Object e) =>
+      e is FirebaseException && e.code == 'unavailable';
+
   /// Authorised "Mark staff attendance" for today. Guards against a
   /// double-tap firing two submissions via [isSubmittingAction]; the
   /// callable itself is also idempotent (deterministic doc id), so a retry
-  /// after a network blip never creates a duplicate record.
+  /// after a network blip never creates a duplicate record. When offline,
+  /// the action is queued instead of failing outright - see
+  /// StaffAttendanceOfflineQueueService.
   Future<bool> markAttendance(String staffId, {String? location}) async {
     if (state.isSubmittingAction) return false;
     emit(state.copyWith(isSubmittingAction: true, actionError: null));
@@ -256,6 +273,27 @@ class StaffAttendanceCubit extends Cubit<StaffAttendanceState> {
       if (!_closed) emit(state.copyWith(isSubmittingAction: false));
       return true;
     } catch (e) {
+      if (_offlineQueue != null && _isOffline(e)) {
+        await _offlineQueue.enqueue(
+          institutionId: _schoolId,
+          actorId: _actorId,
+          actionType: StaffAttendanceQueueActionType.clockIn,
+          payloadJson: jsonEncode({
+            'staffId': staffId,
+            'day': _today.toIso8601String(),
+            if (location != null) 'location': location,
+          }),
+        );
+        if (!_closed) {
+          emit(
+            state.copyWith(
+              isSubmittingAction: false,
+              queuedActionCount: state.queuedActionCount + 1,
+            ),
+          );
+        }
+        return true;
+      }
       if (!_closed) {
         emit(
           state.copyWith(
@@ -265,6 +303,48 @@ class StaffAttendanceCubit extends Cubit<StaffAttendanceState> {
         );
       }
       return false;
+    }
+  }
+
+  /// Authorised manual correction of an existing day's record. [patch]
+  /// mirrors `correctStaffAttendance`'s wire shape (see
+  /// StaffAttendanceCorrectionSheet). Returns true when the correction was
+  /// queued for later sync rather than applied immediately (caller uses this
+  /// to show "queued" instead of "saved").
+  Future<bool> submitCorrection({
+    required String staffId,
+    required DateTime day,
+    required String reason,
+    required Map<String, dynamic> patch,
+  }) async {
+    try {
+      await _repo.correct(
+        schoolId: _schoolId,
+        staffId: staffId,
+        day: day,
+        reason: reason,
+        patch: patch,
+      );
+      return false;
+    } catch (e) {
+      if (_offlineQueue != null && _isOffline(e)) {
+        await _offlineQueue.enqueue(
+          institutionId: _schoolId,
+          actorId: _actorId,
+          actionType: StaffAttendanceQueueActionType.correction,
+          payloadJson: jsonEncode({
+            'staffId': staffId,
+            'day': day.toIso8601String(),
+            'reason': reason,
+            'patch': patch,
+          }),
+        );
+        if (!_closed) {
+          emit(state.copyWith(queuedActionCount: state.queuedActionCount + 1));
+        }
+        return true;
+      }
+      rethrow;
     }
   }
 

@@ -3,25 +3,30 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:school_pulse/features/admin/data/models/staff_attendance_record.dart';
+import 'package:school_pulse/features/admin/presentation/bloc/staff_attendance/staff_attendance_cubit.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/staff_attendance/staff_attendance_state.dart';
 
 /// Bottom sheet for an authorised manual correction of one staff member's
-/// attendance on a given day. Submits to the `correctStaffAttendance`
-/// callable; the dashboard's live stream picks up the change.
+/// attendance on a given day. Submits via [StaffAttendanceCubit.submitCorrection]
+/// (the `correctStaffAttendance` callable, with an offline-queue fallback);
+/// the dashboard's live stream picks up the change once synced.
 class StaffAttendanceCorrectionSheet extends StatefulWidget {
   const StaffAttendanceCorrectionSheet({
     super.key,
+    required this.cubit,
     required this.schoolId,
     required this.day,
     required this.row,
   });
 
+  final StaffAttendanceCubit cubit;
   final String schoolId;
   final DateTime day;
   final StaffAttendanceRow row;
 
   static Future<bool?> show(
     BuildContext context, {
+    required StaffAttendanceCubit cubit,
     required String schoolId,
     required DateTime day,
     required StaffAttendanceRow row,
@@ -34,6 +39,7 @@ class StaffAttendanceCorrectionSheet extends StatefulWidget {
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: StaffAttendanceCorrectionSheet(
+          cubit: cubit,
           schoolId: schoolId,
           day: day,
           row: row,
@@ -116,21 +122,19 @@ class _StaffAttendanceCorrectionSheetState
       _error = null;
     });
     try {
-      final functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
-      await functions.httpsCallable('correctStaffAttendance').call({
-        'schoolId': widget.schoolId,
-        'staffId': widget.row.staff.id,
-        'day': DateFormat('yyyy-MM-dd').format(widget.day),
-        'reason': reason,
-        'patch': {
+      final queued = await widget.cubit.submitCorrection(
+        staffId: widget.row.staff.id,
+        day: widget.day,
+        reason: reason,
+        patch: {
           'status': _status.wire,
           if (clockIn != null) 'clockIn': clockIn.toIso8601String(),
           if (clockOut != null) 'clockOut': clockOut.toIso8601String(),
           if (_location.text.trim().isNotEmpty)
             'location': _location.text.trim(),
         },
-      });
-      if (mounted) Navigator.of(context).pop(true);
+      );
+      if (mounted) Navigator.of(context).pop(queued ? false : true);
     } on FirebaseFunctionsException catch (e) {
       setState(() {
         _submitting = false;

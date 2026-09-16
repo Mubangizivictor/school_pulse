@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:intl/intl.dart';
 
 import 'package:school_pulse/features/admin/data/models/staff_attendance_record.dart';
 import 'package:school_pulse/features/admin/data/models/staff_shift.dart';
@@ -121,6 +122,26 @@ class StaffAttendanceRepositoryImpl implements StaffAttendanceRepository {
       'schoolId': schoolId,
       'staffId': staffId,
       if (location != null) 'location': location,
+      if (operationId != null) 'operationId': operationId,
+    });
+  }
+
+  @override
+  Future<void> correct({
+    required String schoolId,
+    required String staffId,
+    required DateTime day,
+    required String reason,
+    required Map<String, dynamic> patch,
+    String? operationId,
+  }) async {
+    final functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
+    await functions.httpsCallable('correctStaffAttendance').call({
+      'schoolId': schoolId,
+      'staffId': staffId,
+      'day': DateFormat('yyyy-MM-dd').format(day),
+      'reason': reason,
+      'patch': patch,
       if (operationId != null) 'operationId': operationId,
     });
   }

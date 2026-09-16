@@ -47,12 +47,25 @@ abstract class StaffAttendanceRepository {
 
   /// Authorised "Mark staff attendance" - creates or upserts today's clock-in
   /// via the `clockInStaff` callable. Never called for a past day; corrections
-  /// to an existing day go through `correctStaffAttendance` instead.
+  /// to an existing day go through [correct] instead.
   Future<void> clockIn({
     required String schoolId,
     required String staffId,
     required DateTime day,
     String? location,
+    String? operationId,
+  });
+
+  /// Authorised manual correction via the `correctStaffAttendance` callable.
+  /// [patch] mirrors the callable's wire shape (status/clockIn/clockOut/
+  /// location, ISO8601 strings for the time fields) - see
+  /// StaffAttendanceCorrectionSheet for the caller that builds it.
+  Future<void> correct({
+    required String schoolId,
+    required String staffId,
+    required DateTime day,
+    required String reason,
+    required Map<String, dynamic> patch,
     String? operationId,
   });
 }
