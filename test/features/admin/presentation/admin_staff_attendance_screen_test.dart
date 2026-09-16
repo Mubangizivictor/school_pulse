@@ -310,6 +310,63 @@ void main() {
     expect(find.text('No staff selected'), findsNothing);
   });
 
+  testWidgets(
+    'mobile width shows the pinned "Mark staff attendance" bar, not the app-bar icon',
+    (tester) async {
+      setViewSize(tester, const Size(390, 844));
+      await tester.pumpWidget(
+        pump(
+          _user(const [UserRole.schoolAdmin]),
+          stateWith(roster: [_staff('1')]),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 2));
+      expect(
+        find.widgetWithText(FilledButton, 'Mark staff attendance'),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Mark staff attendance'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'desktop width shows the app-bar icon, not the pinned bottom bar',
+    (tester) async {
+      setViewSize(tester, const Size(1440, 960));
+      await tester.pumpWidget(
+        pump(
+          _user(const [UserRole.schoolAdmin]),
+          stateWith(roster: [_staff('1')]),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.byTooltip('Mark staff attendance'), findsOneWidget);
+      expect(
+        find.widgetWithText(FilledButton, 'Mark staff attendance'),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets(
+    'a non-manager sees neither the app-bar icon nor the pinned bar',
+    (tester) async {
+      setViewSize(tester, const Size(390, 844));
+      await tester.pumpWidget(
+        pump(
+          _user(const [UserRole.deputyHead]),
+          stateWith(roster: [_staff('1')]),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 2));
+      expect(find.byTooltip('Mark staff attendance'), findsNothing);
+      expect(
+        find.widgetWithText(FilledButton, 'Mark staff attendance'),
+        findsNothing,
+      );
+    },
+  );
+
   for (final size in const [
     Size(360, 780),
     Size(414, 896),

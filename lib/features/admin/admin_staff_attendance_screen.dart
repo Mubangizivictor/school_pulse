@@ -68,6 +68,29 @@ class StaffAttendanceView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+      bottomNavigationBar: _canManage
+          ? LayoutBuilder(
+              builder: (context, constraints) {
+                // Desktop/tablet already has the app-bar "Mark staff
+                // attendance" icon action - the pinned bottom bar is a
+                // mobile-only affordance per the spec's compact layout.
+                if (MediaQuery.sizeOf(context).width >= 720) {
+                  return const SizedBox.shrink();
+                }
+                return SafeArea(
+                  minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: FilledButton.icon(
+                    onPressed: () => _markAttendance(context),
+                    icon: const Icon(Icons.person_add_alt_1_outlined),
+                    label: const Text('Mark staff attendance'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                  ),
+                );
+              },
+            )
+          : null,
       appBar: AdminAppBar(
         title: 'Staff Attendance',
         actions: [
@@ -77,11 +100,15 @@ class StaffAttendanceView extends StatelessWidget {
             onPressed: () => _showFilterSheet(context),
           ),
           if (_canManage) ...[
-            IconButton(
-              tooltip: 'Mark staff attendance',
-              icon: const Icon(Icons.person_add_alt_1_outlined),
-              onPressed: () => _markAttendance(context),
-            ),
+            // Mobile shows the pinned bottom bar instead (see
+            // bottomNavigationBar above) - avoid offering the same action
+            // twice on a narrow screen.
+            if (MediaQuery.sizeOf(context).width >= 720)
+              IconButton(
+                tooltip: 'Mark staff attendance',
+                icon: const Icon(Icons.person_add_alt_1_outlined),
+                onPressed: () => _markAttendance(context),
+              ),
             IconButton(
               tooltip: 'Export CSV',
               icon: const Icon(Icons.file_download_outlined),
