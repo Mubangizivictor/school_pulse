@@ -63,6 +63,15 @@ void main() {
     when(
       () => structure.watchCampuses(any()),
     ).thenAnswer((_) => Stream.value(const []));
+    when(
+      () => repo.watchShifts(schoolId: any(named: 'schoolId')),
+    ).thenAnswer((_) => Stream.value(const []));
+    when(
+      () => repo.watchLeaveForDay(
+        schoolId: any(named: 'schoolId'),
+        day: any(named: 'day'),
+      ),
+    ).thenAnswer((_) => Stream.value(const []));
   });
 
   StaffAttendanceCubit build({
@@ -285,5 +294,94 @@ void main() {
       ),
     ).called(1);
     await cubit.close();
+  });
+
+  group('selectStaff', () {
+    test('selects then deselects on a second call with the same id', () async {
+      final cubit = build(roster: const [], records: const []);
+      await cubit.init();
+      cubit.selectStaff('staff-1');
+      expect(cubit.state.selectedStaffId, 'staff-1');
+      cubit.selectStaff('staff-1');
+      expect(cubit.state.selectedStaffId, isNull);
+      await cubit.close();
+    });
+  });
+
+  group('markAttendance', () {
+    test('calls repo.clockIn and clears isSubmittingAction on success', () async {
+      final cubit = build(roster: const [], records: const []);
+      await cubit.init();
+      when(
+        () => repo.clockIn(
+          schoolId: any(named: 'schoolId'),
+          staffId: any(named: 'staffId'),
+          day: any(named: 'day'),
+          location: any(named: 'location'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final ok = await cubit.markAttendance('staff-1');
+      expect(ok, isTrue);
+      expect(cubit.state.isSubmittingAction, isFalse);
+      expect(cubit.state.actionError, isNull);
+      verify(
+        () => repo.clockIn(
+          schoolId: 'school-a',
+          staffId: 'staff-1',
+          day: today,
+          location: null,
+        ),
+      ).called(1);
+      await cubit.close();
+    });
+
+    test('surfaces actionError and clears isSubmittingAction on failure', () async {
+      final cubit = build(roster: const [], records: const []);
+      await cubit.init();
+      when(
+        () => repo.clockIn(
+          schoolId: any(named: 'schoolId'),
+          staffId: any(named: 'staffId'),
+          day: any(named: 'day'),
+          location: any(named: 'location'),
+        ),
+      ).thenThrow(Exception('network'));
+
+      final ok = await cubit.markAttendance('staff-1');
+      expect(ok, isFalse);
+      expect(cubit.state.isSubmittingAction, isFalse);
+      expect(cubit.state.actionError, isNotNull);
+      await cubit.close();
+    });
+
+    test('a second call while submitting is a no-op', () async {
+      final cubit = build(roster: const [], records: const []);
+      await cubit.init();
+      final completer = Completer<void>();
+      when(
+        () => repo.clockIn(
+          schoolId: any(named: 'schoolId'),
+          staffId: any(named: 'staffId'),
+          day: any(named: 'day'),
+          location: any(named: 'location'),
+        ),
+      ).thenAnswer((_) => completer.future);
+
+      final first = cubit.markAttendance('staff-1');
+      final second = await cubit.markAttendance('staff-1');
+      expect(second, isFalse);
+      completer.complete();
+      await first;
+      verify(
+        () => repo.clockIn(
+          schoolId: any(named: 'schoolId'),
+          staffId: any(named: 'staffId'),
+          day: any(named: 'day'),
+          location: any(named: 'location'),
+        ),
+      ).called(1);
+      await cubit.close();
+    });
   });
 }

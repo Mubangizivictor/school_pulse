@@ -118,4 +118,71 @@ void main() {
       expect(records.single.status, StaffAttendanceStatus.late);
     });
   });
+
+  group('watchShifts', () {
+    test('reads tenant-scoped shift docs', () async {
+      await firestore
+          .collection('institutions')
+          .doc(schoolA)
+          .collection('staff_shifts')
+          .doc('staff-1')
+          .set({
+            'scheduledStart': '08:00',
+            'scheduledEnd': '16:00',
+            'daysOfWeek': [1, 2, 3, 4, 5],
+            'graceMinutes': 10,
+          });
+
+      final shifts = await repo.watchShifts(schoolId: schoolA).first;
+      expect(shifts.single.staffId, 'staff-1');
+      expect(shifts.single.scheduledStart, '08:00');
+    });
+
+    test('does not leak another school\'s shifts', () async {
+      await firestore
+          .collection('institutions')
+          .doc(schoolB)
+          .collection('staff_shifts')
+          .doc('staff-1')
+          .set({'scheduledStart': '08:00', 'scheduledEnd': '16:00'});
+
+      final shifts = await repo.watchShifts(schoolId: schoolA).first;
+      expect(shifts, isEmpty);
+    });
+  });
+
+  group('watchLeaveForDay', () {
+    test('only surfaces approved leave covering the day', () async {
+      final col = firestore
+          .collection('institutions')
+          .doc(schoolA)
+          .collection('staff_leave_requests');
+      await col.doc('l1').set({
+        'staffId': 'staff-1',
+        'startDate': '2026-09-01',
+        'endDate': '2026-09-03',
+        'status': 'approved',
+        'reason': 'x',
+      });
+      await col.doc('l2').set({
+        'staffId': 'staff-2',
+        'startDate': '2026-09-01',
+        'endDate': '2026-09-03',
+        'status': 'pending',
+        'reason': 'x',
+      });
+      await col.doc('l3').set({
+        'staffId': 'staff-3',
+        'startDate': '2026-09-10',
+        'endDate': '2026-09-12',
+        'status': 'approved',
+        'reason': 'x',
+      });
+
+      final leave = await repo
+          .watchLeaveForDay(schoolId: schoolA, day: DateTime(2026, 9, 2))
+          .first;
+      expect(leave.map((l) => l.staffId), ['staff-1']);
+    });
+  });
 }

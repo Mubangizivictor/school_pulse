@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import 'package:school_pulse/features/admin/data/models/staff_attendance_record.dart';
+import 'package:school_pulse/features/admin/data/models/staff_shift.dart';
 import 'package:school_pulse/features/admin/domain/repositories/staff_attendance_repository.dart';
 
 export 'package:school_pulse/features/admin/domain/repositories/staff_attendance_repository.dart';
@@ -68,5 +70,58 @@ class StaffAttendanceRepositoryImpl implements StaffAttendanceRepository {
     return snap.docs
         .map((d) => StaffAttendanceRecord.fromMap(d.data()))
         .toList();
+  }
+
+  @override
+  Stream<List<StaffShift>> watchShifts({required String schoolId}) {
+    return _firestore
+        .collection('institutions')
+        .doc(schoolId)
+        .collection('staff_shifts')
+        .snapshots()
+        .map(
+          (snap) =>
+              snap.docs.map((d) => StaffShift.fromMap(d.id, d.data())).toList(),
+        );
+  }
+
+  @override
+  Stream<List<StaffLeaveRequest>> watchLeaveForDay({
+    required String schoolId,
+    required DateTime day,
+  }) {
+    // Server-side range filter narrows candidates; exact coverage of `day`
+    // (including approval status) is finished client-side via
+    // StaffLeaveRequest.coversDay, since Firestore can't express "day
+    // between startDate and endDate" as a single range query here.
+    return _firestore
+        .collection('institutions')
+        .doc(schoolId)
+        .collection('staff_leave_requests')
+        .where('status', isEqualTo: 'approved')
+        .snapshots()
+        .map(
+          (snap) => snap.docs
+              .map((d) => StaffLeaveRequest.fromMap(d.id, d.data()))
+              .where((l) => l.coversDay(day))
+              .toList(),
+        );
+  }
+
+  @override
+  Future<void> clockIn({
+    required String schoolId,
+    required String staffId,
+    required DateTime day,
+    String? location,
+    String? operationId,
+  }) async {
+    final functions = FirebaseFunctions.instanceFor(region: 'europe-west1');
+    await functions.httpsCallable('clockInStaff').call({
+      'schoolId': schoolId,
+      'staffId': staffId,
+      if (location != null) 'location': location,
+      if (operationId != null) 'operationId': operationId,
+    });
   }
 }

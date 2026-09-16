@@ -12,6 +12,7 @@ import 'package:school_pulse/features/admin/domain/repositories/staff_attendance
 import 'package:school_pulse/features/admin/presentation/bloc/staff_attendance/staff_attendance_cubit.dart';
 import 'package:school_pulse/features/admin/presentation/bloc/staff_attendance/staff_attendance_state.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
+import 'package:school_pulse/features/admin/presentation/widgets/mark_staff_attendance_sheet.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/staff_attendance_correction_sheet.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/staff_attendance_export.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -71,12 +72,18 @@ class StaffAttendanceView extends StatelessWidget {
             icon: const Icon(Icons.filter_list),
             onPressed: () => _showFilterSheet(context),
           ),
-          if (_canManage)
+          if (_canManage) ...[
+            IconButton(
+              tooltip: 'Mark staff attendance',
+              icon: const Icon(Icons.person_add_alt_1_outlined),
+              onPressed: () => _markAttendance(context),
+            ),
             IconButton(
               tooltip: 'Export CSV',
               icon: const Icon(Icons.file_download_outlined),
               onPressed: () => _export(context),
             ),
+          ],
         ],
       ),
       body: BlocBuilder<StaffAttendanceCubit, StaffAttendanceState>(
@@ -159,6 +166,45 @@ class StaffAttendanceView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _markAttendance(BuildContext context) async {
+    final cubit = context.read<StaffAttendanceCubit>();
+    final staff = await showModalBottomSheet<UserEntity>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text(
+                'Select a staff member',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            for (final s in cubit.state.roster)
+              ListTile(
+                leading: AvatarInitials(name: s.name, size: 32),
+                title: Text(s.name),
+                subtitle: Text(s.role.name),
+                onTap: () => Navigator.pop(sheetContext, s),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (staff == null || !context.mounted) return;
+    final ok = await MarkStaffAttendanceSheet.show(
+      context,
+      cubit: cubit,
+      staff: staff,
+    );
+    if (ok == true && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Attendance marked')));
+    }
   }
 
   Future<void> _export(BuildContext context) async {

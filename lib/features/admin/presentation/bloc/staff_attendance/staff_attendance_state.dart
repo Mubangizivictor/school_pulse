@@ -1,18 +1,21 @@
 import 'package:equatable/equatable.dart';
 
 import 'package:school_pulse/features/admin/data/models/staff_attendance_record.dart';
+import 'package:school_pulse/features/admin/data/models/staff_shift.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/structure/domain/entities/campus_entities.dart';
 
 enum StaffAttendanceFilter { all, present, late, notClockedIn, onLeave, absent }
 
-/// One row in the attendance log: a staff member joined to their record for
-/// the selected day (null when they have not clocked in / no record exists).
+/// One row in the attendance log: a staff member joined to their record and
+/// shift for the selected day (record is null when they have not clocked
+/// in / no record exists).
 class StaffAttendanceRow extends Equatable {
-  const StaffAttendanceRow({required this.staff, this.record});
+  const StaffAttendanceRow({required this.staff, this.record, this.shift});
 
   final UserEntity staff;
   final StaffAttendanceRecord? record;
+  final StaffShift? shift;
 
   /// The status shown for this row - synthesised as [notClockedIn] when
   /// there is no record.
@@ -20,7 +23,12 @@ class StaffAttendanceRow extends Equatable {
       record?.status ?? StaffAttendanceStatus.notClockedIn;
 
   @override
-  List<Object?> get props => [staff.id, record?.clockIn, record?.status];
+  List<Object?> get props => [
+    staff.id,
+    record?.clockIn,
+    record?.status,
+    shift?.scheduledStart,
+  ];
 }
 
 class StaffAttendanceSummary extends Equatable {
@@ -77,10 +85,16 @@ class StaffAttendanceState extends Equatable {
     this.pageSize = 25,
     this.roster = const [],
     this.records = const [],
+    this.shifts = const [],
+    this.leave = const [],
     this.isLoadingRoster = true,
     this.isLoadingRecords = true,
     this.isOffline = false,
     this.error,
+    this.selectedStaffId,
+    this.isSubmittingAction = false,
+    this.actionError,
+    this.queuedActionCount = 0,
   });
 
   final DateTime day;
@@ -93,11 +107,26 @@ class StaffAttendanceState extends Equatable {
 
   final List<UserEntity> roster;
   final List<StaffAttendanceRecord> records;
+  final List<StaffShift> shifts;
+  final List<StaffLeaveRequest> leave;
 
   final bool isLoadingRoster;
   final bool isLoadingRecords;
   final bool isOffline;
   final String? error;
+
+  /// Selected staff member for the desktop right-detail-panel. Null when
+  /// nothing is selected (panel shows an empty-selection prompt instead).
+  final String? selectedStaffId;
+
+  /// True while a mark/correct action is in flight - disables the
+  /// triggering button so a double-tap can't fire two submissions.
+  final bool isSubmittingAction;
+  final String? actionError;
+
+  /// Count of offline-queued mark/correction actions awaiting sync, surfaced
+  /// alongside [isOffline] in the UI.
+  final int queuedActionCount;
 
   bool get isLoading => isLoadingRoster || isLoadingRecords;
 
@@ -111,10 +140,16 @@ class StaffAttendanceState extends Equatable {
     int? pageSize,
     List<UserEntity>? roster,
     List<StaffAttendanceRecord>? records,
+    List<StaffShift>? shifts,
+    List<StaffLeaveRequest>? leave,
     bool? isLoadingRoster,
     bool? isLoadingRecords,
     bool? isOffline,
     Object? error = _noChange,
+    Object? selectedStaffId = _noChange,
+    bool? isSubmittingAction,
+    Object? actionError = _noChange,
+    int? queuedActionCount,
   }) {
     return StaffAttendanceState(
       day: day ?? this.day,
@@ -126,10 +161,20 @@ class StaffAttendanceState extends Equatable {
       pageSize: pageSize ?? this.pageSize,
       roster: roster ?? this.roster,
       records: records ?? this.records,
+      shifts: shifts ?? this.shifts,
+      leave: leave ?? this.leave,
       isLoadingRoster: isLoadingRoster ?? this.isLoadingRoster,
       isLoadingRecords: isLoadingRecords ?? this.isLoadingRecords,
       isOffline: isOffline ?? this.isOffline,
       error: error == _noChange ? this.error : error as String?,
+      selectedStaffId: selectedStaffId == _noChange
+          ? this.selectedStaffId
+          : selectedStaffId as String?,
+      isSubmittingAction: isSubmittingAction ?? this.isSubmittingAction,
+      actionError: actionError == _noChange
+          ? this.actionError
+          : actionError as String?,
+      queuedActionCount: queuedActionCount ?? this.queuedActionCount,
     );
   }
 
@@ -139,14 +184,36 @@ class StaffAttendanceState extends Equatable {
     for (final r in records) r.staffId: r,
   };
 
-  /// The roster narrowed to the selected campus, joined to records, then
-  /// filtered by search + status. Not paginated - see [pagedRows].
+  Map<String, StaffShift> get _shiftsByStaff => {
+    for (final s in shifts) s.staffId: s,
+  };
+
+  /// The staff member for [selectedStaffId], or null when nothing is
+  /// selected or the id no longer matches anyone on the roster.
+  UserEntity? get selectedStaff {
+    final id = selectedStaffId;
+    if (id == null) return null;
+    for (final s in roster) {
+      if (s.id == id) return s;
+    }
+    return null;
+  }
+
+  /// The roster narrowed to the selected campus, joined to records/shifts,
+  /// then filtered by search + status. Not paginated - see [pagedRows].
   List<StaffAttendanceRow> get filteredRows {
     final byStaff = _recordsByStaff;
+    final shiftsByStaff = _shiftsByStaff;
     final q = query.trim().toLowerCase();
     var rows = roster
         .where((s) => campusId == null || s.campusId == campusId)
-        .map((s) => StaffAttendanceRow(staff: s, record: byStaff[s.id]))
+        .map(
+          (s) => StaffAttendanceRow(
+            staff: s,
+            record: byStaff[s.id],
+            shift: shiftsByStaff[s.id],
+          ),
+        )
         .toList();
     if (q.isNotEmpty) {
       rows = rows
@@ -271,10 +338,16 @@ class StaffAttendanceState extends Equatable {
     pageSize,
     roster,
     records,
+    shifts,
+    leave,
     isLoadingRoster,
     isLoadingRecords,
     isOffline,
     error,
+    selectedStaffId,
+    isSubmittingAction,
+    actionError,
+    queuedActionCount,
   ];
 }
 

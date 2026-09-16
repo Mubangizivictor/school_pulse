@@ -134,6 +134,13 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     const day = dayKey(data.day);
     const reason = asText(data.reason, 300);
     const patch = data.patch || {};
+    // Optional client-generated idempotency key (e.g. from an offline queue
+    // replay). When present and a trail doc with this operationId already
+    // exists for this record, the call is a no-op success - guards against
+    // a queued correction being sent twice.
+    const operationId = data.operationId
+      ? asText(data.operationId, 100)
+      : null;
 
     if (!staffId) {
       throw new HttpsError("invalid-argument", "staffId is required.");
@@ -176,6 +183,20 @@ module.exports = ({ admin, onCall, HttpsError }) => {
 
     const docId = `${staffId}_${day}`;
     const ref = db.collection("staff_attendance").doc(docId);
+
+    if (operationId) {
+      const dup = await db
+        .collection("institutions")
+        .doc(schoolId)
+        .collection("staff_attendance_corrections")
+        .where("recordId", "==", docId)
+        .where("operationId", "==", operationId)
+        .limit(1)
+        .get();
+      if (!dup.empty) {
+        return { ok: true, recordId: docId, changedFields: [], duplicate: true };
+      }
+    }
 
     // Computed outside the transaction: shift/leave docs aren't mutated by
     // this callable, so there's no consistency requirement tying their read
@@ -283,6 +304,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
           location: after.location,
         },
         changedFields,
+        operationId: operationId || null,
         createdAt: serverTime(),
       });
 
@@ -304,8 +326,131 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     return { ok: true, ...result };
   }
 
+  // Authorised "Mark staff attendance" - creates today's clock-in doc if
+  // absent. Structurally idempotent: the deterministic doc id
+  // `{staffId}_{yyyy-mm-dd}` means a second call for the same staff/day is a
+  // transactional merge, never a duplicate doc, so no separate dedup table
+  // is needed even without an operationId. Cannot be used to backdate a
+  // past day - that is `correctStaffAttendance`'s job.
+  async function clockIn(request) {
+    const data = request.data || {};
+    const schoolId = asText(data.schoolId, 200);
+    const staffId = asText(data.staffId, 200);
+    if (!staffId) {
+      throw new HttpsError("invalid-argument", "staffId is required.");
+    }
+
+    const { uid, name } = await requireCorrector(request, schoolId);
+
+    const staffSnap = await db.collection("users").doc(staffId).get();
+    const staff = staffSnap.exists ? staffSnap.data() : null;
+    if (!staff || staff.schoolId !== schoolId) {
+      throw new HttpsError(
+        "not-found",
+        "That staff member is not part of this school."
+      );
+    }
+    const campusId = staff.campusId || null;
+
+    const now = new Date();
+    const day = dayKey(
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+    );
+    const location = data.location ? asText(data.location, 160) : "Main Gate";
+    const operationId = data.operationId
+      ? asText(data.operationId, 100)
+      : null;
+    const docId = `${staffId}_${day}`;
+    const ref = db.collection("staff_attendance").doc(docId);
+
+    const derivedStatus = await deriveStatus({
+      db,
+      schoolId,
+      staffId,
+      day,
+      clockIn: now,
+    });
+
+    const result = await db.runTransaction(async (tx) => {
+      const existing = await tx.get(ref);
+      if (existing.exists) {
+        // Already clocked in today - a second tap is a no-op, not an error,
+        // so double-submission never creates a second record or overwrites
+        // the original clock-in time.
+        return { recordId: docId, alreadyClockedIn: true };
+      }
+      if (operationId) {
+        const dup = await db
+          .collection("institutions")
+          .doc(schoolId)
+          .collection("staff_attendance_corrections")
+          .where("recordId", "==", docId)
+          .where("operationId", "==", operationId)
+          .limit(1)
+          .get();
+        if (!dup.empty) {
+          return { recordId: docId, duplicate: true };
+        }
+      }
+
+      tx.set(ref, {
+        schoolId,
+        staffId,
+        campusId,
+        clockIn: admin.firestore.Timestamp.fromDate(now),
+        clockOut: null,
+        status: derivedStatus,
+        location,
+        lastCorrectionAt: serverTime(),
+        lastCorrectedBy: uid,
+      });
+
+      const trailRef = db
+        .collection("institutions")
+        .doc(schoolId)
+        .collection("staff_attendance_corrections")
+        .doc();
+      tx.set(trailRef, {
+        recordId: docId,
+        staffId,
+        actorId: uid,
+        actorName: name,
+        reason: "Marked attendance",
+        before: null,
+        after: { clockIn: admin.firestore.Timestamp.fromDate(now), clockOut: null, status: derivedStatus, location },
+        changedFields: ["clockIn", "status", "location"],
+        operationId: operationId || null,
+        createdAt: serverTime(),
+      });
+
+      const auditRef = db
+        .collection("institutions")
+        .doc(schoolId)
+        .collection("audit_events")
+        .doc();
+      tx.set(auditRef, {
+        actorId: uid,
+        action: "staff_attendance.clocked_in",
+        metadata: { staffId, day },
+        createdAt: serverTime(),
+      });
+
+      return { recordId: docId };
+    });
+
+    return { ok: true, ...result };
+  }
+
   return {
     correctStaffAttendance: onCall(CALLABLE_OPTS, handler),
-    __test__: { CORRECTOR_ROLES, SETTABLE_STATUS, requireCorrector, handler, deriveStatus },
+    clockInStaff: onCall(CALLABLE_OPTS, clockIn),
+    __test__: {
+      CORRECTOR_ROLES,
+      SETTABLE_STATUS,
+      requireCorrector,
+      handler,
+      deriveStatus,
+      clockIn,
+    },
   };
 };

@@ -16,6 +16,7 @@ Object.assign(exports, require("./student_fee_billing")({ admin, onCall, HttpsEr
 Object.assign(exports, require("./staff_payroll_structure")({ admin, onCall, HttpsError }));
 const staffAttendanceCorrectionFunctions = require("./staff_attendance_corrections")({ admin, onCall, HttpsError });
 exports.correctStaffAttendance = staffAttendanceCorrectionFunctions.correctStaffAttendance;
+exports.clockInStaff = staffAttendanceCorrectionFunctions.clockInStaff;
 const staffShiftFunctions = require("./staff_shifts")({ admin, onCall, HttpsError });
 exports.setStaffShift = staffShiftFunctions.setStaffShift;
 const staffLeaveRequestFunctions = require("./staff_leave_requests")({ admin, onCall, HttpsError });

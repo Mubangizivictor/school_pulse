@@ -58,3 +58,44 @@ test("requireCorrector rejects a missing schoolId", async () => {
     /schoolId is required/
   );
 });
+
+test("clockIn rejects an unauthenticated request", async () => {
+  await assert.rejects(
+    () => api.__test__.clockIn({ auth: null, data: { schoolId: "schoolA", staffId: "s1" } }),
+    /signed in/
+  );
+});
+
+test("clockIn rejects a missing staffId before checking auth role", async () => {
+  await assert.rejects(
+    () => api.__test__.clockIn({ auth: { uid: "u" }, data: { schoolId: "schoolA" } }),
+    /staffId is required/
+  );
+});
+
+test("deriveStatus falls back to on_time when the staff has no shift doc", async () => {
+  const leaveQuery = {
+    where: () => leaveQuery,
+    get: async () => ({ docs: [] }),
+  };
+  const shiftDocRef = { get: async () => ({ exists: false }) };
+  const institutionSubcollections = {
+    staff_leave_requests: leaveQuery,
+    staff_shifts: { doc: () => shiftDocRef },
+  };
+  const fakeDb = {
+    collection: () => ({
+      doc: () => ({
+        collection: (name) => institutionSubcollections[name],
+      }),
+    }),
+  };
+  const status = await api.__test__.deriveStatus({
+    db: fakeDb,
+    schoolId: "schoolA",
+    staffId: "s1",
+    day: "2026-09-16",
+    clockIn: new Date("2026-09-16T08:00:00"),
+  });
+  assert.equal(status, "on_time");
+});

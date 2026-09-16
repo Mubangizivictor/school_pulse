@@ -43,6 +43,8 @@ class StaffAttendanceCubit extends Cubit<StaffAttendanceState> {
 
   StreamSubscription<List<StaffAttendanceRecord>>? _recordsSub;
   StreamSubscription? _campusesSub;
+  StreamSubscription? _shiftsSub;
+  StreamSubscription? _leaveSub;
 
   String? _rosterError;
   String? _recordsError;
@@ -55,8 +57,34 @@ class StaffAttendanceCubit extends Cubit<StaffAttendanceState> {
 
   Future<void> init() async {
     _subscribeCampuses();
+    _subscribeShifts();
     await _loadRoster();
     _subscribeRecords();
+    _subscribeLeave();
+  }
+
+  void _subscribeShifts() {
+    _shiftsSub?.cancel();
+    _shiftsSub = _repo
+        .watchShifts(schoolId: _schoolId)
+        .listen(
+          (shifts) {
+            if (!_closed) emit(state.copyWith(shifts: shifts));
+          },
+          onError: (_) {
+            // Shifts are an enhancement (scheduled-shift display + late
+            // derivation) - a failure here shouldn't block the dashboard.
+          },
+        );
+  }
+
+  void _subscribeLeave() {
+    _leaveSub?.cancel();
+    _leaveSub = _repo
+        .watchLeaveForDay(schoolId: _schoolId, day: state.day)
+        .listen((leave) {
+          if (!_closed) emit(state.copyWith(leave: leave));
+        }, onError: (_) {});
   }
 
   void _subscribeCampuses() {
@@ -154,6 +182,7 @@ class StaffAttendanceCubit extends Cubit<StaffAttendanceState> {
     if (clamped == state.day) return;
     emit(state.copyWith(day: clamped, page: 0));
     _subscribeRecords();
+    _subscribeLeave();
   }
 
   void previousDay() => setDay(state.day.subtract(const Duration(days: 1)));
@@ -200,10 +229,51 @@ class StaffAttendanceCubit extends Cubit<StaffAttendanceState> {
     );
   }
 
+  /// Selects/deselects a staff member for the desktop right-detail-panel.
+  /// Tapping an already-selected row deselects it.
+  void selectStaff(String? staffId) {
+    emit(
+      state.copyWith(
+        selectedStaffId: staffId == state.selectedStaffId ? null : staffId,
+      ),
+    );
+  }
+
+  /// Authorised "Mark staff attendance" for today. Guards against a
+  /// double-tap firing two submissions via [isSubmittingAction]; the
+  /// callable itself is also idempotent (deterministic doc id), so a retry
+  /// after a network blip never creates a duplicate record.
+  Future<bool> markAttendance(String staffId, {String? location}) async {
+    if (state.isSubmittingAction) return false;
+    emit(state.copyWith(isSubmittingAction: true, actionError: null));
+    try {
+      await _repo.clockIn(
+        schoolId: _schoolId,
+        staffId: staffId,
+        day: _today,
+        location: location,
+      );
+      if (!_closed) emit(state.copyWith(isSubmittingAction: false));
+      return true;
+    } catch (e) {
+      if (!_closed) {
+        emit(
+          state.copyWith(
+            isSubmittingAction: false,
+            actionError: 'Could not mark attendance. Try again.',
+          ),
+        );
+      }
+      return false;
+    }
+  }
+
   @override
   Future<void> close() {
     _recordsSub?.cancel();
     _campusesSub?.cancel();
+    _shiftsSub?.cancel();
+    _leaveSub?.cancel();
     return super.close();
   }
 }
