@@ -78,6 +78,11 @@ class PulseTable<T> extends StatelessWidget {
           ),
         ),
         child: DataTable(
+          // DataTable auto-adds an unlabeled checkbox column whenever any
+          // row sets onSelectChanged (used here for onRowTap) unless this is
+          // explicitly suppressed - row selection is a tap-anywhere action
+          // for this table, not a multi-select checkbox list.
+          showCheckboxColumn: false,
           headingRowColor: WidgetStateProperty.all(
             isDark ? AppColors.deepNavy : AppColors.bgLight,
           ),

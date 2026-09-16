@@ -891,11 +891,13 @@ class _Pager extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
+                tooltip: 'Previous page',
                 icon: const Icon(Icons.chevron_left),
                 onPressed: state.safePage > 0 ? cubit.previousPage : null,
               ),
               Text('${state.safePage + 1} / ${state.pageCount}'),
               IconButton(
+                tooltip: 'Next page',
                 icon: const Icon(Icons.chevron_right),
                 onPressed: state.safePage < state.pageCount - 1
                     ? cubit.nextPage

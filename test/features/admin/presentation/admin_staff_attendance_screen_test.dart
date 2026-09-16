@@ -367,6 +367,30 @@ void main() {
     },
   );
 
+  testWidgets(
+    'icon actions expose a semantic label and meet minimum tap-target size',
+    (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        pump(
+          _user(const [UserRole.schoolAdmin]),
+          stateWith(
+            roster: [_staff('1')],
+            records: [_rec('1', StaffAttendanceStatus.onTime)],
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(find.byTooltip('Filter by status'), findsOneWidget);
+      expect(find.byTooltip('Export CSV'), findsOneWidget);
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(iOSTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      handle.dispose();
+    },
+  );
+
   for (final size in const [
     Size(360, 780),
     Size(414, 896),
