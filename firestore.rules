@@ -2059,6 +2059,22 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Staff shift/roster used to derive scheduled-shift display and
+    // late/absent status. Written only by the `setStaffShift` callable.
+    match /institutions/{schoolId}/staff_shifts/{staffId} {
+      allow read: if isStaff() && isSameSchool(schoolId);
+      allow write: if false;
+    }
+
+    // Staff leave requests feeding an `on_leave` attendance status. A staff
+    // member may read their own requests in addition to the tenant-wide
+    // staff read; all writes go through `requestStaffLeave`/`decideStaffLeave`.
+    match /institutions/{schoolId}/staff_leave_requests/{id} {
+      allow read: if isStaff() && isSameSchool(schoolId) ||
+        (isSignedIn() && resource.data.staffId == request.auth.uid);
+      allow write: if false;
+    }
+
     // Per-role dashboard summary docs (e.g. stats/attendance_summary,
     // stats/security_summary) read by gatekeeper/security/transport/matron/
     // catering/games/exams dashboards.

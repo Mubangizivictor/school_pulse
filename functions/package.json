@@ -19,6 +19,8 @@
     "test:finance-operations:emulator": "firebase emulators:exec --only firestore --project demo-finance-operations-test \"node --test test/finance_operations.emulator.test.cjs\"",
     "test:staff-attendance-corrections": "node --test test/staff_attendance_corrections.test.cjs",
     "test:staff-attendance-corrections:emulator": "firebase emulators:exec --only firestore --project demo-staff-attendance-corrections-test \"node --test test/staff_attendance_corrections.emulator.test.cjs\"",
+    "test:staff-shifts": "node --test test/staff_shifts.test.cjs",
+    "test:staff-leave-requests": "node --test test/staff_leave_requests.test.cjs",
     "test:finance-reconciliation:emulator": "firebase emulators:exec --only firestore --project demo-finance-reconciliation-test \"node --test test/finance_reconciliation.emulator.test.cjs\"",
     "test:health-clinic:emulator": "firebase emulators:exec --only firestore --project demo-health-clinic-test \"node --test test/health_clinic.emulator.test.cjs\"",
     "test:financial-entitlements:emulator": "firebase emulators:exec --only firestore --project demo-financial-entitlements-test \"node --test test/financial_entitlements.emulator.test.cjs\"",

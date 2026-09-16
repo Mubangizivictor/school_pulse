@@ -4,8 +4,11 @@
  * Scope is deliberately narrow: this file ONLY lets HR/admin leadership
  * amend an existing day's `staff_attendance` doc (clock-in/out time,
  * status, location) with a mandatory reason. It does NOT create clock-in
- * events, touch payroll, or reconcile against approved leave - those are
- * separate, later concerns.
+ * events or touch payroll - those are separate concerns (see
+ * staff_attendance_clockin.js). It DOES fall back to deriving a status from
+ * `staff_shifts` / `staff_leave_requests` (see `deriveStatus`) when no
+ * explicit status is patched in and there's no prior doc to inherit from -
+ * an explicit patch.status always wins over derivation.
  *
  * Every correction:
  *   - upserts the deterministic doc `staff_attendance/{staffId}_{yyyy-mm-dd}`
@@ -38,6 +41,38 @@ module.exports = ({ admin, onCall, HttpsError }) => {
   const SETTABLE_STATUS = new Set(["on_time", "late", "on_leave", "absent"]);
 
   const asText = (value, max) => String(value ?? "").trim().slice(0, max);
+
+  // When no explicit status is patched in and there's no prior doc, derive
+  // one from the staff member's shift + any approved leave covering the day,
+  // rather than always defaulting to "on_time". An explicit patch.status
+  // always wins - this only fills in the gap on first creation.
+  async function deriveStatus({ db, schoolId, staffId, day, clockIn }) {
+    const leaveSnap = await db
+      .collection("institutions")
+      .doc(schoolId)
+      .collection("staff_leave_requests")
+      .where("staffId", "==", staffId)
+      .where("status", "==", "approved")
+      .where("startDate", "<=", day)
+      .get();
+    const onLeave = leaveSnap.docs.some((d) => d.data().endDate >= day);
+    if (onLeave) return "on_leave";
+
+    const shiftSnap = await db
+      .collection("institutions")
+      .doc(schoolId)
+      .collection("staff_shifts")
+      .doc(staffId)
+      .get();
+    if (!shiftSnap.exists) return "on_time";
+    const shift = shiftSnap.data();
+    if (!shift.scheduledStart) return "on_time";
+
+    const [h, m] = shift.scheduledStart.split(":").map(Number);
+    const threshold = new Date(clockIn);
+    threshold.setHours(h, m + (shift.graceMinutes || 0), 0, 0);
+    return clockIn.getTime() > threshold.getTime() ? "late" : "on_time";
+  }
 
   function dayKey(day) {
     // `day` is an ISO date string 'YYYY-MM-DD' from the client.
@@ -142,6 +177,19 @@ module.exports = ({ admin, onCall, HttpsError }) => {
     const docId = `${staffId}_${day}`;
     const ref = db.collection("staff_attendance").doc(docId);
 
+    // Computed outside the transaction: shift/leave docs aren't mutated by
+    // this callable, so there's no consistency requirement tying their read
+    // to the attendance-doc write below. Only used as a fallback when there's
+    // no explicit patch.status and no prior doc to inherit from.
+    const patchClockInForDerivation = parseClock(patch.clockIn, day, "clockIn");
+    const derivedStatus = await deriveStatus({
+      db,
+      schoolId,
+      staffId,
+      day,
+      clockIn: patchClockInForDerivation !== undefined ? patchClockInForDerivation : dayStart,
+    });
+
     const result = await db.runTransaction(async (tx) => {
       const existing = await tx.get(ref);
       const prev = existing.exists ? existing.data() : null;
@@ -174,7 +222,7 @@ module.exports = ({ admin, onCall, HttpsError }) => {
           ? status
           : prev && prev.status
           ? prev.status
-          : "on_time";
+          : derivedStatus;
       const nextLocation =
         patch.location !== undefined
           ? asText(patch.location, 160)
@@ -258,6 +306,6 @@ module.exports = ({ admin, onCall, HttpsError }) => {
 
   return {
     correctStaffAttendance: onCall(CALLABLE_OPTS, handler),
-    __test__: { CORRECTOR_ROLES, SETTABLE_STATUS, requireCorrector, handler },
+    __test__: { CORRECTOR_ROLES, SETTABLE_STATUS, requireCorrector, handler, deriveStatus },
   };
 };

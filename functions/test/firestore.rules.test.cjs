@@ -1720,13 +1720,47 @@ describe('Phase 5 attendance security gate', () => {
     }));
   });
 
-  test('staff_attendance: cross-school read/write denied, schoolId locked on update', async () => {
-    const ref = doc(dbFor('adminA'), 'staff_attendance', 'teacherA_2026-01-01');
-    await assertSucceeds(setDoc(ref, {
+  test('staff_attendance: cross-school read denied, all client writes denied (callable-only)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'staff_attendance', 'teacherA_2026-01-01'), {
+        schoolId: 'schoolA', staffId: 'teacherA', clockIn: new Date(), status: 'on_time', location: 'Main Gate',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'staff_attendance', 'teacherA_2026-01-01')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'staff_attendance', 'teacherA_2026-01-01')));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'staff_attendance', 'teacherA_2026-01-01'), {
       schoolId: 'schoolA', staffId: 'teacherA', clockIn: new Date(), status: 'on_time', location: 'Main Gate',
     }));
-    await assertFails(getDoc(doc(dbFor('teacherB'), 'staff_attendance', 'teacherA_2026-01-01')));
-    await assertFails(updateDoc(ref, { schoolId: 'schoolB' }));
+    await assertFails(updateDoc(doc(dbFor('adminA'), 'staff_attendance', 'teacherA_2026-01-01'), { schoolId: 'schoolB' }));
+  });
+
+  test('staff_shifts: tenant-scoped read, all client writes denied (setStaffShift callable-only)', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'institutions', 'schoolA', 'staff_shifts', 'teacherA'), {
+        staffId: 'teacherA', schoolId: 'schoolA', scheduledStart: '08:00', scheduledEnd: '16:00',
+        daysOfWeek: [1, 2, 3, 4, 5], graceMinutes: 10,
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'institutions', 'schoolA', 'staff_shifts', 'teacherA')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'institutions', 'schoolA', 'staff_shifts', 'teacherA')));
+    await assertFails(setDoc(doc(dbFor('adminA'), 'institutions', 'schoolA', 'staff_shifts', 'teacherA'), {
+      staffId: 'teacherA', schoolId: 'schoolA', scheduledStart: '09:00',
+    }));
+  });
+
+  test('staff_leave_requests: tenant staff read + self-read carve-out, cross-school denied, writes denied', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'institutions', 'schoolA', 'staff_leave_requests', 'leave1'), {
+        staffId: 'teacherA', schoolId: 'schoolA', startDate: '2026-09-01', endDate: '2026-09-03',
+        status: 'pending', reason: 'Family event',
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('adminA'), 'institutions', 'schoolA', 'staff_leave_requests', 'leave1')));
+    await assertSucceeds(getDoc(doc(dbFor('teacherA'), 'institutions', 'schoolA', 'staff_leave_requests', 'leave1')));
+    await assertFails(getDoc(doc(dbFor('teacherB'), 'institutions', 'schoolA', 'staff_leave_requests', 'leave1')));
+    await assertFails(setDoc(doc(dbFor('teacherA'), 'institutions', 'schoolA', 'staff_leave_requests', 'leave1'), {
+      status: 'approved',
+    }));
   });
 
   test('boarding_attendance: hasAnyRole OR-branch still admits a matron with no assignment row', async () => {
