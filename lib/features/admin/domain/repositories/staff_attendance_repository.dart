@@ -4,6 +4,11 @@ import 'package:school_pulse/features/admin/data/models/staff_attendance_record.
 /// clock-in path (later slice) and manual corrections both run server-side
 /// via the `correctStaffAttendance` callable, and the Firestore rules deny
 /// direct client writes.
+///
+/// Unrelated to `AdminAttendanceRepository` (`admin_attendance_repository_impl.dart`),
+/// which reads `class_attendance_sessions` for *student* attendance stats on
+/// the admin dashboard home screen. That is a different collection and a
+/// different domain - not a duplicate of this repository.
 abstract class StaffAttendanceRepository {
   /// Live stream of every staff attendance record whose `clockIn` falls on
   /// the calendar day of [day] (local time), optionally narrowed to one
