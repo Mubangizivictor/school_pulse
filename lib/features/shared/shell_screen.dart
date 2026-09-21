@@ -319,9 +319,9 @@ class StaffShell extends StatelessWidget {
     // desktop/tablet, its own 4-tab bottom nav on mobile) - same reasoning
     // as Bursar below. This must be an exact-path allowlist, not a prefix
     // match on '/staff/admin': sibling routes like school-setup, the
-    // Structure wizard, add-staff wizard, student profile, and audit-log
-    // are standalone screens that still rely on this shell's own chrome/
-    // opt-outs, and would lose their nav entirely under a prefix match.
+    // Structure wizard, add-staff wizard, and audit-log are standalone
+    // screens that still rely on this shell's own chrome/opt-outs, and
+    // would lose their nav entirely under a prefix match.
     const adminShellPaths = {
       '/staff/admin',
       '/staff/admin/approvals',
@@ -340,15 +340,25 @@ class StaffShell extends StatelessWidget {
       '/staff/admin/admissions/review',
       '/staff/admin/admissions/review/enroll',
     };
-    // The Staff subtree (overview/add-staff/:uid) now renders through
-    // AdminShell too (AdminStaffSectionBody resolves the exact screen), so
-    // every path under it needs the shell's own chrome.
+    // The Staff, Parents, and Students subtrees render through AdminShell
+    // (their section bodies resolve the exact screen), so every path under
+    // them needs the shell's own chrome. In particular, this keeps the
+    // parent-link wizard from being wrapped by the shared staff sidebar.
     final staffSectionPath = GoRouterState.of(context).uri.path;
     final isStaffShellSubroute = staffSectionPath.startsWith(
       '/staff/admin/users/',
     );
+    final isParentsShellSubroute = staffSectionPath.startsWith(
+      '/staff/admin/parents/',
+    );
+    final isStudentsShellSubroute = staffSectionPath.startsWith(
+      '/staff/admin/students/',
+    );
     final isAdminSection =
-        adminShellPaths.contains(staffSectionPath) || isStaffShellSubroute;
+        adminShellPaths.contains(staffSectionPath) ||
+        isStaffShellSubroute ||
+        isParentsShellSubroute ||
+        isStudentsShellSubroute;
     final isNurseSection = GoRouterState.of(
       context,
     ).uri.path.startsWith('/staff/nurse');

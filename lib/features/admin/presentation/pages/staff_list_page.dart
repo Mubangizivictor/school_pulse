@@ -11,7 +11,9 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/auth/domain/usecases/create_staff_invitation.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
+import 'package:school_pulse/features/auth/domain/usecases/toggle_staff_status.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/structure/domain/entities/campus_entities.dart';
@@ -43,23 +45,27 @@ String _maskPhone(String phone) {
   return '$prefix ••• ••• $last3'.trim();
 }
 
-enum _StatusFilter { all, active, inactive }
+enum _StatusFilter { all, active, invited, inactive }
 
 enum _SortBy { recentlyAdded, name, role }
+
+/// A staff account's account status is derived, not stored as one field:
+/// `isActive` covers active/inactive, while a pending sign-in invitation
+/// (`invitationStatus == "sent"` on the user doc, mirrored from the
+/// `staff_invitations` collection by `createStaffInvitation` /
+/// `cancelStaffInvitation` in functions/index.js) takes priority display-wise
+/// over a merely-inactive account, matching how invited staff have no
+/// completed account yet.
+_StatusFilter _statusOf(UserEntity s) {
+  if (s.invitationStatus == 'sent') return _StatusFilter.invited;
+  return s.isActive ? _StatusFilter.active : _StatusFilter.inactive;
+}
 
 /// Staff directory - the screen School Admin lands on immediately after
 /// tapping Staff from the dashboard. Replaces the old Account Management
 /// landing page for this entry point (see `UserManagementPage`, still used
 /// for the audit/quick-actions overview but no longer the default
 /// `/staff/admin/users` destination).
-///
-/// Data note: staff accounts here are created directly (see
-/// `createStaffAccount` / the Add Staff wizard), there is no separate
-/// email-invite step, and Firestore staff docs carry no "last login" concept
-/// beyond `lastActiveAt`. So this screen only ever shows Active/Inactive plus
-/// a real last-active timestamp - it deliberately has no "invitations
-/// pending" bucket or resend/cancel-invite actions, since that state doesn't
-/// exist in the data model.
 class StaffListPage extends StatefulWidget {
   const StaffListPage({super.key});
 
@@ -134,8 +140,9 @@ class _StaffListPageState extends State<StaffListPage> {
 
   List<UserEntity> _applyFilters(List<UserEntity> staff) {
     final filtered = staff.where((s) {
-      if (_status == _StatusFilter.active && !s.isActive) return false;
-      if (_status == _StatusFilter.inactive && s.isActive) return false;
+      if (_status != _StatusFilter.all && _statusOf(s) != _status) {
+        return false;
+      }
       if (_departmentId != null && s.departmentId != _departmentId) {
         return false;
       }
@@ -193,6 +200,113 @@ class _StaffListPageState extends State<StaffListPage> {
     final authState = context.watch<AuthBloc>().state;
     return authState is AuthAuthenticated &&
         authState.user.roles.any(UserRoleDisplay.adminRoles.contains);
+  }
+
+  bool _canManageStaffAccess(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    return authState is AuthAuthenticated &&
+        authState.user.roles.any(UserRoleDisplay.adminRoles.contains);
+  }
+
+  Future<void> _resendInvitation(BuildContext context, UserEntity s) async {
+    final confirmed = await _confirm(
+      context,
+      title: 'Resend invitation?',
+      message: 'A new sign-in link will be sent to ${s.email}.',
+      confirmLabel: 'Resend',
+    );
+    if (confirmed != true) return;
+    final result = await di.sl<CreateStaffInvitation>()(s.id);
+    if (!context.mounted) return;
+    result.fold(
+      (failure) => _showSnack(context, 'Couldn\'t resend invitation.'),
+      (_) {
+        _showSnack(context, 'Invitation resent to ${s.email}.');
+        _refresh();
+      },
+    );
+  }
+
+  Future<void> _cancelInvitation(BuildContext context, UserEntity s) async {
+    final confirmed = await _confirm(
+      context,
+      title: 'Revoke invitation?',
+      message:
+          '${s.name} will no longer be able to use the sign-in link sent to them.',
+      confirmLabel: 'Revoke',
+      isDestructive: true,
+    );
+    if (confirmed != true) return;
+    final result = await di.sl<CancelStaffInvitation>()(s.id);
+    if (!context.mounted) return;
+    result.fold(
+      (failure) => _showSnack(context, 'Couldn\'t revoke invitation.'),
+      (_) {
+        _showSnack(context, 'Invitation revoked.');
+        _refresh();
+      },
+    );
+  }
+
+  Future<void> _toggleActive(BuildContext context, UserEntity s) async {
+    final activating = !s.isActive;
+    final confirmed = await _confirm(
+      context,
+      title: activating ? 'Activate staff account?' : 'Deactivate account?',
+      message: activating
+          ? '${s.name} will regain access to School Pulse.'
+          : '${s.name} will immediately lose access to School Pulse.',
+      confirmLabel: activating ? 'Activate' : 'Deactivate',
+      isDestructive: !activating,
+    );
+    if (confirmed != true) return;
+    final result = await di.sl<ToggleStaffStatus>()(s.id, activating);
+    if (!context.mounted) return;
+    result.fold(
+      (failure) => _showSnack(context, 'Couldn\'t update account status.'),
+      (_) {
+        _showSnack(
+          context,
+          activating ? 'Account activated.' : 'Account deactivated.',
+        );
+        _refresh();
+      },
+    );
+  }
+
+  Future<bool?> _confirm(
+    BuildContext context, {
+    required String title,
+    required String message,
+    required String confirmLabel,
+    bool isDestructive = false,
+  }) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: isDestructive
+                ? FilledButton.styleFrom(backgroundColor: AppColors.error)
+                : null,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSnack(BuildContext context, String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   /// Full email/phone are HR-sensitive; only admin-console roles (the same
@@ -283,9 +397,18 @@ class _StaffListPageState extends State<StaffListPage> {
                                   canViewContact: _canViewContactDetails(
                                     context,
                                   ),
+                                  canManageAccess: _canManageStaffAccess(
+                                    context,
+                                  ),
                                   onTap: (s) => context.push(
                                     '/staff/admin/users/${s.id}',
                                   ),
+                                  onResendInvitation: (s) =>
+                                      _resendInvitation(context, s),
+                                  onCancelInvitation: (s) =>
+                                      _cancelInvitation(context, s),
+                                  onToggleActive: (s) =>
+                                      _toggleActive(context, s),
                                 )
                               else
                                 _StaffList(
@@ -295,9 +418,18 @@ class _StaffListPageState extends State<StaffListPage> {
                                   canViewContact: _canViewContactDetails(
                                     context,
                                   ),
+                                  canManageAccess: _canManageStaffAccess(
+                                    context,
+                                  ),
                                   onTap: (s) => context.push(
                                     '/staff/admin/users/${s.id}',
                                   ),
+                                  onResendInvitation: (s) =>
+                                      _resendInvitation(context, s),
+                                  onCancelInvitation: (s) =>
+                                      _cancelInvitation(context, s),
+                                  onToggleActive: (s) =>
+                                      _toggleActive(context, s),
                                 ),
                             ],
                           ),
@@ -468,16 +600,29 @@ class _StaffListPageState extends State<StaffListPage> {
   );
 
   Widget _summaryStrip(BuildContext context, List<UserEntity> all) {
-    final activeCount = all.where((s) => s.isActive).length;
-    final inactiveCount = all.where((s) => !s.isActive).length;
-    return Row(
+    final activeCount = all
+        .where((s) => _statusOf(s) == _StatusFilter.active)
+        .length;
+    final invitedCount = all
+        .where((s) => _statusOf(s) == _StatusFilter.invited)
+        .length;
+    final inactiveCount = all
+        .where((s) => _statusOf(s) == _StatusFilter.inactive)
+        .length;
+    return Wrap(
+      spacing: 20,
+      runSpacing: 8,
       children: [
         _SummaryStat(
           count: activeCount,
           label: 'active',
           color: AppColors.success(context),
         ),
-        const SizedBox(width: 20),
+        _SummaryStat(
+          count: invitedCount,
+          label: 'invited',
+          color: AppColors.warning(context),
+        ),
         _SummaryStat(
           count: inactiveCount,
           label: 'inactive',
@@ -489,8 +634,15 @@ class _StaffListPageState extends State<StaffListPage> {
 
   Widget _filterChipsRow(BuildContext context, List<UserEntity> all) {
     final allCount = all.length;
-    final activeCount = all.where((s) => s.isActive).length;
-    final inactiveCount = all.where((s) => !s.isActive).length;
+    final activeCount = all
+        .where((s) => _statusOf(s) == _StatusFilter.active)
+        .length;
+    final invitedCount = all
+        .where((s) => _statusOf(s) == _StatusFilter.invited)
+        .length;
+    final inactiveCount = all
+        .where((s) => _statusOf(s) == _StatusFilter.inactive)
+        .length;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -507,6 +659,13 @@ class _StaffListPageState extends State<StaffListPage> {
             count: activeCount,
             selected: _status == _StatusFilter.active,
             onTap: () => setState(() => _status = _StatusFilter.active),
+          ),
+          const SizedBox(width: 8),
+          _StatusChip(
+            label: 'Invited',
+            count: invitedCount,
+            selected: _status == _StatusFilter.invited,
+            onTap: () => setState(() => _status = _StatusFilter.invited),
           ),
           const SizedBox(width: 8),
           _StatusChip(
@@ -825,18 +984,40 @@ String _lastActivityLabel(DateTime? at) {
   return '${months[local.month - 1]} ${local.day}, ${local.year}';
 }
 
+/// Label/color for a staff account's derived status badge, shared by the
+/// mobile card list and the desktop table.
+(String, Color) _statusBadgeStyle(BuildContext context, UserEntity s) {
+  switch (_statusOf(s)) {
+    case _StatusFilter.invited:
+      return ('Invitation pending', AppColors.warning(context));
+    case _StatusFilter.inactive:
+      return ('Inactive', AppColors.textMuted(context));
+    case _StatusFilter.active:
+    case _StatusFilter.all:
+      return ('Active', AppColors.success(context));
+  }
+}
+
 class _StaffList extends StatelessWidget {
   const _StaffList({
     required this.staff,
     required this.departmentName,
     required this.canViewContact,
+    required this.canManageAccess,
     required this.onTap,
+    required this.onResendInvitation,
+    required this.onCancelInvitation,
+    required this.onToggleActive,
   });
 
   final List<UserEntity> staff;
   final String? Function(String?) departmentName;
   final bool canViewContact;
+  final bool canManageAccess;
   final void Function(UserEntity) onTap;
+  final void Function(UserEntity) onResendInvitation;
+  final void Function(UserEntity) onCancelInvitation;
+  final void Function(UserEntity) onToggleActive;
 
   @override
   Widget build(BuildContext context) {
@@ -851,7 +1032,11 @@ class _StaffList extends StatelessWidget {
             staff: s,
             departmentName: departmentName(s.departmentId),
             canViewContact: canViewContact,
+            canManageAccess: canManageAccess,
             onTap: () => onTap(s),
+            onResendInvitation: () => onResendInvitation(s),
+            onCancelInvitation: () => onCancelInvitation(s),
+            onToggleActive: () => onToggleActive(s),
           ),
       ],
     );
@@ -863,13 +1048,21 @@ class _StaffCard extends StatelessWidget {
     required this.staff,
     required this.departmentName,
     required this.canViewContact,
+    required this.canManageAccess,
     required this.onTap,
+    required this.onResendInvitation,
+    required this.onCancelInvitation,
+    required this.onToggleActive,
   });
 
   final UserEntity staff;
   final String? departmentName;
   final bool canViewContact;
+  final bool canManageAccess;
   final VoidCallback onTap;
+  final VoidCallback onResendInvitation;
+  final VoidCallback onCancelInvitation;
+  final VoidCallback onToggleActive;
 
   @override
   Widget build(BuildContext context) {
@@ -878,6 +1071,7 @@ class _StaffCard extends StatelessWidget {
         : UserRoleDisplay.name(staff.roles.first);
     final subtitle = [roleLabel, ?departmentName].join(' • ');
     final contact = canViewContact ? staff.email : _maskEmail(staff.email);
+    final (statusLabel, statusColor) = _statusBadgeStyle(context, staff);
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
@@ -933,20 +1127,91 @@ class _StaffCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          StatusBadge(
-            label: staff.isActive ? 'Active' : 'Inactive',
-            color: staff.isActive
-                ? AppColors.success(context)
-                : AppColors.textMuted(context),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 96),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: StatusBadge(label: statusLabel, color: statusColor),
+            ),
           ),
-          const SizedBox(width: 4),
-          Icon(
-            Icons.chevron_right,
-            color: AppColors.textMuted(context),
-            size: 20,
-          ),
+          if (canManageAccess) ...[
+            const SizedBox(width: 4),
+            _StaffActionsMenu(
+              staff: staff,
+              onResendInvitation: onResendInvitation,
+              onCancelInvitation: onCancelInvitation,
+              onToggleActive: onToggleActive,
+            ),
+          ] else ...[
+            const SizedBox(width: 4),
+            Icon(
+              Icons.chevron_right,
+              color: AppColors.textMuted(context),
+              size: 20,
+            ),
+          ],
         ],
       ),
+    );
+  }
+}
+
+/// Authorised row actions - view is always available via the row tap;
+/// invite/access actions only render for roles that can manage staff access
+/// (gated by [StaffListPage._canManageStaffAccess], the same admin-role set
+/// permitted to reach this console at all).
+class _StaffActionsMenu extends StatelessWidget {
+  const _StaffActionsMenu({
+    required this.staff,
+    required this.onResendInvitation,
+    required this.onCancelInvitation,
+    required this.onToggleActive,
+  });
+
+  final UserEntity staff;
+  final VoidCallback onResendInvitation;
+  final VoidCallback onCancelInvitation;
+  final VoidCallback onToggleActive;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = _statusOf(staff);
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert, color: AppColors.textMuted(context)),
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+      iconSize: 20,
+      tooltip: 'Actions',
+      onSelected: (value) {
+        switch (value) {
+          case 'resend':
+            onResendInvitation();
+            break;
+          case 'cancel':
+            onCancelInvitation();
+            break;
+          case 'toggle':
+            onToggleActive();
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        if (status == _StatusFilter.invited) ...[
+          const PopupMenuItem(
+            value: 'resend',
+            child: Text('Resend invitation'),
+          ),
+          const PopupMenuItem(
+            value: 'cancel',
+            child: Text('Revoke invitation'),
+          ),
+        ] else
+          PopupMenuItem(
+            value: 'toggle',
+            child: Text(staff.isActive ? 'Deactivate' : 'Activate'),
+          ),
+      ],
     );
   }
 }
@@ -960,7 +1225,11 @@ class _StaffTable extends StatelessWidget {
     required this.onPageChanged,
     required this.departmentName,
     required this.canViewContact,
+    required this.canManageAccess,
     required this.onTap,
+    required this.onResendInvitation,
+    required this.onCancelInvitation,
+    required this.onToggleActive,
   });
 
   final List<UserEntity> staff;
@@ -970,7 +1239,11 @@ class _StaffTable extends StatelessWidget {
   final ValueChanged<int> onPageChanged;
   final String? Function(String?) departmentName;
   final bool canViewContact;
+  final bool canManageAccess;
   final void Function(UserEntity) onTap;
+  final void Function(UserEntity) onResendInvitation;
+  final void Function(UserEntity) onCancelInvitation;
+  final void Function(UserEntity) onToggleActive;
 
   @override
   Widget build(BuildContext context) {
@@ -992,9 +1265,9 @@ class _StaffTable extends StatelessWidget {
                 0: FlexColumnWidth(2.4),
                 1: FlexColumnWidth(2),
                 2: FlexColumnWidth(2.2),
-                3: FlexColumnWidth(1.4),
+                3: FlexColumnWidth(1.6),
                 4: FlexColumnWidth(1.6),
-                5: FlexColumnWidth(0.6),
+                5: FlexColumnWidth(0.8),
               },
               children: [
                 _headerRow(context),
@@ -1053,7 +1326,7 @@ class _StaffTable extends StatelessWidget {
         cell('Contact'),
         cell('Account status'),
         cell('Last activity'),
-        const SizedBox.shrink(),
+        cell('Actions'),
       ],
     );
   }
@@ -1067,6 +1340,7 @@ class _StaffTable extends StatelessWidget {
     final phone = s.phoneNumber == null
         ? null
         : (canViewContact ? s.phoneNumber! : _maskPhone(s.phoneNumber!));
+    final (statusLabel, statusColor) = _statusBadgeStyle(context, s);
     return TableRow(
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.border(context))),
@@ -1158,12 +1432,7 @@ class _StaffTable extends StatelessWidget {
         _rowCell(
           context,
           onTap: () => onTap(s),
-          child: StatusBadge(
-            label: s.isActive ? 'Active' : 'Inactive',
-            color: s.isActive
-                ? AppColors.success(context)
-                : AppColors.textMuted(context),
-          ),
+          child: StatusBadge(label: statusLabel, color: statusColor),
         ),
         _rowCell(
           context,
@@ -1177,14 +1446,20 @@ class _StaffTable extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        _rowCell(
-          context,
-          onTap: () => onTap(s),
-          child: Icon(
-            Icons.chevron_right,
-            size: 18,
-            color: AppColors.textMuted(context),
-          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+          child: canManageAccess
+              ? _StaffActionsMenu(
+                  staff: s,
+                  onResendInvitation: () => onResendInvitation(s),
+                  onCancelInvitation: () => onCancelInvitation(s),
+                  onToggleActive: () => onToggleActive(s),
+                )
+              : Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: AppColors.textMuted(context),
+                ),
         ),
       ],
     );

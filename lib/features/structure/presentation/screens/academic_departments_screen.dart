@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import '../../domain/entities/structure_entities.dart';
 import '../../domain/entities/structure_setup_preferences.dart';
@@ -172,9 +174,12 @@ class AcademicDepartmentsScreen extends StatelessWidget {
     Department? existing,
     List<Subject> existingSubjects = const [],
   }) {
+    final schoolId =
+        (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => NewDepartmentScreen(
+          schoolId: schoolId,
           existing: existing,
           existingSubjectIds: existingSubjects.map((s) => s.id).toSet(),
         ),
@@ -320,10 +325,12 @@ class _DepartmentRow extends StatelessWidget {
 class NewDepartmentScreen extends StatefulWidget {
   const NewDepartmentScreen({
     super.key,
+    required this.schoolId,
     this.existing,
     this.existingSubjectIds = const {},
   });
 
+  final String schoolId;
   final Department? existing;
   final Set<String> existingSubjectIds;
 
@@ -661,7 +668,7 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
     final edit = widget.existing;
     final department = Department(
       id: edit?.id ?? const Uuid().v4(),
-      schoolId: edit?.schoolId ?? '',
+      schoolId: edit?.schoolId ?? widget.schoolId,
       name: name,
       description: _description.text.trim(),
       headOfDepartmentStaffId: edit?.headOfDepartmentStaffId ?? '',

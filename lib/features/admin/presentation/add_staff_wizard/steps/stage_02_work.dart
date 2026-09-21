@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/core/user_roles.dart';
+import 'package:school_pulse/design_system/components/pulse_card.dart';
 import 'package:school_pulse/design_system/components/wizard_scaffold.dart';
+import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/features/hr/domain/entities/salary_structure.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/structure/domain/entities/campus_entities.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
@@ -14,9 +18,18 @@ import '../add_staff_wizard_controller.dart';
 
 const _employmentTypes = ['Permanent', 'Contract', 'Part-Time', 'Volunteer'];
 
-/// Stage 2 - Work: "Where will they work?" Combines Employment Information
-/// and Pay Structure (previously separate steps) into one stage, matching
-/// the reference design.
+/// Roles authorised to see and configure compensation - "Restricted to HR &
+/// Finance" per the design. Deliberately narrower than
+/// [UserRoleDisplay.adminRoles]: an ordinary School Admin/Director/Head
+/// Teacher can create a staff profile without ever seeing pay, matching the
+/// "never expose pay details to ordinary administrators" requirement.
+const _compensationRoles = {UserRole.hrOfficer, UserRole.bursar};
+
+/// Stage 2 - Work: "Where will they work?" Collects employment details
+/// (campus, employment type, start date, department, job title) plus a
+/// restricted compensation-setup choice. No salary/bank/tax fields or money
+/// values are ever shown on this screen - "Configure pay now" only appears to
+/// HR/Finance and opens the secure Salary Structure workflow, never inline.
 class Stage02Work extends StatefulWidget {
   final VoidCallback onSaveDraft;
 
@@ -30,30 +43,17 @@ class _Stage02WorkState extends State<Stage02Work> {
   final _formKey = GlobalKey<FormState>();
   late final StructureRepository _structureRepository;
 
-  bool _payEnabled = true;
-  Future<MatchedSalaryStructure?>? _matchFuture;
-  String? _matchedForDesignationId;
-
   @override
   void initState() {
     super.initState();
     _structureRepository = di.sl<StructureRepository>();
   }
 
-  void _lookupMatch(AddStaffWizardController controller) {
-    // Work details no longer collect a role, so pay is deliberately set up
-    // later in HR rather than being matched from an onboarding selection.
-    if (_matchedForDesignationId == '') return;
-    _matchedForDesignationId = '';
-    _matchFuture = Future.value(null);
+  bool _canConfigurePayNow(BuildContext context) {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return false;
+    return authState.user.roles.any(_compensationRoles.contains);
   }
-
-  int _billedTotalUgx(
-    MatchedSalaryStructure match,
-    Set<String> selectedComponentIds,
-  ) => match.lines
-      .where((l) => l.required || selectedComponentIds.contains(l.componentId))
-      .fold(0, (sum, l) => sum + l.amountUgx);
 
   Future<void> _pickDate(AddStaffWizardController controller) async {
     final picked = await showDatePicker(
@@ -73,7 +73,7 @@ class _Stage02WorkState extends State<Stage02Work> {
     final controller = context.watch<AddStaffWizardController>();
     final draft = controller.draft;
     final schoolId = controller.schoolId;
-    _lookupMatch(controller);
+    final canConfigurePayNow = _canConfigurePayNow(context);
 
     return WizardStageScaffold(
       title: 'Add staff',
@@ -87,6 +87,7 @@ class _Stage02WorkState extends State<Stage02Work> {
         onBack: () => controller.back(),
         onNext: () {
           if (!_formKey.currentState!.validate()) return;
+          if (draft.campusId == null || draft.campusId!.isEmpty) return;
           controller.next();
         },
       ),
@@ -98,455 +99,454 @@ class _Stage02WorkState extends State<Stage02Work> {
           children: [
             const WizardStageHeading(
               title: 'Where will they work?',
-              subtitle: 'Add their employment details and start date.',
+              subtitle:
+                  "Set employment details and the staff member's starting "
+                  'point at your school.',
             ),
-            const SizedBox(height: 24),
-            StreamBuilder<List<Campus>>(
-              stream: _structureRepository.watchCampuses(schoolId),
+            const SizedBox(height: 20),
+            ResponsiveBuilder(
+              builder: (context, layout) {
+                final employmentCard = _EmploymentDetailsCard(
+                  structureRepository: _structureRepository,
+                  schoolId: schoolId,
+                  draft: draft,
+                  onChanged: controller.notifyDraftChanged,
+                  onPickDate: () => _pickDate(controller),
+                );
+                final compensationCard = _CompensationCard(
+                  canConfigurePayNow: canConfigurePayNow,
+                  payNow: draft.compensationSetUpNow,
+                  onChanged: (value) {
+                    draft.compensationSetUpNow = value;
+                    controller.notifyDraftChanged();
+                  },
+                  onConfigurePayNow: () => context.push(
+                    '/staff/admin/school-setup/structure/people/salary-structures',
+                  ),
+                );
+                if (layout == ResponsiveLayout.desktop) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(flex: 3, child: employmentCard),
+                      const SizedBox(width: 20),
+                      Expanded(flex: 2, child: compensationCard),
+                    ],
+                  );
+                }
+                return Column(
+                  children: [
+                    employmentCard,
+                    const SizedBox(height: 20),
+                    compensationCard,
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmploymentDetailsCard extends StatelessWidget {
+  final StructureRepository structureRepository;
+  final String schoolId;
+  final dynamic draft;
+  final VoidCallback onChanged;
+  final VoidCallback onPickDate;
+
+  const _EmploymentDetailsCard({
+    required this.structureRepository,
+    required this.schoolId,
+    required this.draft,
+    required this.onChanged,
+    required this.onPickDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PulseCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Employment details',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _labeledField(
+            context,
+            'Employment type',
+            required: true,
+            field: DropdownButtonFormField<String>(
+              initialValue: draft.employmentType,
+              decoration: const InputDecoration(
+                hintText: 'Select employment type',
+              ),
+              items: _employmentTypes
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .toList(),
+              validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Select an employment type' : null,
+              onChanged: (v) {
+                if (v != null) {
+                  draft.employmentType = v;
+                  onChanged();
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          _labeledField(
+            context,
+            'Start date',
+            required: true,
+            field: InkWell(
+              onTap: onPickDate,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  hintText: 'Select start date',
+                ),
+                child: Text(
+                  '${draft.dateJoined.day}/${draft.dateJoined.month}/${draft.dateJoined.year}',
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _labeledField(
+            context,
+            'Primary campus',
+            required: true,
+            field: StreamBuilder<List<Campus>>(
+              stream: structureRepository.watchCampuses(schoolId),
               builder: (context, snapshot) {
                 final campuses =
                     (snapshot.data ?? const [])
                         .where((c) => c.isActive)
                         .toList()
                       ..sort((a, b) => a.order.compareTo(b.order));
-                if (campuses.isEmpty) return const SizedBox.shrink();
-                if (campuses.length == 1) {
-                  if (draft.campusId != campuses.first.id) {
-                    draft.campusId = campuses.first.id;
-                  }
-                  return _CampusRow(
-                    campusName: campuses.first.name,
-                    editable: false,
-                  );
+                if (campuses.isNotEmpty &&
+                    !campuses.any((c) => c.id == draft.campusId)) {
+                  draft.campusId = null;
                 }
-                return _CampusRow(
-                  campusName: campuses
-                      .where((c) => c.id == draft.campusId)
-                      .map((c) => c.name)
-                      .firstOrNullExt(),
-                  editable: true,
-                  onChange: () async {
-                    final picked = await showModalBottomSheet<String>(
-                      context: context,
-                      showDragHandle: true,
-                      builder: (ctx) => SafeArea(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: campuses
-                              .map(
-                                (c) => ListTile(
-                                  title: Text(c.name),
-                                  trailing: draft.campusId == c.id
-                                      ? const Icon(Icons.check)
-                                      : null,
-                                  onTap: () => Navigator.pop(ctx, c.id),
-                                ),
-                              )
-                              .toList(),
-                        ),
-                      ),
-                    );
-                    if (picked != null) {
-                      draft.campusId = picked;
-                      controller.notifyDraftChanged();
-                    }
+                return DropdownButtonFormField<String>(
+                  initialValue: draft.campusId,
+                  decoration: const InputDecoration(hintText: 'Select campus'),
+                  items: campuses
+                      .map(
+                        (c) =>
+                            DropdownMenuItem(value: c.id, child: Text(c.name)),
+                      )
+                      .toList(),
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Select a campus' : null,
+                  onChanged: (v) {
+                    draft.campusId = v;
+                    onChanged();
                   },
                 );
               },
             ),
-            _labeledField(
-              'Employment type',
-              DropdownButtonFormField<String>(
-                initialValue: draft.employmentType,
-                decoration: const InputDecoration(
-                  hintText: 'Select employment type',
-                ),
-                items: _employmentTypes
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
-                    .toList(),
-                onChanged: (v) {
-                  if (v != null) {
-                    draft.employmentType = v;
-                    controller.notifyDraftChanged();
-                  }
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-            _labeledField(
-              'Date joined',
-              InkWell(
-                onTap: () => _pickDate(controller),
-                child: InputDecorator(
+          ),
+          const SizedBox(height: 16),
+          _labeledField(
+            context,
+            'Department',
+            required: true,
+            field: StreamBuilder<List<Department>>(
+              stream: structureRepository.watchDepartments(schoolId),
+              builder: (context, snapshot) {
+                final departments =
+                    (snapshot.data ?? const [])
+                        .where((d) => d.isActive)
+                        .toList()
+                      ..sort(
+                        (a, b) => a.displayOrder.compareTo(b.displayOrder),
+                      );
+                if (departments.isNotEmpty &&
+                    !departments.any((d) => d.id == draft.departmentId)) {
+                  draft.departmentId = null;
+                }
+                return DropdownButtonFormField<String>(
+                  initialValue: draft.departmentId,
                   decoration: const InputDecoration(
-                    hintText: 'Select date joined',
+                    hintText: 'Select department',
                   ),
-                  child: Text(
-                    '${draft.dateJoined.day}/${draft.dateJoined.month}/${draft.dateJoined.year}',
+                  items: departments
+                      .map(
+                        (d) =>
+                            DropdownMenuItem(value: d.id, child: Text(d.name)),
+                      )
+                      .toList(),
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Select a department' : null,
+                  onChanged: (v) {
+                    draft.departmentId = v;
+                    onChanged();
+                  },
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          _labeledField(
+            context,
+            'Job title',
+            required: true,
+            field: StreamBuilder<List<StaffDesignation>>(
+              stream: structureRepository.watchDesignations(schoolId),
+              builder: (context, snapshot) {
+                final designations =
+                    (snapshot.data ?? const [])
+                        .where((d) => d.isActive && !d.isArchived)
+                        .toList()
+                      ..sort(
+                        (a, b) => a.displayOrder.compareTo(b.displayOrder),
+                      );
+                if (designations.isNotEmpty &&
+                    !designations.any((d) => d.id == draft.designationId)) {
+                  draft.designationId = null;
+                }
+                return DropdownButtonFormField<String>(
+                  initialValue: draft.designationId,
+                  decoration: const InputDecoration(
+                    hintText: 'Select job title',
                   ),
-                ),
+                  items: designations
+                      .map(
+                        (d) =>
+                            DropdownMenuItem(value: d.id, child: Text(d.name)),
+                      )
+                      .toList(),
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Select a job title' : null,
+                  onChanged: (v) {
+                    draft.designationId = v;
+                    onChanged();
+                  },
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          _labeledField(
+            context,
+            'Staff code',
+            field: InputDecorator(
+              decoration: const InputDecoration(
+                hintText: 'Generated when staff is created',
               ),
-            ),
-            const SizedBox(height: 14),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(
-                  Icons.info_outline,
-                  size: 16,
-                  color: AppColors.textMuted(context),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Staff code generated automatically',
-                    style: TextStyle(
-                      color: AppColors.textMuted(context),
-                      fontSize: 12.5,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 28),
-            const Divider(height: 1),
-            const SizedBox(height: 20),
-            const WizardSectionLabel(
-              label: 'Pay structure',
-              helper: "Choose how you want to handle this staff member's pay.",
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _PayChoiceCard(
-                    title: 'Set up pay now',
-                    subtitle: 'Enter pay structure details',
-                    selected: _payEnabled,
-                    onTap: () => setState(() => _payEnabled = true),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _PayChoiceCard(
-                    title: 'Skip for now',
-                    subtitle: 'Add pay details later',
-                    selected: !_payEnabled,
-                    onTap: () => setState(() => _payEnabled = false),
-                  ),
-                ),
-              ],
-            ),
-            if (_payEnabled) ...[
-              const SizedBox(height: 16),
-              FutureBuilder<MatchedSalaryStructure?>(
-                future: _matchFuture,
-                builder: (context, snapshot) {
-                  final loading =
-                      snapshot.connectionState != ConnectionState.done;
-                  if (loading) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 24),
-                      child: Center(child: SchoolPulseLoader()),
-                    );
-                  }
-                  final match = snapshot.data;
-                  if (match == null) {
-                    return _pendingCard(context);
-                  }
-                  return _matchedCard(context, controller, match);
-                },
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainer(context),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.lock_outline,
-                      size: 16,
-                      color: AppColors.textMuted(context),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Pay details are only visible to authorised HR and admin users.',
-                        style: TextStyle(
-                          color: AppColors.textMuted(context),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _labeledField(String label, Widget field, {bool required = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Builder(
-              builder: (context) => RichText(
-                text: TextSpan(
-                  text: label,
-                  style: TextStyle(
-                    color: AppColors.textPrimary(context),
-                    fontWeight: FontWeight.w600,
-                    fontSize: 12.5,
-                  ),
-                  children: required
-                      ? [
-                          TextSpan(
-                            text: ' *',
-                            style: TextStyle(color: AppColors.danger(context)),
-                          ),
-                        ]
-                      : const [],
-                ),
+              child: Text(
+                'Generated when staff is created',
+                style: TextStyle(color: AppColors.textMuted(context)),
               ),
             ),
           ),
-          field,
-        ],
-      ),
-    );
-  }
-
-  Widget _pendingCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.border(context)),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+          const SizedBox(height: 12),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(
-                Icons.hourglass_top_outlined,
-                color: AppColors.textSecondary(context),
+                Icons.info_outline,
+                size: 16,
+                color: AppColors.textMuted(context),
               ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Pay setup pending',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Continue to add this staff member, then set up their pay in HR '
-            'when you are ready.',
-            style: TextStyle(color: AppColors.textMuted(context)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _matchedCard(
-    BuildContext context,
-    AddStaffWizardController controller,
-    MatchedSalaryStructure match,
-  ) {
-    final draft = controller.draft;
-    final requiredLines = match.lines.where((l) => l.required);
-    final optionalLines = match.lines.where((l) => !l.required);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppColors.border(context)),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.person_outline,
-                color: AppColors.textSecondary(context),
-              ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  match.name,
+                  'Available campuses and departments come from your school '
+                  'structure.',
                   style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary(context),
+                    color: AppColors.textMuted(context),
+                    fontSize: 12.5,
                   ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Pay summary',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-              Text(
-                'Monthly (UGX)',
-                style: TextStyle(
-                  color: AppColors.textMuted(context),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 20),
-          for (final line in requiredLines)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(child: Text(line.name)),
-                  Text(CurrencyFormatter.ugx(line.amountUgx.toDouble())),
-                ],
-              ),
-            ),
-          if (optionalLines.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Allowances',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary(context),
-                fontSize: 12.5,
-              ),
-            ),
-            const SizedBox(height: 4),
-            for (final line in optionalLines)
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                dense: true,
-                value: draft.selectedPayComponentIds.contains(line.componentId),
-                title: Text(line.name),
-                subtitle: Text(
-                  CurrencyFormatter.ugx(line.amountUgx.toDouble()),
-                ),
-                onChanged: (checked) {
-                  if (checked ?? false) {
-                    draft.selectedPayComponentIds.add(line.componentId);
-                  } else {
-                    draft.selectedPayComponentIds.remove(line.componentId);
-                  }
-                  controller.notifyDraftChanged();
-                },
-              ),
-          ],
-          const Divider(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Total monthly pay',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-              Text(
-                CurrencyFormatter.ugx(
-                  _billedTotalUgx(
-                    match,
-                    draft.selectedPayComponentIds,
-                  ).toDouble(),
-                ),
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary(context),
                 ),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _labeledField(
+    BuildContext context,
+    String label, {
+    required Widget field,
+    bool required = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: RichText(
+            text: TextSpan(
+              text: label,
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w600,
+                fontSize: 12.5,
+              ),
+              children: required
+                  ? [
+                      TextSpan(
+                        text: ' *',
+                        style: TextStyle(color: AppColors.danger(context)),
+                      ),
+                    ]
+                  : const [],
+            ),
+          ),
+        ),
+        field,
+      ],
     );
   }
 }
 
-class _CampusRow extends StatelessWidget {
-  final String? campusName;
-  final bool editable;
-  final VoidCallback? onChange;
+class _CompensationCard extends StatelessWidget {
+  final bool canConfigurePayNow;
+  final bool payNow;
+  final ValueChanged<bool> onChanged;
+  final VoidCallback onConfigurePayNow;
 
-  const _CampusRow({
-    required this.campusName,
-    required this.editable,
-    this.onChange,
+  const _CompensationCard({
+    required this.canConfigurePayNow,
+    required this.payNow,
+    required this.onChanged,
+    required this.onConfigurePayNow,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+    return PulseCard(
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Campus',
-            style: TextStyle(
-              color: AppColors.textPrimary(context),
-              fontWeight: FontWeight.w600,
-              fontSize: 12.5,
-            ),
-          ),
-          const SizedBox(height: 6),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                campusName ?? 'Select campus',
-                style: TextStyle(color: AppColors.textPrimary(context)),
+              Expanded(
+                child: Text(
+                  'Compensation setup',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
               ),
-              if (editable)
-                TextButton.icon(
-                  onPressed: onChange,
-                  icon: const Icon(Icons.unfold_more, size: 16),
-                  label: const Text('Change'),
+              if (canConfigurePayNow)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainer(context),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.lock_outline,
+                        size: 13,
+                        color: AppColors.primary(context),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Restricted to HR & Finance',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary(context),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
             ],
           ),
-          const Divider(height: 20),
+          const SizedBox(height: 8),
+          Text(
+            'Pay details are not required to create a staff profile.',
+            style: TextStyle(
+              color: AppColors.textMuted(context),
+              fontSize: 12.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (canConfigurePayNow)
+            _CompensationChoice(
+              title: 'Configure pay now',
+              subtitle: 'Continue to secure HR/Finance pay setup.',
+              selected: payNow,
+              onTap: () {
+                onChanged(true);
+                onConfigurePayNow();
+              },
+            ),
+          if (canConfigurePayNow) const SizedBox(height: 10),
+          _CompensationChoice(
+            title: 'Set up later',
+            subtitle:
+                'Create the staff profile first; authorised HR/Finance can '
+                'complete pay later.',
+            selected: !payNow,
+            onTap: () => onChanged(false),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainer(context),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.shield_outlined,
+                  size: 16,
+                  color: AppColors.textMuted(context),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Pay details are visible only to authorised HR and '
+                    'Finance users.',
+                    style: TextStyle(
+                      color: AppColors.textMuted(context),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _PayChoiceCard extends StatelessWidget {
+class _CompensationChoice extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool selected;
   final VoidCallback onTap;
 
-  const _PayChoiceCard({
+  const _CompensationChoice({
     required this.title,
     required this.subtitle,
     required this.selected,
@@ -559,11 +559,12 @@ class _PayChoiceCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           border: Border.all(
             color: selected
-                ? AppColors.textPrimary(context)
+                ? AppColors.primary(context)
                 : AppColors.border(context),
             width: selected ? 1.6 : 1,
           ),
@@ -576,10 +577,10 @@ class _PayChoiceCard extends StatelessWidget {
               selected ? Icons.radio_button_checked : Icons.radio_button_off,
               size: 18,
               color: selected
-                  ? AppColors.textPrimary(context)
+                  ? AppColors.primary(context)
                   : AppColors.textMuted(context),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -588,16 +589,16 @@ class _PayChoiceCard extends StatelessWidget {
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      fontSize: 13,
+                      fontSize: 13.5,
                       color: AppColors.textPrimary(context),
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 3),
                   Text(
                     subtitle,
                     style: TextStyle(
                       color: AppColors.textMuted(context),
-                      fontSize: 11.5,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -608,8 +609,4 @@ class _PayChoiceCard extends StatelessWidget {
       ),
     );
   }
-}
-
-extension _FirstOrNullExt<T> on Iterable<T> {
-  T? firstOrNullExt() => isEmpty ? null : first;
 }

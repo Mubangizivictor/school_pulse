@@ -110,21 +110,21 @@ Future<void> showHostelFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        Hostel(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          gender: selectedGender,
-          wardenName: wardenNameController.text,
-          wardenContact: wardenContactController.text,
-          wardenStaffId: selectedWardenStaffId,
-          capacity: int.tryParse(capacityController.text) ?? 0,
-          description: descController.text,
-          isActive: isActive,
-        ),
+      final hostel = Hostel(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        gender: selectedGender,
+        wardenName: wardenNameController.text,
+        wardenContact: wardenContactController.text,
+        wardenStaffId: selectedWardenStaffId,
+        capacity: int.tryParse(capacityController.text) ?? 0,
+        description: descController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(hostel);
     },
   );
 }
@@ -192,18 +192,18 @@ Future<void> showHostelRoomFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        HostelRoom(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          hostelId: selectedHostelId!,
-          blockName: blockController.text,
-          roomNumber: roomController.text,
-          bedCapacity: int.tryParse(bedCapacityController.text) ?? 0,
-          isActive: isActive,
-        ),
+      final room = HostelRoom(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        hostelId: selectedHostelId!,
+        blockName: blockController.text,
+        roomNumber: roomController.text,
+        bedCapacity: int.tryParse(bedCapacityController.text) ?? 0,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(room);
     },
   );
 }
@@ -256,17 +256,17 @@ Future<void> showTransportRouteFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        TransportRoute(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          code: codeController.text,
-          description: descController.text,
-          isActive: isActive,
-        ),
+      final route = TransportRoute(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        code: codeController.text,
+        description: descController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(route);
     },
   );
 }
@@ -341,19 +341,19 @@ Future<void> showTransportStopFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        TransportStop(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          routeId: selectedRouteId!,
-          name: nameController.text,
-          order: int.tryParse(orderController.text) ?? 0,
-          pickupTime: pickupTimeController.text,
-          zone: zoneController.text,
-          isActive: isActive,
-        ),
+      final stop = TransportStop(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        routeId: selectedRouteId!,
+        name: nameController.text,
+        order: int.tryParse(orderController.text) ?? 0,
+        pickupTime: pickupTimeController.text,
+        zone: zoneController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(stop);
     },
   );
 }
@@ -432,19 +432,19 @@ Future<void> showTransportVehicleFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        TransportVehicle(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          busNumber: busNumberController.text,
-          plateNumber: plateController.text,
-          capacity: int.tryParse(capacityController.text) ?? 0,
-          driverName: driverController.text,
-          routeId: selectedRouteId ?? '',
-          isActive: isActive,
-        ),
+      final vehicle = TransportVehicle(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        busNumber: busNumberController.text,
+        plateNumber: plateController.text,
+        capacity: int.tryParse(capacityController.text) ?? 0,
+        driverName: driverController.text,
+        routeId: selectedRouteId ?? '',
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(vehicle);
     },
   );
 }

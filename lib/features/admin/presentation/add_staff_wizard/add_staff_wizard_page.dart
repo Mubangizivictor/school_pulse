@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -89,11 +88,16 @@ class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
 
   void _exitWizard() {
     if (!mounted) return;
-    // The wizard deliberately blocks route pops so a system back gesture can
-    // move between stages. At the first stage, use an explicit route change
-    // instead of `maybePop()`; otherwise PopScope intercepts that pop again
-    // and the user appears unable to leave Add staff.
-    context.go('/staff/admin/users');
+    // This page was entered via `context.push('/staff/admin/users/add-staff')`
+    // (see StaffListPage/UserManagementPage), which adds an imperative
+    // Navigator entry on top of AdminShell. `context.go(...)` only updates
+    // GoRouter's notion of the current location - it doesn't pop that pushed
+    // entry - so the wizard stayed on screen even though the URL had
+    // changed. Popping the pushed route (with PopScope disabled so this is
+    // the only way out at the first stage, letting a system back gesture
+    // move between stages instead) is what actually returns to the staff
+    // list/detail screen underneath.
+    Navigator.of(context).pop();
   }
 
   void _saveDraft(BuildContext context) {

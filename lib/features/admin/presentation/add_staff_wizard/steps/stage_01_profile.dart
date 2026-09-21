@@ -42,9 +42,13 @@ String? _validateRequiredName(String? v) {
       : 'Use letters, spaces, hyphens, or apostrophes only';
 }
 
-/// Stage 1 - Profile: "Tell us about the person". Combines what used to be
-/// Personal Information, Contact Information, and Documents into one stage
-/// with clear sections, matching the reference design.
+/// Stage 1 - Profile: "Tell us about the person". Required identity/contact
+/// fields are always visible; everything optional (middle name, preferred
+/// name, gender, nationality, alternate phone, address, emergency contact)
+/// sits behind "More personal details" / "More contact details" disclosures
+/// so the step reads as fast to fill on both desktop and mobile, matching
+/// the reference design's two-column desktop layout / single-column mobile
+/// disclosure layout.
 class Stage01Profile extends StatefulWidget {
   final VoidCallback onSaveDraft;
   final VoidCallback onExit;
@@ -63,8 +67,9 @@ class _Stage01ProfileState extends State<Stage01Profile> {
   final _formKey = GlobalKey<FormState>();
 
   late final TextEditingController _first;
-  late final TextEditingController _middle;
   late final TextEditingController _last;
+  late final TextEditingController _middle;
+  late final TextEditingController _preferred;
   late final TextEditingController _email;
   late final TextEditingController _phone;
   late final TextEditingController _altPhone;
@@ -75,15 +80,25 @@ class _Stage01ProfileState extends State<Stage01Profile> {
   late final TextEditingController _emergencyPhone;
   late final TextEditingController _emergencyAltPhone;
 
-  bool _emergencyExpanded = true;
+  bool _morePersonalExpanded = false;
+  bool _moreContactExpanded = false;
+
+  static const List<String> _genderOptions = [
+    'Female',
+    'Male',
+    'Prefer not to say',
+  ];
+
+  AddStaffWizardController? _controller;
 
   @override
   void initState() {
     super.initState();
     final draft = context.read<AddStaffWizardController>().draft;
     _first = TextEditingController(text: draft.firstName);
-    _middle = TextEditingController(text: draft.middleName);
     _last = TextEditingController(text: draft.lastName);
+    _middle = TextEditingController(text: draft.middleName);
+    _preferred = TextEditingController(text: draft.preferredName);
     _email = TextEditingController(text: draft.email);
     _phone = TextEditingController(text: draft.phoneNumber);
     _altPhone = TextEditingController(text: draft.alternatePhone);
@@ -97,16 +112,98 @@ class _Stage01ProfileState extends State<Stage01Profile> {
     _emergencyAltPhone = TextEditingController(
       text: draft.emergencyContactAlternatePhone,
     );
-    _emergencyExpanded =
+
+    _morePersonalExpanded =
+        draft.middleName.isNotEmpty ||
+        draft.preferredName.isNotEmpty ||
+        draft.nationality.isNotEmpty ||
+        (draft.gender.isNotEmpty && draft.gender != 'Prefer not to say');
+    _moreContactExpanded =
+        draft.alternatePhone.isNotEmpty ||
+        draft.address.isNotEmpty ||
         draft.emergencyContactName.isNotEmpty ||
         draft.emergencyContactPhone.isNotEmpty;
+
+    // On first build, a saved draft may still be loading asynchronously
+    // (AddStaffWizardPage awaits restoreDraftIfPresent() in a post-frame
+    // callback, after this initState already captured the pre-restore,
+    // empty draft into these controllers). Listen for the controller's
+    // notifyListeners() from that restore and sync the text fields once -
+    // TextEditingControllers are only seeded in initState and otherwise
+    // never re-read draft values on rebuild, unlike the avatar initials
+    // which are recomputed live from draft.fullName on every build.
+    _controller = context.read<AddStaffWizardController>();
+    _controller!.addListener(_syncFromDraftIfEmpty);
+  }
+
+  void _syncFromDraftIfEmpty() {
+    if (!mounted) return;
+    final draft = _controller!.draft;
+    if (_first.text.isEmpty && draft.firstName.isNotEmpty) {
+      _first.text = draft.firstName;
+    }
+    if (_last.text.isEmpty && draft.lastName.isNotEmpty) {
+      _last.text = draft.lastName;
+    }
+    if (_middle.text.isEmpty && draft.middleName.isNotEmpty) {
+      _middle.text = draft.middleName;
+    }
+    if (_preferred.text.isEmpty && draft.preferredName.isNotEmpty) {
+      _preferred.text = draft.preferredName;
+    }
+    if (_email.text.isEmpty && draft.email.isNotEmpty) {
+      _email.text = draft.email;
+    }
+    if (_phone.text.isEmpty && draft.phoneNumber.isNotEmpty) {
+      _phone.text = draft.phoneNumber;
+    }
+    if (_altPhone.text.isEmpty && draft.alternatePhone.isNotEmpty) {
+      _altPhone.text = draft.alternatePhone;
+    }
+    if (_address.text.isEmpty && draft.address.isNotEmpty) {
+      _address.text = draft.address;
+    }
+    if (_nationality.text.isEmpty && draft.nationality.isNotEmpty) {
+      _nationality.text = draft.nationality;
+    }
+    if (_emergencyName.text.isEmpty && draft.emergencyContactName.isNotEmpty) {
+      _emergencyName.text = draft.emergencyContactName;
+    }
+    if (_emergencyRelationship.text.isEmpty &&
+        draft.emergencyContactRelationship.isNotEmpty) {
+      _emergencyRelationship.text = draft.emergencyContactRelationship;
+    }
+    if (_emergencyPhone.text.isEmpty &&
+        draft.emergencyContactPhone.isNotEmpty) {
+      _emergencyPhone.text = draft.emergencyContactPhone;
+    }
+    if (_emergencyAltPhone.text.isEmpty &&
+        draft.emergencyContactAlternatePhone.isNotEmpty) {
+      _emergencyAltPhone.text = draft.emergencyContactAlternatePhone;
+    }
+    setState(() {
+      _morePersonalExpanded =
+          _morePersonalExpanded ||
+          draft.middleName.isNotEmpty ||
+          draft.preferredName.isNotEmpty ||
+          draft.nationality.isNotEmpty ||
+          (draft.gender.isNotEmpty && draft.gender != 'Prefer not to say');
+      _moreContactExpanded =
+          _moreContactExpanded ||
+          draft.alternatePhone.isNotEmpty ||
+          draft.address.isNotEmpty ||
+          draft.emergencyContactName.isNotEmpty ||
+          draft.emergencyContactPhone.isNotEmpty;
+    });
   }
 
   @override
   void dispose() {
+    _controller?.removeListener(_syncFromDraftIfEmpty);
     _first.dispose();
-    _middle.dispose();
     _last.dispose();
+    _middle.dispose();
+    _preferred.dispose();
     _email.dispose();
     _phone.dispose();
     _altPhone.dispose();
@@ -121,8 +218,9 @@ class _Stage01ProfileState extends State<Stage01Profile> {
 
   void _saveFieldsToDraft(AddStaffDraft draft) {
     draft.firstName = _first.text.trim();
-    draft.middleName = _middle.text.trim();
     draft.lastName = _last.text.trim();
+    draft.middleName = _middle.text.trim();
+    draft.preferredName = _preferred.text.trim();
     draft.email = _email.text.trim();
     draft.phoneNumber = _phone.text.trim();
     draft.alternatePhone = _altPhone.text.trim();
@@ -175,7 +273,7 @@ class _Stage01ProfileState extends State<Stage01Profile> {
   Widget build(BuildContext context) {
     final controller = context.watch<AddStaffWizardController>();
     final draft = controller.draft;
-    final isWide = MediaQuery.sizeOf(context).width >= 720;
+    final isWide = MediaQuery.sizeOf(context).width >= 900;
 
     return WizardStageScaffold(
       title: 'Add staff',
@@ -183,6 +281,7 @@ class _Stage01ProfileState extends State<Stage01Profile> {
       currentStageIndex: stageIndexFor(WizardStage.profile),
       onBack: widget.onExit,
       onSaveDraft: widget.onSaveDraft,
+      contentPadding: EdgeInsets.fromLTRB(20, 0, 20, isWide ? 32 : 24),
       footer: WizardFooterButtons(
         backLabel: 'Back',
         nextLabel: 'Continue',
@@ -199,239 +298,98 @@ class _Stage01ProfileState extends State<Stage01Profile> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const WizardStageHeading(
+            WizardStageHeading(
               title: 'Tell us about the person',
-              subtitle: 'Add the basic details about this staff member.',
+              subtitle: isWide
+                  ? 'Add the essential details for this staff member. You can add work details and account access next.'
+                  : 'Add the essential details for this staff member. You can add more details and account access next.',
             ),
             const SizedBox(height: 24),
-            _PhotoPicker(
-              photo: draft.photo,
-              fullName: draft.fullName,
-              onTap: () => _pickPhoto(controller),
-            ),
-            const SizedBox(height: 24),
-            isWide
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _labeledField(
-                          'First name',
-                          TextFormField(
-                            controller: _first,
-                            textCapitalization: TextCapitalization.words,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(
-                                _nameCharPattern,
-                              ),
-                            ],
-                            decoration: const InputDecoration(
-                              hintText: 'First name',
-                            ),
-                            validator: _validateRequiredName,
-                          ),
-                          required: true,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _labeledField(
-                          'Last name',
-                          TextFormField(
-                            controller: _last,
-                            textCapitalization: TextCapitalization.words,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.allow(
-                                _nameCharPattern,
-                              ),
-                            ],
-                            decoration: const InputDecoration(
-                              hintText: 'Last name',
-                            ),
-                            validator: _validateRequiredName,
-                          ),
-                          required: true,
-                        ),
-                      ),
-                    ],
-                  )
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _labeledField(
-                        'First name',
-                        TextFormField(
-                          controller: _first,
-                          textCapitalization: TextCapitalization.words,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(_nameCharPattern),
-                          ],
-                          decoration: const InputDecoration(
-                            hintText: 'First name',
-                          ),
-                          validator: _validateRequiredName,
-                        ),
-                        required: true,
-                      ),
-                      const SizedBox(height: 16),
-                      _labeledField(
-                        'Last name',
-                        TextFormField(
-                          controller: _last,
-                          textCapitalization: TextCapitalization.words,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(_nameCharPattern),
-                          ],
-                          decoration: const InputDecoration(
-                            hintText: 'Last name',
-                          ),
-                          validator: _validateRequiredName,
-                        ),
-                        required: true,
-                      ),
-                    ],
-                  ),
-            const SizedBox(height: 16),
-            _labeledField(
-              'Middle name (optional)',
-              TextFormField(
-                controller: _middle,
-                decoration: const InputDecoration(hintText: 'Middle name'),
-              ),
-            ),
-            const SizedBox(height: 16),
-            _labeledField(
-              'Gender',
-              Row(
-                children: [
-                  Expanded(
-                    child: _SegmentChip(
-                      label: 'Woman',
-                      selected: draft.gender == 'Female',
-                      onTap: () {
-                        draft.gender = 'Female';
-                        controller.notifyDraftChanged();
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _SegmentChip(
-                      label: 'Man',
-                      selected: draft.gender == 'Male',
-                      onTap: () {
-                        draft.gender = 'Male';
-                        controller.notifyDraftChanged();
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _SegmentChip(
-                      label: 'Prefer not to say',
-                      selected: draft.gender == 'Prefer not to say',
-                      onTap: () {
-                        draft.gender = 'Prefer not to say';
-                        controller.notifyDraftChanged();
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _labeledField(
-              'Nationality (optional)',
-              TextFormField(
-                controller: _nationality,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(_nameCharPattern),
-                ],
-                decoration: const InputDecoration(hintText: 'Nationality'),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return null;
-                  if (!_nameWordPattern.hasMatch(v.trim())) {
-                    return 'Letters only';
-                  }
-                  return null;
-                },
-              ),
-            ),
-            const SizedBox(height: 28),
-            const Divider(height: 1),
-            const SizedBox(height: 20),
-            WizardSectionLabel(
-              label: 'Contact & emergency',
-              helper:
-                  'How we can reach this staff member and who to contact in an emergency.',
-            ),
-            const SizedBox(height: 14),
-            _labeledField(
-              'Email',
-              TextFormField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                inputFormatters: [
-                  FilteringTextInputFormatter.deny(RegExp(r'\s')),
-                ],
-                decoration: const InputDecoration(hintText: 'Email address'),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Required';
-                  if (!RegExp(
-                    r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
-                  ).hasMatch(v.trim())) {
-                    return 'Enter a valid email';
-                  }
-                  return null;
-                },
-              ),
-              required: true,
-            ),
-            const SizedBox(height: 16),
-            _labeledField(
-              'Phone',
-              TextFormField(
-                controller: _phone,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(_phoneCharPattern),
-                ],
-                decoration: const InputDecoration(hintText: 'Phone number'),
-                validator: (v) => _validatePhone(v, required: true),
-              ),
-              required: true,
-            ),
-            const SizedBox(height: 16),
-            _labeledField(
-              'Alternate phone (optional)',
-              TextFormField(
-                controller: _altPhone,
-                keyboardType: TextInputType.phone,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(_phoneCharPattern),
-                ],
-                decoration: const InputDecoration(
-                  hintText: 'Alternate phone number',
+            if (isWide)
+              _DesktopLayout(
+                photo: _PhotoPicker(
+                  photo: draft.photo,
+                  fullName: draft.fullName,
+                  onTap: () => _pickPhoto(controller),
                 ),
-                validator: (v) => _validatePhone(v, required: false),
+                personalDetails: _PersonalDetailsCard(
+                  isWide: true,
+                  firstController: _first,
+                  lastController: _last,
+                  middleController: _middle,
+                  preferredController: _preferred,
+                  nationalityController: _nationality,
+                  gender: draft.gender,
+                  onGenderChanged: (g) {
+                    draft.gender = g;
+                    controller.notifyDraftChanged();
+                  },
+                  expanded: _morePersonalExpanded,
+                  onToggle: () => setState(
+                    () => _morePersonalExpanded = !_morePersonalExpanded,
+                  ),
+                ),
+                contactDetails: _ContactDetailsCard(
+                  isWide: true,
+                  emailController: _email,
+                  phoneController: _phone,
+                  altPhoneController: _altPhone,
+                  addressController: _address,
+                  emergencyNameController: _emergencyName,
+                  emergencyRelationshipController: _emergencyRelationship,
+                  emergencyPhoneController: _emergencyPhone,
+                  emergencyAltPhoneController: _emergencyAltPhone,
+                  expanded: _moreContactExpanded,
+                  onToggle: () => setState(
+                    () => _moreContactExpanded = !_moreContactExpanded,
+                  ),
+                ),
+              )
+            else
+              _MobileLayout(
+                photo: _PhotoPicker(
+                  photo: draft.photo,
+                  fullName: draft.fullName,
+                  onTap: () => _pickPhoto(controller),
+                ),
+                personalDetails: _PersonalDetailsCard(
+                  isWide: false,
+                  firstController: _first,
+                  lastController: _last,
+                  middleController: _middle,
+                  preferredController: _preferred,
+                  nationalityController: _nationality,
+                  gender: draft.gender,
+                  onGenderChanged: (g) {
+                    draft.gender = g;
+                    controller.notifyDraftChanged();
+                  },
+                  expanded: _morePersonalExpanded,
+                  onToggle: () => setState(
+                    () => _morePersonalExpanded = !_morePersonalExpanded,
+                  ),
+                ),
+                contactDetails: _ContactDetailsCard(
+                  isWide: false,
+                  emailController: _email,
+                  phoneController: _phone,
+                  altPhoneController: _altPhone,
+                  addressController: _address,
+                  emergencyNameController: _emergencyName,
+                  emergencyRelationshipController: _emergencyRelationship,
+                  emergencyPhoneController: _emergencyPhone,
+                  emergencyAltPhoneController: _emergencyAltPhone,
+                  expanded: _moreContactExpanded,
+                  onToggle: () => setState(
+                    () => _moreContactExpanded = !_moreContactExpanded,
+                  ),
+                ),
               ),
+            const SizedBox(height: 14),
+            _PrivacyNotice(
+              text: 'Only authorised staff can view private contact details.',
             ),
-            const SizedBox(height: 16),
-            _labeledField(
-              'Address (optional)',
-              _AddressAutocompleteField(controller: _address),
-            ),
-            const SizedBox(height: 20),
-            _EmergencyContactCard(
-              expanded: _emergencyExpanded,
-              onToggle: () =>
-                  setState(() => _emergencyExpanded = !_emergencyExpanded),
-              nameController: _emergencyName,
-              relationshipController: _emergencyRelationship,
-              phoneController: _emergencyPhone,
-              altPhoneController: _emergencyAltPhone,
-            ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
             const Divider(height: 1),
             const SizedBox(height: 20),
             const WizardSectionLabel(
@@ -457,36 +415,700 @@ class _Stage01ProfileState extends State<Stage01Profile> {
       ),
     );
   }
+}
 
-  Widget _labeledField(String label, Widget field, {bool required = false}) {
-    return Column(
+/// Desktop: two-column layout - a wide "Personal details" + "Contact
+/// details" column on the left, a narrow "Profile photo" card on the right.
+class _DesktopLayout extends StatelessWidget {
+  final Widget photo;
+  final Widget personalDetails;
+  final Widget contactDetails;
+
+  const _DesktopLayout({
+    required this.photo,
+    required this.personalDetails,
+    required this.contactDetails,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: Builder(
-            builder: (context) => RichText(
-              text: TextSpan(
-                text: label,
-                style: TextStyle(
-                  color: AppColors.textPrimary(context),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12.5,
+        Expanded(
+          flex: 3,
+          child: Column(
+            children: [
+              personalDetails,
+              const SizedBox(height: 20),
+              contactDetails,
+            ],
+          ),
+        ),
+        const SizedBox(width: 20),
+        Expanded(
+          flex: 1,
+          child: _CardShell(
+            title: 'Profile photo (optional)',
+            child: Center(child: photo),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Mobile: single column - photo at the top, then Personal details and
+/// Contact details cards each with an internal disclosure.
+class _MobileLayout extends StatelessWidget {
+  final Widget photo;
+  final Widget personalDetails;
+  final Widget contactDetails;
+
+  const _MobileLayout({
+    required this.photo,
+    required this.personalDetails,
+    required this.contactDetails,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Align(alignment: Alignment.centerRight, child: photo),
+        const SizedBox(height: 20),
+        personalDetails,
+        const SizedBox(height: 16),
+        contactDetails,
+      ],
+    );
+  }
+}
+
+class _CardShell extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _CardShell({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.border(context)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontWeight: FontWeight.w700,
+              fontSize: 14.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _PersonalDetailsCard extends StatelessWidget {
+  final bool isWide;
+  final TextEditingController firstController;
+  final TextEditingController lastController;
+  final TextEditingController middleController;
+  final TextEditingController preferredController;
+  final TextEditingController nationalityController;
+  final String gender;
+  final ValueChanged<String> onGenderChanged;
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  const _PersonalDetailsCard({
+    required this.isWide,
+    required this.firstController,
+    required this.lastController,
+    required this.middleController,
+    required this.preferredController,
+    required this.nationalityController,
+    required this.gender,
+    required this.onGenderChanged,
+    required this.expanded,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final nameFields = isWide
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _labeledField(
+                  context,
+                  'First name',
+                  required: true,
+                  child: TextFormField(
+                    controller: firstController,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(_nameCharPattern),
+                    ],
+                    decoration: const InputDecoration(hintText: 'First name'),
+                    validator: _validateRequiredName,
+                  ),
                 ),
-                children: required
-                    ? [
-                        TextSpan(
-                          text: ' *',
-                          style: TextStyle(color: AppColors.danger(context)),
-                        ),
-                      ]
-                    : const [],
               ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _labeledField(
+                  context,
+                  'Last name',
+                  required: true,
+                  child: TextFormField(
+                    controller: lastController,
+                    textCapitalization: TextCapitalization.words,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(_nameCharPattern),
+                    ],
+                    decoration: const InputDecoration(hintText: 'Last name'),
+                    validator: _validateRequiredName,
+                  ),
+                ),
+              ),
+            ],
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _labeledField(
+                context,
+                'First name',
+                required: true,
+                child: TextFormField(
+                  controller: firstController,
+                  textCapitalization: TextCapitalization.words,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(_nameCharPattern),
+                  ],
+                  decoration: const InputDecoration(hintText: 'First name'),
+                  validator: _validateRequiredName,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _labeledField(
+                context,
+                'Last name',
+                required: true,
+                child: TextFormField(
+                  controller: lastController,
+                  textCapitalization: TextCapitalization.words,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(_nameCharPattern),
+                  ],
+                  decoration: const InputDecoration(hintText: 'Last name'),
+                  validator: _validateRequiredName,
+                ),
+              ),
+            ],
+          );
+
+    final moreFields = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const Divider(height: 1),
+        const SizedBox(height: 16),
+        isWide
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _labeledField(
+                      context,
+                      'Middle name (optional)',
+                      child: TextFormField(
+                        controller: middleController,
+                        decoration: const InputDecoration(
+                          hintText: 'Middle name',
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _labeledField(
+                      context,
+                      'Preferred name (optional)',
+                      child: TextFormField(
+                        controller: preferredController,
+                        decoration: const InputDecoration(
+                          hintText: 'Preferred name',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labeledField(
+                    context,
+                    'Middle name (optional)',
+                    child: TextFormField(
+                      controller: middleController,
+                      decoration: const InputDecoration(
+                        hintText: 'Middle name',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _labeledField(
+                    context,
+                    'Preferred name (optional)',
+                    child: TextFormField(
+                      controller: preferredController,
+                      decoration: const InputDecoration(
+                        hintText: 'Preferred name',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+        const SizedBox(height: 16),
+        isWide
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _labeledField(
+                      context,
+                      'Gender (optional)',
+                      child: _GenderDropdown(
+                        value: gender,
+                        onChanged: onGenderChanged,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _labeledField(
+                      context,
+                      'Nationality (optional)',
+                      child: TextFormField(
+                        controller: nationalityController,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(_nameCharPattern),
+                        ],
+                        decoration: const InputDecoration(
+                          hintText: 'Nationality',
+                        ),
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return null;
+                          if (!_nameWordPattern.hasMatch(v.trim())) {
+                            return 'Letters only';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _labeledField(
+                    context,
+                    'Gender (optional)',
+                    child: _GenderDropdown(
+                      value: gender,
+                      onChanged: onGenderChanged,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _labeledField(
+                    context,
+                    'Nationality (optional)',
+                    child: TextFormField(
+                      controller: nationalityController,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(_nameCharPattern),
+                      ],
+                      decoration: const InputDecoration(
+                        hintText: 'Nationality',
+                      ),
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) return null;
+                        if (!_nameWordPattern.hasMatch(v.trim())) {
+                          return 'Letters only';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+      ],
+    );
+
+    return _CardShell(
+      title: 'Personal details',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          nameFields,
+          const SizedBox(height: 4),
+          _DisclosureToggle(
+            label: 'More personal details (optional)',
+            helper: 'Middle name, preferred name, gender, nationality',
+            expanded: expanded,
+            onTap: onToggle,
+          ),
+          if (expanded) moreFields,
+        ],
+      ),
+    );
+  }
+}
+
+class _ContactDetailsCard extends StatelessWidget {
+  final bool isWide;
+  final TextEditingController emailController;
+  final TextEditingController phoneController;
+  final TextEditingController altPhoneController;
+  final TextEditingController addressController;
+  final TextEditingController emergencyNameController;
+  final TextEditingController emergencyRelationshipController;
+  final TextEditingController emergencyPhoneController;
+  final TextEditingController emergencyAltPhoneController;
+  final bool expanded;
+  final VoidCallback onToggle;
+
+  const _ContactDetailsCard({
+    required this.isWide,
+    required this.emailController,
+    required this.phoneController,
+    required this.altPhoneController,
+    required this.addressController,
+    required this.emergencyNameController,
+    required this.emergencyRelationshipController,
+    required this.emergencyPhoneController,
+    required this.emergencyAltPhoneController,
+    required this.expanded,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryFields = isWide
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 3,
+                child: _labeledField(
+                  context,
+                  'Work email',
+                  required: true,
+                  child: TextFormField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                    ],
+                    decoration: const InputDecoration(
+                      hintText: 'name@school.edu',
+                      prefixIcon: Icon(Icons.mail_outline, size: 18),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Required';
+                      if (!RegExp(
+                        r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                      ).hasMatch(v.trim())) {
+                        return 'Enter a valid email';
+                      }
+                      return null;
+                    },
+                  ),
+                  helper: 'Used for account access and communications.',
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 2,
+                child: _labeledField(
+                  context,
+                  'Phone number',
+                  required: true,
+                  child: TextFormField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(_phoneCharPattern),
+                    ],
+                    decoration: const InputDecoration(
+                      hintText: 'Phone number',
+                      prefixIcon: Icon(Icons.call_outlined, size: 18),
+                    ),
+                    validator: (v) => _validatePhone(v, required: true),
+                  ),
+                ),
+              ),
+            ],
+          )
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _labeledField(
+                context,
+                'Work email',
+                required: true,
+                child: TextFormField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                  ],
+                  decoration: const InputDecoration(
+                    hintText: 'name@school.edu',
+                    prefixIcon: Icon(Icons.mail_outline, size: 18),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Required';
+                    if (!RegExp(
+                      r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                    ).hasMatch(v.trim())) {
+                      return 'Enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+                helper: 'Used for account access and communications.',
+              ),
+              const SizedBox(height: 16),
+              _labeledField(
+                context,
+                'Phone number',
+                required: true,
+                child: TextFormField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(_phoneCharPattern),
+                  ],
+                  decoration: const InputDecoration(
+                    hintText: 'Phone number',
+                    prefixIcon: Icon(Icons.call_outlined, size: 18),
+                  ),
+                  validator: (v) => _validatePhone(v, required: true),
+                ),
+              ),
+            ],
+          );
+
+    final moreFields = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const Divider(height: 1),
+        const SizedBox(height: 16),
+        _labeledField(
+          context,
+          'Alternate phone (optional)',
+          child: TextFormField(
+            controller: altPhoneController,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(_phoneCharPattern),
+            ],
+            decoration: const InputDecoration(
+              hintText: 'Alternate phone number',
+              prefixIcon: Icon(Icons.call_outlined, size: 18),
+            ),
+            validator: (v) => _validatePhone(v, required: false),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _labeledField(
+          context,
+          'Address (optional)',
+          child: _AddressAutocompleteField(controller: addressController),
+        ),
+        const SizedBox(height: 16),
+        _EmergencyContactFields(
+          nameController: emergencyNameController,
+          relationshipController: emergencyRelationshipController,
+          phoneController: emergencyPhoneController,
+          altPhoneController: emergencyAltPhoneController,
+        ),
+      ],
+    );
+
+    return _CardShell(
+      title: 'Contact details',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          primaryFields,
+          const SizedBox(height: 4),
+          _DisclosureToggle(
+            label: 'More contact details (optional)',
+            helper: 'Add address and emergency contact information.',
+            icon: Icons.location_on_outlined,
+            expanded: expanded,
+            onTap: onToggle,
+          ),
+          if (expanded) moreFields,
+        ],
+      ),
+    );
+  }
+}
+
+Widget _labeledField(
+  BuildContext context,
+  String label, {
+  required Widget child,
+  bool required = false,
+  String? helper,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: RichText(
+          text: TextSpan(
+            text: label,
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontWeight: FontWeight.w600,
+              fontSize: 12.5,
+            ),
+            children: required
+                ? [
+                    TextSpan(
+                      text: ' *',
+                      style: TextStyle(color: AppColors.danger(context)),
+                    ),
+                  ]
+                : const [],
+          ),
+        ),
+      ),
+      child,
+      if (helper != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            helper,
+            style: TextStyle(
+              color: AppColors.textMuted(context),
+              fontSize: 11.5,
             ),
           ),
         ),
-        field,
-      ],
+    ],
+  );
+}
+
+class _GenderDropdown extends StatelessWidget {
+  final String gender;
+  final ValueChanged<String> onChanged;
+
+  const _GenderDropdown({required String value, required this.onChanged})
+    : gender = value;
+
+  @override
+  Widget build(BuildContext context) {
+    final current = _Stage01ProfileState._genderOptions.contains(gender)
+        ? gender
+        : 'Prefer not to say';
+    return DropdownButtonFormField<String>(
+      initialValue: current,
+      decoration: const InputDecoration(hintText: 'Gender'),
+      items: _Stage01ProfileState._genderOptions
+          .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+          .toList(),
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
+    );
+  }
+}
+
+class _DisclosureToggle extends StatelessWidget {
+  final String label;
+  final String helper;
+  final IconData? icon;
+  final bool expanded;
+  final VoidCallback onTap;
+
+  const _DisclosureToggle({
+    required this.label,
+    required this.helper,
+    this.icon,
+    required this.expanded,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        margin: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.border(context)),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 18, color: AppColors.textMuted(context)),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: AppColors.textPrimary(context),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    helper,
+                    style: TextStyle(
+                      color: AppColors.textMuted(context),
+                      fontSize: 11.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              expanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              color: AppColors.textMuted(context),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -512,48 +1134,26 @@ class _PhotoPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        children: [
-          GestureDetector(
-            onTap: onTap,
-            child: Stack(
-              children: [
-                DottedCircleAvatar(photo: photo, initials: _initials),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.textPrimary(context),
-                    ),
-                    child: Icon(
-                      Icons.add,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          GestureDetector(
-            onTap: onTap,
-            child: Text(
-              'Add photo',
-              style: TextStyle(
-                color: AppColors.textPrimary(context),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onTap,
+          child: DottedCircleAvatar(photo: photo, initials: _initials),
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: onTap,
+          icon: const Icon(Icons.file_upload_outlined, size: 16),
+          label: const Text('Upload photo'),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Used only where your school chooses to display staff profiles.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.textMuted(context), fontSize: 11),
+        ),
+      ],
     );
   }
 }
@@ -602,59 +1202,13 @@ class DottedCircleAvatar extends StatelessWidget {
   }
 }
 
-class _SegmentChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _SegmentChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.textPrimary(context) : Colors.transparent,
-          border: Border.all(color: AppColors.border(context)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w600,
-            color: selected
-                ? Theme.of(context).colorScheme.onPrimary
-                : AppColors.textPrimary(context),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmergencyContactCard extends StatelessWidget {
-  final bool expanded;
-  final VoidCallback onToggle;
+class _EmergencyContactFields extends StatelessWidget {
   final TextEditingController nameController;
   final TextEditingController relationshipController;
   final TextEditingController phoneController;
   final TextEditingController altPhoneController;
 
-  const _EmergencyContactCard({
-    required this.expanded,
-    required this.onToggle,
+  const _EmergencyContactFields({
     required this.nameController,
     required this.relationshipController,
     required this.phoneController,
@@ -664,100 +1218,92 @@ class _EmergencyContactCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         border: Border.all(color: AppColors.border(context)),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
-            onTap: onToggle,
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Emergency contact (optional)',
-                          style: TextStyle(
-                            color: AppColors.textPrimary(context),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Used only if the school needs to reach someone.',
-                          style: TextStyle(
-                            color: AppColors.textMuted(context),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    expanded
-                        ? Icons.keyboard_arrow_up
-                        : Icons.keyboard_arrow_down,
-                    color: AppColors.textMuted(context),
-                  ),
-                ],
-              ),
+          Text(
+            'Emergency contact (optional)',
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
             ),
           ),
-          if (expanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Divider(height: 1),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: 'Full name'),
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: relationshipController,
-                    decoration: const InputDecoration(
-                      labelText: 'Relationship',
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: phoneController,
-                    keyboardType: TextInputType.phone,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(_phoneCharPattern),
-                    ],
-                    decoration: const InputDecoration(labelText: 'Phone'),
-                    validator: (v) => (v?.trim().isNotEmpty ?? false)
-                        ? _validatePhone(v, required: false)
-                        : null,
-                  ),
-                  const SizedBox(height: 14),
-                  TextFormField(
-                    controller: altPhoneController,
-                    keyboardType: TextInputType.phone,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(_phoneCharPattern),
-                    ],
-                    decoration: const InputDecoration(
-                      labelText: 'Alternate phone',
-                    ),
-                    validator: (v) => (v?.trim().isNotEmpty ?? false)
-                        ? _validatePhone(v, required: false)
-                        : null,
-                  ),
-                ],
-              ),
+          const SizedBox(height: 2),
+          Text(
+            'Used only if the school needs to reach someone.',
+            style: TextStyle(
+              color: AppColors.textMuted(context),
+              fontSize: 11.5,
             ),
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: nameController,
+            decoration: const InputDecoration(labelText: 'Full name'),
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: relationshipController,
+            decoration: const InputDecoration(labelText: 'Relationship'),
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: phoneController,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(_phoneCharPattern),
+            ],
+            decoration: const InputDecoration(labelText: 'Phone'),
+            validator: (v) => (v?.trim().isNotEmpty ?? false)
+                ? _validatePhone(v, required: false)
+                : null,
+          ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: altPhoneController,
+            keyboardType: TextInputType.phone,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(_phoneCharPattern),
+            ],
+            decoration: const InputDecoration(labelText: 'Alternate phone'),
+            validator: (v) => (v?.trim().isNotEmpty ?? false)
+                ? _validatePhone(v, required: false)
+                : null,
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _PrivacyNotice extends StatelessWidget {
+  final String text;
+
+  const _PrivacyNotice({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(
+          Icons.shield_outlined,
+          size: 16,
+          color: AppColors.textMuted(context),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(color: AppColors.textMuted(context), fontSize: 12),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -905,6 +1451,7 @@ class _AddressAutocompleteFieldState extends State<_AddressAutocompleteField> {
           onChanged: _onChanged,
           decoration: InputDecoration(
             hintText: 'Address',
+            prefixIcon: const Icon(Icons.location_on_outlined, size: 18),
             suffixIcon: _loading
                 ? const Padding(
                     padding: EdgeInsets.all(14),

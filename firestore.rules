@@ -649,8 +649,13 @@ service cloud.firestore {
         request.resource.data.status in ['draft', 'cancelled'] &&
         // Structured guardian consent is written only by guardian_consent.js's
         // callables (Cloud Functions bypass rules); a client update must
-        // never introduce or change it directly.
-        request.resource.data.guardianConsent == resource.data.guardianConsent &&
+        // never introduce or change it directly. Guarded with a presence
+        // check first: comparing against a wholly-absent field (drafts
+        // created before this field existed, or never touched by the
+        // consent callable) is a hard evaluation error in the rules engine,
+        // not a false comparison, and would deny the entire write.
+        (!('guardianConsent' in resource.data) ||
+          request.resource.data.guardianConsent == resource.data.guardianConsent) &&
         schoolCanWrite(resource.data.schoolId);
       allow delete: if false;
 

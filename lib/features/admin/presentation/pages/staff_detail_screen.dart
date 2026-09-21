@@ -6,6 +6,8 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
+import 'package:school_pulse/features/admin/domain/services/staff_admin_lockout_guard.dart';
 import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_staff_wizard_controller.dart';
 import 'package:school_pulse/features/admin/presentation/pages/edit_staff_screen.dart';
 import 'package:school_pulse/features/admin/presentation/pages/staff_id_card_screen.dart';
@@ -543,6 +545,39 @@ class _AccountOnboardingCardState extends State<_AccountOnboardingCard> {
 
   Future<void> _toggleActive() async {
     final activating = !widget.user.isActive;
+    final authState = context.read<AuthBloc>().state;
+
+    if (!activating && authState is AuthAuthenticated) {
+      setState(() => _working = true);
+      final isLastAdmin = await StaffAdminLockoutGuard.isLastAdmin(
+        schoolId: authState.user.schoolId,
+        staffId: widget.user.id,
+        candidateRoles: widget.user.roles,
+      );
+      if (!mounted) return;
+      setState(() => _working = false);
+      if (isLastAdmin) {
+        await showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text("Can't deactivate this account"),
+            content: Text(
+              '${widget.user.name} is the only remaining Director, Head '
+              'Teacher or School Admin for this school. Assign another '
+              'admin role first, then deactivate this account.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -586,6 +621,19 @@ class _AccountOnboardingCardState extends State<_AccountOnboardingCard> {
             ),
           ),
         );
+        if (authState is AuthAuthenticated) {
+          di.sl<AuditRepository>().logAction(
+            schoolId: authState.user.schoolId,
+            title: activating ? 'Staff Reactivated' : 'Staff Deactivated',
+            description: activating
+                ? '${widget.user.name} was reactivated.'
+                : '${widget.user.name} was deactivated.',
+            iconName: activating ? 'lock_open' : 'lock_outline',
+            colorHex: activating ? 'FF4CAF50' : 'FFF44336',
+            userId: authState.user.id,
+            relatedEntityId: widget.user.id,
+          );
+        }
       },
     );
   }
@@ -978,6 +1026,62 @@ class _AccountRolesEditorSheetState extends State<_AccountRolesEditorSheet> {
       setState(() => _error = 'Select at least one role.');
       return;
     }
+
+    final removedAdminRoles = widget.staff.roles
+        .where(UserRoleDisplay.adminRoles.contains)
+        .where((r) => !_selected.contains(r))
+        .toList();
+    final authState = context.read<AuthBloc>().state;
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : null;
+
+    if (removedAdminRoles.isNotEmpty && schoolId != null) {
+      setState(() => _saving = true);
+      final isLastAdmin = await StaffAdminLockoutGuard.isLastAdmin(
+        schoolId: schoolId,
+        staffId: widget.staff.id,
+        candidateRoles: removedAdminRoles,
+      );
+      if (!mounted) return;
+      if (isLastAdmin) {
+        setState(() {
+          _saving = false;
+          _error =
+              '${widget.staff.name} is the only remaining Director, Head '
+              'Teacher or School Admin for this school. Assign another '
+              'admin role to someone else before removing this one.';
+        });
+        return;
+      }
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Remove admin access?'),
+          content: Text(
+            'This removes ${removedAdminRoles.map(UserRoleDisplay.name).join(', ')} '
+            'from ${widget.staff.name}. They will lose the admin-console '
+            'access that came with ${removedAdminRoles.length == 1 ? 'this role' : 'these roles'}.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Remove'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      if (confirmed != true) {
+        setState(() => _saving = false);
+        return;
+      }
+    }
+
     setState(() {
       _saving = true;
       _error = null;
@@ -993,7 +1097,22 @@ class _AccountRolesEditorSheetState extends State<_AccountRolesEditorSheet> {
                   'Ask a Director, Head Teacher, or School Admin.'
             : failure.message;
       }),
-      (_) => Navigator.of(context).pop(UserModel.fromEntity(updated)),
+      (_) {
+        if (schoolId != null && authState is AuthAuthenticated) {
+          di.sl<AuditRepository>().logAction(
+            schoolId: schoolId,
+            title: 'Staff Roles Updated',
+            description:
+                '${widget.staff.name}\'s account roles were changed to '
+                '${_selected.map(UserRoleDisplay.name).join(', ')}.',
+            iconName: 'admin_panel_settings',
+            colorHex: 'FF2196F3',
+            userId: authState.user.id,
+            relatedEntityId: widget.staff.id,
+          );
+        }
+        Navigator.of(context).pop(UserModel.fromEntity(updated));
+      },
     );
   }
 

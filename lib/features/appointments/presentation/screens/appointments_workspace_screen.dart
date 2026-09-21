@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/core/user_roles.dart';
@@ -238,7 +239,7 @@ class _Stats extends StatelessWidget {
       (
         'Today',
         count((a) => DateUtils.isSameDay(a.scheduledStart, today)),
-        Colors.black,
+        AppColors.textPrimary(context),
       ),
       (
         'Upcoming',
@@ -247,22 +248,22 @@ class _Stats extends StatelessWidget {
               a.scheduledStart.isAfter(DateTime.now()) &&
               a.status == AppointmentStatus.approved,
         ),
-        Colors.black,
+        AppColors.textPrimary(context),
       ),
       (
         'Pending',
         count((a) => a.status == AppointmentStatus.pending),
-        Colors.black,
+        AppColors.textPrimary(context),
       ),
       (
         'Completed',
         count((a) => a.status == AppointmentStatus.completed),
-        Colors.black,
+        AppColors.textPrimary(context),
       ),
       (
         'Cancelled',
         count((a) => a.status == AppointmentStatus.cancelled),
-        Colors.black,
+        AppColors.textPrimary(context),
       ),
       (
         'Missed',
@@ -271,7 +272,7 @@ class _Stats extends StatelessWidget {
               a.status == AppointmentStatus.noShow ||
               a.status == AppointmentStatus.expired,
         ),
-        Colors.black,
+        AppColors.textPrimary(context),
       ),
     ];
     return LayoutBuilder(

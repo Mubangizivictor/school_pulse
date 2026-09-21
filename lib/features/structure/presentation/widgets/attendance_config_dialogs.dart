@@ -83,16 +83,16 @@ Future<void> showAttendanceTypeFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        AttendanceTypeDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          colorHex: _colorToHex(selectedColor),
-          isActive: isActive,
-        ),
+      final type = AttendanceTypeDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        colorHex: _colorToHex(selectedColor),
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(type);
     },
   );
 }
@@ -136,15 +136,15 @@ Future<void> showAttendanceSessionFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        AttendanceSessionDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          isActive: isActive,
-        ),
+      final session = AttendanceSessionDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(session);
     },
   );
 }

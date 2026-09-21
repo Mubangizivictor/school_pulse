@@ -64,6 +64,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   case CameraFacing.front:
                     return const Icon(Icons.camera_front);
                   case CameraFacing.back:
+                  case CameraFacing.external:
+                  case CameraFacing.unknown:
                     return const Icon(Icons.camera_rear);
                 }
               },

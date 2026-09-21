@@ -54,6 +54,14 @@ class _DirectStudentRegistrationScreenState
   int _step = -1;
   String _selectedPath = 'direct';
   bool _draftPersisted = false;
+  // Bumped on every _save() dispatch; a save only commits its own
+  // _draftPersisted/success side effects if it's still the most recently
+  // dispatched one by the time its write resolves. Without this, an earlier
+  // slow save (e.g. dispatched by _next() before guardians were added) can
+  // land after a later, faster save and silently overwrite it with stale
+  // data - including resetting createdAt, since it read !_draftPersisted
+  // before the first save had a chance to flip it.
+  int _saveGeneration = 0;
   bool _saving = false, _enrolling = false, _consent = false, _override = false;
   bool _reviewed = false;
   bool _submittedCurrentStep = false;
@@ -107,7 +115,14 @@ class _DirectStudentRegistrationScreenState
   String _transportChoice = 'none';
   String? _selectedRouteId;
   String? _mealChoice;
-  String? _lastSavedSupportText;
+  // Defaults to '' (not null) so the "nothing changed" guard in
+  // _saveSupportNotes short-circuits correctly when the support notes field
+  // was never touched - otherwise every draft autosave attempted a write to
+  // the clinical-restricted subcollection for an empty note, which fails
+  // with a permission-denied for any staff member without a health/support
+  // role and surfaced as a generic "Unable to save" error on the whole
+  // draft, even though nothing about support notes had actually changed.
+  String _lastSavedSupportText = '';
   bool _supportNotesAccessDenied = false;
   final _first = TextEditingController(),
       _middle = TextEditingController(),
@@ -574,6 +589,12 @@ class _DirectStudentRegistrationScreenState
         ),
       );
     }
+    // Snapshot both the outgoing generation number and whether this dispatch
+    // considers the draft "new" before the network round-trip, so a slower
+    // earlier save can never overwrite fields a faster later save already
+    // wrote (see _saveGeneration doc comment above).
+    final generation = ++_saveGeneration;
+    final isFirstSaveForThisDispatch = !_draftPersisted;
     try {
       await _db
           .collection('direct_enrolment_drafts')
@@ -582,9 +603,11 @@ class _DirectStudentRegistrationScreenState
             ..._data,
             'createdBy': auth.user.id,
             'updatedAt': FieldValue.serverTimestamp(),
-            if (!_draftPersisted) 'createdAt': FieldValue.serverTimestamp(),
+            if (isFirstSaveForThisDispatch)
+              'createdAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true))
           .timeout(const Duration(seconds: 10));
+      if (generation != _saveGeneration) return;
       await _saveSupportNotes(auth.user.id);
       _draftPersisted = true;
       if (!quiet && mounted)
@@ -592,6 +615,7 @@ class _DirectStudentRegistrationScreenState
           context,
         ).showSnackBar(const SnackBar(content: Text('Saved just now')));
     } on FirebaseException catch (e) {
+      if (generation != _saveGeneration) return;
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -599,6 +623,7 @@ class _DirectStudentRegistrationScreenState
           ),
         );
     } catch (_) {
+      if (generation != _saveGeneration) return;
       // Any other failure (e.g. genuinely offline, no connectivity at all)
       // must not trap the user on the current step - the draft simply
       // stays unsaved locally and the next successful save reconciles it.
@@ -611,7 +636,8 @@ class _DirectStudentRegistrationScreenState
           ),
         );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (generation == _saveGeneration && mounted)
+        setState(() => _saving = false);
     }
   }
 
@@ -1682,17 +1708,26 @@ class _DirectStudentRegistrationScreenState
           ),
         ),
       ),
-      OutlinedButton.icon(
-        onPressed: () => _guardian(null),
-        icon: const Icon(Icons.person_add_alt_1),
-        label: const Text('Add guardian'),
-      ),
-      const SizedBox(height: 10),
-      OutlinedButton.icon(
-        onPressed: _existing,
-        icon: const Icon(Icons.search),
-        label: const Text('Find existing family'),
-      ),
+      if (_guardians.length < 2) ...[
+        OutlinedButton.icon(
+          onPressed: () => _guardian(null),
+          icon: const Icon(Icons.person_add_alt_1),
+          label: const Text('Add guardian'),
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          onPressed: _existing,
+          icon: const Icon(Icons.search),
+          label: const Text('Find existing family'),
+        ),
+      ] else
+        const Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text(
+            'A student can be linked to at most 2 parents/guardians. '
+            'Remove one to add another.',
+          ),
+        ),
       if (_canUseGuardianOverride) ...[
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
@@ -3621,6 +3656,7 @@ class _DirectStudentRegistrationScreenState
   }
 
   Future<void> _guardian(Map<String, dynamic>? old) async {
+    if (old == null && _guardians.length >= 2) return;
     final n = TextEditingController(text: old?['name']),
         r = TextEditingController(text: old?['relationship']),
         e = TextEditingController(text: old?['email']);
@@ -3746,6 +3782,7 @@ class _DirectStudentRegistrationScreenState
   }
 
   Future<void> _existing() async {
+    if (_guardians.length >= 2) return;
     final c = TextEditingController();
     final v = await showDialog<String>(
       context: context,
@@ -3909,7 +3946,15 @@ class _DirectStudentRegistrationScreenState
     } on FirebaseFunctionsException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? 'Could not record consent.')),
+          SnackBar(
+            content: Text('Could not record consent — ${e.message ?? e.code}'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not record consent — $e')),
         );
       }
     } finally {

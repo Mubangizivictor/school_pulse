@@ -220,8 +220,9 @@ Future<void> showLevelFormDialog(
                                       .order)
                             level,
                       ];
-                      onSave(changed);
+                      FocusManager.instance.primaryFocus?.unfocus();
                       Navigator.pop(context);
+                      onSave(changed);
                     },
                     child: Text(existing != null ? 'Save changes' : 'Add level'),
                   ),
@@ -466,18 +467,18 @@ Future<void> showAcademicYearFormDialog(
                               setState(() => showDateOrderError = true);
                               return;
                             }
-                            onSave(
-                              AcademicYear(
-                                id: existing?.id ?? const Uuid().v4(),
-                                schoolId: existing?.schoolId ?? schoolId,
-                                name: nameController.text.trim(),
-                                startDate: startDate!,
-                                endDate: endDate!,
-                                isCurrent: isCurrent,
-                                isArchived: existing?.isArchived ?? false,
-                              ),
+                            final year = AcademicYear(
+                              id: existing?.id ?? const Uuid().v4(),
+                              schoolId: existing?.schoolId ?? schoolId,
+                              name: nameController.text.trim(),
+                              startDate: startDate!,
+                              endDate: endDate!,
+                              isCurrent: isCurrent,
+                              isArchived: existing?.isArchived ?? false,
                             );
+                            FocusManager.instance.primaryFocus?.unfocus();
                             Navigator.pop(context);
+                            onSave(year);
                           },
                           child: Text(
                             existing == null
@@ -789,20 +790,20 @@ Future<void> showAcademicTermFormDialog(
                                 setState(() => showDateRequiredError = true);
                                 return;
                               }
-                              onSave(
-                                AcademicTerm(
-                                  id: existing?.id ?? const Uuid().v4(),
-                                  schoolId: existing?.schoolId ?? schoolId,
-                                  academicYearId: year.id,
-                                  name: nameController.text.trim(),
-                                  order: existing?.order ?? sequence,
-                                  startDate: startDate!,
-                                  endDate: endDate!,
-                                  isCurrent: isCurrent,
-                                  periodType: periodType,
-                                ),
+                              final term = AcademicTerm(
+                                id: existing?.id ?? const Uuid().v4(),
+                                schoolId: existing?.schoolId ?? schoolId,
+                                academicYearId: year.id,
+                                name: nameController.text.trim(),
+                                order: existing?.order ?? sequence,
+                                startDate: startDate!,
+                                endDate: endDate!,
+                                isCurrent: isCurrent,
+                                periodType: periodType,
                               );
+                              FocusManager.instance.primaryFocus?.unfocus();
                               Navigator.pop(context);
+                              onSave(term);
                             },
                             child: Text(
                               existing == null
@@ -915,19 +916,19 @@ Future<void> showClassFormDialog(
             ElevatedButton(
               onPressed: () {
                 if (!formKey.currentState!.validate()) return;
-                onSave(
-                  SchoolClass(
-                    id: existing.id,
-                    schoolId: existing.schoolId,
-                    name: nameController.text,
-                    code: codeController.text,
-                    levelId: selectedLevelId ?? '',
-                    capacity: int.tryParse(capacityController.text) ?? 0,
-                    description: descController.text,
-                    isActive: isActive,
-                  ),
+                final schoolClass = SchoolClass(
+                  id: existing.id,
+                  schoolId: existing.schoolId,
+                  name: nameController.text,
+                  code: codeController.text,
+                  levelId: selectedLevelId ?? '',
+                  capacity: int.tryParse(capacityController.text) ?? 0,
+                  description: descController.text,
+                  isActive: isActive,
                 );
+                FocusManager.instance.primaryFocus?.unfocus();
                 Navigator.pop(context);
+                onSave(schoolClass);
               },
               child: const Text('Save'),
             ),
@@ -1032,20 +1033,19 @@ Future<void> showClassFormDialog(
                     child: FilledButton(
                       onPressed: () {
                         if (!formKey.currentState!.validate()) return;
-                        onSave(
-                          SchoolClass(
-                            id: const Uuid().v4(),
-                            schoolId: schoolId,
-                            name: nameController.text.trim(),
-                            code: '',
-                            levelId: selectedLevelId ?? '',
-                            capacity:
-                                int.tryParse(capacityController.text) ?? 0,
-                            description: '',
-                            isActive: true,
-                          ),
+                        final schoolClass = SchoolClass(
+                          id: const Uuid().v4(),
+                          schoolId: schoolId,
+                          name: nameController.text.trim(),
+                          code: '',
+                          levelId: selectedLevelId ?? '',
+                          capacity: int.tryParse(capacityController.text) ?? 0,
+                          description: '',
+                          isActive: true,
                         );
+                        FocusManager.instance.primaryFocus?.unfocus();
                         Navigator.pop(context);
+                        onSave(schoolClass);
                       },
                       child: const Text('Add class'),
                     ),
@@ -1141,18 +1141,18 @@ Future<void> showStreamFormDialog(
             ElevatedButton(
               onPressed: () {
                 if (!formKey.currentState!.validate()) return;
-                onSave(
-                  ClassStream(
-                    id: existing.id,
-                    schoolId: existing.schoolId,
-                    name: nameController.text,
-                    code: codeController.text,
-                    classId: selectedClassId ?? '',
-                    capacity: int.tryParse(capacityController.text) ?? 0,
-                    isActive: isActive,
-                  ),
+                final stream = ClassStream(
+                  id: existing.id,
+                  schoolId: existing.schoolId,
+                  name: nameController.text,
+                  code: codeController.text,
+                  classId: selectedClassId ?? '',
+                  capacity: int.tryParse(capacityController.text) ?? 0,
+                  isActive: isActive,
                 );
+                FocusManager.instance.primaryFocus?.unfocus();
                 Navigator.pop(context);
+                onSave(stream);
               },
               child: const Text('Save'),
             ),
@@ -1303,18 +1303,18 @@ Future<void> showStreamFormDialog(
                     child: FilledButton(
                       onPressed: () {
                         if (!formKey.currentState!.validate()) return;
-                        onSave(
-                          ClassStream(
-                            id: const Uuid().v4(),
-                            schoolId: schoolId,
-                            name: nameController.text.trim(),
-                            code: '',
-                            classId: selectedClassId ?? '',
-                            capacity: capacity,
-                            isActive: true,
-                          ),
+                        final stream = ClassStream(
+                          id: const Uuid().v4(),
+                          schoolId: schoolId,
+                          name: nameController.text.trim(),
+                          code: '',
+                          classId: selectedClassId ?? '',
+                          capacity: capacity,
+                          isActive: true,
                         );
+                        FocusManager.instance.primaryFocus?.unfocus();
                         Navigator.pop(context);
+                        onSave(stream);
                       },
                       child: const Text('Add stream'),
                     ),
@@ -1709,18 +1709,18 @@ Future<void> showDepartmentFormDialog(
             ElevatedButton(
               onPressed: () {
                 if (!formKey.currentState!.validate()) return;
-                onSave(
-                  Department(
-                    id: existing.id,
-                    schoolId: existing.schoolId,
-                    name: nameController.text,
-                    code: codeController.text,
-                    description: descController.text,
-                    headOfDepartmentStaffId: existing.headOfDepartmentStaffId,
-                    isActive: isActive,
-                  ),
+                final department = Department(
+                  id: existing.id,
+                  schoolId: existing.schoolId,
+                  name: nameController.text,
+                  code: codeController.text,
+                  description: descController.text,
+                  headOfDepartmentStaffId: existing.headOfDepartmentStaffId,
+                  isActive: isActive,
                 );
+                FocusManager.instance.primaryFocus?.unfocus();
                 Navigator.pop(context);
+                onSave(department);
               },
               child: const Text('Save'),
             ),
@@ -1802,18 +1802,24 @@ Future<void> showDepartmentFormDialog(
                 child: FilledButton(
                   onPressed: () {
                     if (!formKey.currentState!.validate()) return;
-                    onSave(
-                      Department(
-                        id: const Uuid().v4(),
-                        schoolId: schoolId,
-                        name: nameController.text.trim(),
-                        code: codeController.text.trim(),
-                        description: descController.text.trim(),
-                        headOfDepartmentStaffId: '',
-                        isActive: true,
-                      ),
+                    final department = Department(
+                      id: const Uuid().v4(),
+                      schoolId: schoolId,
+                      name: nameController.text.trim(),
+                      code: codeController.text.trim(),
+                      description: descController.text.trim(),
+                      headOfDepartmentStaffId: '',
+                      isActive: true,
                     );
+                    // Dismiss the keyboard and pop the sheet before
+                    // dispatching: onSave triggers a BlocBuilder rebuild of
+                    // the page underneath this sheet, and popping afterwards
+                    // (or while the keyboard's MediaQuery dependency is still
+                    // tearing down) can target an Element already
+                    // invalidated by that rebuild.
+                    FocusManager.instance.primaryFocus?.unfocus();
                     Navigator.pop(context);
+                    onSave(department);
                   },
                   child: const Text('Add department'),
                 ),
@@ -1883,16 +1889,16 @@ Future<void> showDesignationFormDialog(
           ElevatedButton(
             onPressed: () {
               if (!formKey.currentState!.validate()) return;
-              onSave(
-                StaffDesignation(
-                  id: existing?.id ?? const Uuid().v4(),
-                  schoolId: existing?.schoolId ?? schoolId,
-                  name: nameController.text,
-                  description: descController.text,
-                  isActive: isActive,
-                ),
+              final designation = StaffDesignation(
+                id: existing?.id ?? const Uuid().v4(),
+                schoolId: existing?.schoolId ?? schoolId,
+                name: nameController.text,
+                description: descController.text,
+                isActive: isActive,
               );
+              FocusManager.instance.primaryFocus?.unfocus();
               Navigator.pop(context);
+              onSave(designation);
             },
             child: Text(existing == null ? 'Add' : 'Save'),
           ),

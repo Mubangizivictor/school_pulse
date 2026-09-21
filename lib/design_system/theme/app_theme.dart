@@ -177,7 +177,13 @@ class AppTheme {
         disabledColor: surfaceMuted,
         selectedColor: foreground,
         secondarySelectedColor: foreground,
-        labelStyle: TextStyle(color: foreground),
+        labelStyle: WidgetStateTextStyle.resolveWith(
+          (states) => TextStyle(
+            color: states.contains(WidgetState.selected)
+                ? background
+                : foreground,
+          ),
+        ),
         secondaryLabelStyle: TextStyle(color: background),
         side: outline,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.small),

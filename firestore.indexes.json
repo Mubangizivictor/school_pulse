@@ -2397,6 +2397,20 @@
       ]
     },
     {
+      "collectionGroup": "departments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "schoolId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "displayOrder",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "staff_designations",
       "queryScope": "COLLECTION",
       "fields": [

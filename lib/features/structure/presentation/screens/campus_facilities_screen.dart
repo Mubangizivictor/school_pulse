@@ -214,12 +214,86 @@ class _FacilitiesTab extends StatelessWidget {
       byBuilding.putIfAbsent(label, () => []).add(facility);
     }
 
+    void onAddCampus() => showCampusFormDialog(
+      context,
+      schoolId: schoolId,
+      onSave: (c) => bloc.add(SaveCampusRequested(c)),
+    );
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Campuses',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: onAddCampus,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add campus'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (state.campuses.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'Every school needs at least one campus - it is required '
+                  'before staff, classes and other setup can be assigned.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              )
+            else
+              for (final campus in state.campuses)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: AppCard(
+                    child: ListTile(
+                      leading: const Icon(Icons.location_city_outlined),
+                      title: Text(
+                        campus.name,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: campus.address.isNotEmpty
+                          ? Text(campus.address)
+                          : null,
+                      trailing: PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert),
+                        onSelected: (action) {
+                          if (action == 'edit') {
+                            showCampusFormDialog(
+                              context,
+                              schoolId: schoolId,
+                              existing: campus,
+                              onSave: (u) => bloc.add(SaveCampusRequested(u)),
+                            );
+                          }
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [

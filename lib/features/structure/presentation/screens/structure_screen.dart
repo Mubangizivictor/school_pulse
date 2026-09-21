@@ -106,8 +106,43 @@ class _StructureScreenState extends State<StructureScreen> {
   List<String> get _stepTitles =>
       _steps.map((step) => step.title).toList(growable: false);
 
+  @override
+  void initState() {
+    super.initState();
+    // Resume at the first step that still needs setup instead of always
+    // reopening at Institution: this screen has no persisted "current step"
+    // of its own, and every one of the 16 steps' data (institution profile,
+    // academic years, classes, subjects, ...) already lives in
+    // StructureBloc's state, so an admin who already configured most of
+    // Structure was otherwise forced to click through every prior step
+    // again just to reach the one they actually wanted to edit.
+    final state = context.read<StructureBloc>().state;
+    _index = _firstIncompleteStepIndex(state);
+  }
+
+  int _firstIncompleteStepIndex(StructureState state) {
+    final institutionConfigured = state.institutionProfile.name
+        .trim()
+        .isNotEmpty;
+    if (!institutionConfigured) return 0;
+    final hasCurrentYear = state.academicYears.any(
+      (year) => year.isCurrent && !year.isArchived,
+    );
+    if (!hasCurrentYear) return 1;
+    if (state.academicTerms.isEmpty) return 2;
+    if (!state.levels.any((level) => level.isActive)) return 3;
+    if (!state.classes.any((schoolClass) => schoolClass.isActive)) return 4;
+    // Streams (5) and Teaching plans (7) are optional steps with no
+    // continueEnabled gate in the switch below, so they can't block resume.
+    if (!state.subjects.any((subject) => subject.isActive)) return 6;
+    // Steps 8-14 (departments, responsibilities, assessment, spaces,
+    // operations, feature choices, timetables) are all optional/ungated -
+    // land on Review (15) once every required step above is satisfied.
+    return _steps.length - 1;
+  }
+
   Future<void> _goBack() async {
-    if (!await _confirmLeaveCurrentStep()) return;
+    if (!await _confirmLeaveOrExit()) return;
     if (!mounted) return;
     setState(() => _index--);
   }
@@ -344,7 +379,7 @@ class _StructureScreenState extends State<StructureScreen> {
           stepTitles: _stepTitles,
           onJumpToStep: (index) => setState(() => _index = index),
           onBack: () async {
-            if (!await _confirmLeaveCurrentStep()) return;
+            if (!await _confirmLeaveOrExit()) return;
             if (context.mounted) Navigator.of(context).maybePop();
           },
           onContinue: _goContinue,
@@ -361,10 +396,30 @@ class _StructureScreenState extends State<StructureScreen> {
     );
   }
 
+  /// Gates moving forward (Continue): Step 1 must pass full validation
+  /// before its data counts as saved.
   Future<bool> _confirmLeaveCurrentStep() async {
     if (_index == 0) {
       return _institutionTabKey.currentState?.saveAndValidateForContinue() ??
           false;
+    }
+    if (_index == 12) {
+      return _timetableSectionKey.currentState?.saveIfDirty() ?? true;
+    }
+    return true;
+  }
+
+  /// Gates moving backward or exiting the wizard entirely. Unlike
+  /// [_confirmLeaveCurrentStep], this must never require Step 1's fields to
+  /// pass "Continue" validation - a partially-filled profile is a legitimate
+  /// reason to go back or leave, not a reason to trap the admin on the
+  /// step with no way out. Offers to save/discard/cancel instead.
+  Future<bool> _confirmLeaveOrExit() async {
+    if (_index == 0) {
+      return await _institutionTabKey.currentState?.confirmDiscardIfDirty(
+            context,
+          ) ??
+          true;
     }
     if (_index == 12) {
       return _timetableSectionKey.currentState?.saveIfDirty() ?? true;

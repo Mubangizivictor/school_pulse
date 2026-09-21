@@ -11,7 +11,10 @@ import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/admin/presentation/pages/staff_list_page.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/auth/domain/usecases/create_staff_invitation.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
+import 'package:school_pulse/features/auth/domain/usecases/toggle_staff_status.dart';
+import 'package:school_pulse/features/auth/domain/repositories/auth_repository.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -21,6 +24,8 @@ import 'package:school_pulse/features/structure/presentation/bloc/structure_stat
 import 'package:school_pulse/injection_container.dart' as di;
 
 class _MockGetStaffMembers extends Mock implements GetStaffMembers {}
+
+class _MockAuthRepository extends Mock implements AuthRepository {}
 
 class _MockAuthBloc extends MockBloc<AuthEvent, AuthState>
     implements AuthBloc {}
@@ -60,15 +65,41 @@ void main() {
       isActive: false,
       employmentType: 'Part-time',
     ),
+    const UserEntity(
+      id: 'u3',
+      name: 'Grace Miller',
+      email: 'grace.miller@schoolpulse.com',
+      schoolId: 'school-1',
+      roles: [UserRole.schoolAdmin],
+      isActive: true,
+      invitationStatus: 'sent',
+      invitationId: 'invite-u3',
+      employmentType: 'Full-time',
+    ),
   ];
 
   late _MockGetStaffMembers mockGetStaffMembers;
   late _MockAuthBloc mockAuthBloc;
+  late _MockAuthRepository mockAuthRepository;
 
   setUp(() {
     mockGetStaffMembers = _MockGetStaffMembers();
     mockAuthBloc = _MockAuthBloc();
+    mockAuthRepository = _MockAuthRepository();
     when(() => mockAuthBloc.state).thenReturn(AuthAuthenticated(schoolAdmin));
+    when(
+      () => mockAuthRepository.createStaffInvitation(any()),
+    ).thenAnswer((_) async => const Right(null));
+    when(
+      () => mockAuthRepository.cancelStaffInvitation(any()),
+    ).thenAnswer((_) async => const Right(null));
+    when(
+      () => mockAuthRepository.toggleStaffActiveStatus(
+        any(),
+        any(),
+        reason: any(named: 'reason'),
+      ),
+    ).thenAnswer((_) async => const Right(null));
 
     if (di.sl.isRegistered<GetStaffMembers>()) {
       di.sl.unregister<GetStaffMembers>();
@@ -83,6 +114,27 @@ void main() {
       when(() => bloc.state).thenReturn(const StructureState());
       return bloc;
     });
+
+    if (di.sl.isRegistered<CreateStaffInvitation>()) {
+      di.sl.unregister<CreateStaffInvitation>();
+    }
+    di.sl.registerFactory<CreateStaffInvitation>(
+      () => CreateStaffInvitation(mockAuthRepository),
+    );
+
+    if (di.sl.isRegistered<CancelStaffInvitation>()) {
+      di.sl.unregister<CancelStaffInvitation>();
+    }
+    di.sl.registerFactory<CancelStaffInvitation>(
+      () => CancelStaffInvitation(mockAuthRepository),
+    );
+
+    if (di.sl.isRegistered<ToggleStaffStatus>()) {
+      di.sl.unregister<ToggleStaffStatus>();
+    }
+    di.sl.registerFactory<ToggleStaffStatus>(
+      () => ToggleStaffStatus(mockAuthRepository),
+    );
   });
 
   tearDown(() {
@@ -91,6 +143,15 @@ void main() {
     }
     if (di.sl.isRegistered<StructureBloc>()) {
       di.sl.unregister<StructureBloc>();
+    }
+    if (di.sl.isRegistered<CreateStaffInvitation>()) {
+      di.sl.unregister<CreateStaffInvitation>();
+    }
+    if (di.sl.isRegistered<CancelStaffInvitation>()) {
+      di.sl.unregister<CancelStaffInvitation>();
+    }
+    if (di.sl.isRegistered<ToggleStaffStatus>()) {
+      di.sl.unregister<ToggleStaffStatus>();
     }
   });
 
@@ -133,7 +194,7 @@ void main() {
 
     expect(find.text('James Brown'), findsOneWidget);
     expect(find.text('Lisa Martinez'), findsOneWidget);
-    expect(find.text('2 staff members'), findsOneWidget);
+    expect(find.text('3 staff members'), findsOneWidget);
   });
 
   testWidgets('search filters the staff list', (tester) async {
@@ -343,5 +404,132 @@ void main() {
 
     expect(find.text('Clear filters'), findsNothing);
     expect(find.text('Lisa Martinez'), findsOneWidget);
+  });
+
+  testWidgets('Invited chip filters to pending invitations only', (
+    tester,
+  ) async {
+    when(
+      () => mockGetStaffMembers(any()),
+    ).thenAnswer((_) async => Right(staffList));
+
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Invited'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Grace Miller'), findsOneWidget);
+    expect(find.text('James Brown'), findsNothing);
+    expect(find.text('Lisa Martinez'), findsNothing);
+    expect(find.textContaining('INVITATION PENDING'), findsOneWidget);
+  });
+
+  testWidgets(
+    'resending an invitation calls CreateStaffInvitation and refreshes',
+    (tester) async {
+      when(
+        () => mockGetStaffMembers(any()),
+      ).thenAnswer((_) async => Right(staffList));
+
+      await tester.pumpWidget(wrap());
+      await tester.pumpAndSettle();
+
+      // Filter to Invited so Grace Miller's row is the only one, and its
+      // actions menu is unambiguous.
+      await tester.tap(find.text('Invited'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.more_vert).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Resend invitation'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Resend'));
+      await tester.pumpAndSettle();
+
+      verify(() => mockAuthRepository.createStaffInvitation('u3')).called(1);
+      expect(
+        find.text('Invitation resent to grace.miller@schoolpulse.com.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('revoking an invitation calls CancelStaffInvitation', (
+    tester,
+  ) async {
+    when(
+      () => mockGetStaffMembers(any()),
+    ).thenAnswer((_) async => Right(staffList));
+
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Invited'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.more_vert).first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Revoke invitation'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Revoke'));
+    await tester.pumpAndSettle();
+
+    verify(() => mockAuthRepository.cancelStaffInvitation('u3')).called(1);
+  });
+
+  testWidgets('deactivating an active staff member calls ToggleStaffStatus', (
+    tester,
+  ) async {
+    when(
+      () => mockGetStaffMembers(any()),
+    ).thenAnswer((_) async => Right(staffList));
+
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    // Filter to Active first so James Brown (u1) is the only row and its
+    // actions menu is unambiguous.
+    await tester.tap(find.text('Active'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.more_vert).first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Deactivate'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Deactivate'));
+    await tester.pumpAndSettle();
+
+    verify(
+      () =>
+          mockAuthRepository.toggleStaffActiveStatus('u1', false, reason: null),
+    ).called(1);
+  });
+
+  testWidgets('row actions menu hidden for a non-admin role', (tester) async {
+    const teacherUser = UserEntity(
+      id: 'teacher-1',
+      name: 'Deputy Teacher',
+      email: 'deputy@schoolpulse.com',
+      schoolId: 'school-1',
+      roles: [UserRole.subjectTeacher],
+    );
+    when(
+      () => mockAuthBloc.state,
+    ).thenReturn(const AuthAuthenticated(teacherUser));
+    when(
+      () => mockGetStaffMembers(any()),
+    ).thenAnswer((_) async => Right(staffList));
+
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.more_vert), findsNothing);
   });
 }

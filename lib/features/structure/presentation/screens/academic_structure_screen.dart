@@ -3778,12 +3778,20 @@ class _SubjectCatalogueSetupState extends State<_SubjectCatalogueSetup> {
         assignedClassIds: existing?.assignedClassIds ?? const [],
         order: existing?.order ?? widget.state.subjects.length,
       );
+      // Dismiss the keyboard before popping: the sheet's Padding reads
+      // MediaQuery.viewInsetsOf(sheetContext), so popping while the keyboard
+      // is still closing races that dependency's teardown against the
+      // Navigator's route removal, crashing with a "_dependents.isEmpty"
+      // assertion in framework.dart. Popping first (before dispatching the
+      // bloc event that triggers a BlocBuilder rebuild of this subtree) also
+      // avoids targeting an Element already invalidated by that rebuild.
+      FocusManager.instance.primaryFocus?.unfocus();
+      Navigator.pop(sheetContext);
       if (existing == null) {
         widget.onBulkCreate([subject]);
       } else {
         widget.onSave(subject);
       }
-      Navigator.pop(sheetContext);
     }
 
     final isWide = MediaQuery.sizeOf(context).width >= 900;

@@ -82,27 +82,27 @@ Future<void> showCampusFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        Campus(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          code: codeController.text,
-          address: addressController.text,
-          district: districtController.text,
-          contactPhone: phoneController.text.isEmpty
-              ? null
-              : phoneController.text,
-          contactEmail: emailController.text.isEmpty
-              ? null
-              : emailController.text,
-          isPrimary: isPrimary,
-          isActive: isActive,
-          order: existing?.order ?? 0,
-          archivedAt: existing?.archivedAt,
-        ),
+      final campus = Campus(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        code: codeController.text,
+        address: addressController.text,
+        district: districtController.text,
+        contactPhone: phoneController.text.isEmpty
+            ? null
+            : phoneController.text,
+        contactEmail: emailController.text.isEmpty
+            ? null
+            : emailController.text,
+        isPrimary: isPrimary,
+        isActive: isActive,
+        order: existing?.order ?? 0,
+        archivedAt: existing?.archivedAt,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(campus);
     },
   );
 }
@@ -184,17 +184,17 @@ Future<void> showHouseFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        House(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          colorHex: _colorToHex(selectedColor),
-          description: descController.text,
-          isActive: isActive,
-        ),
+      final house = House(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        colorHex: _colorToHex(selectedColor),
+        description: descController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(house);
     },
   );
 }
@@ -255,18 +255,18 @@ Future<void> showClubFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        Club(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          category: categoryController.text,
-          description: descController.text,
-          patronName: patronController.text,
-          isActive: isActive,
-        ),
+      final club = Club(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        category: categoryController.text,
+        description: descController.text,
+        patronName: patronController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(club);
     },
   );
 }
@@ -441,21 +441,20 @@ Future<void> showFacilityFormDialog(
                     child: FilledButton(
                       onPressed: () {
                         if (!formKey.currentState!.validate()) return;
-                        onSave(
-                          Facility(
-                            id: existing?.id ?? const Uuid().v4(),
-                            schoolId: existing?.schoolId ?? schoolId,
-                            name: nameController.text.trim(),
-                            facilityType: selectedType,
-                            campusId: selectedCampusId ?? '',
-                            location: roomController.text.trim(),
-                            capacity:
-                                int.tryParse(capacityController.text) ?? 0,
-                            description: existing?.description ?? '',
-                            isActive: existing?.isActive ?? true,
-                          ),
+                        final facility = Facility(
+                          id: existing?.id ?? const Uuid().v4(),
+                          schoolId: existing?.schoolId ?? schoolId,
+                          name: nameController.text.trim(),
+                          facilityType: selectedType,
+                          campusId: selectedCampusId ?? '',
+                          location: roomController.text.trim(),
+                          capacity: int.tryParse(capacityController.text) ?? 0,
+                          description: existing?.description ?? '',
+                          isActive: existing?.isActive ?? true,
                         );
+                        FocusManager.instance.primaryFocus?.unfocus();
                         Navigator.pop(context);
+                        onSave(facility);
                       },
                       child: const Text('Add space'),
                     ),

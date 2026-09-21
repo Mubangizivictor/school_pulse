@@ -982,6 +982,12 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
   }
 
   void _validationFailed(Emitter<StructureState> emit, String message) {
+    // Emit errorMessage as a null->value transition on every failure (even
+    // repeats of the same message) so the UI's `listenWhen` (which compares
+    // against the previous state) always sees a change and re-shows the
+    // SnackBar with a fresh dismiss timer, instead of silently no-op'ing
+    // because the text happened to match the last shown error.
+    emit(state.copyWith(isLoading: false, errorMessage: null));
     emit(state.copyWith(isLoading: false, errorMessage: message));
   }
 
