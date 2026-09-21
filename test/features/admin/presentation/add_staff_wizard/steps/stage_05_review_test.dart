@@ -155,6 +155,8 @@ void main() {
       of: find.text('Work details'),
       matching: find.byType(InkWell),
     );
+    await tester.ensureVisible(workRow.first);
+    await tester.pumpAndSettle();
     await tester.tap(workRow.first);
     await tester.pumpAndSettle();
 
