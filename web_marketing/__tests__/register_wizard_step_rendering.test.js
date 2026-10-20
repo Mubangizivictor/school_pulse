@@ -27,7 +27,7 @@ const path = require('node:path');
 const { JSDOM } = require('jsdom');
 
 const ROOT = path.join(__dirname, '..');
-const RAW_HTML = fs.readFileSync(path.join(ROOT, 'register-school.html'), 'utf8')
+const RAW_HTML = fs.readFileSync(path.join(ROOT, 'pages-html', 'register-school.html'), 'utf8')
   .replace(/<script src="[^"]*"><\/script>/g, '')
   .replace(/<link rel="stylesheet"[^>]*>/g, '')
   .replace(/<link rel="icon"[^>]*>/g, '')
@@ -47,7 +47,7 @@ function renderWizard() {
     callFunction: () => Promise.reject(new Error('stubbed - not under test')),
   };
   for (const rel of SCRIPTS) {
-    window.eval(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
+    window.eval(fs.readFileSync(path.join(ROOT, 'public', rel), 'utf8'));
   }
   window.document.dispatchEvent(new window.Event('DOMContentLoaded', { bubbles: true, cancelable: true }));
   return dom;
