@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
@@ -277,6 +278,17 @@ class _SecurityBody extends StatelessWidget {
                 }).toList(),
               );
             },
+          ),
+          const SizedBox(height: 24),
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: ListTile(
+              leading: const Icon(Icons.fact_check_outlined),
+              title: const Text('Audit log'),
+              subtitle: const Text('Track changes made across the system'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/staff/admin/audit-log'),
+            ),
           ),
         ],
       ),

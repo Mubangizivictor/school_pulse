@@ -13,6 +13,7 @@ import 'package:school_pulse/features/admin/parent_access_workspace/domain/entit
 import 'package:school_pulse/features/admin/parent_access_workspace/domain/repositories/parent_access_repository.dart';
 import 'package:school_pulse/features/admin/parent_access_workspace/presentation/cubit/parents_access_cubit.dart';
 import 'package:school_pulse/features/admin/parent_access_workspace/presentation/screens/parents_access_workspace_screen.dart';
+import 'package:school_pulse/features/admin/parent_access_workspace/presentation/widgets/filter_bottom_sheet.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
@@ -98,7 +99,8 @@ void main() {
 
   group('responsive tiers render without overflow', () {
     testWidgets(
-      '390x844 (phone reference) shows TabBar + bottom-sheet filter affordance',
+      '390x844 (phone reference) shows TabBar + inline filter chips, no '
+      'redundant app-bar leading/search/filter icons',
       (tester) async {
         tester.view.physicalSize = const Size(390, 844);
         tester.view.devicePixelRatio = 1.0;
@@ -108,7 +110,16 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Parents & access'), findsOneWidget);
-        expect(find.byIcon(Icons.filter_list), findsOneWidget);
+        expect(find.byType(ParentAccessFilterChips), findsOneWidget);
+        expect(find.byIcon(Icons.arrow_back), findsNothing);
+        expect(
+          find.byIcon(Icons.search),
+          findsOneWidget,
+          reason:
+              'only the body search field icon should remain, not a '
+              'second redundant app-bar search action',
+        );
+        expect(find.byIcon(Icons.filter_list), findsNothing);
         expect(tester.takeException(), isNull);
       },
     );

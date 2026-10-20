@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:school_pulse/design_system/components/phone_number_field.dart';
@@ -47,7 +48,7 @@ class _LinkParentStepDetailsState extends State<LinkParentStepDetails> {
       title: 'Link parent to learners',
       stageLabels: kLinkParentStageLabels,
       currentStageIndex: linkParentStageIndexFor(LinkParentStage.details),
-      onBack: () => Navigator.of(context).maybePop(),
+      onBack: () => context.pop(),
       footer: WizardFooterButtons(
         nextLabel: 'Review invitation',
         loading: controller.checkingDuplicate,

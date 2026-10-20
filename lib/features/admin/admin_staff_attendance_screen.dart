@@ -442,15 +442,21 @@ class _Controls extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: dateRow,
+              Row(
+                children: [
+                  Flexible(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: dateRow,
+                    ),
+                  ),
+                  if (state.campuses.isNotEmpty) ...[
+                    const SizedBox(width: 12),
+                    Expanded(child: campusDropdown),
+                  ],
+                ],
               ),
               const SizedBox(height: 8),
-              if (state.campuses.isNotEmpty) ...[
-                campusDropdown,
-                const SizedBox(height: 8),
-              ],
               SizedBox(width: double.infinity, child: search),
             ],
           );

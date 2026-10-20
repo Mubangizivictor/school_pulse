@@ -694,6 +694,14 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/staff/admin/subscription'),
           ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.link_outlined),
+            title: const Text('School Subdomain'),
+            subtitle: const Text("Manage your school's web address"),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/staff/admin/school-subdomain'),
+          ),
         ],
       ),
     );

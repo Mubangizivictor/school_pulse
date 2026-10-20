@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -250,6 +251,13 @@ class _DataManagementCenterScreenState
                           onTap: _working
                               ? null
                               : () => _request('restoreRequest'),
+                        ),
+                        _ActionCard(
+                          icon: Icons.health_and_safety_outlined,
+                          title: 'Institution health',
+                          subtitle: 'Setup completeness and integrity checks',
+                          onTap: () =>
+                              context.push('/staff/admin/institution-health'),
                         ),
                       ],
                     ),

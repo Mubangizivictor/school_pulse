@@ -308,11 +308,8 @@ class _PhoneLayout extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    IconButton(
-                      onPressed: () => Navigator.of(context).maybePop(),
-                      icon: const Icon(Icons.arrow_back),
-                    ),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,44 +332,20 @@ class _PhoneLayout extends StatelessWidget {
                         ],
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => showSearch(
-                        context: context,
-                        delegate: _ParentAccessSearchDelegate(),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: onAddParent,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary(context),
+                        foregroundColor: AppColors.background(context),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                      icon: const Icon(Icons.search),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.filter_list),
-                      onPressed: () async {
-                        final selected = await showParentAccessFilterSheet(
-                          context,
-                          current: state.filter,
-                        );
-                        if (selected != null && context.mounted) {
-                          context.read<ParentsAccessCubit>().setFilter(
-                            selected,
-                          );
-                        }
-                      },
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add / link'),
                     ),
                   ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: ElevatedButton.icon(
-                  onPressed: onAddParent,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary(context),
-                    foregroundColor: AppColors.background(context),
-                    minimumSize: const Size.fromHeight(44),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add / link parent'),
                 ),
               ),
               const SizedBox(height: 12),
@@ -607,28 +580,6 @@ Future<void> _confirmReallocate(
       ),
     ),
   );
-}
-
-class _ParentAccessSearchDelegate extends SearchDelegate<void> {
-  @override
-  List<Widget> buildActions(BuildContext context) => [
-    IconButton(onPressed: () => query = '', icon: const Icon(Icons.clear)),
-  ];
-
-  @override
-  Widget buildLeading(BuildContext context) => IconButton(
-    onPressed: () => close(context, null),
-    icon: const Icon(Icons.arrow_back),
-  );
-
-  @override
-  Widget buildResults(BuildContext context) => const SizedBox.shrink();
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    context.read<ParentsAccessCubit>().setSearchQuery(query);
-    return const SizedBox.shrink();
-  }
 }
 
 // ---------------------------------------------------------------------------

@@ -86,20 +86,20 @@ void main() {
     await tester.pumpWidget(buildApp(schoolAdmin));
     await tester.pumpAndSettle();
 
-    expect(find.text('School structure'), findsOneWidget);
-    expect(find.text('Roles & access'), findsOneWidget);
+    expect(find.text('Structure'), findsOneWidget);
+    expect(find.text('Roles'), findsOneWidget);
     expect(find.text('Reports'), findsOneWidget);
-    expect(find.text('School settings'), findsOneWidget);
+    expect(find.text('SMS'), findsOneWidget);
   });
 
   testWidgets('hides admin tools for an unauthorized role', (tester) async {
     await tester.pumpWidget(buildApp(bursar));
     await tester.pumpAndSettle();
 
-    expect(find.text('School structure'), findsNothing);
-    expect(find.text('Roles & access'), findsNothing);
+    expect(find.text('Structure'), findsNothing);
+    expect(find.text('Roles'), findsNothing);
     expect(find.text('Reports'), findsNothing);
-    expect(find.text('School settings'), findsNothing);
+    expect(find.text('SMS'), findsNothing);
   });
 
   testWidgets('shows account identity and school name', (tester) async {
@@ -223,7 +223,7 @@ void main() {
       await tester.pumpWidget(buildAppWithState(AuthLoading()));
       await tester.pump();
       expect(find.byType(SchoolPulseLoader), findsOneWidget);
-      expect(find.text('School structure'), findsNothing);
+      expect(find.text('Structure'), findsNothing);
     },
   );
 

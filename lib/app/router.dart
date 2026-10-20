@@ -1217,6 +1217,16 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/admin/reports',
+          redirect: (context, state) {
+            final auth = context.read<AuthBloc>().state;
+            if (auth is! AuthAuthenticated) return '/welcome';
+            if (!auth.user.roles.any(
+              UserRoleDisplay.adminConsoleRoles.contains,
+            )) {
+              return UserRoleRouting.dashboardPath(auth.user.role);
+            }
+            return null;
+          },
           builder: (context, state) => const CentralReportsScreen(),
         ),
         GoRoute(
@@ -2426,6 +2436,16 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'users',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                if (!auth.user.roles.any(
+                  UserRoleDisplay.adminConsoleRoles.contains,
+                )) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
               builder: (context, state) =>
                   const AdminShell(section: AdminSection.staff),
               routes: [
@@ -2483,10 +2503,30 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'broadcast-sms',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                if (!auth.user.roles.any(
+                  UserRoleDisplay.adminConsoleRoles.contains,
+                )) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
               builder: (context, state) => const BroadcastSmsScreen(),
             ),
             GoRoute(
               path: 'config',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                if (!auth.user.roles.any(
+                  UserRoleDisplay.adminConsoleRoles.contains,
+                )) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
               builder: (context, state) => const SystemConfigScreen(),
             ),
             GoRoute(
@@ -2548,6 +2588,16 @@ final router = GoRouter(
               // that nested Navigator and AdminShell's sidebar stays mounted
               // underneath, producing a double sidebar.
               parentNavigatorKey: rootNavigatorKey,
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                if (!auth.user.roles.any(
+                  UserRoleDisplay.adminConsoleRoles.contains,
+                )) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
               builder: (context, state) => const StructureWizardScreen(),
               routes: [
                 GoRoute(

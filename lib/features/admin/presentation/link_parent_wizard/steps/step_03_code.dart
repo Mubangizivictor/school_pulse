@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -260,14 +261,14 @@ class _LinkParentStepSentState extends State<LinkParentStepSent> {
                   Expanded(
                     child: SecondaryButton(
                       label: 'Link another parent',
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => context.pop(),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: PrimaryButton(
                       label: 'Done',
-                      onPressed: () => Navigator.of(context).pop(true),
+                      onPressed: () => context.pop(true),
                     ),
                   ),
                 ],

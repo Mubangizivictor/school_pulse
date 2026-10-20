@@ -53,6 +53,21 @@ class AdminMoreScreen extends StatelessWidget {
   }
 }
 
+/// Groups the admin tool rows into labeled sub-sections under "School
+/// administration" so 14 destinations read as a few short, scannable lists
+/// instead of one long undifferentiated one.
+enum _ToolGroup { operations, communication, students, security, system }
+
+extension on _ToolGroup {
+  String get label => switch (this) {
+    _ToolGroup.operations => 'Operations',
+    _ToolGroup.communication => 'Communication',
+    _ToolGroup.students => 'Students',
+    _ToolGroup.security => 'Security & compliance',
+    _ToolGroup.system => 'System',
+  };
+}
+
 class _AdminTool {
   const _AdminTool({
     required this.icon,
@@ -60,28 +75,32 @@ class _AdminTool {
     required this.subtitle,
     required this.route,
     required this.roles,
+    required this.group,
   });
   final IconData icon;
   final String title;
   final String subtitle;
   final String route;
   final List<UserRole> roles;
+  final _ToolGroup group;
 }
 
 const _adminTools = [
   _AdminTool(
     icon: Icons.account_tree_outlined,
-    title: 'School structure',
+    title: 'Structure',
     subtitle: 'Manage classrooms, grades & groups',
     route: '/staff/admin/structure',
     roles: UserRoleDisplay.adminConsoleRoles,
+    group: _ToolGroup.operations,
   ),
   _AdminTool(
     icon: Icons.people_alt_outlined,
-    title: 'Roles & access',
+    title: 'Roles',
     subtitle: 'Manage staff roles and permissions',
     route: '/staff/admin/users',
     roles: UserRoleDisplay.adminConsoleRoles,
+    group: _ToolGroup.operations,
   ),
   _AdminTool(
     icon: Icons.bar_chart_outlined,
@@ -89,64 +108,41 @@ const _adminTools = [
     subtitle: 'View analytics and export data',
     route: '/staff/admin/reports',
     roles: UserRoleDisplay.adminConsoleRoles,
-  ),
-  _AdminTool(
-    icon: Icons.settings_outlined,
-    title: 'School settings',
-    subtitle: 'School settings and preferences',
-    route: '/staff/admin/school-setup',
-    roles: [
-      UserRole.schoolAdmin,
-      UserRole.headTeacher,
-      UserRole.deputyHead,
-      UserRole.director,
-    ],
+    group: _ToolGroup.operations,
   ),
   _AdminTool(
     icon: Icons.storage_outlined,
-    title: 'Data management',
-    subtitle: 'Import, export and manage school data',
+    title: 'Data',
+    subtitle: 'Import/export data, plus institution health checks',
     route: '/staff/admin/data-management',
     roles: [UserRole.schoolAdmin, UserRole.headTeacher, UserRole.director],
-  ),
-  _AdminTool(
-    icon: Icons.health_and_safety_outlined,
-    title: 'Institution health',
-    subtitle: 'Setup completeness and data integrity checks',
-    route: '/staff/admin/institution-health',
-    roles: [UserRole.schoolAdmin, UserRole.headTeacher, UserRole.director],
+    group: _ToolGroup.operations,
   ),
   _AdminTool(
     icon: Icons.sms_outlined,
-    title: 'Broadcast SMS',
-    subtitle: 'Send bulk SMS to parents or staff',
+    title: 'SMS',
+    subtitle: 'Send bulk SMS to parents or staff, and view past broadcasts',
     route: '/staff/admin/broadcast-sms',
     roles: UserRoleDisplay.adminConsoleRoles,
+    group: _ToolGroup.communication,
   ),
   _AdminTool(
-    icon: Icons.history_outlined,
-    title: 'Broadcast history',
-    subtitle: 'Past SMS and announcement campaigns',
-    route: '/staff/admin/broadcast-history',
-    roles: UserRoleDisplay.adminConsoleRoles,
-  ),
-  _AdminTool(
-    icon: Icons.tune_outlined,
-    title: 'System config',
-    subtitle: 'Platform-wide configuration options',
-    route: '/staff/admin/config',
-    roles: UserRoleDisplay.adminConsoleRoles,
-  ),
-  _AdminTool(
-    icon: Icons.extension_outlined,
-    title: 'Integrations',
-    subtitle: 'Connected providers and API access',
-    route: '/staff/admin/integrations',
-    roles: [UserRole.schoolAdmin, UserRole.headTeacher, UserRole.director],
+    icon: Icons.campaign_outlined,
+    title: 'Announcements',
+    subtitle: 'Compose and track announcements',
+    route: '/staff/admin/communication-center',
+    roles: [
+      UserRole.director,
+      UserRole.headTeacher,
+      UserRole.schoolAdmin,
+      UserRole.deputyHead,
+      UserRole.securityHead,
+    ],
+    group: _ToolGroup.communication,
   ),
   _AdminTool(
     icon: Icons.badge_outlined,
-    title: 'Batch ID cards',
+    title: 'ID cards',
     subtitle: 'Print ID cards for many learners at once',
     route: '/staff/admin/batch-id-cards',
     roles: [
@@ -158,6 +154,7 @@ const _adminTools = [
       UserRole.receptionist,
       UserRole.hrOfficer,
     ],
+    group: _ToolGroup.students,
   ),
   _AdminTool(
     icon: Icons.how_to_reg_outlined,
@@ -173,54 +170,39 @@ const _adminTools = [
       UserRole.receptionist,
       UserRole.hrOfficer,
     ],
-  ),
-  _AdminTool(
-    icon: Icons.fact_check_outlined,
-    title: 'Audit log',
-    subtitle: 'Track changes made across the system',
-    route: '/staff/admin/audit-log',
-    roles: [UserRole.director, UserRole.headTeacher, UserRole.schoolAdmin],
-  ),
-  _AdminTool(
-    icon: Icons.support_agent_outlined,
-    title: 'Support centre',
-    subtitle: 'Internal support tickets and resources',
-    route: '/staff/admin/support',
-    roles: [UserRole.director, UserRole.headTeacher, UserRole.schoolAdmin],
-  ),
-  _AdminTool(
-    icon: Icons.campaign_outlined,
-    title: 'Communication centre',
-    subtitle: 'Compose and track announcements',
-    route: '/staff/admin/communication-center',
-    roles: [
-      UserRole.director,
-      UserRole.headTeacher,
-      UserRole.schoolAdmin,
-      UserRole.deputyHead,
-      UserRole.securityHead,
-    ],
+    group: _ToolGroup.students,
   ),
   _AdminTool(
     icon: Icons.security_outlined,
-    title: 'Security centre',
-    subtitle: 'Access logs and security settings',
+    title: 'Security',
+    subtitle: 'Access logs, security settings and audit log',
     route: '/staff/admin/security',
     roles: [UserRole.director, UserRole.headTeacher, UserRole.schoolAdmin],
+    group: _ToolGroup.security,
   ),
   _AdminTool(
-    icon: Icons.workspace_premium_outlined,
-    title: 'Subscription',
-    subtitle: 'Plan, billing and usage',
-    route: '/staff/admin/subscription',
-    roles: UserRoleDisplay.adminConsoleRoles,
+    icon: Icons.support_agent_outlined,
+    title: 'Support',
+    subtitle: 'Internal support tickets and resources',
+    route: '/staff/admin/support',
+    roles: [UserRole.director, UserRole.headTeacher, UserRole.schoolAdmin],
+    group: _ToolGroup.security,
   ),
   _AdminTool(
-    icon: Icons.link_outlined,
-    title: 'School subdomain',
-    subtitle: 'Manage your school\'s web address',
-    route: '/staff/admin/school-subdomain',
+    icon: Icons.tune_outlined,
+    title: 'Config',
+    subtitle: 'Platform configuration, plus subscription & billing',
+    route: '/staff/admin/config',
     roles: UserRoleDisplay.adminConsoleRoles,
+    group: _ToolGroup.system,
+  ),
+  _AdminTool(
+    icon: Icons.extension_outlined,
+    title: 'Integrations',
+    subtitle: 'Connected providers and API access',
+    route: '/staff/admin/integrations',
+    roles: [UserRole.schoolAdmin, UserRole.headTeacher, UserRole.director],
+    group: _ToolGroup.system,
   ),
 ];
 
@@ -251,28 +233,15 @@ class _MobileMore extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.fromLTRB(20, 12, 20, 88),
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
     children: [
-      Row(
-        children: [
-          Text(
-            'More',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary(context),
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            onPressed: () => context.push('/staff/more/security-privacy'),
-            icon: Icon(
-              Icons.settings_outlined,
-              size: 22,
-              color: AppColors.textPrimary(context),
-            ),
-          ),
-        ],
+      Text(
+        'More',
+        style: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary(context),
+        ),
       ),
       const SizedBox(height: 12),
       _AccountCard(user: user),
@@ -280,7 +249,7 @@ class _MobileMore extends StatelessWidget {
         const SizedBox(height: AppSpacing.x3l),
         const _SectionTitle('School administration'),
         const SizedBox(height: AppSpacing.m),
-        _ToolGrid(tools: tools),
+        _ToolSections(tools: tools),
       ],
       const SizedBox(height: AppSpacing.x3l),
       const _SectionTitle('Personal'),
@@ -315,7 +284,7 @@ class _WideMore extends StatelessWidget {
         if (tools.isNotEmpty) ...[
           const _SectionTitle('School administration'),
           const SizedBox(height: AppSpacing.m),
-          _ToolGrid(tools: tools),
+          _ToolSections(tools: tools),
         ],
       ],
     );
@@ -560,97 +529,49 @@ class _AccountCardState extends State<_AccountCard> {
   }
 }
 
-/// Two-per-row tool grid whose cards hug their content instead of
-/// stretching to a forced aspect ratio, so a short title/subtitle pair
-/// doesn't leave dead space at the bottom of the card.
-class _ToolGrid extends StatelessWidget {
-  const _ToolGrid({required this.tools});
+/// Renders the authorized admin tools as a sequence of labeled row-groups,
+/// one per [_ToolGroup] - the same `_SectionTitle` + `_RowGroup` pattern
+/// the Personal/Support sections already use below this, so the whole More
+/// screen reads as one consistent list-based UI instead of mixing a card
+/// grid with rows.
+class _ToolSections extends StatelessWidget {
+  const _ToolSections({required this.tools});
   final List<_AdminTool> tools;
 
   @override
   Widget build(BuildContext context) {
-    final rows = <Widget>[];
-    for (var i = 0; i < tools.length; i += 2) {
-      final second = i + 1 < tools.length ? tools[i + 1] : null;
-      rows.add(
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: _ToolCard(tool: tools[i])),
-              const SizedBox(width: AppSpacing.m),
-              Expanded(
-                child: second == null
-                    ? const SizedBox.shrink()
-                    : _ToolCard(tool: second),
-              ),
-            ],
-          ),
-        ),
-      );
-      if (i + 2 < tools.length) rows.add(const SizedBox(height: AppSpacing.m));
+    final byGroup = <_ToolGroup, List<_AdminTool>>{};
+    for (final tool in tools) {
+      byGroup.putIfAbsent(tool.group, () => []).add(tool);
     }
-    return Column(children: rows);
-  }
-}
-
-class _ToolCard extends StatelessWidget {
-  const _ToolCard({required this.tool});
-  final _AdminTool tool;
-
-  @override
-  Widget build(BuildContext context) => AppCard(
-    onTap: () => context.push(tool.route),
-    padding: const EdgeInsets.all(AppSpacing.l),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: AppColors.informationSurface(context),
-                borderRadius: BorderRadius.circular(9),
+    final sections = <Widget>[];
+    for (final group in _ToolGroup.values) {
+      final groupTools = byGroup[group];
+      if (groupTools == null || groupTools.isEmpty) continue;
+      if (sections.isNotEmpty) {
+        sections.add(const SizedBox(height: AppSpacing.x3l));
+      }
+      sections.add(_SectionTitle(group.label));
+      sections.add(const SizedBox(height: AppSpacing.m));
+      sections.add(
+        _RowGroup(
+          rows: [
+            for (final tool in groupTools)
+              _MoreRow(
+                icon: tool.icon,
+                title: tool.title,
+                subtitle: tool.subtitle,
+                onTap: (context) => context.push(tool.route),
               ),
-              child: Icon(
-                tool.icon,
-                size: 18,
-                color: AppColors.information(context),
-              ),
-            ),
-            const Spacer(),
-            Icon(
-              Icons.chevron_right,
-              size: 18,
-              color: AppColors.textSecondary(context),
-            ),
           ],
         ),
-        const SizedBox(height: AppSpacing.m),
-        Text(
-          tool.title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          tool.subtitle,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.textSecondary(context),
-          ),
-        ),
-      ],
-    ),
-  );
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: sections,
+    );
+  }
 }
 
 class _SectionTitle extends StatelessWidget {
