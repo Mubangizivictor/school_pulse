@@ -445,6 +445,9 @@ class _DirectStudentRegistrationScreenState
       _guardianConsent = d['guardianConsent'] != null
           ? Map<String, dynamic>.from(d['guardianConsent'] as Map)
           : null;
+      final guardianOverride = d['guardianOverride'] as Map<String, dynamic>?;
+      _override = guardianOverride != null;
+      _overrideReason = guardianOverride?['reason'] as String? ?? '';
       final fees = Map<String, dynamic>.from(d['fees'] ?? {});
       _selectedFeeAddOnIds
         ..clear()
@@ -995,7 +998,7 @@ class _DirectStudentRegistrationScreenState
   Widget build(BuildContext context) => PopScope(
     canPop: _step < 0,
     onPopInvokedWithResult: (p, _) async {
-      if (!p && await _leave() && mounted) context.pop();
+      if (!p && await _leave() && mounted) Navigator.of(context).maybePop();
     },
     child: Scaffold(
       appBar: AppBar(
