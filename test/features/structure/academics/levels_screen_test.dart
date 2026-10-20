@@ -108,7 +108,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Primary'), findsOneWidget);
-    expect(find.text('PRI'), findsOneWidget);
+    expect(find.textContaining('Code: PRI'), findsOneWidget);
   });
 
   testWidgets('tapping Add Level opens the full-screen add form', (

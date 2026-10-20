@@ -148,8 +148,11 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Create 7 classes'));
     await tester.pumpAndSettle();
 
-    // The bottom sheet's own confirm button carries the same label; tap it.
-    await tester.tap(find.widgetWithText(FilledButton, 'Create 7 classes'));
+    // The bottom sheet's own confirm button carries the same label as the
+    // inline one still behind it; the sheet's is the last in the tree.
+    await tester.tap(
+      find.widgetWithText(FilledButton, 'Create 7 classes').last,
+    );
     await tester.pumpAndSettle();
 
     final captured = verify(

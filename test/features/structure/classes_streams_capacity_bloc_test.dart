@@ -185,6 +185,9 @@ void main() {
       act: (bloc) => bloc.add(
         SaveStreamRequested(_stream(id: 'red', capacity: 25, name: 'Red')),
       ),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
       expect: () => [
         isA<StructureState>().having(
           (s) => s.errorMessage,
@@ -275,6 +278,9 @@ void main() {
           _stream(id: 'b', capacity: 0, classId: 'class-1', name: 'East'),
         ]),
       ),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
       expect: () => [
         isA<StructureState>().having(
           (s) => s.errorMessage,
@@ -306,12 +312,16 @@ void main() {
     blocTest<StructureBloc, StructureState>(
       'rejects a bulk stream that would exceed its class capacity',
       build: () => StructureBloc(repository: repository),
-      seed: () => StructureState(classes: [_class(id: 'class-1', capacity: 10)]),
+      seed: () =>
+          StructureState(classes: [_class(id: 'class-1', capacity: 10)]),
       act: (bloc) => bloc.add(
         CreateStreamsRequested([
           _stream(id: 'a', capacity: 20, classId: 'class-1', name: 'East'),
         ]),
       ),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
       expect: () => [
         isA<StructureState>().having(
           (s) => s.errorMessage,
@@ -336,6 +346,9 @@ void main() {
         ],
       ),
       act: (bloc) => bloc.add(SaveClassRequested(_class(capacity: 40))),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
       expect: () => [
         isA<StructureState>().having(
           (s) => s.errorMessage,
@@ -394,6 +407,9 @@ void main() {
       act: (bloc) => bloc.add(
         CreateClassesRequested([_class(id: 'one'), _class(id: 'two')]),
       ),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
       expect: () => [
         isA<StructureState>().having(
           (state) => state.errorMessage,
@@ -424,15 +440,13 @@ void main() {
     blocTest<StructureBloc, StructureState>(
       'calls repository.reorderClasses when no dependent streams exist',
       build: () {
-        when(
-          () => repository.reorderClasses(any()),
-        ).thenAnswer((_) async {});
+        when(() => repository.reorderClasses(any())).thenAnswer((_) async {});
         return StructureBloc(repository: repository);
       },
       seed: () => StructureState(
         levels: [_level()],
         classes: [
-          _class(id: 'one', ).copyWith(order: 0),
+          _class(id: 'one').copyWith(order: 0),
           _class(id: 'two').copyWith(name: 'Primary 2', order: 1),
         ],
       ),
@@ -464,6 +478,9 @@ void main() {
           _class(id: 'one').copyWith(order: 1),
         ]),
       ),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
       expect: () => [
         isA<StructureState>().having(
           (state) => state.errorMessage,
@@ -523,7 +540,12 @@ void main() {
       act: (bloc) => bloc.add(
         const CreateSubjectsRequested([
           Subject(id: 'eng', schoolId: schoolId, name: 'English', code: 'X'),
-          Subject(id: 'mat', schoolId: schoolId, name: 'Mathematics', code: 'X'),
+          Subject(
+            id: 'mat',
+            schoolId: schoolId,
+            name: 'Mathematics',
+            code: 'X',
+          ),
         ]),
       ),
       verify: (_) => verifyNever(() => repository.addSubjects(any())),
@@ -554,6 +576,9 @@ void main() {
         subjects: [Subject(id: 'eng', schoolId: schoolId, name: 'English')],
       ),
       act: (bloc) => bloc.add(const DeleteSubjectRequested('eng')),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
       expect: () => [
         isA<StructureState>().having(
           (s) => s.errorMessage,
@@ -596,7 +621,11 @@ void main() {
       verify: (_) {
         verify(
           () => repository.saveDepartmentWithSubjects(
-            const Department(id: 'dept-1', schoolId: schoolId, name: 'Languages'),
+            const Department(
+              id: 'dept-1',
+              schoolId: schoolId,
+              name: 'Languages',
+            ),
             const [Subject(id: 'eng', schoolId: schoolId, name: 'English')],
             const [Subject(id: 'mat', schoolId: schoolId, name: 'Mathematics')],
           ),
@@ -608,7 +637,9 @@ void main() {
       'rejects a duplicate department name before any write',
       build: () => StructureBloc(repository: repository),
       seed: () => const StructureState(
-        departments: [Department(id: 'existing', schoolId: schoolId, name: 'Languages')],
+        departments: [
+          Department(id: 'existing', schoolId: schoolId, name: 'Languages'),
+        ],
       ),
       act: (bloc) => bloc.add(
         const SaveDepartmentWithSubjectsRequested(
@@ -617,6 +648,9 @@ void main() {
           [],
         ),
       ),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
       expect: () => [
         isA<StructureState>().having(
           (s) => s.errorMessage,

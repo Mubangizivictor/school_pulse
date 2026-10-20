@@ -35,8 +35,9 @@ jobs:
           for collection in \
             structure_curriculum_assignments \
             structure_teaching_assignments \
-            structure_class_timetables \
-            structure_timetable_lessons; do
+            structure_teaching_plans \
+            structure_teaching_plan_subjects \
+            structure_class_plan_overrides; do
             grep -q "match /${collection}/{id}" firestore.rules
           done
           grep -q 'request.resource.data.schoolId == schoolId' firestore.rules

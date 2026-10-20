@@ -70,9 +70,8 @@ void main() {
         ).thenAnswer((_) async {});
         return StructureBloc(repository: repository);
       },
-      act: (bloc) => bloc.add(
-        SaveGradingSystemWithBandsRequested(_system, _validBands()),
-      ),
+      act: (bloc) =>
+          bloc.add(SaveGradingSystemWithBandsRequested(_system, _validBands())),
       verify: (_) {
         verify(
           () => repository.saveGradingSystemWithBands(_system, _validBands()),
@@ -103,6 +102,9 @@ void main() {
           ),
         ]),
       ),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
       expect: () => [
         isA<StructureState>().having(
           (s) => s.errorMessage,
@@ -187,12 +189,12 @@ void main() {
         return StructureBloc(repository: repository);
       },
       seed: () => StructureState(
-        gradingSystems: [
-          _system.copyWith(id: 'old-default', isDefault: true),
-        ],
+        gradingSystems: [_system.copyWith(id: 'old-default', isDefault: true)],
       ),
       act: (bloc) => bloc.add(
-        SaveGradingSystemRequested(_system.copyWith(id: 'new-default', isDefault: true)),
+        SaveGradingSystemRequested(
+          _system.copyWith(id: 'new-default', isDefault: true),
+        ),
       ),
       verify: (_) {
         verify(

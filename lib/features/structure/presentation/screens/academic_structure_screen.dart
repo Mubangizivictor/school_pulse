@@ -3242,13 +3242,15 @@ class _LevelWorkspace extends StatelessWidget {
                 children: [
                   Icon(Icons.lightbulb_outline, size: 18, color: scheme.onSurfaceVariant),
                   const SizedBox(width: 8),
-                  Text(
-                    'Suggested classes',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
+                  Expanded(
+                    child: Text(
+                      'Suggested classes',
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   if (suggestions.isNotEmpty)
                     TextButton(
                       onPressed: allSelected

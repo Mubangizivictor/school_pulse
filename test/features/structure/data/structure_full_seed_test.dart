@@ -1,5 +1,7 @@
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/features/structure/data/datasources/structure_remote_data_source.dart';
 import 'package:school_pulse/features/structure/data/repositories/structure_setup_repository_impl.dart';
 import 'package:school_pulse/features/structure/domain/entities/assessment_grading_entities.dart';
@@ -15,12 +17,19 @@ import 'package:school_pulse/features/structure/domain/entities/transport_struct
 
 const _schoolId = 'sp-structure-e2e-school';
 
+class _MockFirebaseAuth extends Mock implements FirebaseAuth {}
+
 void main() {
   test(
     'realistic combined-school Structure persists through production serializers',
     () async {
       final firestore = FakeFirebaseFirestore();
-      final remote = StructureRemoteDataSourceImpl(firestore: firestore);
+      final auth = _MockFirebaseAuth();
+      when(() => auth.currentUser).thenReturn(null);
+      final remote = StructureRemoteDataSourceImpl(
+        firestore: firestore,
+        auth: auth,
+      );
       final setup = StructureSetupRepositoryImpl(
         firestore: firestore,
         schoolIdOverride: _schoolId,

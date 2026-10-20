@@ -197,10 +197,18 @@ void main() {
       seed: () => StructureState(
         levels: [_level()],
         classes: [
-          SchoolClass(id: 'class-1', schoolId: 'school-1', name: 'P1', levelId: 'level-1'),
+          SchoolClass(
+            id: 'class-1',
+            schoolId: 'school-1',
+            name: 'P1',
+            levelId: 'level-1',
+          ),
         ],
       ),
       act: (bloc) => bloc.add(const DeleteLevelRequested('level-1')),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
       expect: () => [
         isA<StructureState>().having(
           (s) => s.errorMessage,
@@ -233,9 +241,7 @@ void main() {
     blocTest<StructureBloc, StructureState>(
       'SaveLevelWithReorderRequested calls repository.saveLevelsBatch atomically',
       build: () {
-        when(
-          () => repository.saveLevelsBatch(any()),
-        ).thenAnswer((_) async {});
+        when(() => repository.saveLevelsBatch(any())).thenAnswer((_) async {});
         return StructureBloc(repository: repository);
       },
       act: (bloc) => bloc.add(
@@ -258,6 +264,9 @@ void main() {
           _level(id: 'level-new').copyWith(name: 'Primary', order: 1),
         ]),
       ),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
       expect: () => [
         isA<StructureState>().having(
           (s) => s.errorMessage,
