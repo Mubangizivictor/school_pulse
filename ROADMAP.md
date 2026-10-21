@@ -67,13 +67,32 @@ A step is only `[x]` when all of these are true:
   - Needs JDK ≥ 21: `export JAVA_HOME=/opt/homebrew/opt/openjdk@21 PATH=$JAVA_HOME/bin:$PATH` (default `java` is 17). The storage run exits non-zero from an emulator crash on shutdown, after the tests pass.
 
 ### 0.4 Dead code audit
-- [ ] For each of the 57 feature folders, mark it **WIRED** (referenced by router/DI), **UNWIRED**, or **DUPLICATE**.
-  - Folders with 0 router/DI references (check these first): `attendance_summary`, `billing`, `librarian`, `qr_scanner`.
-  - Known duplicate pairs to resolve: `attendance` vs `attendance_hub`, `exams` vs `exam_factory`, `library` vs `librarian`, `nurse` vs `health`, `parent` vs `parent_access` vs `parent_offline`, `messages` vs `communication_center` vs `announcements`, `billing` vs `subscription_payment` vs `super_admin` billing, `school_onboarding` vs `structure`.
-- [ ] For each pair, choose ONE winner. Delete or archive the loser in one commit per pair.
+- [x] For each of the 57 feature folders, mark it **WIRED** (referenced by router/DI), **UNWIRED**, or **DUPLICATE**.
+  - Audit 2026-10-21: there are **60** folders now, and `school_onboarding` is already gone (deleted in de9345d8). "Router" includes `super_admin_routes.dart`; "DI" includes `super_admin_injection.dart`.
+  - **WIRED (direct router/DI refs), 52:** academic, admin, announcements, appointments, approvals, attendance, attendance_hub, auth, biometrics, branding, catering, communication_center, data_management, dean, director, discipline, exam_factory, exams, finance, games, gate_ops, headteacher, health, hr, institution, institution_health, integrations, inventory, lesson_plans, library, matron, messages, module_control, notifications, nurse, parent, parent_access, parent_offline, patron, portal, profile, registration, relationships, religion, reports, school_calendar, school_directory, shared, structure, student, student_identity, subscription_payment, super_admin, teacher, transport, verification.
+  - **WIRED indirectly (0 router/DI refs, but imported by wired features), 3:**
+    - `billing`: pricing-band and subscription-cycle data, used by super_admin (8 files) and structure's calendar confirmation.
+    - `qr_scanner`: used by library, exams, finance and catering.
+    - `attendance_summary`: one entity, used by attendance, student and teacher.
+  - **UNWIRED, 1:** `librarian`, a single `librarian_dashboard.dart` with zero references in lib/ or test/. The `/staff/librarian` route already renders `library`'s `LibraryDashboardScreen`.
+- [ ] For each pair, choose ONE winner. Delete or archive the loser in one commit per pair. **Recommendations below. Waiting for Victor's approval; nothing is deleted yet.**
+  | Pair | Verdict | Evidence |
+  |---|---|---|
+  | `library` vs `librarian` | **Winner `library`. Delete `librarian/`** (1 file) | `librarian` has 0 refs. `/staff/librarian` → `LibraryDashboardScreen` (router.dart:1491). `library` has a full DI stack (repo, eligibility, local and remote sources). |
+  | `attendance` vs `attendance_hub` | **Winner `attendance_hub`.** Move the 3 still-routed legacy screens, then delete `attendance/` | hub owns DI (bloc, repo, offline queue) and has 8 commits since Aug 21 vs 4. `/staff/attendance` already uses hub's NFC/QR/manual screens, but `AttendanceMethodScreen`, `AttendanceSummaryScreen` and `AttendanceListScreen` still come from `attendance/` (router.dart:3288-3340). This is a move, not a pure delete, so it fits Phase 3.1. |
+  | `exams` vs `exam_factory` | **Not duplicates. Keep both** | `exams` = assessments/marks (`AssessmentBloc`, `ExamsRepository` in DI, `ExamsDashboardScreen` routed). `exam_factory` = the exam-paper production workflow with its own offline queue (21 router refs). Different domains. |
+  | `nurse` vs `health` | **Layers, not duplicates.** Keep; fold `nurse/` into `health/presentation` later | `health` = data/domain (6 DI registrations) + clinic screens. `nurse` = the shell + More/medicine screens only (router only, 0 DI). Health is in the Parking Lot, so leave it until after launch. |
+  | `parent` / `parent_access` / `parent_offline` | **Layers. Keep all three** | `parent` = parent UI (15 router refs). `parent_access` = module guard/resolver (`ParentModuleGuard`, `ParentAccessCubit`). `parent_offline` = cache/queue/PIN store (DI). Optional later: nest them under `parent/`. |
+  | `messages` / `communication_center` / `announcements` | **Distinct. Keep all three** | Separate collections: `conversations`/`messages` (1:1 chat with outbox, 20 commits since Aug 21), `communication_campaigns`/`templates` (bulk campaigns), `announcements` (feed). Product question for later: should campaigns publish into announcements? |
+  | `billing` / `subscription_payment` / `super_admin` billing | **Layers. Keep.** Maybe move `billing/` → `super_admin/` later | `billing` = shared data and entities (used by super_admin + structure). `subscription_payment` = school-side pay cubit (DI). `super_admin` = owner-console screens. |
+  | `school_onboarding` vs `structure` | **Done.** `structure` won | `school_onboarding` deleted in de9345d8. |
 
 ### 0.5 Shared foundations
 - [ ] The design system (`lib/design_system/`) has: buttons, inputs, cards, list tiles, empty state, error state, loading skeleton, responsive scaffold, data table, stat tile, filter bar, confirmation dialog. Fill any gaps.
+  - Inventory 2026-10-21:
+    - **Exist:** buttons (`PulseButton`, `PrimaryButton`, `SecondaryButton`), inputs (`PulseTextField`, `AppSearchField`, `PhoneNumberField`, `SearchablePickerField`), cards (`PulseCard`, `AppCard`), empty state (`EmptyState`), loading skeleton (`Skeleton`, `SchoolPulseLoader`), data table (`PulseTable`), stat tile (`DashboardStatCard`, `AnalyticalStatCard`).
+    - **Partial:** responsive scaffold. `ResponsiveBuilder` + `AppResponsiveContent` exist, but there is no scaffold. `WizardScaffold` is wizard-only.
+    - **Missing:** list tile (only domain-specific ones exist: `ChatListTile`, `BedListTile`, `GatekeeperActionTile`); error state (4+ private `_ErrorState`/`_ErrorView` copies and `ExamFactoryErrorState`; `AlertBanner` is the closest shared widget); filter bar (only a private `_FilterBar`); confirmation dialog (only `ReauthPasswordDialog` and a private `_LogoutConfirmationDialog`).
 - [ ] One standard pattern for offline writes (queue) and one for audit logs, documented in `PROJECT_CONTEXT.md`.
 - [ ] Notification init in `main.dart` is time-bounded (already fixed, so verify it).
 - [ ] App Check, Crashlytics/error logging and analytics are enabled.
