@@ -36,9 +36,19 @@ A step is only `[x]` when all of these are true:
 - [ ] Anything not listed goes into the Parking Lot. Don't touch it until after launch.
 
 ### 0.2 Clean repo state
-- [ ] `git status` is clean. All WIP is committed or deliberately deleted.
-- [ ] List all `git stash list` entries. For each one, decide whether to apply it via `git show stash@{n}:<path>` or drop it. Write the decision down here.
-- [ ] Merge `structure-module` into `main` (or decide the branch strategy: one `main` plus short feature branches).
+- [x] `git status` is clean. All WIP is committed or deliberately deleted.
+- [x] List all `git stash list` entries. For each one, decide whether to apply it via `git show stash@{n}:<path>` or drop it. Write the decision down here.
+  - Decisions (2026-10-21). All 8 stashes were backed up first as patches in `~/Desktop/school_pulse_stash_backup/stash_{0..7}.patch`.
+    - stash 0 (finance/nurse/parent report-card): **dropped**. The nurse/health commits in the tree are newer.
+    - stash 1 (lesson attendance BLoC): **kept parked**. Now `stash@{0}`. See Phase 3.1.
+    - stash 2 (reports_dashboard WIP): **dropped**.
+    - stash 3 (admissions polish): **dropped**.
+    - stash 4 (message outbox/NFC): **dropped**. Already landed; the outbox impl was split into mobile/web/factory files.
+    - stash 5 (public location.js + Uganda regions): **dropped**. It breaks the no-regional-defaults rule.
+    - stash 6 (pre-gate_ops-rebuild snapshot): **dropped**. Too stale.
+    - stash 7 (old logo/launcher assets + super-admin dialogs): **dropped**. See Parking Lot.
+    - The stray `# ` line in README.md was reverted.
+- [ ] Merge `structure-module` → `main` at end of Phase 0, after tests are green. (Decision: deferred until then.)
 
 ### 0.3 Warnings and tests
 - [ ] Fix all `unawaited_return_in_try_block` warnings (attendance_hub repo, staff_identity_bloc, communication_attachments_uploader, student_identity_bloc, nfc_scan_flow_mixin, nfc_credential_repository_impl).
@@ -157,6 +167,7 @@ Each step uses `SetupWizardShell`, saves a draft, and can be revisited.
 - [ ] Absence → parent notification.
 - [ ] Reports: daily, weekly, per class, per student, chronic absentees.
 - [ ] Google Sheets export (per-school OAuth).
+- Note: lesson attendance BLoC (stash 1 patch: `~/Desktop/school_pulse_stash_backup/stash_1.patch`, also still parked as `stash@{0}`).
 
 ### 3.2 Timetable
 - [ ] View timetable per class, per teacher, per room.
@@ -323,6 +334,8 @@ Built or partly built, but NOT required to launch. Do not work on these until Ph
 - Integrations (third-party)
 - Institution health scoring
 - Any new idea that comes up during Phases 0–7
+- Lesson attendance BLoC (stash 1 patch)
+- Old logo/launcher assets in `~/Desktop/school_pulse_stash_backup/stash_7.patch`
 
 ---
 
