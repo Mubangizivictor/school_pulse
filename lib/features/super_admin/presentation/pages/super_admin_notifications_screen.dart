@@ -13,6 +13,7 @@ import 'package:school_pulse/features/super_admin/domain/entities/owner_notifica
 import '../responsive.dart';
 import '../widgets/owner_notification_visuals.dart';
 import 'owner_notification_detail_screen.dart';
+import 'package:school_pulse/design_system/components/app_error_state.dart';
 
 /// SaaS Owner "Notifications" screen — an owner-only nested route under
 /// Settings. The persistent owner bottom navigation stays visible (Settings
@@ -293,7 +294,7 @@ class _SuperAdminNotificationsScreenState
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError && _cachedFallback == null) {
-                return _ErrorState(
+                return AppErrorState(
                   message: _friendlyError(snapshot.error!),
                   onRetry: () => setState(() {}),
                 );
@@ -623,38 +624,6 @@ class _EmptyState extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline_rounded,
-              size: 42,
-              color: AppColors.danger(context),
-            ),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton.tonal(
-              onPressed: onRetry,
-              child: const Text('Try again'),
-            ),
-          ],
-        ),
       ),
     );
   }

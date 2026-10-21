@@ -17,6 +17,7 @@ import '../bloc/student_identity_event.dart';
 import '../bloc/student_identity_state.dart';
 import '../widgets/card_history_sheet.dart';
 import '../widgets/nfc_scan_flow_mixin.dart';
+import 'package:school_pulse/design_system/components/app_error_state.dart';
 
 /// Combines the "School ID", "NFC card" and "QR credential" concerns into
 /// one screen with three cards, matching the Identity & credentials
@@ -108,7 +109,7 @@ class _IdentityAndCardsBodyState extends State<IdentityAndCardsBody> {
         }
 
         if (state is StudentIdentityError) {
-          return _ErrorState(
+          return AppErrorState(
             message: state.message,
             onRetry: () => context.read<StudentIdentityBloc>().add(
               LoadStudentIdentityEvent(
@@ -294,29 +295,6 @@ class _HistoryPreservedNote extends StatelessWidget {
   );
 }
 
-class _ErrorState extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline_rounded, size: 48),
-          const SizedBox(height: 12),
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 16),
-          FilledButton(onPressed: onRetry, child: const Text('Try Again')),
-        ],
-      ),
-    ),
-  );
-}
-
 // ---------------------------------------------------------------------------
 // SCHOOL ID CARD
 // ---------------------------------------------------------------------------
@@ -366,15 +344,17 @@ class _SchoolIdCard extends StatelessWidget {
             color: _issued
                 ? Theme.of(context).extension<SemanticColors>()!.success
                 : scheme.onSurfaceVariant,
-            icon: _issued ? Icons.check_circle_outline : Icons.remove_circle_outline,
+            icon: _issued
+                ? Icons.check_circle_outline
+                : Icons.remove_circle_outline,
           ),
           if (_issued && identity.issuedAt != null) ...[
             const SizedBox(height: 8),
             Text(
               'Last issued ${DateFormat('d MMM yyyy').format(identity.issuedAt!)}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
           const SizedBox(height: 16),
@@ -415,9 +395,9 @@ class _SchoolIdCard extends StatelessWidget {
           else
             Text(
               'No identity has been issued for this learner yet.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
         ],
       ),
@@ -476,9 +456,7 @@ class _QrCredentialCard extends StatelessWidget {
               color: _active
                   ? Theme.of(context).extension<SemanticColors>()!.success
                   : Theme.of(context).extension<SemanticColors>()!.error,
-              icon: _active
-                  ? Icons.check_circle_outline
-                  : Icons.block_outlined,
+              icon: _active ? Icons.check_circle_outline : Icons.block_outlined,
             )
           else
             StatusBadge(
@@ -489,9 +467,9 @@ class _QrCredentialCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Used for verified check-in and school services.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: scheme.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
           if (_issued)
@@ -694,7 +672,9 @@ class _NfcCardState extends State<_NfcCard> with NfcScanFlowMixin {
               _ => 'No active card',
             },
             color: switch (status) {
-              'active' => Theme.of(context).extension<SemanticColors>()!.success,
+              'active' => Theme.of(
+                context,
+              ).extension<SemanticColors>()!.success,
               'revoked' => Theme.of(context).extension<SemanticColors>()!.error,
               _ => scheme.onSurfaceVariant,
             },
@@ -708,9 +688,9 @@ class _NfcCardState extends State<_NfcCard> with NfcScanFlowMixin {
             const SizedBox(height: 8),
             Text(
               'Assign a physical card for gate, library and attendance use.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ],
           const SizedBox(height: 16),
@@ -767,4 +747,3 @@ class _NfcCardState extends State<_NfcCard> with NfcScanFlowMixin {
     );
   }
 }
-

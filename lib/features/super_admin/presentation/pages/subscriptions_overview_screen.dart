@@ -21,6 +21,7 @@ import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
 import 'billing_page.dart';
 import 'school_detail_screen.dart';
+import 'package:school_pulse/design_system/components/app_error_state.dart';
 
 /// Threshold used to bucket a school's subscription as "expiring soon".
 /// Chosen to give the owner about two weeks' notice before a manual renewal
@@ -143,7 +144,7 @@ class _SubscriptionsOverviewScreenState
           }
           if (state.status == SuperAdminStatus.failure &&
               state.schools.isEmpty) {
-            return _ErrorState(
+            return AppErrorState(
               message: state.errorMessage ?? 'Unable to load schools.',
               onRetry: _refresh,
             );
@@ -156,9 +157,7 @@ class _SubscriptionsOverviewScreenState
           final suspended = <School>[];
           final cancelled = <School>[];
 
-          final visibleSchools = state.schools
-              .where(_matchesSearch)
-              .toList();
+          final visibleSchools = state.schools.where(_matchesSearch).toList();
 
           for (final school in visibleSchools) {
             if (school.status == SchoolStatus.suspended) {
@@ -572,39 +571,6 @@ class _SubscriptionRow extends StatelessWidget {
               icon: const Icon(Icons.receipt_long_outlined, size: 18),
             ),
             const Icon(Icons.chevron_right_rounded, size: 18),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.cloud_off_outlined,
-              size: 54,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 14),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Try Again'),
-            ),
           ],
         ),
       ),

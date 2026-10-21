@@ -49,7 +49,7 @@ void main() {
   test('loading, error, and empty states are all handled explicitly', () {
     expect(source.contains('SchoolPulseLoader()'), isTrue);
     expect(
-      source.contains('class _ErrorState extends StatelessWidget'),
+      source.contains('AppErrorState(message: _error!, onRetry: _reload)'),
       isTrue,
     );
     expect(

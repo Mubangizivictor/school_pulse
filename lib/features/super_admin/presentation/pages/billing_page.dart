@@ -14,6 +14,7 @@ import 'package:school_pulse/features/super_admin/domain/entities/manual_subscri
 import '../responsive.dart';
 import 'payment_inspector.dart';
 import 'payment_review_screen.dart';
+import 'package:school_pulse/design_system/components/app_error_state.dart';
 
 enum _DateRange { today, thisWeek, thisMonth, thisYear, all }
 
@@ -119,8 +120,7 @@ class _BillingPageState extends State<BillingPage> {
         _items = items;
         _loading = false;
         // Drop a stale selection that is no longer in the list.
-        if (_selectedId != null &&
-            !items.any((p) => p.id == _selectedId)) {
+        if (_selectedId != null && !items.any((p) => p.id == _selectedId)) {
           _selectedId = null;
         }
       });
@@ -215,7 +215,7 @@ class _BillingPageState extends State<BillingPage> {
               child: _loading
                   ? const Center(child: SchoolPulseLoader())
                   : _error != null
-                  ? _ErrorState(message: _error!, onRetry: _reload)
+                  ? AppErrorState(message: _error!, onRetry: _reload)
                   : wide
                   ? _wideBody(context)
                   : _narrowBody(context),
@@ -236,9 +236,7 @@ class _BillingPageState extends State<BillingPage> {
             tooltip: 'Back',
             onPressed: () => Navigator.of(context).maybePop(),
             icon: const Icon(Icons.arrow_back_rounded),
-            style: IconButton.styleFrom(
-              minimumSize: const Size(40, 40),
-            ),
+            style: IconButton.styleFrom(minimumSize: const Size(40, 40)),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -247,10 +245,7 @@ class _BillingPageState extends State<BillingPage> {
               children: [
                 const Text(
                   'Subscription payments',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -293,10 +288,7 @@ class _BillingPageState extends State<BillingPage> {
         children: [
           Text(
             _dateRange.label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
           const SizedBox(width: 4),
           Icon(
@@ -454,10 +446,7 @@ class _BillingPageState extends State<BillingPage> {
         _resultsCount(context),
         const SizedBox(height: 8),
         if (_visibleItems.isEmpty)
-          _EmptyState(
-            filter: _filter,
-            hasQuery: _search.trim().isNotEmpty,
-          )
+          _EmptyState(filter: _filter, hasQuery: _search.trim().isNotEmpty)
         else
           for (final payment in _visibleItems)
             Padding(
@@ -617,9 +606,7 @@ class _BillingPageState extends State<BillingPage> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: selected
-                      ? accent
-                      : AppColors.textSecondary(context),
+                  color: selected ? accent : AppColors.textSecondary(context),
                 ),
               ),
             ),
@@ -645,8 +632,10 @@ class _BillingPageState extends State<BillingPage> {
                 prefixIcon: const Icon(Icons.search_rounded, size: 18),
                 filled: true,
                 fillColor: AppColors.surfaceContainer(context),
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 8,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(color: AppColors.border(context)),
@@ -694,10 +683,7 @@ class _BillingPageState extends State<BillingPage> {
     final n = _visibleItems.length;
     return Text(
       'Showing $n result${n == 1 ? '' : 's'}',
-      style: TextStyle(
-        fontSize: 12,
-        color: AppColors.textSecondary(context),
-      ),
+      style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
     );
   }
 
@@ -733,13 +719,10 @@ class _BillingPageState extends State<BillingPage> {
             _TableRow(
               payment: _visibleItems[i],
               amount: _money.format(_visibleItems[i].submittedAmount),
-              submittedAt:
-                  _shortDateTime.format(_visibleItems[i].submittedAt),
+              submittedAt: _shortDateTime.format(_visibleItems[i].submittedAt),
               selected: _selectedId == _visibleItems[i].id,
-              onTap: () =>
-                  setState(() => _selectedId = _visibleItems[i].id),
-              onCopyReference: () =>
-                  _copyReference(_visibleItems[i].reference),
+              onTap: () => setState(() => _selectedId = _visibleItems[i].id),
+              onCopyReference: () => _copyReference(_visibleItems[i].reference),
             ),
           ],
         ],
@@ -890,8 +873,7 @@ class _BillingPageState extends State<BillingPage> {
                         ChoiceChip(
                           label: const Text('All'),
                           selected: method == null,
-                          onSelected: (_) =>
-                              setSheetState(() => method = null),
+                          onSelected: (_) => setSheetState(() => method = null),
                         ),
                         ChoiceChip(
                           label: const Text('MTN MoMo'),
@@ -943,10 +925,8 @@ class _BillingPageState extends State<BillingPage> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: FilledButton(
-                            onPressed: () => Navigator.pop(
-                              sheetContext,
-                              (method, sortBy),
-                            ),
+                            onPressed: () =>
+                                Navigator.pop(sheetContext, (method, sortBy)),
                             style: FilledButton.styleFrom(
                               backgroundColor: paymentAccent(sheetContext),
                               foregroundColor: Colors.white,
@@ -1071,10 +1051,7 @@ class _Metric extends StatelessWidget {
             child: Text(
               value,
               maxLines: 1,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -1161,9 +1138,7 @@ class _TableRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = paymentAccent(context);
     return Material(
-      color: selected
-          ? accent.withValues(alpha: 0.08)
-          : Colors.transparent,
+      color: selected ? accent.withValues(alpha: 0.08) : Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Container(
@@ -1475,19 +1450,14 @@ class _EmptyState extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            hasQuery
-                ? Icons.search_off_rounded
-                : Icons.payments_outlined,
+            hasQuery ? Icons.search_off_rounded : Icons.payments_outlined,
             size: 30,
             color: AppColors.textSecondary(context),
           ),
           const SizedBox(height: 12),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 4),
           Text(
@@ -1499,38 +1469,6 @@ class _EmptyState extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline_rounded,
-              size: 40,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: onRetry,
-              child: const Text('Try again'),
-            ),
-          ],
-        ),
       ),
     );
   }
