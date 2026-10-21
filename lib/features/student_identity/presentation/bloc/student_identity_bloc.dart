@@ -233,7 +233,7 @@ class StudentIdentityBloc
             schoolId: schoolId,
           )
           .timeout(const Duration(seconds: 8));
-      return result.fold((_) => null, (cardUid) => cardUid);
+      return await result.fold((_) => null, (cardUid) => cardUid);
     } catch (_) {
       return null;
     }

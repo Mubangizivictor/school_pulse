@@ -110,7 +110,7 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
           final allResult = await studentRepository.getAllStudents(
             schoolId: schoolId,
           );
-          return allResult.fold(
+          return await allResult.fold(
             Left.new,
             (students) => Right(
               students
@@ -131,7 +131,7 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
           );
         case AttendanceCategory.staff:
           final result = await getStaffMembers(NoParams());
-          return result.fold(
+          return await result.fold(
             Left.new,
             (staff) => Right(
               staff

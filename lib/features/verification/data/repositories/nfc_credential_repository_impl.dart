@@ -73,12 +73,14 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     if (functions == null || studentId == null) return null;
     if (!await networkInfo.isConnected) return null;
     try {
-      await functions!.httpsCallable('replaceNfcCredential').call<Map<String, dynamic>>({
-        'cardUid': oldCardUid,
-        'newCardUid': newCardUid,
-        'studentId': studentId,
-        'reason': reason,
-      });
+      await functions!
+          .httpsCallable('replaceNfcCredential')
+          .call<Map<String, dynamic>>({
+            'cardUid': oldCardUid,
+            'newCardUid': newCardUid,
+            'studentId': studentId,
+            'reason': reason,
+          });
       return const Right(null);
     } on FirebaseFunctionsException catch (e) {
       if (e.code == 'already-exists') {
@@ -110,11 +112,13 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     if (functions == null || studentId == null) return null;
     if (!await networkInfo.isConnected) return null;
     try {
-      await functions!.httpsCallable('revokeNfcCredential').call<Map<String, dynamic>>({
-        'cardUid': cardUid,
-        'studentId': studentId,
-        'reason': reason,
-      });
+      await functions!
+          .httpsCallable('revokeNfcCredential')
+          .call<Map<String, dynamic>>({
+            'cardUid': cardUid,
+            'studentId': studentId,
+            'reason': reason,
+          });
       return const Right(null);
     } on FirebaseFunctionsException catch (e) {
       return Left(
@@ -134,15 +138,18 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
     if (functions == null || studentId == null) return null;
     if (!await networkInfo.isConnected) return null;
     try {
-      await functions!.httpsCallable('reactivateNfcCredential').call<Map<String, dynamic>>({
-        'cardUid': cardUid,
-        'studentId': studentId,
-      });
+      await functions!
+          .httpsCallable('reactivateNfcCredential')
+          .call<Map<String, dynamic>>({
+            'cardUid': cardUid,
+            'studentId': studentId,
+          });
       return const Right(null);
     } on FirebaseFunctionsException catch (e) {
       return Left(
         ServerFailure(
-          e.message ?? 'NFC card reactivation failed on the server (${e.code}).',
+          e.message ??
+              'NFC card reactivation failed on the server (${e.code}).',
         ),
       );
     } catch (e) {
@@ -259,7 +266,7 @@ class NfcCredentialRepositoryImpl implements NfcCredentialRepository {
         schoolId: schoolId,
         reason: reason,
       );
-      return revokeResult.fold(
+      return await revokeResult.fold(
         Left.new,
         (_) => assign(
           credentialValue: newCredentialValue,

@@ -560,9 +560,9 @@ class _StreamsChoiceView extends StatelessWidget {
                   title: 'No streams',
                   subtitle: 'Enrol learners directly into classes',
                   selected: choice == StructureUseChoice.disabled,
-                  onTap: () => context
-                      .read<StructureSetupCubit>()
-                      .setStreams(StructureUseChoice.disabled),
+                  onTap: () => context.read<StructureSetupCubit>().setStreams(
+                    StructureUseChoice.disabled,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 _StreamsChoiceCard(
@@ -570,9 +570,9 @@ class _StreamsChoiceView extends StatelessWidget {
                   title: 'Add streams',
                   subtitle: 'Create groups such as East and West',
                   selected: choice == StructureUseChoice.enabled,
-                  onTap: () => context
-                      .read<StructureSetupCubit>()
-                      .setStreams(StructureUseChoice.enabled),
+                  onTap: () => context.read<StructureSetupCubit>().setStreams(
+                    StructureUseChoice.enabled,
+                  ),
                 ),
                 const Spacer(),
                 if (choice == StructureUseChoice.disabled)
@@ -580,12 +580,19 @@ class _StreamsChoiceView extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline, size: 16, color: scheme.onSurfaceVariant),
+                        Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: scheme.onSurfaceVariant,
+                        ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'You can add streams later.',
-                            style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: scheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
                       ],
@@ -596,7 +603,8 @@ class _StreamsChoiceView extends StatelessWidget {
                     width: double.infinity,
                     height: 52,
                     child: OutlinedButton.icon(
-                      onPressed: () => _openAddStreamsSheet(context, state, schoolId),
+                      onPressed: () =>
+                          _openAddStreamsSheet(context, state, schoolId),
                       icon: const Icon(Icons.add, size: 18),
                       label: const Text('Add streams'),
                     ),
@@ -653,12 +661,18 @@ class _StreamsChoiceCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -823,19 +837,27 @@ class _AddStreamsSheetState extends State<_AddStreamsSheet> {
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
                 value: _applyToAll,
-                onChanged: (value) => setState(() => _applyToAll = value ?? true),
+                onChanged: (value) =>
+                    setState(() => _applyToAll = value ?? true),
                 title: const Text('Apply this stream to selected classes'),
               ),
               const SizedBox(height: 4),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.info_outline, size: 16, color: scheme.onSurfaceVariant),
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'If a class capacity is set, stream capacities cannot exceed it.',
-                      style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],
@@ -849,7 +871,10 @@ class _AddStreamsSheetState extends State<_AddStreamsSheet> {
                     border: Border.all(color: scheme.outline),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text(_error!, style: TextStyle(color: scheme.onSurface)),
+                  child: Text(
+                    _error!,
+                    style: TextStyle(color: scheme.onSurface),
+                  ),
                 ),
               ],
               const SizedBox(height: 20),
@@ -877,11 +902,12 @@ class _AddStreamsSheetState extends State<_AddStreamsSheet> {
         initiallySelected: _selectedClassIds,
       ),
     );
-    if (result != null) setState(() {
-      _selectedClassIds
-        ..clear()
-        ..addAll(result);
-    });
+    if (result != null)
+      setState(() {
+        _selectedClassIds
+          ..clear()
+          ..addAll(result);
+      });
   }
 
   void _submit() {
@@ -897,11 +923,17 @@ class _AddStreamsSheetState extends State<_AddStreamsSheet> {
     final capacityText = _capacityController.text.trim();
     final capacity = capacityText.isEmpty ? 0 : int.tryParse(capacityText);
     if (capacity == null || capacity < 0) {
-      setState(() => _error = 'Enter a valid capacity, or leave it empty for no limit.');
+      setState(
+        () =>
+            _error = 'Enter a valid capacity, or leave it empty for no limit.',
+      );
       return;
     }
     if (!_applyToAll && _selectedClassIds.length > 1) {
-      setState(() => _error = 'Turn on "Apply to selected classes" to use one class, or enable it for all.');
+      setState(
+        () => _error =
+            'Turn on "Apply to selected classes" to use one class, or enable it for all.',
+      );
       return;
     }
     final streams = [
@@ -946,9 +978,9 @@ class _MultiClassPickerState extends State<_MultiClassPicker> {
           children: [
             Text(
               'Add to more classes',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
             for (final item in widget.classes)
@@ -1081,12 +1113,18 @@ class _StreamClassGroup extends StatelessWidget {
                   children: [
                     Text(
                       schoolClass.name,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${streams.length} stream${streams.length == 1 ? '' : 's'}',
-                      style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -1098,7 +1136,10 @@ class _StreamClassGroup extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   border: Border.all(color: scheme.outlineVariant),
                   borderRadius: BorderRadius.circular(10),
@@ -1108,12 +1149,16 @@ class _StreamClassGroup extends StatelessWidget {
                     Expanded(
                       child: Text(
                         '${stream.name} · ${stream.capacity == 0 ? 'No limit' : 'Capacity ${stream.capacity}'}',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert, size: 20),
-                      onSelected: (action) => _handleAction(context, action, stream),
+                      onSelected: (action) =>
+                          _handleAction(context, action, stream),
                       itemBuilder: (_) => const [
                         PopupMenuItem(value: 'edit', child: Text('Edit')),
                         PopupMenuItem(value: 'archive', child: Text('Archive')),
@@ -1144,7 +1189,11 @@ class _StreamClassGroup extends StatelessWidget {
         streams: allStreams,
         onSave: (value) => _dispatchIfValid(
           context,
-          _validator.validateStream(value, classes: allClasses, streams: allStreams),
+          _validator.validateStream(
+            value,
+            classes: allClasses,
+            streams: allStreams,
+          ),
           () => bloc.add(SaveStreamRequested(value)),
         ),
       );
@@ -1819,7 +1868,6 @@ class _SystemCard extends StatelessWidget {
   }
 }
 
-
 /// Step 2 (Academic years): a direct inline setup workspace, replacing the
 /// old empty-state + "Add academic year" modal. The form always renders
 /// (no giant empty state); once fields are valid a live preview card shows
@@ -1838,8 +1886,7 @@ class _AcademicYearSetupView extends StatefulWidget {
   final VoidCallback? onSetUpTerms;
 
   @override
-  State<_AcademicYearSetupView> createState() =>
-      _AcademicYearSetupViewState();
+  State<_AcademicYearSetupView> createState() => _AcademicYearSetupViewState();
 }
 
 class _AcademicYearSetupViewState extends State<_AcademicYearSetupView> {
@@ -1971,9 +2018,9 @@ class _AcademicYearSetupViewState extends State<_AcademicYearSetupView> {
           children: [
             Text(
               'Set your academic year',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
             Text(
@@ -1998,181 +2045,178 @@ class _AcademicYearSetupViewState extends State<_AcademicYearSetupView> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _editingYear == null
-                          ? 'Academic year details'
-                          : 'Editing ${_editingYear!.name}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'These details are required to continue.',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Academic year name *',
-                        hintText: 'e.g. 2026',
-                        helperText:
-                            'Use a year (e.g. 2026) or a name (e.g. 2025/26).',
-                      ),
-                      onChanged: (_) => setState(() {}),
-                      validator: (value) =>
-                          value == null || value.trim().isEmpty
-                          ? 'Required'
-                          : null,
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: AcademicYearDateField(
-                            label: 'Start date *',
-                            value: _startDate == null
-                                ? 'Select start date'
-                                : fmt.format(_startDate!),
-                            isPlaceholder: _startDate == null,
-                            onTap: () => _pickDate(isStart: true),
-                          ),
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _editingYear == null
+                            ? 'Academic year details'
+                            : 'Editing ${_editingYear!.name}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: AcademicYearDateField(
-                            label: 'End date *',
-                            value: _endDate == null
-                                ? 'Select end date'
-                                : fmt.format(_endDate!),
-                            isPlaceholder: _endDate == null,
-                            onTap: () => _pickDate(isStart: false),
-                          ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'These details are required to continue.',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: scheme.onSurfaceVariant,
                         ),
-                      ],
-                    ),
-                    if (_dateError != null) ...[
-                      const SizedBox(height: 10),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Academic year name *',
+                          hintText: 'e.g. 2026',
+                          helperText:
+                              'Use a year (e.g. 2026) or a name (e.g. 2025/26).',
+                        ),
+                        onChanged: (_) => setState(() {}),
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                            ? 'Required'
+                            : null,
+                      ),
+                      const SizedBox(height: 12),
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.error_outline,
-                            size: 16,
-                            color: scheme.error,
+                          Expanded(
+                            child: AcademicYearDateField(
+                              label: 'Start date *',
+                              value: _startDate == null
+                                  ? 'Select start date'
+                                  : fmt.format(_startDate!),
+                              isPlaceholder: _startDate == null,
+                              onTap: () => _pickDate(isStart: true),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
-                              _dateError!,
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: scheme.error,
-                              ),
+                            child: AcademicYearDateField(
+                              label: 'End date *',
+                              value: _endDate == null
+                                  ? 'Select end date'
+                                  : fmt.format(_endDate!),
+                              isPlaceholder: _endDate == null,
+                              onTap: () => _pickDate(isStart: false),
                             ),
                           ),
                         ],
                       ),
-                    ],
-                    const SizedBox(height: 12),
-                    InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () =>
-                          setState(() => _isCurrent = !_isCurrent),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: scheme.surface,
-                          border: Border.all(color: scheme.outlineVariant),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
+                      if (_dateError != null) ...[
+                        const SizedBox(height: 10),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Switch(
-                              value: _isCurrent,
-                              onChanged: (value) =>
-                                  setState(() => _isCurrent = value),
+                            Icon(
+                              Icons.error_outline,
+                              size: 16,
+                              color: scheme.error,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 8),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Set as current academic year'),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'This will be used for new enrolments '
-                                    'and terms.',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: scheme.onSurfaceVariant,
+                              child: Text(
+                                _dateError!,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: scheme.error,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => setState(() => _isCurrent = !_isCurrent),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: scheme.surface,
+                            border: Border.all(color: scheme.outlineVariant),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Switch(
+                                value: _isCurrent,
+                                onChanged: (value) =>
+                                    setState(() => _isCurrent = value),
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Set as current academic year'),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'This will be used for new enrolments '
+                                      'and terms.',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: scheme.onSurfaceVariant,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Theme(
+                        data: Theme.of(
+                          context,
+                        ).copyWith(dividerColor: Colors.transparent),
+                        child: ExpansionTile(
+                          initiallyExpanded: _advancedExpanded,
+                          onExpansionChanged: (value) =>
+                              setState(() => _advancedExpanded = value),
+                          tilePadding: EdgeInsets.zero,
+                          title: const Text(
+                            'Advanced dates (optional)',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: Text(
+                            'Set term dates or multiple calendars '
+                            '(e.g. primary/secondary).',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                          childrenPadding: const EdgeInsets.only(bottom: 8),
+                          children: [
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                years.length > 1 || widget.onSetUpTerms == null
+                                    ? 'Manage term dates from the Terms / '
+                                          'semesters step after saving this '
+                                          'year.'
+                                    : 'Save this year first, then use "Set '
+                                          'up terms" below to add term dates.',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: scheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Theme(
-                      data: Theme.of(
-                        context,
-                      ).copyWith(dividerColor: Colors.transparent),
-                      child: ExpansionTile(
-                        initiallyExpanded: _advancedExpanded,
-                        onExpansionChanged: (value) =>
-                            setState(() => _advancedExpanded = value),
-                        tilePadding: EdgeInsets.zero,
-                        title: const Text(
-                          'Advanced dates (optional)',
-                          style: TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        subtitle: Text(
-                          'Set term dates or multiple calendars '
-                          '(e.g. primary/secondary).',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                        childrenPadding: const EdgeInsets.only(bottom: 8),
-                        children: [
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              years.length > 1 ||
-                                      widget.onSetUpTerms == null
-                                  ? 'Manage term dates from the Terms / '
-                                        'semesters step after saving this '
-                                        'year.'
-                                  : 'Save this year first, then use "Set '
-                                        'up terms" below to add term dates.',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
               ),
             ),
             const SizedBox(height: 20),
@@ -2214,9 +2258,7 @@ class _AcademicYearSetupViewState extends State<_AcademicYearSetupView> {
                       )
                     : const Icon(Icons.check_rounded, size: 18),
                 label: Text(
-                  _editingYear == null
-                      ? 'Save academic year'
-                      : 'Save changes',
+                  _editingYear == null ? 'Save academic year' : 'Save changes',
                 ),
               ),
             ),
@@ -2224,9 +2266,9 @@ class _AcademicYearSetupViewState extends State<_AcademicYearSetupView> {
               const SizedBox(height: 24),
               Text(
                 'Your academic years',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 4),
               Text(
@@ -2286,7 +2328,6 @@ class _InfoBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     // Pale-blue explanatory banner: a fixed light-blue tone works in both
     // themes because the banner is an informational accent, not a
     // theme-derived surface (matches the reference screenshots exactly).
@@ -2320,7 +2361,11 @@ class _InfoBanner extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   message,
-                  style: const TextStyle(color: bannerText, fontSize: 12.5, height: 1.4),
+                  style: const TextStyle(
+                    color: bannerText,
+                    fontSize: 12.5,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
@@ -2381,7 +2426,10 @@ class _AcademicYearPreviewCard extends StatelessWidget {
                 ),
                 Text(
                   dateLabel,
-                  style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -2789,10 +2837,11 @@ class _ClassesBulkSetupState extends State<_ClassesBulkSetup> {
         ..sort((a, b) => a.order.compareTo(b.order));
 
   List<SchoolClass> _classesForLevel(String levelId) {
-    final items = widget.state.classes
-        .where((item) => item.levelId == levelId && item.isActive)
-        .toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
+    final items =
+        widget.state.classes
+            .where((item) => item.levelId == levelId && item.isActive)
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
     return items;
   }
 
@@ -2873,7 +2922,9 @@ class _ClassesBulkSetupState extends State<_ClassesBulkSetup> {
                           onSelect: _selectLevel,
                         ),
                         const SizedBox(height: 20),
-                        Expanded(child: SingleChildScrollView(child: workspace)),
+                        Expanded(
+                          child: SingleChildScrollView(child: workspace),
+                        ),
                       ],
                     ),
                   ),
@@ -2964,9 +3015,7 @@ class _LevelSwitcher extends StatelessWidget {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: selected
-                        ? scheme.primaryContainer
-                        : scheme.surface,
+                    color: selected ? scheme.primaryContainer : scheme.surface,
                     border: Border.all(
                       color: selected ? scheme.primary : scheme.outlineVariant,
                       width: selected ? 1.5 : 1,
@@ -3156,7 +3205,11 @@ class _LevelSummaryRow extends StatelessWidget {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, size: 18, color: scheme.onSurfaceVariant),
+              Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: scheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),
@@ -3215,9 +3268,9 @@ class _LevelWorkspace extends StatelessWidget {
             Expanded(
               child: Text(
                 level.name,
-                style: Theme.of(
-                  context,
-                ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ],
@@ -3240,7 +3293,11 @@ class _LevelWorkspace extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.lightbulb_outline, size: 18, color: scheme.onSurfaceVariant),
+                  Icon(
+                    Icons.lightbulb_outline,
+                    size: 18,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -3265,7 +3322,10 @@ class _LevelWorkspace extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     'No configured suggestions for this level. Add the class names your school uses.',
-                    style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 )
               else
@@ -3381,11 +3441,8 @@ class _ClassLevelGroup extends StatelessWidget {
               schoolClass: levelClasses[i],
               draggable: false,
               onEdit: () => onEdit(levelClasses[i]),
-              onAction: (action) => _handleAction(
-                context,
-                action,
-                levelClasses[i],
-              ),
+              onAction: (action) =>
+                  _handleAction(context, action, levelClasses[i]),
             ),
         ],
       );
@@ -3412,11 +3469,8 @@ class _ClassLevelGroup extends StatelessWidget {
         schoolClass: levelClasses[index],
         draggable: true,
         onEdit: () => onEdit(levelClasses[index]),
-        onAction: (action) => _handleAction(
-          context,
-          action,
-          levelClasses[index],
-        ),
+        onAction: (action) =>
+            _handleAction(context, action, levelClasses[index]),
       ),
     );
   }
@@ -3481,7 +3535,14 @@ class _ClassCard extends StatelessWidget {
               child: Icon(Icons.drag_indicator, color: scheme.onSurfaceVariant),
             )
           else
-            SizedBox(width: 24, child: Icon(Icons.lock_outline, size: 18, color: scheme.onSurfaceVariant)),
+            SizedBox(
+              width: 24,
+              child: Icon(
+                Icons.lock_outline,
+                size: 18,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
           const SizedBox(width: 12),
           Text(
             '${index + 1}.',
@@ -3494,12 +3555,18 @@ class _ClassCard extends StatelessWidget {
               children: [
                 Text(
                   schoolClass.name,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   '${schoolClass.capacity == 0 ? 'No capacity set' : 'Capacity ${schoolClass.capacity}'} • Streams added next',
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -3593,15 +3660,16 @@ List<_SuggestedSubject> _suggestionsForLevel(EducationalLevel? level) {
         .map((raw) {
           final parts = raw.trim().split('|');
           final name = parts.first.trim();
-          return _SuggestedSubject(name, parts.length > 1 ? parts[1].trim() : '');
+          return _SuggestedSubject(
+            name,
+            parts.length > 1 ? parts[1].trim() : '',
+          );
         })
         .where((s) => s.name.isNotEmpty)
         .toList();
   }
   final template = _kSubjectTemplates
-      .where(
-        (t) => level.name.toLowerCase().contains(t.levelNameMatch),
-      )
+      .where((t) => level.name.toLowerCase().contains(t.levelNameMatch))
       .firstOrNull;
   return template?.subjects ?? const [];
 }
@@ -3655,10 +3723,11 @@ class _SubjectCatalogueSetupState extends State<_SubjectCatalogueSetup> {
       .length;
 
   List<Subject> _subjectsForLevel(String levelId) {
-    final items = widget.state.subjects
-        .where((s) => s.isActive && s.assignedLevelIds.contains(levelId))
-        .toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
+    final items =
+        widget.state.subjects
+            .where((s) => s.isActive && s.assignedLevelIds.contains(levelId))
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
     return items;
   }
 
@@ -3673,9 +3742,9 @@ class _SubjectCatalogueSetupState extends State<_SubjectCatalogueSetup> {
         .where((s) => s.assignedLevelIds.contains(level.id))
         .map((s) => s.name.trim().toLowerCase())
         .toSet();
-    return _suggestionsForLevel(level)
-        .where((s) => !existing.contains(s.name.toLowerCase()))
-        .toList();
+    return _suggestionsForLevel(
+      level,
+    ).where((s) => !existing.contains(s.name.toLowerCase())).toList();
   }
 
   Future<void> _addSelectedSuggestions(
@@ -3703,7 +3772,8 @@ class _SubjectCatalogueSetupState extends State<_SubjectCatalogueSetup> {
     final name = TextEditingController(text: existing?.name);
     final code = TextEditingController(text: existing?.code);
     final levels = _levels;
-    final initialLevelIds = existing?.assignedLevelIds.toList() ??
+    final initialLevelIds =
+        existing?.assignedLevelIds.toList() ??
         (defaultLevelId != null ? [defaultLevelId] : <String>[]);
     final selectedLevelIds = {...initialLevelIds};
 
@@ -3758,16 +3828,16 @@ class _SubjectCatalogueSetupState extends State<_SubjectCatalogueSetup> {
     void submit(BuildContext sheetContext, StateSetter setSheetState) {
       final subjectName = name.text.trim();
       if (subjectName.isEmpty) {
-        ScaffoldMessenger.of(sheetContext).showSnackBar(
-          const SnackBar(content: Text('Enter a subject name.')),
-        );
+        ScaffoldMessenger.of(
+          sheetContext,
+        ).showSnackBar(const SnackBar(content: Text('Enter a subject name.')));
         return;
       }
       final error = duplicateError(setSheetState);
       if (error != null) {
-        ScaffoldMessenger.of(sheetContext).showSnackBar(
-          SnackBar(content: Text(error)),
-        );
+        ScaffoldMessenger.of(
+          sheetContext,
+        ).showSnackBar(SnackBar(content: Text(error)));
         return;
       }
       final subject = Subject(
@@ -3802,7 +3872,9 @@ class _SubjectCatalogueSetupState extends State<_SubjectCatalogueSetup> {
         context: context,
         builder: (dialogContext) => StatefulBuilder(
           builder: (dialogContext, setSheetState) => AlertDialog(
-            title: Text(existing == null ? 'Add custom subject' : 'Edit subject'),
+            title: Text(
+              existing == null ? 'Add custom subject' : 'Edit subject',
+            ),
             content: SizedBox(
               width: 420,
               child: SingleChildScrollView(
@@ -3925,10 +3997,9 @@ class _SubjectCatalogueSetupState extends State<_SubjectCatalogueSetup> {
   }
 
   Future<void> _delete(Subject subject) async {
-    final count = await di.sl<StructureDependencyService>().countSubjectReferences(
-      widget.schoolId,
-      subject.id,
-    );
+    final count = await di
+        .sl<StructureDependencyService>()
+        .countSubjectReferences(widget.schoolId, subject.id);
     if (!mounted) return;
     if (count == 0) {
       final confirmed = await showDeleteConfirmDialog(
@@ -3980,9 +4051,7 @@ class _SubjectCatalogueSetupState extends State<_SubjectCatalogueSetup> {
         if (mounted) setState(() => _levelId = level.id);
       });
     }
-    final totalSubjects = widget.state.subjects
-        .where((s) => s.isActive)
-        .length;
+    final totalSubjects = widget.state.subjects.where((s) => s.isActive).length;
 
     return SafeArea(
       child: LayoutBuilder(
@@ -4040,7 +4109,9 @@ class _SubjectCatalogueSetupState extends State<_SubjectCatalogueSetup> {
                           onSelect: _selectLevel,
                         ),
                         const SizedBox(height: 20),
-                        Expanded(child: SingleChildScrollView(child: workspace)),
+                        Expanded(
+                          child: SingleChildScrollView(child: workspace),
+                        ),
                       ],
                     ),
                   ),
@@ -4138,9 +4209,7 @@ class _SubjectLevelSwitcher extends StatelessWidget {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: selected
-                        ? scheme.primaryContainer
-                        : scheme.surface,
+                    color: selected ? scheme.primaryContainer : scheme.surface,
                     border: Border.all(
                       color: selected ? scheme.primary : scheme.outlineVariant,
                       width: selected ? 1.5 : 1,
@@ -4379,9 +4448,9 @@ class _SubjectLevelWorkspace extends StatelessWidget {
             Expanded(
               child: Text(
                 '${level.name} subjects',
-                style: Theme.of(
-                  context,
-                ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
           ],
@@ -4403,7 +4472,11 @@ class _SubjectLevelWorkspace extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.lightbulb_outline, size: 18, color: scheme.onSurfaceVariant),
+                  Icon(
+                    Icons.lightbulb_outline,
+                    size: 18,
+                    color: scheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Suggested subjects',
@@ -4428,7 +4501,10 @@ class _SubjectLevelWorkspace extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 4),
                   child: Text(
                     'No configured suggestions for this level. Add the subjects your school uses.',
-                    style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 )
               else
@@ -4576,7 +4652,10 @@ class _SubjectCard extends StatelessWidget {
                 padding: const EdgeInsets.only(right: 8),
                 child: Text(
                   subject.code,
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             IconButton(

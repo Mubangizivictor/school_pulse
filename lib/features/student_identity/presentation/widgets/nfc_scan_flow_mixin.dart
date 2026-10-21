@@ -34,7 +34,10 @@ mixin NfcScanFlowMixin<T extends StatefulWidget> on State<T> {
   /// and resolves to the scanned card UID or null (cancelled/timed out/
   /// unavailable-and-manual-entry-cancelled). [schoolId] is only used to
   /// populate the required [VerificationContext.gate] shape.
-  Future<String?> scanCard(String promptMessage, {required String schoolId}) async {
+  Future<String?> scanCard(
+    String promptMessage, {
+    required String schoolId,
+  }) async {
     if (nfcScanning) return null;
 
     final adapter = sl<NfcCredentialReaderAdapter>();
@@ -45,7 +48,7 @@ mixin NfcScanFlowMixin<T extends StatefulWidget> on State<T> {
       final available = await adapter.isAvailable();
       if (!available) {
         if (!mounted) return null;
-        return manualUidFallback();
+        return await manualUidFallback();
       }
 
       if (!mounted) return null;
@@ -192,8 +195,9 @@ mixin NfcScanFlowMixin<T extends StatefulWidget> on State<T> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   'Reason',
-                  style: Theme.of(sheetContext).textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
