@@ -51,12 +51,20 @@ A step is only `[x]` when all of these are true:
 - [ ] Merge `structure-module` → `main` at end of Phase 0, after tests are green. (Decision: deferred until then.)
 
 ### 0.3 Warnings and tests
-- [ ] Fix all `unawaited_return_in_try_block` warnings (attendance_hub repo, staff_identity_bloc, communication_attachments_uploader, student_identity_bloc, nfc_scan_flow_mixin, nfc_credential_repository_impl).
-- [ ] Fix the unused-variable warnings (e.g. `academic_structure_screen.dart:2289`).
-- [ ] Bring analyzer issues from ~326 down to < 50. Errors and warnings must be zero.
+- [x] Fix all `unawaited_return_in_try_block` warnings (attendance_hub repo, staff_identity_bloc, communication_attachments_uploader, student_identity_bloc, nfc_scan_flow_mixin, nfc_credential_repository_impl).
+- [x] Fix the unused-variable warnings (e.g. `academic_structure_screen.dart:2289`).
+- [x] Bring analyzer issues from ~326 down to < 50. Errors and warnings must be zero. **Now 49, 0 errors, 0 warnings** (2026-10-21).
+  - Remaining infos: 25 `use_build_context_synchronously`, 23 `deprecated_member_use` (Radio `groupValue`/`onChanged` → `RadioGroup`, `onReorder` → `onReorderItem`), 1 `library_private_types_in_public_api`. Each needs a behavioural check, not a mechanical edit.
 - [ ] Run `flutter test`. Record the failing tests here, then fix or delete each one with a reason.
-- [ ] Run every `functions/package.json` test script. Record and fix failures.
-- [ ] `npm run test:rules` and `npm run test:storage-rules` are green.
+  - 2026-10-21: 22 failing at start, all pre-existing (they also failed at 997f721b). 18 fixed. All were stale tests, except one real bug:
+    - super_admin route/source tests ×6: the routes became flat guarded siblings (99d9a4e2) and payment review a bottom sheet (0542e14b).
+    - attendance offline queue ×6: the fixture `createdAt` was hard-coded to 2026-08-16 and aged past the 30-day retention window. It is now relative to now.
+    - attendance roster, id_generator (`-S-` segment), id_card (byte-size heuristic → page count), permission evaluator (catalog v3), notification list ×2 (button is disabled, not hidden).
+    - **Real bug:** `month_calendar_grid` overflowed 2.5px at 320px width. Fixed.
+  - **Open:** `class_teacher_dashboard_test.dart` ×4. The "HI" commit 43ceddc5 redesigned the dashboard (no % figure, header text and quick actions changed). Needs Victor's decision.
+- [ ] Run every `functions/package.json` test script. Record and fix failures. (Only rules + storage-rules run so far.)
+- [x] `npm run test:rules` and `npm run test:storage-rules` are green. Rules 271/271 after 2 stale tests were updated (no rule changes). Storage 23/23.
+  - Needs JDK ≥ 21: `export JAVA_HOME=/opt/homebrew/opt/openjdk@21 PATH=$JAVA_HOME/bin:$PATH` (default `java` is 17). The storage run exits non-zero from an emulator crash on shutdown, after the tests pass.
 
 ### 0.4 Dead code audit
 - [ ] For each of the 57 feature folders, mark it **WIRED** (referenced by router/DI), **UNWIRED**, or **DUPLICATE**.
