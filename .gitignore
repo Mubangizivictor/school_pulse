@@ -82,3 +82,6 @@ firebase-debug.*.log
 # dlopen() it on macOS (Isar looks in the working directory) - vendored from
 # isar_flutter_libs' own macos/ build output, never checked in.
 /libisar.dylib
+
+# Old projects kept locally (not part of this repo)
+/_old/
