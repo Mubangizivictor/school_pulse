@@ -49,7 +49,9 @@ void main() {
     method: AttendanceMethod.nfc,
     markedBy: 'Teacher A',
     operatorId: 'staff-a',
-    createdAt: DateTime(2026, 8, 16, 8, 4),
+    // Relative to now: a fixed date ages past the 30-day retention window
+    // and the sync sweep then (correctly) blocks it as stale.
+    createdAt: DateTime.now().subtract(const Duration(hours: 1)),
   );
 
   // Matches `record` above (personId student-a, classId class-a, active) so
@@ -409,8 +411,7 @@ void main() {
         () => local.markRetryableFailure(any(), error: any(named: 'error')),
       );
       verifyNever(
-        () =>
-            local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+        () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
       );
     });
 
@@ -430,8 +431,7 @@ void main() {
         () => local.markRetryableFailure(any(), error: any(named: 'error')),
       ).called(1);
       verifyNever(
-        () =>
-            local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+        () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
       );
       verifyNever(() => local.markSynced(any()));
     });
@@ -453,8 +453,7 @@ void main() {
       await repository.syncPendingAttendance('school-a');
 
       verify(
-        () =>
-            local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+        () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
       ).called(1);
       verifyNever(
         () => local.markRetryableFailure(any(), error: any(named: 'error')),
@@ -476,8 +475,7 @@ void main() {
       await repository.syncPendingAttendance('school-a');
 
       verify(
-        () =>
-            local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+        () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
       ).called(1);
     });
 
@@ -508,15 +506,13 @@ void main() {
         () => local.getPending('school-a'),
       ).thenAnswer((_) async => [staleRecord]);
       when(
-        () =>
-            local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+        () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
       ).thenAnswer((_) async {});
 
       await repository.syncPendingAttendance('school-a');
 
       verify(
-        () =>
-            local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+        () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
       ).called(1);
       verifyNever(() => remote.pushRecord(any(), any(), any()));
     });

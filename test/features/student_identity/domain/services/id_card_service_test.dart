@@ -56,10 +56,13 @@ void main() {
 
       expect(batchPdf, isNotEmpty);
       expect(String.fromCharCodes(batchPdf.take(4)), '%PDF');
-      // A 3-entry batch should be substantially larger than a 1-page card -
-      // a reasonable proxy that all three pages actually got added, without
-      // needing a full PDF page-count parser in the test.
-      expect(batchPdf.length, greaterThan(singleCard.length * 2));
+      // Every entry contributes a front + back page. Shared fonts/images make
+      // byte size a poor proxy, so count `/Type /Page` objects instead.
+      int pageCount(List<int> pdf) => RegExp(
+        r'/Type\s*/Page(?![s\w])',
+      ).allMatches(String.fromCharCodes(pdf)).length;
+      expect(pageCount(singleCard), greaterThan(0));
+      expect(pageCount(batchPdf), entries.length * pageCount(singleCard));
     },
   );
 
