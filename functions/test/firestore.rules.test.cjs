@@ -1126,12 +1126,15 @@ describe('subscription access enforcement', () => {
     await assertSucceeds(getDoc(doc(dbFor('teacherReadOnly'), 'students', 'roExistingStudent')));
   });
 
-  test('the write-lock generalizes to other threaded collections (staff_attendance)', async () => {
-    await assertFails(setDoc(doc(dbFor('teacherReadOnly'), 'staff_attendance', 'roAttendance'), {
-      schoolId: 'schoolReadOnly', staffId: 'teacherReadOnly', date: '2026-08-12',
+  test('the write-lock generalizes to other threaded collections (attendance_records)', async () => {
+    // staff_attendance used to be the example here, but it became
+    // callable-write-only (3487115f), so it no longer exercises
+    // schoolCanWrite; attendance_records is still client-writable behind it.
+    await assertFails(setDoc(doc(dbFor('teacherReadOnly'), 'attendance_records', 'roAttendance'), {
+      schoolId: 'schoolReadOnly', studentId: 'student1', date: '2026-08-12',
     }));
-    await assertSucceeds(setDoc(doc(dbFor('teacherFull'), 'staff_attendance', 'fullAttendance'), {
-      schoolId: 'schoolFull', staffId: 'teacherFull', date: '2026-08-12',
+    await assertSucceeds(setDoc(doc(dbFor('teacherFull'), 'attendance_records', 'fullAttendance'), {
+      schoolId: 'schoolFull', studentId: 'student1', date: '2026-08-12',
     }));
   });
 
@@ -3343,11 +3346,21 @@ describe('Term billing Phase 3A: student_pricing_bands', () => {
     });
   }
 
-  test('student_pricing_bands: any authenticated staff can read, unauthenticated cannot', async () => {
+  test('student_pricing_bands: staff read all; unauthenticated read only active bands', async () => {
+    // Active bands are deliberately public (marketing pricing page, 598ebdc6);
+    // inactive/superseded bands stay staff-only.
     await seedBand();
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), 'student_pricing_bands', 'oldBand'), {
+        minStudents: 1, maxStudents: 300, amountUgx: 300000, isActive: false,
+      });
+    });
+    const anon = testEnv.unauthenticatedContext().firestore();
     await assertSucceeds(getDoc(doc(dbFor('adminA'), 'student_pricing_bands', 'band1')));
     await assertSucceeds(getDoc(doc(dbFor('teacherB'), 'student_pricing_bands', 'band1')));
-    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), 'student_pricing_bands', 'band1')));
+    await assertSucceeds(getDoc(doc(dbFor('teacherB'), 'student_pricing_bands', 'oldBand')));
+    await assertSucceeds(getDoc(doc(anon, 'student_pricing_bands', 'band1')));
+    await assertFails(getDoc(doc(anon, 'student_pricing_bands', 'oldBand')));
   });
 
   test('student_pricing_bands: only the SaaS owner may write directly; school admin/staff cannot', async () => {
