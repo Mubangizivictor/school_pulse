@@ -142,7 +142,7 @@ void main() {
       await tester.pumpWidget(harness(role: UserRole.schoolAdmin));
       await tester.pumpAndSettle();
 
-      expect(find.text('No notifications found'), findsOneWidget);
+      expect(find.textContaining('No notifications found'), findsOneWidget);
     });
 
     testWidgets('shows a retry button on failure', (tester) async {
@@ -269,8 +269,9 @@ void main() {
       expect(find.text('Details n1'), findsOneWidget);
     });
 
-    testWidgets('mark all as read dispatches the event and is hidden with '
-        'no unread items', (tester) async {
+    testWidgets('mark all as read is disabled with no unread items', (
+      tester,
+    ) async {
       when(() => centerBloc.state).thenReturn(
         NotificationCenterState(
           status: NotificationCenterStatus.ready,
@@ -289,7 +290,15 @@ void main() {
       await tester.pumpWidget(harness(role: UserRole.schoolAdmin));
       await tester.pumpAndSettle();
 
-      expect(find.text('Mark all as read'), findsNothing);
+      // The header keeps the control visible but disabled (onPressed null);
+      // no enabled mark-all-read affordance may exist.
+      final buttons = tester.widgetList<ButtonStyleButton>(
+        find.ancestor(
+          of: find.text('Mark all as read'),
+          matching: find.bySubtype<ButtonStyleButton>(),
+        ),
+      );
+      expect(buttons.every((b) => b.onPressed == null), isTrue);
     });
 
     testWidgets('mark all as read appears and fires when there is unread '

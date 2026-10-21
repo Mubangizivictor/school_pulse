@@ -221,7 +221,7 @@ void main() {
             operatorId: ordinaryTeacher.id,
             schoolId: ordinaryTeacher.schoolId,
             permissionIds: [Permission.securityIdentityVerify],
-            version: 2,
+            version: 3, // must match _permissionCatalogVersion
             expiresAt: DateTime.now().add(const Duration(hours: 1)),
           ),
         );
