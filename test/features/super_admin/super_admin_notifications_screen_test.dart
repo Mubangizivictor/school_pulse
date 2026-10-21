@@ -24,21 +24,47 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('the service is injectable for tests but defaults to the production OwnerNotificationService', () {
-    expect(source.contains('final OwnerNotificationService? service;'), isTrue);
-    expect(source.contains('widget.service ?? OwnerNotificationService()'), isTrue);
-  });
+  test(
+    'the service is injectable for tests but defaults to the production OwnerNotificationService',
+    () {
+      expect(
+        source.contains('final OwnerNotificationService? service;'),
+        isTrue,
+      );
+      expect(
+        source.contains('widget.service ?? OwnerNotificationService()'),
+        isTrue,
+      );
+    },
+  );
 
-  test('falls back to a cached offline snapshot rather than a blank screen when the stream has no data', () {
-    expect(source.contains('_notifications.cachedNotifications()'), isTrue);
-    expect(source.contains('final items = live ?? _cachedFallback ?? const [];'), isTrue);
-    expect(source.contains('class _OfflineBanner extends StatelessWidget'), isTrue);
-  });
+  test(
+    'falls back to a cached offline snapshot rather than a blank screen when the stream has no data',
+    () {
+      expect(source.contains('_notifications.cachedNotifications()'), isTrue);
+      expect(
+        source.contains('final items = live ?? _cachedFallback ?? const [];'),
+        isTrue,
+      );
+      expect(
+        source.contains('class _OfflineBanner extends StatelessWidget'),
+        isTrue,
+      );
+    },
+  );
 
-  test('pending offline changes are surfaced and synced on entry, not silently dropped', () {
-    expect(source.contains('_notifications.syncPending().then((_) => _refreshPending());'), isTrue);
-    expect(source.contains('_notifications.pendingActionCount()'), isTrue);
-  });
+  test(
+    'pending offline changes are surfaced and synced on entry, not silently dropped',
+    () {
+      expect(
+        source.contains(
+          '_notifications.syncPending().then((_) => _refreshPending());',
+        ),
+        isTrue,
+      );
+      expect(source.contains('_notifications.pendingActionCount()'), isTrue);
+    },
+  );
 
   test('mark unread is honestly unavailable rather than a fake local toggle', () {
     expect(
@@ -46,34 +72,53 @@ void main() {
       isTrue,
     );
     expect(
-      source.contains('// No "mark unread" callable exists; surface honestly rather than fake it.'),
+      source.contains(
+        '// No "mark unread" callable exists; surface honestly rather than fake it.',
+      ),
       isTrue,
     );
   });
 
-  test('delete and clear-all both require a destructive confirmation dialog first', () {
-    expect(source.contains("title: 'Delete this notification?'"), isTrue);
-    expect(source.contains("title: 'Clear all notifications?'"), isTrue);
-    expect(source.contains('if (ok != true) return;'), isTrue);
-  });
+  test(
+    'delete and clear-all both require a destructive confirmation dialog first',
+    () {
+      expect(source.contains("title: 'Delete this notification?'"), isTrue);
+      expect(source.contains("title: 'Clear all notifications?'"), isTrue);
+      expect(source.contains('if (ok != true) return;'), isTrue);
+    },
+  );
 
-  test('clear-all and delete clarify the underlying record is untouched, only the owner feed entry', () {
-    expect(source.contains('Underlying records are untouched.'), isTrue);
-  });
+  test(
+    'clear-all and delete clarify the underlying record is untouched, only the owner feed entry',
+    () {
+      expect(source.contains('Underlying records are untouched.'), isTrue);
+    },
+  );
 
-  test('signed-out state (_ownerId == null) shows an explicit sign-in prompt, not a crash', () {
-    expect(source.contains('if (_ownerId == null) {'), isTrue);
-    expect(source.contains("Text('Sign in to manage notifications')"), isTrue);
-  });
+  test(
+    'signed-out state (_ownerId == null) shows an explicit sign-in prompt, not a crash',
+    () {
+      expect(source.contains('if (_ownerId == null) {'), isTrue);
+      expect(
+        source.contains("Text('Sign in to manage notifications')"),
+        isTrue,
+      );
+    },
+  );
 
-  test('errors never leak a raw exception string to the SnackBar or error state', () {
-    // Regression: _friendlyError must fall back to the shared
-    // friendlyErrorMessage() helper, not a raw error.toString().
-    expect(source.contains('return friendlyErrorMessage(error);'), isTrue);
-    expect(
-      source.contains("import 'package:school_pulse/core/error/friendly_error_message.dart';"),
-      isTrue,
-    );
-    expect(source.contains("v.replaceFirst(RegExp(r'^Exception:"), isFalse);
-  });
+  test(
+    'errors never leak a raw exception string to the SnackBar or error state',
+    () {
+      // Regression: _friendlyError must fall back to the shared
+      // friendlyErrorMessage() helper, not a raw error.toString().
+      expect(source.contains('return friendlyErrorMessage(error);'), isTrue);
+      expect(
+        source.contains(
+          "import 'package:school_pulse/core/error/friendly_error_message.dart';",
+        ),
+        isTrue,
+      );
+      expect(source.contains("v.replaceFirst(RegExp(r'^Exception:"), isFalse);
+    },
+  );
 }

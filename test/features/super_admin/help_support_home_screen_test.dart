@@ -13,52 +13,63 @@ import 'package:school_pulse/features/super_admin/data/support_faq_data.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/help_support_home_screen.dart';
 
 void main() {
-  testWidgets('renders the five real support rows and omits Video Guides/System Status', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: HelpSupportHomeScreen()));
+  testWidgets(
+    'renders the five real support rows and omits Video Guides/System Status',
+    (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: HelpSupportHomeScreen()));
 
-    expect(find.text('Help & Support'), findsWidgets);
-    expect(find.text('Help Center'), findsOneWidget);
-    expect(find.text('Contact Support'), findsOneWidget);
-    expect(find.text('FAQs'), findsOneWidget);
-    expect(find.text('Report a Problem'), findsOneWidget);
-    expect(find.text('Submit a Request'), findsOneWidget);
+      expect(find.text('Help & Support'), findsWidgets);
+      expect(find.text('Help Center'), findsOneWidget);
+      expect(find.text('Contact Support'), findsOneWidget);
+      expect(find.text('FAQs'), findsOneWidget);
+      expect(find.text('Report a Problem'), findsOneWidget);
+      expect(find.text('Submit a Request'), findsOneWidget);
 
-    // Deliberately omitted rows - fabricating either would be dishonest UI
-    // per this screen's own documented reasoning.
-    expect(find.text('Video Guides'), findsNothing);
-    expect(find.text('System Status'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+      // Deliberately omitted rows - fabricating either would be dishonest UI
+      // per this screen's own documented reasoning.
+      expect(find.text('Video Guides'), findsNothing);
+      expect(find.text('System Status'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('SupportHelpCenterScreen renders all maintained guide topics when scrolled through', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: SupportHelpCenterScreen()));
+  testWidgets(
+    'SupportHelpCenterScreen renders all maintained guide topics when scrolled through',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(home: SupportHelpCenterScreen()),
+      );
 
-    expect(find.text('Help Center'), findsWidgets);
-    const titles = [
-      'Owner Console Overview',
-      'Reviewing School Applications',
-      'Configuring Manual Payment Methods',
-      'Reviewing Submitted Payments',
-      'Platform Notifications',
-      'Audit Logs',
-    ];
-    for (final title in titles) {
-      await tester.scrollUntilVisible(find.text(title), 300);
-      expect(find.text(title), findsOneWidget);
-    }
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('Help Center'), findsWidgets);
+      const titles = [
+        'Owner Console Overview',
+        'Reviewing School Applications',
+        'Configuring Manual Payment Methods',
+        'Reviewing Submitted Payments',
+        'Platform Notifications',
+        'Audit Logs',
+      ];
+      for (final title in titles) {
+        await tester.scrollUntilVisible(find.text(title), 300);
+        expect(find.text(title), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('SupportFaqsScreen renders every FAQ from the maintained data source, collapsed by default', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: SupportFaqsScreen()));
+  testWidgets(
+    'SupportFaqsScreen renders every FAQ from the maintained data source, collapsed by default',
+    (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: SupportFaqsScreen()));
 
-    expect(find.text('FAQs'), findsWidgets);
-    for (final faq in kSuperAdminSupportFaqs) {
-      await tester.scrollUntilVisible(find.text(faq.question), 300);
-      expect(find.text(faq.question), findsOneWidget);
-    }
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('FAQs'), findsWidgets);
+      for (final faq in kSuperAdminSupportFaqs) {
+        await tester.scrollUntilVisible(find.text(faq.question), 300);
+        expect(find.text(faq.question), findsOneWidget);
+      }
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('tapping a FAQ expands it to reveal the answer', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: SupportFaqsScreen()));

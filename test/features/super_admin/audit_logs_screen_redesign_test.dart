@@ -21,12 +21,17 @@ void main() {
     expect(source.contains('_Period _period = _Period.today;'), isTrue);
   });
 
-  test('category chips match the compact All/Schools/Billing/Security/System row', () {
-    expect(
-      source.contains('enum _AuditCategory { all, schools, billing, security, system }'),
-      isTrue,
-    );
-  });
+  test(
+    'category chips match the compact All/Schools/Billing/Security/System row',
+    () {
+      expect(
+        source.contains(
+          'enum _AuditCategory { all, schools, billing, security, system }',
+        ),
+        isTrue,
+      );
+    },
+  );
 
   test('Export is wired to a real CSV share action, not a placeholder', () {
     expect(source.contains("'Export CSV'"), isTrue);
@@ -37,19 +42,28 @@ void main() {
   });
 
   test('the list is scoped by a period picker defaulting to Today', () {
-    expect(source.contains('enum _Period { today, thisWeek, thisMonth, all }'), isTrue);
+    expect(
+      source.contains('enum _Period { today, thisWeek, thisMonth, all }'),
+      isTrue,
+    );
     expect(source.contains('_period = _Period.today'), isTrue);
     expect(source.contains('_period.includes(l.timestamp)'), isTrue);
   });
 
-  test('each row renders a title-cased event, the resolved actor and a category', () {
-    expect(source.contains('_titleCaseAction(log.action)'), isTrue);
-    expect(source.contains('_actorLabel(log.ownerId)'), isTrue);
-    expect(source.contains('_categoryOf(log)'), isTrue);
-  });
+  test(
+    'each row renders a title-cased event, the resolved actor and a category',
+    () {
+      expect(source.contains('_titleCaseAction(log.action)'), isTrue);
+      expect(source.contains('_actorLabel(log.ownerId)'), isTrue);
+      expect(source.contains('_categoryOf(log)'), isTrue);
+    },
+  );
 
-  test('actor label falls back off a raw device token to the real signed-in owner', () {
-    expect(source.contains('String _actorLabel(String ownerId)'), isTrue);
-    expect(source.contains('FirebaseAuth.instance.currentUser'), isTrue);
-  });
+  test(
+    'actor label falls back off a raw device token to the real signed-in owner',
+    () {
+      expect(source.contains('String _actorLabel(String ownerId)'), isTrue);
+      expect(source.contains('FirebaseAuth.instance.currentUser'), isTrue);
+    },
+  );
 }

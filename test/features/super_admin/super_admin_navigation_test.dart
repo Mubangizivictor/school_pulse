@@ -27,7 +27,13 @@ void main() {
           .allMatches(sectionsBlock)
           .map((m) => m.group(1))
           .toList();
-      expect(labels, ['Overview', 'Schools', 'Billing', 'Activity', 'Settings']);
+      expect(labels, [
+        'Overview',
+        'Schools',
+        'Billing',
+        'Activity',
+        'Settings',
+      ]);
     },
   );
 
@@ -59,36 +65,43 @@ void main() {
     ),
   ];
 
-  testWidgets('owner navigation exposes exactly five destinations in the approved order', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: 0,
-            onDestinationSelected: (_) {},
-            destinations: destinations,
+  testWidgets(
+    'owner navigation exposes exactly five destinations in the approved order',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            bottomNavigationBar: NavigationBar(
+              selectedIndex: 0,
+              onDestinationSelected: (_) {},
+              destinations: destinations,
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    expect(find.byType(NavigationDestination), findsNWidgets(5));
-    final labels = tester
-        .widgetList<NavigationDestination>(find.byType(NavigationDestination))
-        .map((d) => d.label)
-        .toList();
-    expect(labels, ['Overview', 'Schools', 'Billing', 'Activity', 'Settings']);
+      expect(find.byType(NavigationDestination), findsNWidgets(5));
+      final labels = tester
+          .widgetList<NavigationDestination>(find.byType(NavigationDestination))
+          .map((d) => d.label)
+          .toList();
+      expect(labels, [
+        'Overview',
+        'Schools',
+        'Billing',
+        'Activity',
+        'Settings',
+      ]);
 
-    // No separate "Payments", "Plans", or "Subscription Plans" destination -
-    // those are tabs inside Billing (BillingHomeScreen), not nav items.
-    expect(labels, isNot(contains('Payments')));
-    expect(labels, isNot(contains('Plans')));
-    expect(labels, isNot(contains('Payments & Billing')));
-    expect(labels, isNot(contains('Subscription Plans')));
-    expect(labels, isNot(contains('Notifications')));
-    expect(labels, isNot(contains('Audit Logs')));
-    expect(tester.takeException(), isNull);
-  });
+      // No separate "Payments", "Plans", or "Subscription Plans" destination -
+      // those are tabs inside Billing (BillingHomeScreen), not nav items.
+      expect(labels, isNot(contains('Payments')));
+      expect(labels, isNot(contains('Plans')));
+      expect(labels, isNot(contains('Payments & Billing')));
+      expect(labels, isNot(contains('Subscription Plans')));
+      expect(labels, isNot(contains('Notifications')));
+      expect(labels, isNot(contains('Audit Logs')));
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

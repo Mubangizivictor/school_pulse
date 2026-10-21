@@ -20,51 +20,101 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('the service is injectable for tests but defaults to the production OwnerNotificationService', () {
-    expect(source.contains('final OwnerNotificationService? service;'), isTrue);
-    expect(source.contains('widget.service ?? OwnerNotificationService()'), isTrue);
-  });
+  test(
+    'the service is injectable for tests but defaults to the production OwnerNotificationService',
+    () {
+      expect(
+        source.contains('final OwnerNotificationService? service;'),
+        isTrue,
+      );
+      expect(
+        source.contains('widget.service ?? OwnerNotificationService()'),
+        isTrue,
+      );
+    },
+  );
 
-  test('notifications are streamed live from the real service, not fetched once', () {
-    expect(source.contains('_service.watchNotifications()'), isTrue);
-    expect(source.contains('StreamBuilder<List<OwnerNotification>>'), isTrue);
-  });
+  test(
+    'notifications are streamed live from the real service, not fetched once',
+    () {
+      expect(source.contains('_service.watchNotifications()'), isTrue);
+      expect(source.contains('StreamBuilder<List<OwnerNotification>>'), isTrue);
+    },
+  );
 
-  test('supports all six owner filter chips (all/critical/billing/platform/schools/security)', () {
-    expect(source.contains('OwnerNotificationFilter.all'), isTrue);
-    expect(source.contains('OwnerNotificationFilter.critical'), isTrue);
-    expect(source.contains('OwnerNotificationFilter.billing'), isTrue);
-    expect(source.contains('OwnerNotificationFilter.platform'), isTrue);
-    expect(source.contains('OwnerNotificationFilter.schools'), isTrue);
-    expect(source.contains('OwnerNotificationFilter.security'), isTrue);
-  });
+  test(
+    'supports all six owner filter chips (all/critical/billing/platform/schools/security)',
+    () {
+      expect(source.contains('OwnerNotificationFilter.all'), isTrue);
+      expect(source.contains('OwnerNotificationFilter.critical'), isTrue);
+      expect(source.contains('OwnerNotificationFilter.billing'), isTrue);
+      expect(source.contains('OwnerNotificationFilter.platform'), isTrue);
+      expect(source.contains('OwnerNotificationFilter.schools'), isTrue);
+      expect(source.contains('OwnerNotificationFilter.security'), isTrue);
+    },
+  );
 
-  test('critical filter includes both critical and requiresReview severities', () {
-    expect(
-      source.contains(
-        'n.severity == OwnerNotificationSeverity.critical ||\n            n.severity == OwnerNotificationSeverity.requiresReview',
-      ),
-      isTrue,
-    );
-  });
+  test(
+    'critical filter includes both critical and requiresReview severities',
+    () {
+      expect(
+        source.contains(
+          'n.severity == OwnerNotificationSeverity.critical ||\n            n.severity == OwnerNotificationSeverity.requiresReview',
+        ),
+        isTrue,
+      );
+    },
+  );
 
-  test('results are grouped by day with Today/Yesterday/weekday/full-date labels', () {
-    expect(source.contains("if (diff == 0) return 'Today';"), isTrue);
-    expect(source.contains("if (diff == 1) return 'Yesterday';"), isTrue);
-    expect(source.contains("DateFormat('EEEE').format(date)"), isTrue);
-  });
+  test(
+    'results are grouped by day with Today/Yesterday/weekday/full-date labels',
+    () {
+      expect(source.contains("if (diff == 0) return 'Today';"), isTrue);
+      expect(source.contains("if (diff == 1) return 'Yesterday';"), isTrue);
+      expect(source.contains("DateFormat('EEEE').format(date)"), isTrue);
+    },
+  );
 
-  test('an empty filtered result shows an explicit empty state naming the active filter', () {
-    expect(source.contains("'Nothing in \${_filter.label} yet.'"), isTrue);
-  });
+  test(
+    'an empty filtered result shows an explicit empty state naming the active filter',
+    () {
+      expect(source.contains("'Nothing in \${_filter.label} yet.'"), isTrue);
+    },
+  );
 
-  test('tapping a notification opens the real detail screen, carrying the same service instance', () {
-    expect(source.contains('OwnerNotificationDetailScreen(\n                                  notification: n,\n                                  service: _service,'), isTrue);
-  });
+  test(
+    'tapping a notification opens the real detail screen, carrying the same service instance',
+    () {
+      expect(
+        source.contains(
+          'OwnerNotificationDetailScreen(\n                                  notification: n,\n                                  service: _service,',
+        ),
+        isTrue,
+      );
+    },
+  );
 
-  test('mark-read/archive/delete all go through the real service, not local-only state', () {
-    expect(source.contains('onMarkRead: n.isUnread\n                                ? () => _service.markRead(n.id)'), isTrue);
-    expect(source.contains('onArchive: () =>\n                                _service.archiveNotification(n.id)'), isTrue);
-    expect(source.contains('onDelete: () =>\n                                _service.deleteNotification(n.id)'), isTrue);
-  });
+  test(
+    'mark-read/archive/delete all go through the real service, not local-only state',
+    () {
+      expect(
+        source.contains(
+          'onMarkRead: n.isUnread\n                                ? () => _service.markRead(n.id)',
+        ),
+        isTrue,
+      );
+      expect(
+        source.contains(
+          'onArchive: () =>\n                                _service.archiveNotification(n.id)',
+        ),
+        isTrue,
+      );
+      expect(
+        source.contains(
+          'onDelete: () =>\n                                _service.deleteNotification(n.id)',
+        ),
+        isTrue,
+      );
+    },
+  );
 }

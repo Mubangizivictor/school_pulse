@@ -19,34 +19,66 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('reads real health data via PlatformHealthRepository, not a hardcoded status', () {
-    expect(source.contains('final PlatformHealthRepository _repo = PlatformHealthRepository();'), isTrue);
-    expect(source.contains('_repo.watchCurrent()'), isTrue);
-  });
+  test(
+    'reads real health data via PlatformHealthRepository, not a hardcoded status',
+    () {
+      expect(
+        source.contains(
+          'final PlatformHealthRepository _repo = PlatformHealthRepository();',
+        ),
+        isTrue,
+      );
+      expect(source.contains('_repo.watchCurrent()'), isTrue);
+    },
+  );
 
   test('refresh action is loading-guarded against double taps', () {
     expect(source.contains('bool _refreshing = false;'), isTrue);
     expect(source.contains('if (_refreshing) return;'), isTrue);
   });
 
-  test('Attention section only shows non-operational, non-not-configured components', () {
-    expect(source.contains('attentionComponents'), isTrue);
-    expect(source.contains("_attentionSection"), isTrue);
-  });
+  test(
+    'Attention section only shows non-operational, non-not-configured components',
+    () {
+      expect(source.contains('attentionComponents'), isTrue);
+      expect(source.contains("_attentionSection"), isTrue);
+    },
+  );
 
-  test('History section reads the two Platform Health incident action strings via watchIncidentHistory', () {
-    expect(source.contains('watchIncidentHistory()'), isTrue);
-  });
+  test(
+    'History section reads the two Platform Health incident action strings via watchIncidentHistory',
+    () {
+      expect(source.contains('watchIncidentHistory()'), isTrue);
+    },
+  );
 
-  test('acknowledging an incident calls the real acknowledgeIncident callable, not a no-op', () {
-    expect(source.contains('_repo.acknowledgeIncident(componentId, note: note)'), isTrue);
-  });
+  test(
+    'acknowledging an incident calls the real acknowledgeIncident callable, not a no-op',
+    () {
+      expect(
+        source.contains('_repo.acknowledgeIncident(componentId, note: note)'),
+        isTrue,
+      );
+    },
+  );
 
-  test('uses the shared compact style helpers matching billing_home_screen.dart', () {
-    for (final helper in ['_pageTitle', '_sectionTitle', '_rowTitle', '_rowBody']) {
-      expect(source.contains('TextStyle $helper(BuildContext'), isTrue, reason: '$helper missing');
-    }
-  });
+  test(
+    'uses the shared compact style helpers matching billing_home_screen.dart',
+    () {
+      for (final helper in [
+        '_pageTitle',
+        '_sectionTitle',
+        '_rowTitle',
+        '_rowBody',
+      ]) {
+        expect(
+          source.contains('TextStyle $helper(BuildContext'),
+          isTrue,
+          reason: '$helper missing',
+        );
+      }
+    },
+  );
 
   test('back button navigates back rather than being a dead icon', () {
     expect(source.contains('Icons.arrow_back_rounded'), isTrue);

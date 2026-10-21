@@ -19,11 +19,20 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('loads and saves only through the owner-scoped callables, never a direct Firestore write', () {
-    expect(source.contains("httpsCallable('getManualPaymentConfig')"), isTrue);
-    expect(source.contains("httpsCallable('updateManualPaymentConfig')"), isTrue);
-    expect(source.contains('FirebaseFirestore'), isFalse);
-  });
+  test(
+    'loads and saves only through the owner-scoped callables, never a direct Firestore write',
+    () {
+      expect(
+        source.contains("httpsCallable('getManualPaymentConfig')"),
+        isTrue,
+      );
+      expect(
+        source.contains("httpsCallable('updateManualPaymentConfig')"),
+        isTrue,
+      );
+      expect(source.contains('FirebaseFirestore'), isFalse);
+    },
+  );
 
   test('exposes all four provider cards: MTN, Airtel, Bank, Cash', () {
     expect(source.contains("title: 'MTN Mobile Money'"), isTrue);
@@ -34,7 +43,10 @@ void main() {
 
   test('unsaved edits are guarded before navigating away', () {
     expect(source.contains('SuperAdminUnsavedChangesGuard('), isTrue);
-    expect(source.contains('hasUnsavedChanges: _hasUnsavedChanges && !_saving'), isTrue);
+    expect(
+      source.contains('hasUnsavedChanges: _hasUnsavedChanges && !_saving'),
+      isTrue,
+    );
   });
 
   test('loading state renders a loader, not a blank screen', () {
@@ -42,7 +54,10 @@ void main() {
   });
 
   test('Save Changes button is present and disabled while saving', () {
-    expect(source.contains("Text(_saving ? 'Saving…' : 'Save Changes')"), isTrue);
+    expect(
+      source.contains("Text(_saving ? 'Saving…' : 'Save Changes')"),
+      isTrue,
+    );
     expect(source.contains('onPressed: _saving ? null : _save'), isTrue);
   });
 
@@ -52,7 +67,9 @@ void main() {
     // prefix stripped - that leaked Dart/Firebase internals into the UI.
     expect(source.contains('return friendlyErrorMessage(error);'), isTrue);
     expect(
-      source.contains("import 'package:school_pulse/core/error/friendly_error_message.dart';"),
+      source.contains(
+        "import 'package:school_pulse/core/error/friendly_error_message.dart';",
+      ),
       isTrue,
     );
     expect(source.contains("text.replaceFirst(RegExp(r'^Exception:"), isFalse);

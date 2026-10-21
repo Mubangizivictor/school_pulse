@@ -24,51 +24,90 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('both entry points share the same form/flow; only origin tag and copy differ', () {
-    expect(source.contains("_isReportProblem => widget.args.origin == 'report_problem'"), isTrue);
-    expect(
-      source.contains(
-        "_isReportProblem ? 'Report a Problem' : 'Submit a Request'",
-      ),
-      isTrue,
-    );
-  });
+  test(
+    'both entry points share the same form/flow; only origin tag and copy differ',
+    () {
+      expect(
+        source.contains(
+          "_isReportProblem => widget.args.origin == 'report_problem'",
+        ),
+        isTrue,
+      );
+      expect(
+        source.contains(
+          "_isReportProblem ? 'Report a Problem' : 'Submit a Request'",
+        ),
+        isTrue,
+      );
+    },
+  );
 
   test('unsaved edits are guarded before navigating away', () {
     expect(source.contains('SuperAdminUnsavedChangesGuard('), isTrue);
-    expect(source.contains('hasUnsavedChanges: _dirty && !_submitting'), isTrue);
-  });
-
-  test('submission creates a real ticket via SupportTicketService, then navigates to the conversation', () {
-    expect(source.contains('_service.createTicket('), isTrue);
     expect(
-      source.contains("context.pushReplacement('/super-admin/settings/support/ticket/\$ticketId')"),
+      source.contains('hasUnsavedChanges: _dirty && !_submitting'),
       isTrue,
     );
   });
 
-  test('errors never interpolate a raw caught exception into the visible error text', () {
-    // Regression: this screen originally did
-    // `_error = 'Could not submit this ticket. Please try again.\n\$e';`
-    // which rendered a raw Dart/Firebase exception string directly to the
-    // owner. Fixed to use the shared friendlyErrorMessage() helper.
-    expect(source.contains(r"'\n$e'"), isFalse);
-    expect(source.contains('friendlyErrorMessage(\n          e,'), isTrue);
-    expect(
-      source.contains("import 'package:school_pulse/core/error/friendly_error_message.dart';"),
-      isTrue,
-    );
-  });
+  test(
+    'submission creates a real ticket via SupportTicketService, then navigates to the conversation',
+    () {
+      expect(source.contains('_service.createTicket('), isTrue);
+      expect(
+        source.contains(
+          "context.pushReplacement('/super-admin/settings/support/ticket/\$ticketId')",
+        ),
+        isTrue,
+      );
+    },
+  );
+
+  test(
+    'errors never interpolate a raw caught exception into the visible error text',
+    () {
+      // Regression: this screen originally did
+      // `_error = 'Could not submit this ticket. Please try again.\n\$e';`
+      // which rendered a raw Dart/Firebase exception string directly to the
+      // owner. Fixed to use the shared friendlyErrorMessage() helper.
+      expect(source.contains(r"'\n$e'"), isFalse);
+      expect(source.contains('friendlyErrorMessage(\n          e,'), isTrue);
+      expect(
+        source.contains(
+          "import 'package:school_pulse/core/error/friendly_error_message.dart';",
+        ),
+        isTrue,
+      );
+    },
+  );
 
   test('form requires both subject and description before submitting', () {
     expect(source.contains("? 'Subject is required'"), isTrue);
     expect(source.contains("? 'Description is required'"), isTrue);
-    expect(source.contains('if (!_formKey.currentState!.validate()) return;'), isTrue);
+    expect(
+      source.contains('if (!_formKey.currentState!.validate()) return;'),
+      isTrue,
+    );
   });
 
   test('priority selector offers Low/Medium/High, defaulting to Medium', () {
-    expect(source.contains('SupportTicketPriority _priority = SupportTicketPriority.medium;'), isTrue);
-    expect(source.contains("value: SupportTicketPriority.low,\n                      label: Text('Low')"), isTrue);
-    expect(source.contains("value: SupportTicketPriority.high,\n                      label: Text('High')"), isTrue);
+    expect(
+      source.contains(
+        'SupportTicketPriority _priority = SupportTicketPriority.medium;',
+      ),
+      isTrue,
+    );
+    expect(
+      source.contains(
+        "value: SupportTicketPriority.low,\n                      label: Text('Low')",
+      ),
+      isTrue,
+    );
+    expect(
+      source.contains(
+        "value: SupportTicketPriority.high,\n                      label: Text('High')",
+      ),
+      isTrue,
+    );
   });
 }

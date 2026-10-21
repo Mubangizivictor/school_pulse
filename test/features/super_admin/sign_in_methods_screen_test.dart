@@ -51,38 +51,62 @@ void main() {
     expect(source.contains('isDestructive: true'), isTrue);
   });
 
-  test('every link/unlink is logged via the server-side logOwnerProviderEvent callable', () {
-    expect(source.contains("httpsCallable('logOwnerProviderEvent')"), isTrue);
-    expect(source.contains("_logProviderEvent('google.com', 'link')"), isTrue);
-    expect(source.contains("_logProviderEvent('google.com', 'unlink')"), isTrue);
-    expect(source.contains("_logProviderEvent('apple.com', 'link')"), isTrue);
-    expect(source.contains("_logProviderEvent('apple.com', 'unlink')"), isTrue);
-  });
+  test(
+    'every link/unlink is logged via the server-side logOwnerProviderEvent callable',
+    () {
+      expect(source.contains("httpsCallable('logOwnerProviderEvent')"), isTrue);
+      expect(
+        source.contains("_logProviderEvent('google.com', 'link')"),
+        isTrue,
+      );
+      expect(
+        source.contains("_logProviderEvent('google.com', 'unlink')"),
+        isTrue,
+      );
+      expect(source.contains("_logProviderEvent('apple.com', 'link')"), isTrue);
+      expect(
+        source.contains("_logProviderEvent('apple.com', 'unlink')"),
+        isTrue,
+      );
+    },
+  );
 
-  test('audit logging failure never blocks the UI from reflecting a completed link/unlink', () {
-    expect(
-      source.contains(
-        '} catch (_) {\n      // Audit logging failure must never block the already-completed',
-      ),
-      isTrue,
-    );
-  });
+  test(
+    'audit logging failure never blocks the UI from reflecting a completed link/unlink',
+    () {
+      expect(
+        source.contains(
+          '} catch (_) {\n      // Audit logging failure must never block the already-completed',
+        ),
+        isTrue,
+      );
+    },
+  );
 
-  test('linking to a different UID than before is treated as a fatal integration bug', () {
-    expect(
-      source.contains(
-        "throw StateError('Linking unexpectedly changed the signed-in account.');",
-      ),
-      isTrue,
-    );
-  });
+  test(
+    'linking to a different UID than before is treated as a fatal integration bug',
+    () {
+      expect(
+        source.contains(
+          "throw StateError('Linking unexpectedly changed the signed-in account.');",
+        ),
+        isTrue,
+      );
+    },
+  );
 
-  test('password provider is shown as Active but has no link/unlink affordance', () {
-    expect(source.contains("title: 'Email & Password'"), isTrue);
-    expect(source.contains("label: 'Active'"), isTrue);
-  });
+  test(
+    'password provider is shown as Active but has no link/unlink affordance',
+    () {
+      expect(source.contains("title: 'Email & Password'"), isTrue);
+      expect(source.contains("label: 'Active'"), isTrue);
+    },
+  );
 
-  test('errors surface a clean FirebaseAuthException.message, not a raw toString', () {
-    expect(source.contains('e.message ?? '), isTrue);
-  });
+  test(
+    'errors surface a clean FirebaseAuthException.message, not a raw toString',
+    () {
+      expect(source.contains('e.message ?? '), isTrue);
+    },
+  );
 }

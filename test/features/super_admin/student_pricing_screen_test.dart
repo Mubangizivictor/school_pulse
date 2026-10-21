@@ -20,18 +20,18 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('renders a pricing-band list from student_pricing_bands, not a plan list', () {
-    expect(source.contains('PricingBandRemoteDataSource'), isTrue);
-    expect(source.contains('_bandsSection'), isTrue);
-    expect(source.contains('getPricingBands'), isTrue);
-    expect(source.contains('_rangeLabel'), isTrue);
-  });
+  test(
+    'renders a pricing-band list from student_pricing_bands, not a plan list',
+    () {
+      expect(source.contains('PricingBandRemoteDataSource'), isTrue);
+      expect(source.contains('_bandsSection'), isTrue);
+      expect(source.contains('getPricingBands'), isTrue);
+      expect(source.contains('_rangeLabel'), isTrue);
+    },
+  );
 
   test('empty state is present for an empty band catalog', () {
-    expect(
-      source.contains('No pricing bands configured yet'),
-      isTrue,
-    );
+    expect(source.contains('No pricing bands configured yet'), isTrue);
   });
 
   test('loading and error/retry states are present', () {
@@ -39,30 +39,42 @@ void main() {
     expect(source.contains("Text('Retry')"), isTrue);
   });
 
-  test('add pricing band action calls the owner-only createPricingBand callable', () {
-    expect(source.contains('Add pricing band'), isTrue);
-    expect(source.contains('_openCreate'), isTrue);
-    expect(source.contains('createPricingBand'), isTrue);
-  });
+  test(
+    'add pricing band action calls the owner-only createPricingBand callable',
+    () {
+      expect(source.contains('Add pricing band'), isTrue);
+      expect(source.contains('_openCreate'), isTrue);
+      expect(source.contains('createPricingBand'), isTrue);
+    },
+  );
 
-  test('edit action is gated to future-effective bands and calls updatePricingBand', () {
-    expect(source.contains('isFutureEffective'), isTrue);
-    expect(source.contains('Edit future-effective band'), isTrue);
-    expect(source.contains('updatePricingBand'), isTrue);
-  });
+  test(
+    'edit action is gated to future-effective bands and calls updatePricingBand',
+    () {
+      expect(source.contains('isFutureEffective'), isTrue);
+      expect(source.contains('Edit future-effective band'), isTrue);
+      expect(source.contains('updatePricingBand'), isTrue);
+    },
+  );
 
-  test('deactivate action is gated to active bands and calls deactivatePricingBand', () {
-    expect(source.contains('Deactivate band'), isTrue);
-    expect(source.contains('band.isActive'), isTrue);
-    expect(source.contains('deactivatePricingBand'), isTrue);
-  });
+  test(
+    'deactivate action is gated to active bands and calls deactivatePricingBand',
+    () {
+      expect(source.contains('Deactivate band'), isTrue);
+      expect(source.contains('band.isActive'), isTrue);
+      expect(source.contains('deactivatePricingBand'), isTrue);
+    },
+  );
 
-  test('pricing-change history section reads the platform audit log filtered to pricing-band actions', () {
-    expect(source.contains('getAuditLogs'), isTrue);
-    expect(source.contains('CREATE_PRICING_BAND'), isTrue);
-    expect(source.contains('UPDATE_PRICING_BAND'), isTrue);
-    expect(source.contains('DEACTIVATE_PRICING_BAND'), isTrue);
-  });
+  test(
+    'pricing-change history section reads the platform audit log filtered to pricing-band actions',
+    () {
+      expect(source.contains('getAuditLogs'), isTrue);
+      expect(source.contains('CREATE_PRICING_BAND'), isTrue);
+      expect(source.contains('UPDATE_PRICING_BAND'), isTrue);
+      expect(source.contains('DEACTIVATE_PRICING_BAND'), isTrue);
+    },
+  );
 
   test('shows none of the removed plan concepts', () {
     expect(source.contains('planName'), isFalse);
@@ -74,15 +86,15 @@ void main() {
     expect(source.contains('Save plan'), isFalse);
   });
 
-  test('states the every-feature-included / student-count-only pricing rule', () {
-    expect(
-      source.contains('All School Pulse features are included.'),
-      isTrue,
-    );
-    expect(
-      source.contains('Price is based only'),
-      isTrue,
-    );
-    expect(source.contains('verified enrolled learners per term'), isTrue);
-  });
+  test(
+    'states the every-feature-included / student-count-only pricing rule',
+    () {
+      expect(
+        source.contains('All School Pulse features are included.'),
+        isTrue,
+      );
+      expect(source.contains('Price is based only'), isTrue);
+      expect(source.contains('verified enrolled learners per term'), isTrue);
+    },
+  );
 }

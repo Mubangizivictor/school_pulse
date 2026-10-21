@@ -23,40 +23,69 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('categories are derived client-side from AuditLog.action, no new backend call', () {
-    expect(source.contains("action.contains('PAYMENT')"), isTrue);
-    expect(source.contains("action.contains('SIGN_IN')"), isTrue);
-    expect(source.contains("action.contains('SCHOOL')"), isTrue);
-    expect(source.contains('return _AuditCategory.system;'), isTrue);
-  });
+  test(
+    'categories are derived client-side from AuditLog.action, no new backend call',
+    () {
+      expect(source.contains("action.contains('PAYMENT')"), isTrue);
+      expect(source.contains("action.contains('SIGN_IN')"), isTrue);
+      expect(source.contains("action.contains('SCHOOL')"), isTrue);
+      expect(source.contains('return _AuditCategory.system;'), isTrue);
+    },
+  );
 
-  test('logs are sourced from the real SuperAdminBloc state, not a mock list', () {
-    expect(source.contains('BlocBuilder<SuperAdminBloc, SuperAdminState>'), isTrue);
-    expect(source.contains('state.auditLogs'), isTrue);
-  });
+  test(
+    'logs are sourced from the real SuperAdminBloc state, not a mock list',
+    () {
+      expect(
+        source.contains('BlocBuilder<SuperAdminBloc, SuperAdminState>'),
+        isTrue,
+      );
+      expect(source.contains('state.auditLogs'), isTrue);
+    },
+  );
 
   test('refresh dispatches LoadAuditLogsEvent, not a silent no-op', () {
     expect(source.contains('const LoadAuditLogsEvent()'), isTrue);
   });
 
-  test('empty states differ for no logs at all vs. no logs matching the filter', () {
-    expect(source.contains("title: 'No audit logs found'"), isTrue);
-    expect(source.contains("title: 'No matching logs'"), isTrue);
-  });
+  test(
+    'empty states differ for no logs at all vs. no logs matching the filter',
+    () {
+      expect(source.contains("title: 'No audit logs found'"), isTrue);
+      expect(source.contains("title: 'No matching logs'"), isTrue);
+    },
+  );
 
-  test('CSV export uses the already-fetched filtered logs, escaping quotes safely', () {
-    expect(source.contains('Event,EventCode,Actor,Target,Category,Timestamp,Reason'), isTrue);
-    expect(source.contains("value.replaceAll('\"', '\"\"')"), isTrue);
-    expect(source.contains("mimeType: 'text/csv'"), isTrue);
-  });
+  test(
+    'CSV export uses the already-fetched filtered logs, escaping quotes safely',
+    () {
+      expect(
+        source.contains(
+          'Event,EventCode,Actor,Target,Category,Timestamp,Reason',
+        ),
+        isTrue,
+      );
+      expect(source.contains("value.replaceAll('\"', '\"\"')"), isTrue);
+      expect(source.contains("mimeType: 'text/csv'"), isTrue);
+    },
+  );
 
-  test('a raw device token in ownerId falls back to the signed-in owner identity, never shown verbatim', () {
-    expect(source.contains('looksLikeToken'), isTrue);
-    expect(source.contains("return 'SaaS Owner';"), isTrue);
-  });
+  test(
+    'a raw device token in ownerId falls back to the signed-in owner identity, never shown verbatim',
+    () {
+      expect(source.contains('looksLikeToken'), isTrue);
+      expect(source.contains("return 'SaaS Owner';"), isTrue);
+    },
+  );
 
-  test('desktop pagination clamps to a valid page and shows a rows-per-page control', () {
-    expect(source.contains('clampedPage = page.clamp(0, totalPages - 1)'), isTrue);
-    expect(source.contains('const [10, 25, 50]'), isTrue);
-  });
+  test(
+    'desktop pagination clamps to a valid page and shows a rows-per-page control',
+    () {
+      expect(
+        source.contains('clampedPage = page.clamp(0, totalPages - 1)'),
+        isTrue,
+      );
+      expect(source.contains('const [10, 25, 50]'), isTrue);
+    },
+  );
 }

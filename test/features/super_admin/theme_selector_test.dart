@@ -23,7 +23,8 @@ void main() {
                 for (final mode in ThemeMode.values)
                   TextButton(
                     key: ValueKey(mode),
-                    onPressed: () => context.read<ThemeProvider>().setThemeMode(mode),
+                    onPressed: () =>
+                        context.read<ThemeProvider>().setThemeMode(mode),
                     child: Text(mode.name),
                   ),
                 Text('current: ${theme.themeMode.name}'),
@@ -35,7 +36,9 @@ void main() {
     );
   }
 
-  testWidgets('selecting Light sets ThemeProvider.themeMode to light', (tester) async {
+  testWidgets('selecting Light sets ThemeProvider.themeMode to light', (
+    tester,
+  ) async {
     final provider = ThemeProvider();
     await tester.pumpWidget(harness(provider));
     await tester.tap(find.byKey(const ValueKey(ThemeMode.light)));
@@ -45,7 +48,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('selecting Dark sets ThemeProvider.themeMode to dark', (tester) async {
+  testWidgets('selecting Dark sets ThemeProvider.themeMode to dark', (
+    tester,
+  ) async {
     final provider = ThemeProvider();
     await tester.pumpWidget(harness(provider));
     await tester.tap(find.byKey(const ValueKey(ThemeMode.dark)));
@@ -54,7 +59,9 @@ void main() {
     expect(find.text('current: dark'), findsOneWidget);
   });
 
-  testWidgets('selecting System sets ThemeProvider.themeMode to system', (tester) async {
+  testWidgets('selecting System sets ThemeProvider.themeMode to system', (
+    tester,
+  ) async {
     final provider = ThemeProvider();
     await tester.pumpWidget(harness(provider));
     await tester.tap(find.byKey(const ValueKey(ThemeMode.dark)));

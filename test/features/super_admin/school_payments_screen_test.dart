@@ -31,9 +31,12 @@ void main() {
     expect(source.contains('schoolId: widget.school.id'), isTrue);
   });
 
-  test('the underlying service call is a real schoolId parameter, not a client-side filter', () {
-    expect(serviceSource.contains("if (schoolId != null) 'schoolId': schoolId"), isTrue);
-  });
+  test(
+    'the underlying service call is a real schoolId parameter, not a client-side filter',
+    () {
+      expect(serviceSource.contains("'schoolId': ?schoolId"), isTrue);
+    },
+  );
 
   test('filters cover All, Pending review, Paid, Failed', () {
     for (final label in ['All', 'Pending review', 'Paid', 'Failed']) {
@@ -49,9 +52,17 @@ void main() {
 
   test('has loading, empty, error, retry and pull-to-refresh states', () {
     expect(source.contains('SchoolPulseLoader'), isTrue);
-    expect(source.contains('No payments recorded for this school yet.'), isTrue);
+    expect(
+      source.contains('No payments recorded for this school yet.'),
+      isTrue,
+    );
     expect(source.contains('RefreshIndicator'), isTrue);
-    expect(source.contains("TextButton(onPressed: _load, child: const Text('Retry'))"), isTrue);
+    expect(
+      source.contains(
+        "TextButton(onPressed: _load, child: const Text('Retry'))",
+      ),
+      isTrue,
+    );
   });
 
   test('review action only opens for a pending-verification payment', () {
@@ -59,10 +70,15 @@ void main() {
     expect(source.contains('PaymentReviewScreen(payment: payment)'), isTrue);
   });
 
-  test('View all payments from Subscription passes the same school through, preserving selection', () {
-    expect(
-      subscriptionScreenSource.contains('SchoolPaymentsScreen(school: widget.school)'),
-      isTrue,
-    );
-  });
+  test(
+    'View all payments from Subscription passes the same school through, preserving selection',
+    () {
+      expect(
+        subscriptionScreenSource.contains(
+          'SchoolPaymentsScreen(school: widget.school)',
+        ),
+        isTrue,
+      );
+    },
+  );
 }

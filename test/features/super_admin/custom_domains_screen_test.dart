@@ -19,13 +19,16 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('the service is injectable for tests but defaults to the production CustomDomainService', () {
-    expect(source.contains('final CustomDomainService? service;'), isTrue);
-    expect(
-      source.contains('widget.service ?? CustomDomainService()'),
-      isTrue,
-    );
-  });
+  test(
+    'the service is injectable for tests but defaults to the production CustomDomainService',
+    () {
+      expect(source.contains('final CustomDomainService? service;'), isTrue);
+      expect(
+        source.contains('widget.service ?? CustomDomainService()'),
+        isTrue,
+      );
+    },
+  );
 
   test('requests are streamed live, not fetched once', () {
     expect(source.contains('_service.watchRequests()'), isTrue);
@@ -43,30 +46,51 @@ void main() {
     expect(source.contains('_service.activate(request.hostname)'), isTrue);
   });
 
-  test('remove/reject label and confirmation copy differ for an active vs. pending domain', () {
-    expect(
-      source.contains("request.isActive ? 'Remove this domain?' : 'Reject this request?'"),
-      isTrue,
-    );
-    expect(source.contains('_service.reject(request.hostname, controller.text)'), isTrue);
-  });
+  test(
+    'remove/reject label and confirmation copy differ for an active vs. pending domain',
+    () {
+      expect(
+        source.contains(
+          "request.isActive ? 'Remove this domain?' : 'Reject this request?'",
+        ),
+        isTrue,
+      );
+      expect(
+        source.contains('_service.reject(request.hostname, controller.text)'),
+        isTrue,
+      );
+    },
+  );
 
-  test('every mutation goes through CustomDomainService, not a direct Firestore write', () {
-    expect(source.contains('FirebaseFirestore.instance.collection'), isFalse);
-  });
+  test(
+    'every mutation goes through CustomDomainService, not a direct Firestore write',
+    () {
+      expect(source.contains('FirebaseFirestore.instance.collection'), isFalse);
+    },
+  );
 
   test('errors never leak a raw exception string to the UI', () {
     // Regression: _friendlyError must fall back to the shared
     // friendlyErrorMessage() helper, not a raw error.toString().
     expect(source.contains('return friendlyErrorMessage(error);'), isTrue);
     expect(
-      source.contains("import 'package:school_pulse/core/error/friendly_error_message.dart';"),
+      source.contains(
+        "import 'package:school_pulse/core/error/friendly_error_message.dart';",
+      ),
       isTrue,
     );
     expect(source.contains("value.replaceFirst(RegExp(r'^\\[.*?\\]"), isFalse);
   });
 
-  test('stream errors are also passed through the same friendly error path', () {
-    expect(source.contains('Text(\n                      _friendlyError(snapshot.error!)'), isTrue);
-  });
+  test(
+    'stream errors are also passed through the same friendly error path',
+    () {
+      expect(
+        source.contains(
+          'Text(\n                      _friendlyError(snapshot.error!)',
+        ),
+        isTrue,
+      );
+    },
+  );
 }

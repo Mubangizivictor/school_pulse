@@ -20,50 +20,58 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('re-exports the real SchoolDetailScreen rather than defining a duplicate', () {
-    expect(
-      source.contains("export 'school_overview_screen.dart' show SchoolDetailScreen;"),
-      isTrue,
-    );
-  });
+  test(
+    're-exports the real SchoolDetailScreen rather than defining a duplicate',
+    () {
+      expect(
+        source.contains(
+          "export 'school_overview_screen.dart' show SchoolDetailScreen;",
+        ),
+        isTrue,
+      );
+    },
+  );
 
-  testWidgets('confirmSchoolStatusChange shows a title/message dialog and only fires onConfirm on confirm', (tester) async {
-    var confirmed = false;
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: ElevatedButton(
-              onPressed: () => confirmSchoolStatusChange(
-                context,
-                action: 'Suspend',
-                message: 'This school will lose access immediately.',
-                color: Colors.red,
-                onConfirm: () => confirmed = true,
+  testWidgets(
+    'confirmSchoolStatusChange shows a title/message dialog and only fires onConfirm on confirm',
+    (tester) async {
+      var confirmed = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () => confirmSchoolStatusChange(
+                  context,
+                  action: 'Suspend',
+                  message: 'This school will lose access immediately.',
+                  color: Colors.red,
+                  onConfirm: () => confirmed = true,
+                ),
+                child: const Text('Open'),
               ),
-              child: const Text('Open'),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('Open'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Suspend School?'), findsOneWidget);
-    expect(
-      find.text('This school will lose access immediately.'),
-      findsOneWidget,
-    );
-    expect(confirmed, isFalse);
+      expect(find.text('Suspend School?'), findsOneWidget);
+      expect(
+        find.text('This school will lose access immediately.'),
+        findsOneWidget,
+      );
+      expect(confirmed, isFalse);
 
-    await tester.tap(find.text('Suspend'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Suspend'));
+      await tester.pumpAndSettle();
 
-    expect(confirmed, isTrue);
-    expect(tester.takeException(), isNull);
-  });
+      expect(confirmed, isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('Cancel dismisses without calling onConfirm', (tester) async {
     var confirmed = false;

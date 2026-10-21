@@ -22,10 +22,13 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('BillingHomeScreen title reads Billing, not a separate Payments/Plans label', () {
-    expect(source.contains("Text('Billing'"), isTrue);
-    expect(source.contains("'Payments & Billing'"), isFalse);
-  });
+  test(
+    'BillingHomeScreen title reads Billing, not a separate Payments/Plans label',
+    () {
+      expect(source.contains("Text('Billing'"), isTrue);
+      expect(source.contains("'Payments & Billing'"), isFalse);
+    },
+  );
 
   test('BillingHomeScreen surfaces the manual-payment confirmation queue', () {
     expect(source.contains('_confirmationQueueSection'), isTrue);
@@ -34,41 +37,62 @@ void main() {
     expect(source.contains('onOpen: (p) => _openReview(context, p)'), isTrue);
   });
 
-  test('BillingHomeScreen surfaces pricing-band performance, not plan performance', () {
-    expect(source.contains('_pricingBandsSection'), isTrue);
-    expect(source.contains('_PricingBandTable'), isTrue);
-    expect(source.contains('_PricingBandCard'), isTrue);
-    expect(source.contains('_pricingBands'), isTrue);
-    expect(source.contains('_planPerformanceSection'), isFalse);
-    expect(source.contains('class PlanPerformanceRow'), isFalse);
-  });
+  test(
+    'BillingHomeScreen surfaces pricing-band performance, not plan performance',
+    () {
+      expect(source.contains('_pricingBandsSection'), isTrue);
+      expect(source.contains('_PricingBandTable'), isTrue);
+      expect(source.contains('_PricingBandCard'), isTrue);
+      expect(source.contains('_pricingBands'), isTrue);
+      expect(source.contains('_planPerformanceSection'), isFalse);
+      expect(source.contains('class PlanPerformanceRow'), isFalse);
+    },
+  );
 
-  test('BillingHomeScreen reaches Student pricing and Payment Methods, not the old plans screen', () {
-    expect(source.contains('Student pricing'), isTrue);
-    expect(source.contains('Payment methods'), isTrue);
-    expect(source.contains('_openPlans'), isTrue);
-    expect(source.contains('_openPaymentMethods'), isTrue);
-    expect(source.contains('StudentPricingScreen()'), isTrue);
-    expect(source.contains('ManualPaymentConfigScreen()'), isTrue);
-    expect(source.contains('SubscriptionPlansScreen()'), isFalse);
-  });
+  test(
+    'BillingHomeScreen reaches Student pricing and Payment Methods, not the old plans screen',
+    () {
+      expect(source.contains('Student pricing'), isTrue);
+      expect(source.contains('Payment methods'), isTrue);
+      expect(source.contains('_openPlans'), isTrue);
+      expect(source.contains('_openPaymentMethods'), isTrue);
+      expect(source.contains('StudentPricingScreen()'), isTrue);
+      expect(source.contains('ManualPaymentConfigScreen()'), isTrue);
+      expect(source.contains('SubscriptionPlansScreen()'), isFalse);
+    },
+  );
 
-  test('a review row tapped opens the real PaymentReviewScreen for that payment', () {
-    expect(source.contains('_openReview'), isTrue);
-    expect(source.contains('PaymentReviewScreen(payment: payment)'), isTrue);
-  });
+  test(
+    'a review row tapped opens the real PaymentReviewScreen for that payment',
+    () {
+      expect(source.contains('_openReview'), isTrue);
+      expect(source.contains('PaymentReviewScreen(payment: payment)'), isTrue);
+    },
+  );
 
-  test('BillingHomeScreen surfaces a renewals section sourced from subscription_cycles', () {
-    expect(source.contains('_renewalsSection'), isTrue);
-    expect(source.contains("title: 'Renewals due soon (next 30 days)'"), isTrue);
-    expect(source.contains('getAllUpcomingSubscriptionCycles'), isTrue);
-    expect(source.contains('_RenewalTable'), isTrue);
-    expect(source.contains('_RenewalCard'), isTrue);
-  });
+  test(
+    'BillingHomeScreen surfaces a renewals section sourced from subscription_cycles',
+    () {
+      expect(source.contains('_renewalsSection'), isTrue);
+      expect(
+        source.contains("title: 'Renewals due soon (next 30 days)'"),
+        isTrue,
+      );
+      expect(source.contains('getAllUpcomingSubscriptionCycles'), isTrue);
+      expect(source.contains('_RenewalTable'), isTrue);
+      expect(source.contains('_RenewalCard'), isTrue);
+    },
+  );
 
-  test('renewal rows use the shared cycle-status badge mapping, not raw Colors', () {
-    expect(source.contains('cycleStatusLabel(cycle.cycleStatus)'), isTrue);
-    expect(source.contains('cycleStatusColor(context, cycle.cycleStatus)'), isTrue);
-    expect(source.contains('StatusBadge('), isTrue);
-  });
+  test(
+    'renewal rows use the shared cycle-status badge mapping, not raw Colors',
+    () {
+      expect(source.contains('cycleStatusLabel(cycle.cycleStatus)'), isTrue);
+      expect(
+        source.contains('cycleStatusColor(context, cycle.cycleStatus)'),
+        isTrue,
+      );
+      expect(source.contains('StatusBadge('), isTrue);
+    },
+  );
 }

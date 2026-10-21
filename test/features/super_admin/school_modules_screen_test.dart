@@ -36,19 +36,25 @@ void main() {
     expect(source.contains('QR'), isFalse);
   });
 
-  test('module rows are sourced from the real entitlement system, not enabledFeatures', () {
-    expect(source.contains('ModuleControlRepository'), isTrue);
-    expect(source.contains('ModuleRegistry'), isTrue);
-    expect(source.contains('watchModules'), isTrue);
-    expect(source.contains('school.enabledFeatures'), isFalse);
-    expect(source.contains('SwitchListTile'), isFalse);
-  });
+  test(
+    'module rows are sourced from the real entitlement system, not enabledFeatures',
+    () {
+      expect(source.contains('ModuleControlRepository'), isTrue);
+      expect(source.contains('ModuleRegistry'), isTrue);
+      expect(source.contains('watchModules'), isTrue);
+      expect(source.contains('school.enabledFeatures'), isFalse);
+      expect(source.contains('SwitchListTile'), isFalse);
+    },
+  );
 
-  test('changes go through a confirmation sheet calling setModuleEnabled with a reason, not a raw toggle', () {
-    expect(source.contains('setModuleEnabled'), isTrue);
-    expect(source.contains('_ModuleConfirmationSheet'), isTrue);
-    expect(source.contains('reason.length < 3'), isTrue);
-  });
+  test(
+    'changes go through a confirmation sheet calling setModuleEnabled with a reason, not a raw toggle',
+    () {
+      expect(source.contains('setModuleEnabled'), isTrue);
+      expect(source.contains('_ModuleConfirmationSheet'), isTrue);
+      expect(source.contains('reason.length < 3'), isTrue);
+    },
+  );
 
   test('unentitled/unavailable modules are blocked from being toggled', () {
     expect(source.contains('_GroupState.unavailable'), isTrue);

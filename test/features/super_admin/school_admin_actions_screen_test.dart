@@ -20,22 +20,37 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('admins are sourced from the real getSchoolAdmins query, not a mock list', () {
-    expect(source.contains('repository.getSchoolAdmins(widget.school.id)'), isTrue);
-  });
+  test(
+    'admins are sourced from the real getSchoolAdmins query, not a mock list',
+    () {
+      expect(
+        source.contains('repository.getSchoolAdmins(widget.school.id)'),
+        isTrue,
+      );
+    },
+  );
 
-  test('support session uses the sanctioned requestSupportAccess flow, not enterSupportMode', () {
-    expect(source.contains('SupportAccessService'), isTrue);
-    expect(source.contains('service.request('), isTrue);
-    expect(source.contains('EnterSupportModeRequested'), isFalse);
-    expect(source.contains('enterSupportMode'), isFalse);
-  });
+  test(
+    'support session uses the sanctioned requestSupportAccess flow, not enterSupportMode',
+    () {
+      expect(source.contains('SupportAccessService'), isTrue);
+      expect(source.contains('service.request('), isTrue);
+      expect(source.contains('EnterSupportModeRequested'), isFalse);
+      expect(source.contains('enterSupportMode'), isFalse);
+    },
+  );
 
-  test('support session requires a reason and states the 30-minute audited expiry', () {
-    expect(source.contains('30-minute'), isTrue);
-    expect(source.contains('audited'), isTrue);
-    expect(source.contains("'Please enter a reason (min 3 characters)'"), isTrue);
-  });
+  test(
+    'support session requires a reason and states the 30-minute audited expiry',
+    () {
+      expect(source.contains('30-minute'), isTrue);
+      expect(source.contains('audited'), isTrue);
+      expect(
+        source.contains("'Please enter a reason (min 3 characters)'"),
+        isTrue,
+      );
+    },
+  );
 
   test('there is no Delete school action anywhere on this screen', () {
     expect(source.contains('Delete school'), isFalse);
@@ -43,11 +58,14 @@ void main() {
     expect(source.contains('deleteSchoolDialog('), isFalse);
   });
 
-  test('suspend/reactivate/archive all require confirmation and are logged', () {
-    expect(source.contains('confirmSchoolStatusChange'), isTrue);
-    expect(source.contains('_confirmArchive'), isTrue);
-    expect(source.contains('Every administrative action is logged.'), isTrue);
-  });
+  test(
+    'suspend/reactivate/archive all require confirmation and are logged',
+    () {
+      expect(source.contains('confirmSchoolStatusChange'), isTrue);
+      expect(source.contains('_confirmArchive'), isTrue);
+      expect(source.contains('Every administrative action is logged.'), isTrue);
+    },
+  );
 
   test('archive requires a meaningful reason before dispatching', () {
     expect(source.contains('if (reason.length < 3) return;'), isTrue);

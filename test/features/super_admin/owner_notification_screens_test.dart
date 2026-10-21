@@ -19,8 +19,9 @@ class _FakeService extends OwnerNotificationService {
   final _controller = StreamController<List<OwnerNotification>>.broadcast();
 
   final calls = <String>[];
-  OwnerNotificationPreferences prefs =
-      OwnerNotificationPreferences.defaults('owner-x');
+  OwnerNotificationPreferences prefs = OwnerNotificationPreferences.defaults(
+    'owner-x',
+  );
 
   @override
   String? get currentOwnerId => 'owner-x';
@@ -51,8 +52,7 @@ class _FakeService extends OwnerNotificationService {
   }
 
   @override
-  Future<void> archiveNotification(String id) async =>
-      calls.add('archive:$id');
+  Future<void> archiveNotification(String id) async => calls.add('archive:$id');
 
   @override
   Future<void> deleteNotification(String id) async => calls.add('delete:$id');
@@ -100,25 +100,34 @@ OwnerNotification _n(
 }
 
 Widget _wrap(Widget child) => MaterialApp(
-      home: MediaQuery(
-        data: const MediaQueryData(size: Size(430, 1600)),
-        child: child,
-      ),
-    );
+  home: MediaQuery(
+    data: const MediaQueryData(size: Size(430, 1600)),
+    child: child,
+  ),
+);
 
 void main() {
   group('Owner Notifications screen', () {
-    testWidgets('renders the header, 3 NEW chip, filter chips and tiles',
-        (tester) async {
+    testWidgets('renders the header, 3 NEW chip, filter chips and tiles', (
+      tester,
+    ) async {
       final svc = _FakeService([
-        _n('a', category: OwnerNotificationCategory.billing,
-            type: 'manual_payment_pending', severity: 'requires_review'),
-        _n('b', category: OwnerNotificationCategory.platform,
-            severity: 'critical'),
+        _n(
+          'a',
+          category: OwnerNotificationCategory.billing,
+          type: 'manual_payment_pending',
+          severity: 'requires_review',
+        ),
+        _n(
+          'b',
+          category: OwnerNotificationCategory.platform,
+          severity: 'critical',
+        ),
         _n('c', category: OwnerNotificationCategory.schools),
       ]);
       await tester.pumpWidget(
-          _wrap(SuperAdminNotificationsScreen(service: svc)));
+        _wrap(SuperAdminNotificationsScreen(service: svc)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Notifications'), findsOneWidget); // app bar title
@@ -130,8 +139,14 @@ void main() {
       expect(find.text('Mark all read'), findsOneWidget);
       expect(find.byIcon(Icons.more_horiz_rounded), findsOneWidget);
       expect(find.text('3 NEW'), findsOneWidget);
-      for (final label in ['All', 'Critical', 'Billing', 'Platform', 'Schools',
-          'Security']) {
+      for (final label in [
+        'All',
+        'Critical',
+        'Billing',
+        'Platform',
+        'Schools',
+        'Security',
+      ]) {
         expect(find.text(label), findsOneWidget, reason: '$label chip');
       }
       expect(find.byType(OwnerNotificationTile), findsNWidgets(3));
@@ -143,12 +158,16 @@ void main() {
 
     testWidgets('a filter chip narrows the list', (tester) async {
       final svc = _FakeService([
-        _n('a', category: OwnerNotificationCategory.billing,
-            type: 'manual_payment_pending'),
+        _n(
+          'a',
+          category: OwnerNotificationCategory.billing,
+          type: 'manual_payment_pending',
+        ),
         _n('b', category: OwnerNotificationCategory.schools),
       ]);
       await tester.pumpWidget(
-          _wrap(SuperAdminNotificationsScreen(service: svc)));
+        _wrap(SuperAdminNotificationsScreen(service: svc)),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(OwnerNotificationTile), findsNWidgets(2));
 
@@ -163,7 +182,8 @@ void main() {
         _n('a', category: OwnerNotificationCategory.billing),
       ]);
       await tester.pumpWidget(
-          _wrap(SuperAdminNotificationsScreen(service: svc)));
+        _wrap(SuperAdminNotificationsScreen(service: svc)),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Mark all read'));
@@ -176,7 +196,8 @@ void main() {
         _n('a', category: OwnerNotificationCategory.billing),
       ]);
       await tester.pumpWidget(
-          _wrap(SuperAdminNotificationsScreen(service: svc)));
+        _wrap(SuperAdminNotificationsScreen(service: svc)),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.more_horiz_rounded));
@@ -189,13 +210,15 @@ void main() {
       expect(svc.calls, contains('clearAll'));
     });
 
-    testWidgets('long-press opens the safe owner action menu only',
-        (tester) async {
+    testWidgets('long-press opens the safe owner action menu only', (
+      tester,
+    ) async {
       final svc = _FakeService([
         _n('a', category: OwnerNotificationCategory.billing),
       ]);
       await tester.pumpWidget(
-          _wrap(SuperAdminNotificationsScreen(service: svc)));
+        _wrap(SuperAdminNotificationsScreen(service: svc)),
+      );
       await tester.pumpAndSettle();
 
       await tester.longPress(find.byType(OwnerNotificationTile));
@@ -209,13 +232,19 @@ void main() {
   });
 
   group('Owner Notification Detail', () {
-    testWidgets('payment shows REQUIRES REVIEW, masked ref, payment actions',
-        (tester) async {
+    testWidgets('payment shows REQUIRES REVIEW, masked ref, payment actions', (
+      tester,
+    ) async {
       final svc = _FakeService(const []);
-      final n = _n('a', category: OwnerNotificationCategory.billing,
-          type: 'manual_payment_pending', severity: 'requires_review');
-      await tester.pumpWidget(_wrap(
-          OwnerNotificationDetailScreen(notification: n, service: svc)));
+      final n = _n(
+        'a',
+        category: OwnerNotificationCategory.billing,
+        type: 'manual_payment_pending',
+        severity: 'requires_review',
+      );
+      await tester.pumpWidget(
+        _wrap(OwnerNotificationDetailScreen(notification: n, service: svc)),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('REQUIRES REVIEW'), findsOneWidget);
@@ -224,20 +253,27 @@ void main() {
       expect(find.text('Review payment'), findsOneWidget);
       expect(find.textContaining('Opened by you'), findsOneWidget);
       expect(
-        find.text('Sensitive school details are shown only after authorization.'),
+        find.text(
+          'Sensitive school details are shown only after authorization.',
+        ),
         findsOneWidget,
       );
       // opening marks read
       expect(svc.calls, contains('markRead:a'));
     });
 
-    testWidgets('platform incident shows the platform-health action',
-        (tester) async {
+    testWidgets('platform incident shows the platform-health action', (
+      tester,
+    ) async {
       final svc = _FakeService(const []);
-      final n = _n('p', category: OwnerNotificationCategory.platform,
-          severity: 'critical');
-      await tester.pumpWidget(_wrap(
-          OwnerNotificationDetailScreen(notification: n, service: svc)));
+      final n = _n(
+        'p',
+        category: OwnerNotificationCategory.platform,
+        severity: 'critical',
+      );
+      await tester.pumpWidget(
+        _wrap(OwnerNotificationDetailScreen(notification: n, service: svc)),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Open platform health'), findsOneWidget);
       expect(find.text('Acknowledge'), findsOneWidget);
@@ -245,16 +281,23 @@ void main() {
       expect(find.text('UGX 350,000'), findsNothing);
     });
 
-    testWidgets('security shows security-center action, no archive-as-primary',
-        (tester) async {
-      final svc = _FakeService(const []);
-      final n = _n('s', category: OwnerNotificationCategory.security,
-          type: 'security_alert', severity: 'critical');
-      await tester.pumpWidget(_wrap(
-          OwnerNotificationDetailScreen(notification: n, service: svc)));
-      await tester.pumpAndSettle();
-      expect(find.text('Open security center'), findsOneWidget);
-    });
+    testWidgets(
+      'security shows security-center action, no archive-as-primary',
+      (tester) async {
+        final svc = _FakeService(const []);
+        final n = _n(
+          's',
+          category: OwnerNotificationCategory.security,
+          type: 'security_alert',
+          severity: 'critical',
+        );
+        await tester.pumpWidget(
+          _wrap(OwnerNotificationDetailScreen(notification: n, service: svc)),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Open security center'), findsOneWidget);
+      },
+    );
   });
 
   testWidgets(
@@ -265,7 +308,8 @@ void main() {
         _n('a', category: OwnerNotificationCategory.billing),
       ]);
       await tester.pumpWidget(
-          _wrap(SuperAdminNotificationsScreen(service: svc)));
+        _wrap(SuperAdminNotificationsScreen(service: svc)),
+      );
       await tester.pumpAndSettle();
       expect(find.byIcon(Icons.settings_outlined), findsNothing);
       expect(find.text('Notification settings'), findsNothing);

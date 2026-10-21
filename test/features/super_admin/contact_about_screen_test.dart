@@ -23,41 +23,55 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('Live Chat and Terms of Service rows are deliberately omitted, not faked', () {
-    // Both are named in the doc comment explaining why they're absent, but
-    // neither should appear as an actual _InfoTile title in the widget.
-    expect(source.contains("title: 'Live Chat'"), isFalse);
-    expect(source.contains("title: 'Terms of Service'"), isFalse);
-    expect(
-      source.contains('no real chat implementation exists in this codebase'),
-      isTrue,
-    );
-  });
+  test(
+    'Live Chat and Terms of Service rows are deliberately omitted, not faked',
+    () {
+      // Both are named in the doc comment explaining why they're absent, but
+      // neither should appear as an actual _InfoTile title in the widget.
+      expect(source.contains("title: 'Live Chat'"), isFalse);
+      expect(source.contains("title: 'Terms of Service'"), isFalse);
+      expect(
+        source.contains('no real chat implementation exists in this codebase'),
+        isTrue,
+      );
+    },
+  );
 
-  test('Privacy Policy routes to the real in-app draft screen, not an external link', () {
-    expect(
-      source.contains("context.push('/super-admin/settings/about/privacy-policy')"),
-      isTrue,
-    );
-  });
+  test(
+    'Privacy Policy routes to the real in-app draft screen, not an external link',
+    () {
+      expect(
+        source.contains(
+          "context.push('/super-admin/settings/about/privacy-policy')",
+        ),
+        isTrue,
+      );
+    },
+  );
 
-  testWidgets('renders contact rows sourced from the real SupportContact constants', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: ContactAboutScreen()));
-    await tester.pump();
+  testWidgets(
+    'renders contact rows sourced from the real SupportContact constants',
+    (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: ContactAboutScreen()));
+      await tester.pump();
 
-    expect(find.text('Contact & About'), findsWidgets);
-    expect(find.text(SupportContact.companyName), findsOneWidget);
-    expect(find.text(SupportContact.supportEmail), findsOneWidget);
-    expect(find.text(SupportContact.websiteUrl), findsOneWidget);
-    expect(find.text('Privacy Policy'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('Contact & About'), findsWidgets);
+      expect(find.text(SupportContact.companyName), findsOneWidget);
+      expect(find.text(SupportContact.supportEmail), findsOneWidget);
+      expect(find.text(SupportContact.websiteUrl), findsOneWidget);
+      expect(find.text('Privacy Policy'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  test('the App version row shows a Loading... placeholder until PackageInfo resolves', () {
-    // PackageInfo.fromPlatform() resolves via a platform channel too fast/
-    // asynchronously in the test harness to reliably catch the interstitial
-    // frame with pumpWidget, so this is verified at the source level.
-    expect(source.contains("? 'Loading...'"), isTrue);
-    expect(source.contains("subtitle: 'App version'"), isTrue);
-  });
+  test(
+    'the App version row shows a Loading... placeholder until PackageInfo resolves',
+    () {
+      // PackageInfo.fromPlatform() resolves via a platform channel too fast/
+      // asynchronously in the test harness to reliably catch the interstitial
+      // frame with pumpWidget, so this is verified at the source level.
+      expect(source.contains("? 'Loading...'"), isTrue);
+      expect(source.contains("subtitle: 'App version'"), isTrue);
+    },
+  );
 }

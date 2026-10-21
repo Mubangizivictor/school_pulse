@@ -24,51 +24,75 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('no duplicated navigation: billing / payment methods and audit logs are not linked from Settings', () {
-    expect(source.contains('ManualPaymentConfigScreen'), isFalse);
-    expect(source.contains('Billing & payment methods'), isFalse);
-    expect(source.contains('AuditLogsScreen'), isFalse);
-    expect(source.contains("'Platform audit logs'"), isFalse);
-    expect(source.contains('/super-admin/audit-logs'), isFalse);
-  });
+  test(
+    'no duplicated navigation: billing / payment methods and audit logs are not linked from Settings',
+    () {
+      expect(source.contains('ManualPaymentConfigScreen'), isFalse);
+      expect(source.contains('Billing & payment methods'), isFalse);
+      expect(source.contains('AuditLogsScreen'), isFalse);
+      expect(source.contains("'Platform audit logs'"), isFalse);
+      expect(source.contains('/super-admin/audit-logs'), isFalse);
+    },
+  );
 
-  test('sign out is not an in-page button; it is reached only through the account menu', () {
-    // The only logout call site is inside the header account menu handler.
-    expect(source.contains("'Log out'"), isFalse);
-    expect(source.contains("label: 'Logout'"), isFalse);
-    expect(source.contains('_showAccountMenu'), isTrue);
-    expect(source.contains('handleSuperAdminLogout(context)'), isTrue);
-  });
+  test(
+    'sign out is not an in-page button; it is reached only through the account menu',
+    () {
+      // The only logout call site is inside the header account menu handler.
+      expect(source.contains("'Log out'"), isFalse);
+      expect(source.contains("label: 'Logout'"), isFalse);
+      expect(source.contains('_showAccountMenu'), isTrue);
+      expect(source.contains('handleSuperAdminLogout(context)'), isTrue);
+    },
+  );
 
-  test('school / platform deletion is deliberately absent from global settings', () {
-    expect(source.contains('deleteSchool'), isFalse);
-    expect(source.contains("'Delete platform'"), isFalse);
-    expect(source.contains("'Delete School'"), isFalse);
-  });
+  test(
+    'school / platform deletion is deliberately absent from global settings',
+    () {
+      expect(source.contains('deleteSchool'), isFalse);
+      expect(source.contains("'Delete platform'"), isFalse);
+      expect(source.contains("'Delete School'"), isFalse);
+    },
+  );
 
-  test('platform configuration destinations route to real screens / paths, not placeholders', () {
-    for (final path in const [
-      "context.push('/super-admin/schools')",
-      "context.push('/super-admin/settings/custom-domains')",
-      "context.push('/super-admin/settings/subdomain-requests')",
-      "context.push('/super-admin/settings/support')",
-      "context.push('/super-admin/platform-health')",
-      "context.push('/super-admin/settings/security')",
-    ]) {
-      expect(source.contains(path), isTrue, reason: '$path missing');
-    }
-  });
+  test(
+    'platform configuration destinations route to real screens / paths, not placeholders',
+    () {
+      for (final path in const [
+        "context.push('/super-admin/schools')",
+        "context.push('/super-admin/settings/custom-domains')",
+        "context.push('/super-admin/settings/subdomain-requests')",
+        "context.push('/super-admin/settings/support')",
+        "context.push('/super-admin/platform-health')",
+        "context.push('/super-admin/settings/security')",
+      ]) {
+        expect(source.contains(path), isTrue, reason: '$path missing');
+      }
+    },
+  );
 
-  test('unsigned-in state falls back to a safe placeholder, not a crash on null user', () {
-    expect(source.contains('final ownerName ='), isTrue);
-    expect(source.contains("'SaaS Owner'"), isTrue);
-    expect(source.contains("'Not signed in'"), isTrue);
-  });
+  test(
+    'unsigned-in state falls back to a safe placeholder, not a crash on null user',
+    () {
+      expect(source.contains('final ownerName ='), isTrue);
+      expect(source.contains("'SaaS Owner'"), isTrue);
+      expect(source.contains("'Not signed in'"), isTrue);
+    },
+  );
 
-  test('theme selection uses the app-wide ThemeProvider, so it persists and affects the whole app', () {
-    expect(source.contains('context.watch<ThemeProvider>().themeMode'), isTrue);
-    expect(source.contains('context.read<ThemeProvider>().setThemeMode(value)'), isTrue);
-  });
+  test(
+    'theme selection uses the app-wide ThemeProvider, so it persists and affects the whole app',
+    () {
+      expect(
+        source.contains('context.watch<ThemeProvider>().themeMode'),
+        isTrue,
+      );
+      expect(
+        source.contains('context.read<ThemeProvider>().setThemeMode(value)'),
+        isTrue,
+      );
+    },
+  );
 
   test('edit-profile taps route to the real profile screen', () {
     expect(source.contains('const SuperAdminProfileScreen()'), isTrue);

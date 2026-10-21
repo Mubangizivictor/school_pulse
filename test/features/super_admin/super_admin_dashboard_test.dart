@@ -32,54 +32,95 @@ void main() {
     );
   });
 
-  test('one nested Navigator per section keeps pushed screens inside that section', () {
-    expect(
-      source.contains('final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate('),
-      isTrue,
-    );
-    expect(source.contains('SuperAdminTabNavigator(\n            navigatorKey: _navigatorKeys[index],'), isTrue);
-  });
+  test(
+    'one nested Navigator per section keeps pushed screens inside that section',
+    () {
+      expect(
+        source.contains(
+          'final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(',
+        ),
+        isTrue,
+      );
+      expect(
+        source.contains(
+          'SuperAdminTabNavigator(\n            navigatorKey: _navigatorKeys[index],',
+        ),
+        isTrue,
+      );
+    },
+  );
 
-  test('route location changes (deep link/refresh/back-forward) resync the selected section', () {
-    expect(source.contains('final index = _sectionIndexForLocation(location);'), isTrue);
-    expect(source.contains('if (index != _selectedIndex) {'), isTrue);
-  });
+  test(
+    'route location changes (deep link/refresh/back-forward) resync the selected section',
+    () {
+      expect(
+        source.contains('final index = _sectionIndexForLocation(location);'),
+        isTrue,
+      );
+      expect(source.contains('if (index != _selectedIndex) {'), isTrue);
+    },
+  );
 
-  test('the Overview Payments-to-Verify shortcut lands on Billing pre-filtered to pendingVerification', () {
-    expect(
-      source.contains('_goToBilling(filter: ManualPaymentStatus.pendingVerification)'),
-      isTrue,
-    );
-    expect(source.contains('_billingInitialFilter = filter;'), isTrue);
-    expect(source.contains('_billingPageKey++;'), isTrue);
-  });
+  test(
+    'the Overview Payments-to-Verify shortcut lands on Billing pre-filtered to pendingVerification',
+    () {
+      expect(
+        source.contains(
+          '_goToBilling(filter: ManualPaymentStatus.pendingVerification)',
+        ),
+        isTrue,
+      );
+      expect(source.contains('_billingInitialFilter = filter;'), isTrue);
+      expect(source.contains('_billingPageKey++;'), isTrue);
+    },
+  );
 
-  test('re-selecting the already-active section pops it to root instead of no-op', () {
-    expect(
-      source.contains(
-        'if (index == _selectedIndex) {\n                        // Re-selecting the active section returns it to',
-      ),
-      isTrue,
-    );
-  });
+  test(
+    're-selecting the already-active section pops it to root instead of no-op',
+    () {
+      expect(
+        source.contains(
+          'if (index == _selectedIndex) {\n                        // Re-selecting the active section returns it to',
+        ),
+        isTrue,
+      );
+    },
+  );
 
-  test('a section tap performs URL navigation only - didChangeDependencies moves the index', () {
-    // The tap handler must not also setState(_selectedIndex): one code path
-    // (didChangeDependencies) owns the index so the nav highlight can never
-    // disagree with the actual route.
-    expect(
-      source.contains('if (_navThrottled()) return;\n'
-          '                      // URL-only: didChangeDependencies moves _selectedIndex'),
-      isTrue,
-    );
-    expect(source.contains('_navThrottled() => ownerNavThrottled()'), isTrue);
-  });
+  test(
+    'a section tap performs URL navigation only - didChangeDependencies moves the index',
+    () {
+      // The tap handler must not also setState(_selectedIndex): one code path
+      // (didChangeDependencies) owns the index so the nav highlight can never
+      // disagree with the actual route.
+      expect(
+        source.contains(
+          'if (_navThrottled()) return;\n'
+          '                      // URL-only: didChangeDependencies moves _selectedIndex',
+        ),
+        isTrue,
+      );
+      expect(source.contains('_navThrottled() => ownerNavThrottled()'), isTrue);
+    },
+  );
 
-  test('this device is registered for owner push notifications on dashboard entry', () {
-    expect(source.contains('OwnerPushTokenService().registerCurrentDevice();'), isTrue);
-  });
+  test(
+    'this device is registered for owner push notifications on dashboard entry',
+    () {
+      expect(
+        source.contains('OwnerPushTokenService().registerCurrentDevice();'),
+        isTrue,
+      );
+    },
+  );
 
-  test('sign-out uses the shared logout confirmation flow, not a bespoke one', () {
-    expect(source.contains('onTap: () => handleSuperAdminLogout(context)'), isTrue);
-  });
+  test(
+    'sign-out uses the shared logout confirmation flow, not a bespoke one',
+    () {
+      expect(
+        source.contains('onTap: () => handleSuperAdminLogout(context)'),
+        isTrue,
+      );
+    },
+  );
 }

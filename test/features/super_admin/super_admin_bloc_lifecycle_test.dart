@@ -60,8 +60,14 @@ void main() {
   blocTest<SuperAdminBloc, SuperAdminState>(
     'suspend calls repository.suspendSchool (the callable-backed path) and does not call logAction directly',
     build: () {
-      when(() => repository.suspendSchool(any(), any())).thenAnswer((_) async {});
-      return SuperAdminBloc(repository: repository, auth: auth, payments: payments);
+      when(
+        () => repository.suspendSchool(any(), any()),
+      ).thenAnswer((_) async {});
+      return SuperAdminBloc(
+        repository: repository,
+        auth: auth,
+        payments: payments,
+      );
     },
     act: (bloc) => bloc.add(
       const UpdateSchoolStatusEvent(
@@ -71,7 +77,9 @@ void main() {
       ),
     ),
     verify: (_) {
-      verify(() => repository.suspendSchool('school1', 'Non-payment')).called(1);
+      verify(
+        () => repository.suspendSchool('school1', 'Non-payment'),
+      ).called(1);
       verifyNever(() => repository.logAction(any()));
       verifyNever(() => repository.updateSchool(any()));
     },
@@ -81,10 +89,17 @@ void main() {
     'activate calls repository.activateSchool and does not call logAction directly',
     build: () {
       when(() => repository.activateSchool(any())).thenAnswer((_) async {});
-      return SuperAdminBloc(repository: repository, auth: auth, payments: payments);
+      return SuperAdminBloc(
+        repository: repository,
+        auth: auth,
+        payments: payments,
+      );
     },
     act: (bloc) => bloc.add(
-      const UpdateSchoolStatusEvent(schoolId: 'school1', status: SchoolStatus.active),
+      const UpdateSchoolStatusEvent(
+        schoolId: 'school1',
+        status: SchoolStatus.active,
+      ),
     ),
     verify: (_) {
       verify(() => repository.activateSchool('school1')).called(1);
@@ -96,8 +111,14 @@ void main() {
   blocTest<SuperAdminBloc, SuperAdminState>(
     'archive calls repository.archiveSchool and does not call logAction directly',
     build: () {
-      when(() => repository.archiveSchool(any(), any())).thenAnswer((_) async {});
-      return SuperAdminBloc(repository: repository, auth: auth, payments: payments);
+      when(
+        () => repository.archiveSchool(any(), any()),
+      ).thenAnswer((_) async {});
+      return SuperAdminBloc(
+        repository: repository,
+        auth: auth,
+        payments: payments,
+      );
     },
     act: (bloc) => bloc.add(
       const UpdateSchoolStatusEvent(
@@ -107,7 +128,9 @@ void main() {
       ),
     ),
     verify: (_) {
-      verify(() => repository.archiveSchool('school1', 'Closed down')).called(1);
+      verify(
+        () => repository.archiveSchool('school1', 'Closed down'),
+      ).called(1);
       verifyNever(() => repository.logAction(any()));
       verifyNever(() => repository.updateSchool(any()));
     },
@@ -119,7 +142,11 @@ void main() {
       when(
         () => repository.updateSchoolSubscription(any(), any(), any()),
       ).thenAnswer((_) async {});
-      return SuperAdminBloc(repository: repository, auth: auth, payments: payments);
+      return SuperAdminBloc(
+        repository: repository,
+        auth: auth,
+        payments: payments,
+      );
     },
     act: (bloc) => bloc.add(
       UpdateSubscriptionEvent(
@@ -130,7 +157,11 @@ void main() {
     ),
     verify: (_) {
       verify(
-        () => repository.updateSchoolSubscription('school1', 'growth', DateTime(2027, 1, 1)),
+        () => repository.updateSchoolSubscription(
+          'school1',
+          'growth',
+          DateTime(2027, 1, 1),
+        ),
       ).called(1);
       verifyNever(() => repository.logAction(any()));
       verifyNever(() => repository.updateSchool(any()));
@@ -143,12 +174,25 @@ void main() {
       when(
         () => repository.suspendSchool(any(), any()),
       ).thenThrow(StateError('Access denied.'));
-      return SuperAdminBloc(repository: repository, auth: auth, payments: payments);
+      return SuperAdminBloc(
+        repository: repository,
+        auth: auth,
+        payments: payments,
+      );
     },
     act: (bloc) => bloc.add(
-      const UpdateSchoolStatusEvent(schoolId: 'school1', status: SchoolStatus.suspended),
+      const UpdateSchoolStatusEvent(
+        schoolId: 'school1',
+        status: SchoolStatus.suspended,
+      ),
     ),
-    expect: () => [isA<SuperAdminState>().having((s) => s.errorMessage, 'errorMessage', isNotNull)],
+    expect: () => [
+      isA<SuperAdminState>().having(
+        (s) => s.errorMessage,
+        'errorMessage',
+        isNotNull,
+      ),
+    ],
   );
 
   blocTest<SuperAdminBloc, SuperAdminState>(
@@ -196,7 +240,11 @@ void main() {
           ),
         ],
       );
-      return SuperAdminBloc(repository: repository, auth: auth, payments: payments);
+      return SuperAdminBloc(
+        repository: repository,
+        auth: auth,
+        payments: payments,
+      );
     },
     act: (bloc) => bloc.add(LoadSuperAdminDashboard()),
     expect: () => [

@@ -46,7 +46,10 @@ void main() {
   });
 
   test('empty and error payment states are compact, not giant blank areas', () {
-    expect(source.contains('No payments recorded for this school yet.'), isTrue);
+    expect(
+      source.contains('No payments recorded for this school yet.'),
+      isTrue,
+    );
     expect(source.contains('EmptyState('), isFalse);
   });
 
@@ -54,32 +57,47 @@ void main() {
     expect(source.contains('BillingHomeScreen()'), isTrue);
   });
 
-  test('Manage subscription is present and reaches subscription management', () {
-    expect(source.contains('Manage subscription'), isTrue);
-  });
+  test(
+    'Manage subscription is present and reaches subscription management',
+    () {
+      expect(source.contains('Manage subscription'), isTrue);
+    },
+  );
 
-  test('Term cycle history section is present, reads from subscription_cycles, and clones the payments-list shape', () {
-    expect(source.contains("'Term cycle history'"), isTrue);
-    expect(source.contains('_buildCyclesList'), isTrue);
-    expect(source.contains('getSubscriptionCyclesForSchool'), isTrue);
-    expect(source.contains('ListView.separated('), isTrue);
-    expect(source.contains('shrinkWrap: true'), isTrue);
-    expect(source.contains('NeverScrollableScrollPhysics()'), isTrue);
-  });
+  test(
+    'Term cycle history section is present, reads from subscription_cycles, and clones the payments-list shape',
+    () {
+      expect(source.contains("'Term cycle history'"), isTrue);
+      expect(source.contains('_buildCyclesList'), isTrue);
+      expect(source.contains('getSubscriptionCyclesForSchool'), isTrue);
+      expect(source.contains('ListView.separated('), isTrue);
+      expect(source.contains('shrinkWrap: true'), isTrue);
+      expect(source.contains('NeverScrollableScrollPhysics()'), isTrue);
+    },
+  );
 
-  test('cycle rows show a status badge via the shared mapping, not raw Colors', () {
-    expect(source.contains('cycleStatusLabel(cycle.cycleStatus)'), isTrue);
-    expect(source.contains('cycleStatusColor(context, cycle.cycleStatus)'), isTrue);
-  });
+  test(
+    'cycle rows show a status badge via the shared mapping, not raw Colors',
+    () {
+      expect(source.contains('cycleStatusLabel(cycle.cycleStatus)'), isTrue);
+      expect(
+        source.contains('cycleStatusColor(context, cycle.cycleStatus)'),
+        isTrue,
+      );
+    },
+  );
 
-  test('compact current-cycle info block shows term price, band, verified learners, invoice/due/grace dates, no raw IDs', () {
-    expect(source.contains('_CurrentCycleInfoBlock'), isTrue);
-    expect(source.contains("'Term price'"), isTrue);
-    expect(source.contains("'Verified learners'"), isTrue);
-    expect(source.contains("'Band'"), isTrue);
-    expect(source.contains("'Amount due'"), isTrue);
-    expect(source.contains("'Payment due'"), isTrue);
-    expect(source.contains("'Grace ends'"), isTrue);
-    expect(source.contains('cycle.id'), isFalse);
-  });
+  test(
+    'compact current-cycle info block shows term price, band, verified learners, invoice/due/grace dates, no raw IDs',
+    () {
+      expect(source.contains('_CurrentCycleInfoBlock'), isTrue);
+      expect(source.contains("'Term price'"), isTrue);
+      expect(source.contains("'Verified learners'"), isTrue);
+      expect(source.contains("'Band'"), isTrue);
+      expect(source.contains("'Amount due'"), isTrue);
+      expect(source.contains("'Payment due'"), isTrue);
+      expect(source.contains("'Grace ends'"), isTrue);
+      expect(source.contains('cycle.id'), isFalse);
+    },
+  );
 }

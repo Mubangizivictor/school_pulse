@@ -26,11 +26,14 @@ void main() {
     expect(source.contains('SubscriptionPlan'), isFalse);
   });
 
-  test('subscription rows derive a pricing-band label from pricingSnapshot, absent gracefully', () {
-    expect(source.contains('_pricingBandLabel'), isTrue);
-    expect(source.contains('cycle?.pricingSnapshot'), isTrue);
-    expect(source.contains('learners'), isTrue);
-  });
+  test(
+    'subscription rows derive a pricing-band label from pricingSnapshot, absent gracefully',
+    () {
+      expect(source.contains('_pricingBandLabel'), isTrue);
+      expect(source.contains('cycle?.pricingSnapshot'), isTrue);
+      expect(source.contains('learners'), isTrue);
+    },
+  );
 
   test('search is scoped to school name only, not plan', () {
     expect(source.contains('Search by school name'), isTrue);

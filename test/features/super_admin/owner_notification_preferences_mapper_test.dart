@@ -50,8 +50,10 @@ void main() {
     });
 
     test('falls back to defaults on an empty / malformed map', () {
-      final prefs =
-          OwnerNotificationPreferencesMapper.fromCallable({}, 'owner-2');
+      final prefs = OwnerNotificationPreferencesMapper.fromCallable(
+        {},
+        'owner-2',
+      );
       expect(prefs.inAppEnabled, isTrue);
       expect(prefs.pushEnabled, isTrue);
       expect(prefs.securityAlerts, isTrue);
@@ -60,10 +62,9 @@ void main() {
     });
 
     test('an unknown frequency degrades to realtime', () {
-      final prefs = OwnerNotificationPreferencesMapper.fromCallable(
-        {'frequency': 'hourly'},
-        'owner-3',
-      );
+      final prefs = OwnerNotificationPreferencesMapper.fromCallable({
+        'frequency': 'hourly',
+      }, 'owner-3');
       expect(prefs.frequency, OwnerNotificationFrequency.realtime);
     });
   });
@@ -86,8 +87,9 @@ void main() {
         frequency: OwnerNotificationFrequency.dailyDigest,
       );
 
-      final payload =
-          OwnerNotificationPreferencesMapper.toCallablePayload(original);
+      final payload = OwnerNotificationPreferencesMapper.toCallablePayload(
+        original,
+      );
       final back = OwnerNotificationPreferencesMapper.fromCallable(
         Map<String, dynamic>.from(payload),
         'owner-9',
@@ -111,9 +113,13 @@ void main() {
       expect(payload['frequency'], 'realtime');
       final keys = (payload['categories'] as Map).keys.toSet();
       expect(
-        keys.containsAll(
-          {'payments', 'platformHealth', 'schools', 'security', 'weeklyDigest'},
-        ),
+        keys.containsAll({
+          'payments',
+          'platformHealth',
+          'schools',
+          'security',
+          'weeklyDigest',
+        }),
         isTrue,
       );
     });

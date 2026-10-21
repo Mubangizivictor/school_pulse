@@ -9,7 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_placeholder_screen.dart';
 
 void main() {
-  testWidgets('renders title, icon, and a custom message without throwing', (tester) async {
+  testWidgets('renders title, icon, and a custom message without throwing', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: SuperAdminPlaceholderScreen(
@@ -26,17 +28,20 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('defaults to "Coming in a later phase." when no message is given', (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: SuperAdminPlaceholderScreen(
-          title: 'Another Section',
-          icon: Icons.hourglass_empty_outlined,
+  testWidgets(
+    'defaults to "Coming in a later phase." when no message is given',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: SuperAdminPlaceholderScreen(
+            title: 'Another Section',
+            icon: Icons.hourglass_empty_outlined,
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(find.text('Coming in a later phase.'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('Coming in a later phase.'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

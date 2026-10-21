@@ -19,55 +19,77 @@ void main() {
     ).readAsStringSync();
   });
 
-  test('status is read from the real getOwnerRecoveryCodesStatus callable, not a mock', () {
-    expect(source.contains("httpsCallable('getOwnerRecoveryCodesStatus')"), isTrue);
-  });
+  test(
+    'status is read from the real getOwnerRecoveryCodesStatus callable, not a mock',
+    () {
+      expect(
+        source.contains("httpsCallable('getOwnerRecoveryCodesStatus')"),
+        isTrue,
+      );
+    },
+  );
 
   test('generation requires an enrolled MFA factor first', () {
     expect(
       source.contains('multiFactor\n            .getEnrolledFactors()'),
       isTrue,
     );
-    expect(
-      source.contains('Set up Two-Step Verification first'),
-      isTrue,
-    );
+    expect(source.contains('Set up Two-Step Verification first'), isTrue);
   });
 
-  test('regenerating over existing codes requires a destructive confirmation dialog', () {
-    expect(source.contains("title: 'Regenerate recovery codes?'"), isTrue);
-    expect(source.contains('isDestructive: true'), isTrue);
-  });
+  test(
+    'regenerating over existing codes requires a destructive confirmation dialog',
+    () {
+      expect(source.contains("title: 'Regenerate recovery codes?'"), isTrue);
+      expect(source.contains('isDestructive: true'), isTrue);
+    },
+  );
 
-  test('generation requires fresh reauthentication before calling the callable', () {
-    expect(
-      source.contains('OwnerSecurityPolicy.ensureFreshAuthentication('),
-      isTrue,
-    );
-    expect(source.contains("if (!fresh) {"), isTrue);
-  });
+  test(
+    'generation requires fresh reauthentication before calling the callable',
+    () {
+      expect(
+        source.contains('OwnerSecurityPolicy.ensureFreshAuthentication('),
+        isTrue,
+      );
+      expect(source.contains("if (!fresh) {"), isTrue);
+    },
+  );
 
-  test('codes come from the real generateOwnerRecoveryCodes callable, never fabricated client-side', () {
-    expect(source.contains("httpsCallable('generateOwnerRecoveryCodes')"), isTrue);
-    expect(
-      source.contains("final codes = (result.data['codes'] as List).cast<String>();"),
-      isTrue,
-    );
-  });
+  test(
+    'codes come from the real generateOwnerRecoveryCodes callable, never fabricated client-side',
+    () {
+      expect(
+        source.contains("httpsCallable('generateOwnerRecoveryCodes')"),
+        isTrue,
+      );
+      expect(
+        source.contains(
+          "final codes = (result.data['codes'] as List).cast<String>();",
+        ),
+        isTrue,
+      );
+    },
+  );
 
-  test('the reveal screen cannot be popped back to and codes are never persisted', () {
-    expect(source.contains('class _RecoveryCodesRevealScreen'), isTrue);
-    expect(source.contains('return PopScope('), isTrue);
-    expect(source.contains('canPop: false'), isTrue);
-    // The doc comment explicitly disclaims SharedPreferences/local caching -
-    // just confirm there is no actual persistence call in the code.
-    expect(source.contains('SharedPreferences.'), isFalse);
-    expect(source.contains('.setString('), isFalse);
-  });
+  test(
+    'the reveal screen cannot be popped back to and codes are never persisted',
+    () {
+      expect(source.contains('class _RecoveryCodesRevealScreen'), isTrue);
+      expect(source.contains('return PopScope('), isTrue);
+      expect(source.contains('canPop: false'), isTrue);
+      // The doc comment explicitly disclaims SharedPreferences/local caching -
+      // just confirm there is no actual persistence call in the code.
+      expect(source.contains('SharedPreferences.'), isFalse);
+      expect(source.contains('.setString('), isFalse);
+    },
+  );
 
   test('rate-limit errors surface a clear message, not a raw Firebase code', () {
     expect(
-      source.contains("e.code == 'resource-exhausted'\n            ? 'Too many attempts. Try again later.'"),
+      source.contains(
+        "e.code == 'resource-exhausted'\n            ? 'Too many attempts. Try again later.'",
+      ),
       isTrue,
     );
   });

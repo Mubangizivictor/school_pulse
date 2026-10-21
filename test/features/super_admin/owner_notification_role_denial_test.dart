@@ -42,12 +42,12 @@ void main() {
       router.contains('authState.user.role != UserRole.superAdmin'),
       isTrue,
     );
-    // The owner notification route is a real child of /super-admin, defined
+    // The owner notification route is a guarded /super-admin sibling, defined
     // in the extracted subtree (commit d2d15ef1).
     final routes = File(
       'lib/features/super_admin/presentation/super_admin_routes.dart',
     ).readAsStringSync();
-    expect(routes.contains("'notifications'"), isTrue);
+    expect(routes.contains("path: '/super-admin/notifications',"), isTrue);
     // ...and the whole subtree carries its own async owner-session redirect.
     expect(
       routes.contains('redirect: (context, state) => _superAdminRedirect'),
@@ -59,7 +59,10 @@ void main() {
     final svc = File(
       'lib/features/super_admin/data/services/owner_notification_service.dart',
     ).readAsStringSync();
-    expect(svc.contains("_feedCollection = 'super_admin_notifications'"), isTrue);
+    expect(
+      svc.contains("_feedCollection = 'super_admin_notifications'"),
+      isTrue,
+    );
     expect(svc.contains('users/'), isFalse);
     expect(svc.contains('staff/notifications'), isFalse);
     expect(svc.contains('parent/notifications'), isFalse);
@@ -68,54 +71,55 @@ void main() {
     expect(svc.contains("core/notification/"), isFalse);
   });
 
+  test('owner push registration goes through the canonical server-verified '
+      'callables, not a direct client Firestore write', () {
+    final src = File(
+      'lib/features/super_admin/data/services/owner_push_token_service.dart',
+    ).readAsStringSync();
+    expect(
+      src.contains("httpsCallable('registerOwnerNotificationDevice')"),
+      isTrue,
+    );
+    expect(
+      src.contains("httpsCallable('unregisterOwnerNotificationDevice')"),
+      isTrue,
+    );
+    // No direct client write to any token collection - registration is
+    // callable-only so the server's send path and the client can never
+    // drift onto different token stores.
+    expect(src.contains('.collection('), isFalse);
+  });
+
   test(
-    'owner push registration goes through the canonical server-verified '
-    'callables, not a direct client Firestore write',
+    'the owner Isar cache instance name is per-owner and owner-prefixed',
     () {
-      final src = File(
-        'lib/features/super_admin/data/services/owner_push_token_service.dart',
-      ).readAsStringSync();
       expect(
-        src.contains("httpsCallable('registerOwnerNotificationDevice')"),
-        isTrue,
+        OwnerNotificationIsarStore.instanceNameFor('u1'),
+        'owner_notifications_u1',
       );
       expect(
-        src.contains("httpsCallable('unregisterOwnerNotificationDevice')"),
-        isTrue,
+        OwnerNotificationIsarStore.instanceNameFor('u1'),
+        isNot(OwnerNotificationIsarStore.instanceNameFor('u2')),
       );
-      // No direct client write to any token collection - registration is
-      // callable-only so the server's send path and the client can never
-      // drift onto different token stores.
-      expect(src.contains('.collection('), isFalse);
     },
   );
 
-  test('the owner Isar cache instance name is per-owner and owner-prefixed',
-      () {
-    expect(
-      OwnerNotificationIsarStore.instanceNameFor('u1'),
-      'owner_notifications_u1',
-    );
-    expect(
-      OwnerNotificationIsarStore.instanceNameFor('u1'),
-      isNot(OwnerNotificationIsarStore.instanceNameFor('u2')),
-    );
-  });
-
-  test('a signed-out service caches / queues nothing and clears cleanly',
-      () async {
-    SharedPreferences.setMockInitialValues({});
-    final store = OwnerNotificationOfflineStore(
-      prefs: await SharedPreferences.getInstance(),
-    );
-    final svc = OwnerNotificationService.forTest(offlineStore: store);
-    // forTest() has no auth -> currentOwnerId is null.
-    expect(svc.currentOwnerId, isNull);
-    expect(await svc.cachedNotifications(), isEmpty);
-    expect(await svc.pendingActionCount(), 0);
-    // clearOfflineState with no owner wipes everything.
-    await store.writeCache('someone', const []);
-    await svc.clearOfflineState();
-    expect(await store.readCache('someone'), isEmpty);
-  });
+  test(
+    'a signed-out service caches / queues nothing and clears cleanly',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final store = OwnerNotificationOfflineStore(
+        prefs: await SharedPreferences.getInstance(),
+      );
+      final svc = OwnerNotificationService.forTest(offlineStore: store);
+      // forTest() has no auth -> currentOwnerId is null.
+      expect(svc.currentOwnerId, isNull);
+      expect(await svc.cachedNotifications(), isEmpty);
+      expect(await svc.pendingActionCount(), 0);
+      // clearOfflineState with no owner wipes everything.
+      await store.writeCache('someone', const []);
+      await svc.clearOfflineState();
+      expect(await store.readCache('someone'), isEmpty);
+    },
+  );
 }

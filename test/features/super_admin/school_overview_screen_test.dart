@@ -44,12 +44,8 @@ Future<void> _pump(WidgetTester tester, School school) async {
   final repository = _MockRepository();
   final auth = _MockFirebaseAuth();
   when(() => repository.getAllSchools()).thenAnswer((_) async => [school]);
-  when(
-    () => repository.getSchoolApplications(),
-  ).thenAnswer((_) async => []);
-  when(
-    () => repository.getSubscriptionPlans(),
-  ).thenAnswer((_) async => []);
+  when(() => repository.getSchoolApplications()).thenAnswer((_) async => []);
+  when(() => repository.getSubscriptionPlans()).thenAnswer((_) async => []);
   when(() => repository.getPlatformStats()).thenAnswer((_) async => {});
 
   await tester.pumpWidget(
@@ -105,11 +101,14 @@ void main() {
       expect(source.contains("school.metadata['staffCount']"), isFalse);
     });
 
-    test('has loading, loaded and unavailable states with a retry affordance', () {
-      expect(source.contains('_CountsLoadState'), isTrue);
-      expect(source.contains('CircularProgressIndicator'), isTrue);
-      expect(source.contains('tap to retry'), isTrue);
-    });
+    test(
+      'has loading, loaded and unavailable states with a retry affordance',
+      () {
+        expect(source.contains('_CountsLoadState'), isTrue);
+        expect(source.contains('CircularProgressIndicator'), isTrue);
+        expect(source.contains('tap to retry'), isTrue);
+      },
+    );
 
     test('pull-to-refresh also refreshes the metrics tile', () {
       expect(source.contains('_metricsKey.currentState?.refresh()'), isTrue);

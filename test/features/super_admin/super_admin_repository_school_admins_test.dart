@@ -33,9 +33,12 @@ void main() {
     verify(() => dataSource.getSchoolAdmins('school1')).called(1);
   });
 
-  test('SchoolAdminSummary equality is field-based for widget/bloc testing', () {
-    const a = SchoolAdminSummary(uid: 'u1', name: 'A', email: 'a@x.com');
-    const b = SchoolAdminSummary(uid: 'u1', name: 'A', email: 'a@x.com');
-    expect(a, b);
-  });
+  test(
+    'SchoolAdminSummary equality is field-based for widget/bloc testing',
+    () {
+      const a = SchoolAdminSummary(uid: 'u1', name: 'A', email: 'a@x.com');
+      const b = SchoolAdminSummary(uid: 'u1', name: 'A', email: 'a@x.com');
+      expect(a, b);
+    },
+  );
 }

@@ -9,29 +9,42 @@ OwnerNotification _n(Map<String, dynamic> json) =>
 void main() {
   group('category derivation', () {
     test('explicit category wins', () {
-      expect(_n({'category': 'security'}).category,
-          OwnerNotificationCategory.security);
-      expect(_n({'category': 'platform_health'}).category,
-          OwnerNotificationCategory.platform);
+      expect(
+        _n({'category': 'security'}).category,
+        OwnerNotificationCategory.security,
+      );
+      expect(
+        _n({'category': 'platform_health'}).category,
+        OwnerNotificationCategory.platform,
+      );
     });
 
     test('derives billing from a payment id', () {
-      expect(_n({'paymentId': 'p1'}).category, OwnerNotificationCategory.billing);
+      expect(
+        _n({'paymentId': 'p1'}).category,
+        OwnerNotificationCategory.billing,
+      );
     });
 
     test('derives schools from an application id', () {
-      expect(_n({'applicationId': 'a1'}).category,
-          OwnerNotificationCategory.schools);
+      expect(
+        _n({'applicationId': 'a1'}).category,
+        OwnerNotificationCategory.schools,
+      );
     });
 
     test('derives platform from a health type', () {
-      expect(_n({'type': 'platform_health_incident'}).category,
-          OwnerNotificationCategory.platform);
+      expect(
+        _n({'type': 'platform_health_incident'}).category,
+        OwnerNotificationCategory.platform,
+      );
     });
 
     test('unknown shape falls back to digest', () {
-      expect(_n({'type': 'something_else'}).category,
-          OwnerNotificationCategory.digest);
+      expect(
+        _n({'type': 'something_else'}).category,
+        OwnerNotificationCategory.digest,
+      );
     });
   });
 
@@ -75,13 +88,15 @@ void main() {
       expect(n.platformHealthDegraded, isTrue);
     });
 
-    test('an operational platform event is information, green (not degraded)',
-        () {
-      final n = _n({'category': 'platform', 'healthState': 'operational'});
-      expect(n.platformHealthDegraded, isFalse);
-      expect(n.severity, OwnerNotificationSeverity.information);
-      expect(n.severity.showsOnTile, isFalse);
-    });
+    test(
+      'an operational platform event is information, green (not degraded)',
+      () {
+        final n = _n({'category': 'platform', 'healthState': 'operational'});
+        expect(n.platformHealthDegraded, isFalse);
+        expect(n.severity, OwnerNotificationSeverity.information);
+        expect(n.severity.showsOnTile, isFalse);
+      },
+    );
 
     test('a resolved notification reads RESOLVED', () {
       final n = _n({
@@ -93,8 +108,10 @@ void main() {
     });
 
     test('a digest is information', () {
-      expect(_n({'type': 'weekly_owner_digest'}).severity,
-          OwnerNotificationSeverity.information);
+      expect(
+        _n({'type': 'weekly_owner_digest'}).severity,
+        OwnerNotificationSeverity.information,
+      );
     });
   });
 
@@ -105,9 +122,13 @@ void main() {
   });
 
   test('filter labels are exactly the six chips in order', () {
-    expect(
-      OwnerNotificationFilter.values.map((f) => f.label).toList(),
-      ['All', 'Critical', 'Billing', 'Platform', 'Schools', 'Security'],
-    );
+    expect(OwnerNotificationFilter.values.map((f) => f.label).toList(), [
+      'All',
+      'Critical',
+      'Billing',
+      'Platform',
+      'Schools',
+      'Security',
+    ]);
   });
 }
