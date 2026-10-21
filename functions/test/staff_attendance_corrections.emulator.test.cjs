@@ -102,7 +102,10 @@ describe("correctStaffAttendance — happy path", () => {
     const t = trail.docs[0].data();
     assert.equal(t.actorId, ADMIN);
     assert.equal(t.reason, validPatch.reason);
-    assert.deepEqual(t.changedFields.sort(), ["clockIn", "status"].sort());
+    // A new record also gets the default location written, and the trail
+    // must list every field the write actually set.
+    assert.equal(rec.location, "Main Gate");
+    assert.deepEqual(t.changedFields.sort(), ["clockIn", "location", "status"].sort());
     assert.equal(t.before, null);
 
     const audit = await auditCol().where("action", "==", "staff_attendance.corrected").get();
