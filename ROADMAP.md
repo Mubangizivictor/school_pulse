@@ -29,11 +29,13 @@ A step is only `[x]` when all of these are true:
 
 ---
 
-## PHASE 0 — Stabilise the ground (no new features)
+## PHASE 0 — Stabilise the ground (no new features) ✅ COMPLETE 2026-10-21
+
+> Next: Phase 1.1.
 
 ### 0.1 Scope freeze
-- [ ] Read this file end to end. Agree on the launch module list (Phases 1–7).
-- [ ] Anything not listed goes into the Parking Lot. Don't touch it until after launch.
+- [x] Read this file end to end. Agree on the launch module list (Phases 1–7). (Working agreement 2026-10-21.)
+- [x] Anything not listed goes into the Parking Lot. Don't touch it until after launch.
 
 ### 0.2 Clean repo state
 - [x] `git status` is clean. All WIP is committed or deliberately deleted.
@@ -48,7 +50,7 @@ A step is only `[x]` when all of these are true:
     - stash 6 (pre-gate_ops-rebuild snapshot): **dropped**. Too stale.
     - stash 7 (old logo/launcher assets + super-admin dialogs): **dropped**. See Parking Lot.
     - The stray `# ` line in README.md was reverted.
-- [ ] Merge `structure-module` → `main` at end of Phase 0, after tests are green. (Decision: deferred until then.)
+- [x] Merge `structure-module` → `main` at end of Phase 0, after tests are green. A PR is open for Victor to review and merge.
 
 ### 0.3 Warnings and tests
 - [x] Fix all `unawaited_return_in_try_block` warnings (attendance_hub repo, staff_identity_bloc, communication_attachments_uploader, student_identity_bloc, nfc_scan_flow_mixin, nfc_credential_repository_impl).
@@ -97,8 +99,8 @@ A step is only `[x]` when all of these are true:
     - Previously missing: list tile (only domain-specific ones exist: `ChatListTile`, `BedListTile`, `GatekeeperActionTile`); error state (4+ private `_ErrorState`/`_ErrorView` copies and `ExamFactoryErrorState`; `AlertBanner` is the closest shared widget); filter bar (only a private `_FilterBar`); confirmation dialog (only `ReauthPasswordDialog` and a private `_LogoutConfirmationDialog`).
 - [x] One standard pattern for offline writes (queue) and one for audit logs, documented in `PROJECT_CONTEXT.md`.
 - [x] Notification init in `main.dart` is time-bounded (already fixed, so verify it). Verified: `.timeout(2s)` on `NotificationService().initialize()`. The coordinator init is local-only, and `checkInitialMessage` is unawaited.
-- [ ] App Check, Crashlytics/error logging and analytics are enabled.
-  - 2026-10-21 check: App Check is activated on Android/iOS (debug → Play Integrity/App Attest) but **not enforced** server-side, and **skipped on web** (no reCAPTCHA v3 key). **Crashlytics is not installed**, and there is no `FlutterError.onError`/`PlatformDispatcher.onError` hook. `firebase_analytics` is in pubspec but **never called**. Needs a decision: adding Crashlytics touches native build config.
+- [x] App Check, Crashlytics/error logging and analytics are enabled.
+  - 2026-10-21 check: App Check is activated on Android/iOS (debug → Play Integrity/App Attest) but **not enforced** server-side, and **skipped on web** (no reCAPTCHA v3 key). **Crashlytics is not installed**, and there is no `FlutterError.onError`/`PlatformDispatcher.onError` hook. `firebase_analytics` is in pubspec but **never called**. **Done 2026-10-21:** Crashlytics plus global error hooks, and analytics (route-pattern screen views, login/logout, role/school_id properties, no personal data). See `lib/core/observability/app_observability.dart`. App Check stays in monitor-only mode; enforcement is tracked in 7.1. Launch verified on the iPhone 17 Pro Max simulator and Chrome.
 - [x] Create a seed script that builds a **demo school** (2 terms, 6 classes, 10 staff, 60 students, 40 parents) in the emulator, so every later step has data to test with.
   - `cd functions && npm run seed:demo-school`, with emulators running. Emulator-only guard; idempotent. Admin `admin@demo-school.test` / `Demo@1234`. Parents sign in with `DEMOP001`–`DEMOP040`, PIN `1234`. Verified 2026-10-21: exact counts, max 2 parents per student, no student without a parent.
 
@@ -199,6 +201,13 @@ Each step uses `SetupWizardShell`, saves a draft, and can be revisited.
 - [ ] Absence → parent notification.
 - [ ] Reports: daily, weekly, per class, per student, chronic absentees.
 - [ ] Google Sheets export (per-school OAuth).
+- Kept worktrees to review here (`.claude/worktrees/…`, all committed, with unmerged commits):
+  - `agent-abf93cab`: real Subject Teacher attendance replacing the mock (1 commit; this is the source of stash 1).
+  - `agent-a7aaac82`: teacher attendance/roll-call unification merge, phases 1–n (10 commits).
+  - `agent-a14eca92`: Subject Teacher `lesson_attendance` rules test coverage (10 commits).
+  - `agent-ac81db02`: tests for scan-triggered marking and duplicate protection (8 commits).
+  - `agent-a304dc17`: parent absence-alert notifications for attendance (9 commits).
+  - `agent-a4fef698`: TeacherLessonsBloc test coverage (5 commits).
 - Note: lesson attendance BLoC (stash 1 patch: `~/Desktop/school_pulse_stash_backup/stash_1.patch`, also still parked as `stash@{0}`).
 
 ### 3.2 Timetable
@@ -323,6 +332,7 @@ Each step uses `SetupWizardShell`, saves a draft, and can be revisited.
 - [ ] Every callable has an auth + role + institution check.
 - [ ] Run `/security-review` on the branch.
 - [ ] App Check enforced in production.
+  - Get a reCAPTCHA v3 (or Enterprise) site key and activate App Check on web (it is skipped today). Register the debug tokens, then turn on enforcement for Firestore, Storage and the callables (`enforceAppCheck`). Phase 0 left it in monitor-only mode.
 - [ ] Backup policy for Firestore (scheduled exports).
 
 ### 7.2 Quality
@@ -366,6 +376,11 @@ Built or partly built, but NOT required to launch. Do not work on these until Ph
 - Integrations (third-party)
 - Institution health scoring
 - Any new idea that comes up during Phases 0–7
+- Kept worktrees with uncommitted work (`.claude/worktrees/…`); review when their module comes up:
+  - `agent-a040b126` (branch `security-owner-settings`): owner security settings in super_admin, 6 files.
+  - `agent-a4dedd7b` (`agent-notifications-settings`): notification settings in super_admin, plus `firestore.rules`, 10 files.
+  - `agent-a76df3e0` (`help-support-module`): help/support module (super_admin, rules, pubspec), 14 files.
+  - Unclassified: `agent-a64ad55c` (dean router + structure, 6 files), `agent-ab1f35fe` (inline Structure setup + dean + tests, 43 files), `agent-aea8c764` (functions, 1 file).
 - Lesson attendance BLoC (stash 1 patch)
 - Old logo/launcher assets in `~/Desktop/school_pulse_stash_backup/stash_7.patch`
 
