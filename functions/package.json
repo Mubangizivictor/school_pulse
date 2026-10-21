@@ -34,7 +34,8 @@
     "test:academic-calendar-billing": "node academic_calendar_billing.test.js",
     "test:academic-calendar-billing:emulator": "firebase emulators:exec --only firestore --project demo-academic-calendar-billing-test \"node --test test/academic_calendar_billing.emulator.test.cjs\"",
     "logs": "firebase functions:log",
-    "deploy": "firebase deploy --only functions"
+    "deploy": "firebase deploy --only functions",
+    "seed:demo-school": "FIRESTORE_EMULATOR_HOST=${FIRESTORE_EMULATOR_HOST:-127.0.0.1:8080} FIREBASE_AUTH_EMULATOR_HOST=${FIREBASE_AUTH_EMULATOR_HOST:-127.0.0.1:9099} node scripts/seed_demo_school_emulator.js"
   },
   "dependencies": {
     "firebase-admin": "^12.7.0",

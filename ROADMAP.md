@@ -99,7 +99,8 @@ A step is only `[x]` when all of these are true:
 - [x] Notification init in `main.dart` is time-bounded (already fixed, so verify it). Verified: `.timeout(2s)` on `NotificationService().initialize()`. The coordinator init is local-only, and `checkInitialMessage` is unawaited.
 - [ ] App Check, Crashlytics/error logging and analytics are enabled.
   - 2026-10-21 check: App Check is activated on Android/iOS (debug → Play Integrity/App Attest) but **not enforced** server-side, and **skipped on web** (no reCAPTCHA v3 key). **Crashlytics is not installed**, and there is no `FlutterError.onError`/`PlatformDispatcher.onError` hook. `firebase_analytics` is in pubspec but **never called**. Needs a decision: adding Crashlytics touches native build config.
-- [ ] Create a seed script that builds a **demo school** (2 terms, 6 classes, 10 staff, 60 students, 40 parents) in the emulator, so every later step has data to test with.
+- [x] Create a seed script that builds a **demo school** (2 terms, 6 classes, 10 staff, 60 students, 40 parents) in the emulator, so every later step has data to test with.
+  - `cd functions && npm run seed:demo-school`, with emulators running. Emulator-only guard; idempotent. Admin `admin@demo-school.test` / `Demo@1234`. Parents sign in with `DEMOP001`–`DEMOP040`, PIN `1234`. Verified 2026-10-21: exact counts, max 2 parents per student, no student without a parent.
 
 ---
 
