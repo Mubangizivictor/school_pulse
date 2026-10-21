@@ -108,6 +108,75 @@ Notifications are a mature module under `lib/features/notifications/`.
 See `NOTIFICATIONS_MODULE.md` for implementation detail, verification status,
 known gaps, and deployment considerations.
 
+## Standard pattern: offline writes (queue)
+
+New offline-capable writes follow the **attendance_hub queue**. Reference
+code: `lib/features/attendance_hub/data/datasources/attendance_local_data_source*.dart`
+and `AttendanceRepositoryImpl.syncPendingAttendance`. Don't invent a new shape.
+
+1. **Platform split via a factory.** `xxx_local_data_source.dart` (abstract),
+   then `_mobile.dart` (Isar), `_web.dart` and `_stub.dart`, chosen in
+   `xxx_local_data_source_factory.dart` with conditional imports. Register the
+   factory result in `injection_container.dart`. Register the Isar schema in
+   `lib/core/platform/isar_bootstrap_mobile.dart`; a missing schema only shows
+   up on a real device or simulator run.
+2. **Deterministic record id.** The id is built from the business key (e.g.
+   `buildAttendanceRecordId(category, scope, session, date, person)`), so a
+   retry or a second scan updates the same doc instead of duplicating it.
+   Enqueue with `cacheIfAbsent`.
+3. **Lifecycle:** `queued → syncing → completed`, or `retryableFailure`
+   (bounded exponential backoff of 1, 2, 4, 8, 16 min; same shape as
+   `OfflineOperation.backoffFor`) or `permanentlyBlocked` (with a user-facing
+   reason). Map Firestore `permission-denied`/`not-found` to blocked and
+   everything else to retryable.
+4. **Staleness.** Rows older than the retention window (attendance: 30 days)
+   are blocked, not replayed. `evictStale` runs on every sweep. Tests must use
+   timestamps relative to `DateTime.now()`; a fixed date silently ages out.
+5. **Triggers:** on sign-in (`main.dart`), on app resume (a
+   `*_sync_lifecycle_gate.dart` widget), and on an explicit bloc event.
+   Each sweep checks `networkInfo.isConnected` first.
+6. **Logout clears the queue** (`clearLocalQueue()` from `AuthBloc`), so one
+   user's pending writes never replay under another account.
+7. **Only queue what is safe to replay.** Drafts and teacher-owned content
+   only. Approvals, permission changes and anything that needs a fresh
+   server-side decision must not be queued (see the `OfflineOperationType`
+   doc comment in `teacher/domain/entities/offline_operation.dart`).
+   Firestore rules still apply on replay; the queue is never a way around them.
+
+Teacher-panel writes use the typed `OfflineOperation` envelope
+(`lib/features/teacher/`), which follows the same rules. Messages
+(`message_outbox_service_*`) and parent_offline have their own outboxes;
+align them with this pattern when those modules are touched.
+
+## Standard pattern: audit logs
+
+Audit events are **server-authored**. Reference: `recordAuditEvent()` in
+`functions/academic_calendar_billing.js`, and `functions/enrollment_audit.js`
+for the client-triggered variant.
+
+- **Where:** `institutions/{schoolId}/audit_events/{autoId}`. This is the
+  collection the admin audit-log screen reads. Its rules are `allow write: if
+  false` and reads are limited to `isInstitutionAdminReader()`. Platform-owner
+  actions go to `super_admin_audit_logs`.
+- **Shape:** `{ actorId, action, metadata, createdAt: serverTimestamp() }`.
+  `action` is a dotted or snake_case id from an explicit allow-list (e.g.
+  `staff_attendance.corrected`). `metadata` carries the entity ids and the
+  `reason`. Actor and time always come from `request.auth` and the server
+  clock, never from the client payload.
+- **Same transaction.** Write the audit doc in the same transaction or batch
+  as the mutation, so you never get one without the other. For
+  correction-style changes, also append an immutable per-record trail doc
+  `{ actorId, reason, before, after, changedFields }`, where `changedFields`
+  lists every field the write actually set, defaults included.
+- **Client-only events** (e.g. "previewed a PDF") go through an allow-listed
+  callable like `enrollment_audit.js`, never through a direct client write.
+- **Legacy, don't extend:** the top-level `audit_logs` (client-creatable) and
+  per-module collections (`health_audit`, `exam_factory_audit`,
+  `parent_link_audit_log`, `schools/{id}/finance_audit_events`, ...). New
+  code writes to `institutions/{id}/audit_events`.
+- **Tests:** each callable's emulator test asserts the audit doc exists, with
+  the right `action` and `metadata`.
+
 ## How to assist on this project
 
 When answering a School Pulse question:

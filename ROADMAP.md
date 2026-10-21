@@ -55,14 +55,15 @@ A step is only `[x]` when all of these are true:
 - [x] Fix the unused-variable warnings (e.g. `academic_structure_screen.dart:2289`).
 - [x] Bring analyzer issues from ~326 down to < 50. Errors and warnings must be zero. **Now 49, 0 errors, 0 warnings** (2026-10-21).
   - Remaining infos: 25 `use_build_context_synchronously`, 23 `deprecated_member_use` (Radio `groupValue`/`onChanged` → `RadioGroup`, `onReorder` → `onReorderItem`), 1 `library_private_types_in_public_api`. Each needs a behavioural check, not a mechanical edit.
-- [ ] Run `flutter test`. Record the failing tests here, then fix or delete each one with a reason.
+- [x] Run `flutter test`. Record the failing tests here, then fix or delete each one with a reason.
   - 2026-10-21: 22 failing at start, all pre-existing (they also failed at 997f721b). 18 fixed. All were stale tests, except one real bug:
     - super_admin route/source tests ×6: the routes became flat guarded siblings (99d9a4e2) and payment review a bottom sheet (0542e14b).
     - attendance offline queue ×6: the fixture `createdAt` was hard-coded to 2026-08-16 and aged past the 30-day retention window. It is now relative to now.
     - attendance roster, id_generator (`-S-` segment), id_card (byte-size heuristic → page count), permission evaluator (catalog v3), notification list ×2 (button is disabled, not hidden).
     - **Real bug:** `month_calendar_grid` overflowed 2.5px at 320px width. Fixed.
-  - **Open:** `class_teacher_dashboard_test.dart` ×4. The "HI" commit 43ceddc5 redesigned the dashboard (no % figure, header text and quick actions changed). Needs Victor's decision.
-- [ ] Run every `functions/package.json` test script. Record and fix failures. (Only rules + storage-rules run so far.)
+  - `class_teacher_dashboard_test.dart` ×4: updated to the 43ceddc5 design, which Victor confirmed is the spec. This also fixed the greeting's first-name regex. **Suite fully green.**
+- [x] Run every `functions/package.json` test script. Record and fix failures.
+  - 2026-10-21: all 25 other scripts pass. One stale assertion was fixed: `staff-attendance-corrections:emulator`, where the trail's `changedFields` correctly includes the defaulted `location`.
 - [x] `npm run test:rules` and `npm run test:storage-rules` are green. Rules 271/271 after 2 stale tests were updated (no rule changes). Storage 23/23.
   - Needs JDK ≥ 21: `export JAVA_HOME=/opt/homebrew/opt/openjdk@21 PATH=$JAVA_HOME/bin:$PATH` (default `java` is 17). The storage run exits non-zero from an emulator crash on shutdown, after the tests pass.
 
@@ -75,7 +76,7 @@ A step is only `[x]` when all of these are true:
     - `qr_scanner`: used by library, exams, finance and catering.
     - `attendance_summary`: one entity, used by attendance, student and teacher.
   - **UNWIRED, 1:** `librarian`, a single `librarian_dashboard.dart` with zero references in lib/ or test/. The `/staff/librarian` route already renders `library`'s `LibraryDashboardScreen`.
-- [ ] For each pair, choose ONE winner. Delete or archive the loser in one commit per pair. **Recommendations below. Waiting for Victor's approval; nothing is deleted yet.**
+- [x] For each pair, choose ONE winner. Delete or archive the loser in one commit per pair. Approved 2026-10-21: `librarian/` deleted (22c6deaa). attendance → attendance_hub is deferred to Phase 3.1. The other pairs are layers, so they stay.
   | Pair | Verdict | Evidence |
   |---|---|---|
   | `library` vs `librarian` | **Winner `library`. Delete `librarian/`** (1 file) | `librarian` has 0 refs. `/staff/librarian` → `LibraryDashboardScreen` (router.dart:1491). `library` has a full DI stack (repo, eligibility, local and remote sources). |
@@ -88,14 +89,16 @@ A step is only `[x]` when all of these are true:
   | `school_onboarding` vs `structure` | **Done.** `structure` won | `school_onboarding` deleted in de9345d8. |
 
 ### 0.5 Shared foundations
-- [ ] The design system (`lib/design_system/`) has: buttons, inputs, cards, list tiles, empty state, error state, loading skeleton, responsive scaffold, data table, stat tile, filter bar, confirmation dialog. Fill any gaps.
+- [x] The design system (`lib/design_system/`) has: buttons, inputs, cards, list tiles, empty state, error state, loading skeleton, responsive scaffold, data table, stat tile, filter bar, confirmation dialog. Fill any gaps.
   - Inventory 2026-10-21:
     - **Exist:** buttons (`PulseButton`, `PrimaryButton`, `SecondaryButton`), inputs (`PulseTextField`, `AppSearchField`, `PhoneNumberField`, `SearchablePickerField`), cards (`PulseCard`, `AppCard`), empty state (`EmptyState`), loading skeleton (`Skeleton`, `SchoolPulseLoader`), data table (`PulseTable`), stat tile (`DashboardStatCard`, `AnalyticalStatCard`).
     - **Partial:** responsive scaffold. `ResponsiveBuilder` + `AppResponsiveContent` exist, but there is no scaffold. `WizardScaffold` is wizard-only.
-    - **Missing:** list tile (only domain-specific ones exist: `ChatListTile`, `BedListTile`, `GatekeeperActionTile`); error state (4+ private `_ErrorState`/`_ErrorView` copies and `ExamFactoryErrorState`; `AlertBanner` is the closest shared widget); filter bar (only a private `_FilterBar`); confirmation dialog (only `ReauthPasswordDialog` and a private `_LogoutConfirmationDialog`).
-- [ ] One standard pattern for offline writes (queue) and one for audit logs, documented in `PROJECT_CONTEXT.md`.
-- [ ] Notification init in `main.dart` is time-bounded (already fixed, so verify it).
+    - **Built 2026-10-21:** `AppListTile`, `AppErrorState` (replaced the 4 private `_ErrorState` copies), `AppFilterBar`, `showAppConfirmationDialog`/`AppConfirmationDialog`, and `AppResponsiveScaffold`, with tests in `test/design_system/shared_components_test.dart`.
+    - Previously missing: list tile (only domain-specific ones exist: `ChatListTile`, `BedListTile`, `GatekeeperActionTile`); error state (4+ private `_ErrorState`/`_ErrorView` copies and `ExamFactoryErrorState`; `AlertBanner` is the closest shared widget); filter bar (only a private `_FilterBar`); confirmation dialog (only `ReauthPasswordDialog` and a private `_LogoutConfirmationDialog`).
+- [x] One standard pattern for offline writes (queue) and one for audit logs, documented in `PROJECT_CONTEXT.md`.
+- [x] Notification init in `main.dart` is time-bounded (already fixed, so verify it). Verified: `.timeout(2s)` on `NotificationService().initialize()`. The coordinator init is local-only, and `checkInitialMessage` is unawaited.
 - [ ] App Check, Crashlytics/error logging and analytics are enabled.
+  - 2026-10-21 check: App Check is activated on Android/iOS (debug → Play Integrity/App Attest) but **not enforced** server-side, and **skipped on web** (no reCAPTCHA v3 key). **Crashlytics is not installed**, and there is no `FlutterError.onError`/`PlatformDispatcher.onError` hook. `firebase_analytics` is in pubspec but **never called**. Needs a decision: adding Crashlytics touches native build config.
 - [ ] Create a seed script that builds a **demo school** (2 terms, 6 classes, 10 staff, 60 students, 40 parents) in the emulator, so every later step has data to test with.
 
 ---
@@ -188,6 +191,7 @@ Each step uses `SetupWizardShell`, saves a draft, and can be revisited.
 
 ### 3.1 Attendance
 - [ ] Choose one module (`attendance_hub`). Delete or merge `attendance` and `attendance_summary`.
+  - Phase 0.4 decision: winner `attendance_hub`. First move `AttendanceMethodScreen`, `AttendanceSummaryScreen` and `AttendanceListScreen` (still routed from `attendance/`, router.dart:3288-3340) and the `attendance_summary` entity into hub, then delete `attendance/` and `attendance_summary/`.
 - [ ] Class register: mark present/absent/late/excused, works offline and syncs later.
 - [ ] Staff attendance (`watchToday` etc.).
 - [ ] Attendance history (previous attendances).
