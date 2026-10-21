@@ -42,7 +42,7 @@ class _ClassTeacherHomeHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthBloc>().state;
     final name = auth is AuthAuthenticated && auth.user.name.trim().isNotEmpty
-        ? auth.user.name.trim().split(RegExp(r'\\s+')).first
+        ? auth.user.name.trim().split(RegExp(r'\s+')).first
         : 'there';
     final hour = DateTime.now().hour;
     final greeting = hour < 12

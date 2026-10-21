@@ -171,11 +171,12 @@ void main() {
         ),
       );
 
-      // The header identifies the responsibility and the school; the class
-      // itself is named by the responsibility switcher rather than being
-      // concatenated into the header subtitle as it once was.
-      expect(find.text('Class Teacher'), findsOneWidget);
-      expect(find.text('Kabale Campus'), findsOneWidget);
+      // 43ceddc5 header: a first-name greeting, then the responsibility
+      // switcher naming the class and stream, then term + date.
+      expect(find.textContaining(', Grace'), findsOneWidget);
+      expect(find.textContaining('Nakato'), findsNothing);
+      expect(find.text('Class Teacher • P5 • East'), findsOneWidget);
+      expect(find.textContaining('Term 2 • '), findsOneWidget);
       // The hardcoded stand-in the panel used to ship with must be gone.
       expect(find.textContaining('Grade 10A'), findsNothing);
       expect(find.textContaining('North Campus'), findsNothing);
@@ -202,9 +203,12 @@ void main() {
         ),
       );
 
+      // Total / Present / Absent / Late counts; no percentage tile.
       expect(find.text('32'), findsOneWidget);
       expect(find.text('30'), findsOneWidget);
-      expect(find.text('93.8%'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('Taken'), findsOneWidget);
+      expect(find.text('View register'), findsOneWidget);
     });
 
     testWidgets('says the register is not taken rather than showing 0%', (
@@ -220,7 +224,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Not taken'), findsNWidgets(2));
+      expect(find.text('Not taken'), findsOneWidget);
+      // Present/Absent/Late show a dash, not 0.
+      expect(find.text('—'), findsNWidgets(3));
+      expect(find.text('0'), findsNothing);
       expect(find.text('0.0%'), findsNothing);
     });
   });
@@ -320,7 +327,7 @@ void main() {
   });
 
   group('quick actions', () {
-    testWidgets('keeps exactly the three approved actions', (tester) async {
+    testWidgets('shows the 43ceddc5 action set', (tester) async {
       await pump(
         tester,
         contextState: ClassTeacherContextState(active: _activeContext),
@@ -329,9 +336,13 @@ void main() {
         ),
       );
 
-      expect(find.text('Roll Call'), findsOneWidget);
-      expect(find.text('Submit Marks'), findsOneWidget);
-      expect(find.text('Resources'), findsOneWidget);
+      // 'Take attendance' is both a quick action and the attendance card's
+      // CTA while the register is not taken.
+      expect(find.text('Take attendance'), findsNWidgets(2));
+      expect(find.text('Add class note'), findsOneWidget);
+      expect(find.text('Message parents'), findsOneWidget);
+      expect(find.text('Roll Call'), findsNothing);
+      expect(find.text('Submit Marks'), findsNothing);
     });
   });
 
