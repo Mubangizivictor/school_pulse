@@ -43,8 +43,9 @@ void main() {
           if (file is! File || !file.path.endsWith('.dart')) continue;
           if (file.path.contains('lib/features/super_admin/')) continue;
           final content = file.readAsStringSync();
-          if (content.contains('SchoolDetailScreen('))
+          if (content.contains('SchoolDetailScreen(')) {
             outsideMatches.add(file.path);
+          }
         }
       }
       expect(
