@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
 
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/domain/services/app_role_session_service.dart';

@@ -577,8 +577,9 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
           }
         },
         onError: (Object error, StackTrace stackTrace) {
-          if (!completer.isCompleted)
+          if (!completer.isCompleted) {
             completer.completeError(error, stackTrace);
+          }
         },
       );
 

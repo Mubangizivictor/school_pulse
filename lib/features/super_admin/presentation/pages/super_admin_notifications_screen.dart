@@ -99,11 +99,11 @@ class _SuperAdminNotificationsScreenState
   }
 
   Future<void> _markAllRead() => _run(() async {
-        final n = await _notifications.markAllRead();
-        if (mounted) {
-          _snack(n == 0 ? 'Nothing to mark' : 'Marked $n as read');
-        }
-      });
+    final n = await _notifications.markAllRead();
+    if (mounted) {
+      _snack(n == 0 ? 'Nothing to mark' : 'Marked $n as read');
+    }
+  });
 
   Future<void> _markRead(OwnerNotification n) =>
       _run(() => _notifications.markRead(n.id));
@@ -111,7 +111,9 @@ class _SuperAdminNotificationsScreenState
   Future<void> _markUnread(OwnerNotification n) =>
       // No "mark unread" callable exists; surface honestly rather than fake it.
       _run(() async {
-        if (mounted) _snack('Marking unread is not available for owner alerts.');
+        if (mounted) {
+          _snack('Marking unread is not available for owner alerts.');
+        }
       });
 
   Future<void> _archive(OwnerNotification n) =>
@@ -120,7 +122,8 @@ class _SuperAdminNotificationsScreenState
   Future<void> _delete(OwnerNotification n) async {
     final ok = await _confirm(
       title: 'Delete this notification?',
-      message: 'It is removed from your owner feed only. The underlying '
+      message:
+          'It is removed from your owner feed only. The underlying '
           'record is untouched.',
       confirmLabel: 'Delete',
     );
@@ -131,7 +134,8 @@ class _SuperAdminNotificationsScreenState
   Future<void> _clearAll() async {
     final ok = await _confirm(
       title: 'Clear all notifications?',
-      message: 'Every notification in your owner feed is permanently removed. '
+      message:
+          'Every notification in your owner feed is permanently removed. '
           'This cannot be undone. Underlying records are untouched.',
       confirmLabel: 'Clear all',
     );
@@ -209,16 +213,16 @@ class _SuperAdminNotificationsScreenState
   }
 
   Widget _backButton(BuildContext context) => IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
-        tooltip: 'Back',
-        // Reached via context.go from the Overview bell (not a stacked
-        // push), so Navigator.canPop is false here and Flutter's AppBar
-        // would render no back control at all. An explicit back button
-        // returns to Overview - the section this screen belongs to.
-        onPressed: () => Navigator.canPop(context)
-            ? Navigator.of(context).pop()
-            : context.go('/super-admin'),
-      );
+    icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+    tooltip: 'Back',
+    // Reached via context.go from the Overview bell (not a stacked
+    // push), so Navigator.canPop is false here and Flutter's AppBar
+    // would render no back control at all. An explicit back button
+    // returns to Overview - the section this screen belongs to.
+    onPressed: () => Navigator.canPop(context)
+        ? Navigator.of(context).pop()
+        : context.go('/super-admin'),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -310,7 +314,7 @@ class _SuperAdminNotificationsScreenState
               final body = ListView(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                 children: [
-                  if (unreadChip != null) unreadChip,
+                  ?unreadChip,
                   OwnerFilterChips(
                     selected: _filter,
                     onSelected: (f) => setState(() => _filter = f),
@@ -331,10 +335,10 @@ class _SuperAdminNotificationsScreenState
                           timestamp: _dateTime.format(n.createdAt),
                           busy: _busy,
                           onTap: () => _openDetail(n),
-                          onMarkRead:
-                              n.isUnread ? () => _markRead(n) : null,
-                          onMarkUnread:
-                              n.isUnread ? null : () => _markUnread(n),
+                          onMarkRead: n.isUnread ? () => _markRead(n) : null,
+                          onMarkUnread: n.isUnread
+                              ? null
+                              : () => _markUnread(n),
                           onArchive: () => _archive(n),
                           onDelete: () => _delete(n),
                         ),
@@ -384,8 +388,10 @@ class OwnerNotificationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visuals =
-        OwnerNotificationVisuals.forNotification(context, notification);
+    final visuals = OwnerNotificationVisuals.forNotification(
+      context,
+      notification,
+    );
     return Material(
       color: AppColors.surfaceElevated(context),
       borderRadius: BorderRadius.circular(14),
@@ -567,7 +573,7 @@ class _OfflineBanner extends StatelessWidget {
             child: Text(
               pending > 0
                   ? 'Offline — showing your last synced feed. $pending change'
-                      "${pending == 1 ? '' : 's'} will apply when you reconnect."
+                        "${pending == 1 ? '' : 's'} will apply when you reconnect."
                   : 'Offline — showing your last synced feed.',
               style: TextStyle(
                 fontSize: 12,

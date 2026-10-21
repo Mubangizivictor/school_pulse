@@ -293,8 +293,9 @@ class ExamMissingMarksScreen extends StatelessWidget {
                   final draft = entries
                       .where((e) => e.status == MarkEntryStatus.draft)
                       .length;
-                  if (entries.isEmpty || draft == 0)
+                  if (entries.isEmpty || draft == 0) {
                     return const SizedBox.shrink();
+                  }
                   return Card(
                     margin: const EdgeInsets.only(bottom: 10),
                     child: ListTile(

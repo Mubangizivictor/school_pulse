@@ -195,7 +195,7 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
       await _ownerFunctions.httpsCallable('setSchoolLifecycleStatus').call({
         'schoolId': schoolId,
         'status': status,
-        if (reason != null) 'reason': reason,
+        'reason': ?reason,
       });
     } on FirebaseFunctionsException catch (e) {
       throw StateError(e.message ?? 'Unable to update the school status.');
@@ -209,13 +209,11 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
     required DateTime expiry,
   }) async {
     try {
-      await _ownerFunctions.httpsCallable('updateSchoolSubscriptionPlan').call(
-        {
-          'schoolId': schoolId,
-          'planId': planId,
-          'expiry': expiry.millisecondsSinceEpoch,
-        },
-      );
+      await _ownerFunctions.httpsCallable('updateSchoolSubscriptionPlan').call({
+        'schoolId': schoolId,
+        'planId': planId,
+        'expiry': expiry.millisecondsSinceEpoch,
+      });
     } on FirebaseFunctionsException catch (e) {
       throw StateError(e.message ?? 'Unable to update the subscription.');
     }
@@ -360,7 +358,7 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
     final callable = _defaultCodebaseFunctions.httpsCallable('exitSupportMode');
     await callable.call<Map<String, dynamic>>({
       'ownerId': ownerId,
-      if (schoolId != null) 'schoolId': schoolId,
+      'schoolId': ?schoolId,
     });
   }
 

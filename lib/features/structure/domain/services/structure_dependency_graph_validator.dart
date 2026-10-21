@@ -41,8 +41,9 @@ class StructureDependencyGraphValidator {
       final step = byId[id];
       if (step != null) {
         for (final prerequisite in step.prerequisites) {
-          if (byId.containsKey(prerequisite) && visit(prerequisite))
+          if (byId.containsKey(prerequisite) && visit(prerequisite)) {
             return true;
+          }
         }
       }
       visiting.remove(id);

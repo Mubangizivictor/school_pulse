@@ -294,7 +294,7 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
         'markingDeadline': _iso(series.markingDeadline),
       if (series.resultPublicationDate != null)
         'resultPublicationDate': _iso(series.resultPublicationDate),
-      if (operationId != null) 'operationId': operationId,
+      'operationId': ?operationId,
     };
     final result = await _call('saveExamSeries', payload);
     return (result?['seriesId'] as String?) ?? series.id;
@@ -319,7 +319,7 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
     'markingGuide': question.markingGuide,
     'teacherNotes': question.teacherNotes,
     'attachmentUrls': question.attachmentUrls,
-    if (operationId != null) 'operationId': operationId,
+    'operationId': ?operationId,
   });
 
   @override
@@ -366,7 +366,7 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
         'totalMarks': paper.totalMarks,
         'durationMinutes': paper.durationMinutes,
         'questionIds': paper.questionIds,
-        if (operationId != null) 'operationId': operationId,
+        'operationId': ?operationId,
       });
 
   @override
@@ -476,9 +476,9 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
       'duplex': duplex,
       'includeQuestionPaper': includeQuestionPaper,
       'includeMarkingGuide': includeMarkingGuide,
-      if (watermark != null) 'watermark': watermark,
+      'watermark': ?watermark,
       'isReprint': isReprint,
-      if (reprintReason != null) 'reprintReason': reprintReason,
+      'reprintReason': ?reprintReason,
     });
     return (result?['jobId'] as String?) ?? '';
   }
@@ -650,12 +650,12 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
   }) async {
     final result = await _call('saveExamSitting', {
       'institutionId': institutionId,
-      if (sittingId != null) 'sittingId': sittingId,
+      'sittingId': ?sittingId,
       'paperId': paperId,
       'venueId': venueId,
-      if (venueName != null) 'venueName': venueName,
+      'venueName': ?venueName,
       'startTime': startTime.toUtc().toIso8601String(),
-      if (durationMinutes != null) 'durationMinutes': durationMinutes,
+      'durationMinutes': ?durationMinutes,
     });
     return (result?['sittingId'] as String?) ?? sittingId ?? '';
   }
@@ -689,7 +689,7 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
       'institutionId': institutionId,
       'sittingId': sittingId,
       'staffId': staffId,
-      if (staffName != null) 'staffName': staffName,
+      'staffName': ?staffName,
       'role': role.name,
     });
     return (result?['assignmentId'] as String?) ?? '';
@@ -725,10 +725,10 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
     'institutionId': institutionId,
     'sittingId': sittingId,
     'studentId': studentId,
-    if (studentName != null) 'studentName': studentName,
+    'studentName': ?studentName,
     'status': status.name,
-    if (note != null) 'note': note,
-    if (operationId != null) 'operationId': operationId,
+    'note': ?note,
+    'operationId': ?operationId,
   });
 
   @override
@@ -757,7 +757,7 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
   }) async {
     final result = await _call('reportExamIncident', {
       'institutionId': institutionId,
-      if (incidentId != null) 'incidentId': incidentId,
+      'incidentId': ?incidentId,
       'sittingId': sittingId,
       'type': type.name,
       'description': description,
@@ -801,11 +801,11 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
     'institutionId': institutionId,
     'paperId': paperId,
     'studentId': studentId,
-    if (studentName != null) 'studentName': studentName,
-    if (score != null) 'score': score,
+    'studentName': ?studentName,
+    'score': ?score,
     'isAbsent': isAbsent,
-    if (remark != null) 'remark': remark,
-    if (operationId != null) 'operationId': operationId,
+    'remark': ?remark,
+    'operationId': ?operationId,
   });
 
   @override
@@ -817,7 +817,7 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
     final result = await _call('submitExamMarks', {
       'institutionId': institutionId,
       'paperId': paperId,
-      if (operationId != null) 'operationId': operationId,
+      'operationId': ?operationId,
     });
     return (result?['submitted'] as num?)?.toInt() ?? 0;
   }
@@ -831,7 +831,7 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
     final result = await _call('approveExamResults', {
       'institutionId': institutionId,
       'paperId': paperId,
-      if (operationId != null) 'operationId': operationId,
+      'operationId': ?operationId,
     });
     return {
       'approvedCount': (result?['approvedCount'] as num?)?.toInt() ?? 0,
@@ -906,7 +906,7 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
       'institutionId': institutionId,
       'sittingId': sittingId,
       'studentId': studentId,
-      if (studentName != null) 'studentName': studentName,
+      'studentName': ?studentName,
       'seatNumber': seatNumber,
     });
     return (result?['seatId'] as String?) ?? '';
@@ -959,9 +959,9 @@ class ExamFactoryRepositoryImpl implements ExamFactoryRepository {
     'institutionId': institutionId,
     'sittingId': sittingId,
     'studentId': studentId,
-    if (studentName != null) 'studentName': studentName,
+    'studentName': ?studentName,
     'status': status.name,
-    if (note != null) 'note': note,
-    if (operationId != null) 'operationId': operationId,
+    'note': ?note,
+    'operationId': ?operationId,
   });
 }

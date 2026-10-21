@@ -29,8 +29,9 @@ class ClassSuggestionResolver {
         .map((value) => value.trim())
         .where((value) => value.isNotEmpty)
         .toList();
-    if (names.isEmpty)
+    if (names.isEmpty) {
       names.addAll(_rangeFromConfiguredDescription(description));
+    }
     // A configured school type is a useful dependency for future catalogue
     // sources; retaining the read also documents that no hard-coded mapping
     // is being applied here.

@@ -15,8 +15,7 @@ class ParentOfflineQueueService {
   final ParentQueueDataSource _dataSource;
   static const _uuid = Uuid();
 
-  ParentOfflineQueueService({required ParentQueueDataSource dataSource})
-    : _dataSource = dataSource;
+  ParentOfflineQueueService({required this._dataSource});
 
   Future<String> enqueue({
     required String tenantId,

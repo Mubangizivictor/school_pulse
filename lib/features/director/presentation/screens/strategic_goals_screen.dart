@@ -58,7 +58,7 @@ class _StrategicGoalsScreenState extends State<StrategicGoalsScreen> {
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: goals.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (_, i) => _GoalCard(
               goal: goals[i],
               onTap: () => _openGoalEditor(context, schoolId, goal: goals[i]),

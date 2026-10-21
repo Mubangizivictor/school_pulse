@@ -76,8 +76,9 @@ class ParentAccessRepositoryImpl implements ParentAccessRepository {
         phoneNumber: phoneNumber,
         reason: reason,
       );
-      if (data['removed'] == true || data['code'] == null)
+      if (data['removed'] == true || data['code'] == null) {
         return const Right(null);
+      }
       return Right(
         IssuedParentAccessCode(
           inviteId: data['inviteId'] as String,

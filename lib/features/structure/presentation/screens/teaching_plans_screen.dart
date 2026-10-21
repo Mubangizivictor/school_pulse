@@ -163,9 +163,9 @@ class _Overview extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               'Plans by education level',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 12),
             Expanded(
@@ -178,8 +178,9 @@ class _Overview extends StatelessWidget {
                   final plan = plans
                       .where((p) => p.educationLevelId == level.id)
                       .firstOrNull;
-                  final assignedSubjectCount =
-                      plan == null ? 0 : (subjectCountByPlanId[plan.id] ?? 0);
+                  final assignedSubjectCount = plan == null
+                      ? 0
+                      : (subjectCountByPlanId[plan.id] ?? 0);
                   return _LevelPlanCard(
                     level: level,
                     assignedSubjectCount: assignedSubjectCount,
@@ -275,7 +276,10 @@ class _SubjectsPrerequisiteCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '$count subject${count == 1 ? '' : 's'} in your school catalogue',
-                    style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -332,13 +336,19 @@ class _LevelPlanCard extends StatelessWidget {
                 children: [
                   Text(
                     level.name,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     '$assignedSubjectCount subject${assignedSubjectCount == 1 ? '' : 's'}'
                     '${plan?.totalWeeklyHours != null ? ' · Weekly lesson load set' : ' · Weekly lesson load not set'}',
-                    style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   switch (readiness) {
@@ -397,7 +407,9 @@ class _SetUpPlanSheet extends StatefulWidget {
 }
 
 class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
-  late final Set<String> _selectedSubjectIds = {...widget.initiallyAssignedSubjectIds};
+  late final Set<String> _selectedSubjectIds = {
+    ...widget.initiallyAssignedSubjectIds,
+  };
   late final _totalWeeklyHours = TextEditingController(
     text: widget.plan?.totalWeeklyHours?.toString() ?? '',
   );
@@ -411,7 +423,8 @@ class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
   void initState() {
     super.initState();
     final existingDuration = widget.plan?.defaultLessonDurationMinutes;
-    if (existingDuration != null && !_kLessonDurationPresets.contains(existingDuration)) {
+    if (existingDuration != null &&
+        !_kLessonDurationPresets.contains(existingDuration)) {
       _customDuration = true;
       _customDurationController.text = existingDuration.toString();
     }
@@ -449,9 +462,8 @@ class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
                   Expanded(
                     child: Text(
                       'Set up ${widget.level.name} plan',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                   ),
                   IconButton(
@@ -470,11 +482,15 @@ class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
                   const Expanded(
                     child: Text(
                       'Selected subjects',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                   OutlinedButton(
-                    onPressed: () => context.push('/staff/admin/structure?section=subjects'),
+                    onPressed: () =>
+                        context.push('/staff/admin/structure?section=subjects'),
                     child: const Text('Manage subjects'),
                   ),
                 ],
@@ -483,7 +499,10 @@ class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
               if (_availableSubjects.isEmpty)
                 Text(
                   'No subjects in your school catalogue yet. Add subjects first.',
-                  style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 )
               else
                 Wrap(
@@ -505,7 +524,9 @@ class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
                             ? const Icon(Icons.close, size: 16)
                             : null,
                         onDeleted: _selectedSubjectIds.contains(subject.id)
-                            ? () => setState(() => _selectedSubjectIds.remove(subject.id))
+                            ? () => setState(
+                                () => _selectedSubjectIds.remove(subject.id),
+                              )
                             : null,
                       ),
                   ],
@@ -550,7 +571,9 @@ class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
                     selected: _customDuration,
                     onSelected: (_) => setState(() {
                       _customDuration = true;
-                      _durationMinutes = int.tryParse(_customDurationController.text);
+                      _durationMinutes = int.tryParse(
+                        _customDurationController.text,
+                      );
                     }),
                   ),
                 ],
@@ -578,12 +601,19 @@ class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.info_outline, size: 18, color: scheme.onSurfaceVariant),
+                    Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: scheme.onSurfaceVariant,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'This is a school default, not a fixed timetable.',
-                        style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ],
@@ -591,7 +621,10 @@ class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 10),
-                Text(_error!, style: TextStyle(color: scheme.error, fontSize: 12)),
+                Text(
+                  _error!,
+                  style: TextStyle(color: scheme.error, fontSize: 12),
+                ),
               ],
               const SizedBox(height: 20),
               SizedBox(
@@ -647,7 +680,9 @@ class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
       final rawDuration = _customDurationController.text.trim();
       _durationMinutes = rawDuration.isEmpty ? null : int.tryParse(rawDuration);
       if (_durationMinutes != null && _durationMinutes! <= 0) {
-        setState(() => _error = 'Enter a positive custom duration, or leave it blank.');
+        setState(
+          () => _error = 'Enter a positive custom duration, or leave it blank.',
+        );
         return;
       }
     }
@@ -687,8 +722,12 @@ class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
         );
       }
 
-      final existingSubjects = await widget.repository.watchPlanSubjects(plan.id).first;
-      final existingBySubjectId = {for (final s in existingSubjects) s.subjectId: s};
+      final existingSubjects = await widget.repository
+          .watchPlanSubjects(plan.id)
+          .first;
+      final existingBySubjectId = {
+        for (final s in existingSubjects) s.subjectId: s,
+      };
       final toAdd = _selectedSubjectIds
           .where((id) => !existingBySubjectId.containsKey(id))
           .toList();
@@ -715,7 +754,8 @@ class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
         final subject = widget.structure.subjects
             .where((s) => s.id == subjectId)
             .firstOrNull;
-        if (subject == null || subject.assignedLevelIds.contains(widget.level.id)) {
+        if (subject == null ||
+            subject.assignedLevelIds.contains(widget.level.id)) {
           continue;
         }
         structureBloc.add(
@@ -730,7 +770,9 @@ class _SetUpPlanSheetState extends State<_SetUpPlanSheet> {
       if (!mounted) return;
       navigator.pop();
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not save plan: $error')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not save plan: $error')),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -760,17 +802,21 @@ class TeachingPlanEditorScreen extends StatelessWidget {
         stream: repository.watchPlanSubjects(plan.id),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return _Message(title: 'Could not load plan', body: '${snapshot.error}');
+            return _Message(
+              title: 'Could not load plan',
+              body: '${snapshot.error}',
+            );
           }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
           final planSubjects = [...snapshot.data!]
             ..sort((a, b) => a.order.compareTo(b.order));
-          final classesInLevel = structure.classes
-              .where((c) => c.levelId == level.id && c.isActive)
-              .toList()
-            ..sort((a, b) => a.order.compareTo(b.order));
+          final classesInLevel =
+              structure.classes
+                  .where((c) => c.levelId == level.id && c.isActive)
+                  .toList()
+                ..sort((a, b) => a.order.compareTo(b.order));
           return _PlanEditorBody(
             repository: repository,
             plan: plan,
@@ -803,8 +849,9 @@ class _PlanEditorBody extends StatelessWidget {
   final List<SchoolClass> classesInLevel;
 
   int? get _weeklyCapacity {
-    final slots = structure.timetableConfig.slots
-        .where((slot) => slot.isActive && slot.type == 'period');
+    final slots = structure.timetableConfig.slots.where(
+      (slot) => slot.isActive && slot.type == 'period',
+    );
     if (slots.isEmpty) return null;
     return slots.length;
   }
@@ -814,7 +861,7 @@ class _PlanEditorBody extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final plannedTotal = planSubjects
         .where((s) => s.isActive)
-        .fold<int>(0, (sum, s) => sum + (s.weeklyLessons ?? 0));
+        .fold<int>(0, (total, s) => total + (s.weeklyLessons ?? 0));
     final capacity = _weeklyCapacity;
     final overCapacity = capacity != null && plannedTotal > capacity;
     final assignedSubjectIds = planSubjects.map((s) => s.subjectId).toSet();
@@ -848,7 +895,11 @@ class _PlanEditorBody extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.warning_amber_outlined, size: 18, color: scheme.onSurface),
+                  Icon(
+                    Icons.warning_amber_outlined,
+                    size: 18,
+                    color: scheme.onSurface,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -886,8 +937,11 @@ class _PlanEditorBody extends StatelessWidget {
               child: EmptyState(
                 icon: Icons.menu_book_outlined,
                 title: 'No subjects yet',
-                message: 'Add subjects from the school catalogue for this level.',
-                ctaLabel: availableSubjects.isEmpty ? null : 'Add school subject',
+                message:
+                    'Add subjects from the school catalogue for this level.',
+                ctaLabel: availableSubjects.isEmpty
+                    ? null
+                    : 'Add school subject',
                 onCtaPressed: availableSubjects.isEmpty
                     ? null
                     : () => _addSubject(context, availableSubjects),
@@ -959,7 +1013,10 @@ class _PlanEditorBody extends StatelessWidget {
     );
   }
 
-  Future<void> _addSubject(BuildContext context, List<Subject> available) async {
+  Future<void> _addSubject(
+    BuildContext context,
+    List<Subject> available,
+  ) async {
     final result = await showModalBottomSheet<_SubjectFormResult>(
       context: context,
       isScrollControlled: true,
@@ -981,12 +1038,19 @@ class _PlanEditorBody extends StatelessWidget {
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not add subject: $error')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not add subject: $error')),
+      );
     }
   }
 
-  Future<void> _editSubject(BuildContext context, TeachingPlanSubject planSubject) async {
-    final subject = structure.subjects.where((s) => s.id == planSubject.subjectId).firstOrNull;
+  Future<void> _editSubject(
+    BuildContext context,
+    TeachingPlanSubject planSubject,
+  ) async {
+    final subject = structure.subjects
+        .where((s) => s.id == planSubject.subjectId)
+        .firstOrNull;
     final result = await showModalBottomSheet<_SubjectFormResult>(
       context: context,
       isScrollControlled: true,
@@ -1008,20 +1072,35 @@ class _PlanEditorBody extends StatelessWidget {
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not update subject: $error')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not update subject: $error')),
+      );
     }
   }
 
-  Future<void> _removeSubject(BuildContext context, TeachingPlanSubject planSubject) async {
-    final subject = structure.subjects.where((s) => s.id == planSubject.subjectId).firstOrNull;
+  Future<void> _removeSubject(
+    BuildContext context,
+    TeachingPlanSubject planSubject,
+  ) async {
+    final subject = structure.subjects
+        .where((s) => s.id == planSubject.subjectId)
+        .firstOrNull;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Remove subject'),
-        content: Text('Remove "${subject?.name ?? 'this subject'}" from the ${level.name} plan?'),
+        content: Text(
+          'Remove "${subject?.name ?? 'this subject'}" from the ${level.name} plan?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
         ],
       ),
     );
@@ -1030,7 +1109,9 @@ class _PlanEditorBody extends StatelessWidget {
     try {
       await repository.removeSubject(plan.id, planSubject.subjectId);
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not remove subject: $error')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not remove subject: $error')),
+      );
     }
   }
 }
@@ -1066,8 +1147,14 @@ class _PlanSubjectRow extends StatelessWidget {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(icon: const Icon(Icons.edit_outlined), onPressed: onEdit),
-              IconButton(icon: const Icon(Icons.delete_outline), onPressed: onRemove),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: onEdit,
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                onPressed: onRemove,
+              ),
             ],
           ),
         ),
@@ -1089,7 +1176,10 @@ class _ClassAdjustmentRow extends StatelessWidget {
       child: AppCard(
         onTap: onTap,
         child: ListTile(
-          title: Text(schoolClass.name, style: const TextStyle(fontWeight: FontWeight.w700)),
+          title: Text(
+            schoolClass.name,
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
           subtitle: const Text('Inherits level plan'),
           trailing: const Icon(Icons.chevron_right),
         ),
@@ -1131,8 +1221,11 @@ class _SubjectFormSheetState extends State<_SubjectFormSheet> {
   @override
   void initState() {
     super.initState();
-    _subjectId = widget.existing?.subjectId ??
-        (widget.availableSubjects.isNotEmpty ? widget.availableSubjects.first.id : null);
+    _subjectId =
+        widget.existing?.subjectId ??
+        (widget.availableSubjects.isNotEmpty
+            ? widget.availableSubjects.first.id
+            : null);
   }
 
   @override
@@ -1166,18 +1259,24 @@ class _SubjectFormSheetState extends State<_SubjectFormSheet> {
               const SizedBox(height: 16),
               if (!widget.lockSubject)
                 DropdownButtonFormField<String>(
-                  value: _subjectId,
+                  initialValue: _subjectId,
                   decoration: const InputDecoration(labelText: 'Subject'),
                   items: [
                     for (final subject in widget.availableSubjects)
-                      DropdownMenuItem(value: subject.id, child: Text(subject.name)),
+                      DropdownMenuItem(
+                        value: subject.id,
+                        child: Text(subject.name),
+                      ),
                   ],
                   onChanged: (value) => setState(() => _subjectId = value),
                 )
               else if (widget.availableSubjects.isNotEmpty)
                 Text(
                   widget.availableSubjects.first.name,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
               const SizedBox(height: 16),
               Row(
@@ -1188,7 +1287,8 @@ class _SubjectFormSheetState extends State<_SubjectFormSheet> {
                       title: const Text('Core'),
                       value: true,
                       groupValue: _isCore,
-                      onChanged: (value) => setState(() => _isCore = value ?? true),
+                      onChanged: (value) =>
+                          setState(() => _isCore = value ?? true),
                     ),
                   ),
                   Expanded(
@@ -1197,7 +1297,8 @@ class _SubjectFormSheetState extends State<_SubjectFormSheet> {
                       title: const Text('Elective'),
                       value: false,
                       groupValue: _isCore,
-                      onChanged: (value) => setState(() => _isCore = value ?? true),
+                      onChanged: (value) =>
+                          setState(() => _isCore = value ?? true),
                     ),
                   ),
                 ],
@@ -1212,7 +1313,10 @@ class _SubjectFormSheetState extends State<_SubjectFormSheet> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 10),
-                Text(_error!, style: TextStyle(color: scheme.onSurface, fontSize: 12)),
+                Text(
+                  _error!,
+                  style: TextStyle(color: scheme.onSurface, fontSize: 12),
+                ),
               ],
               const SizedBox(height: 20),
               SizedBox(
@@ -1240,7 +1344,10 @@ class _SubjectFormSheetState extends State<_SubjectFormSheet> {
     if (raw.isNotEmpty) {
       weekly = int.tryParse(raw);
       if (weekly == null || weekly <= 0) {
-        setState(() => _error = 'Enter a positive number of weekly lessons, or leave it blank.');
+        setState(
+          () => _error =
+              'Enter a positive number of weekly lessons, or leave it blank.',
+        );
         return;
       }
     }
@@ -1259,7 +1366,10 @@ class _Message extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          ),
           const SizedBox(height: 8),
           Text(body, textAlign: TextAlign.center),
         ],

@@ -26,10 +26,12 @@ class _SpacesRoomsScreenState extends State<SpacesRoomsScreen> {
   Widget build(BuildContext context) => FutureBuilder<String>(
     future: _schoolId,
     builder: (context, tenant) {
-      if (tenant.hasError)
+      if (tenant.hasError) {
         return _Message(error: tenant.error, retry: () => setState(() {}));
-      if (!tenant.hasData)
+      }
+      if (!tenant.hasData) {
         return const Center(child: CircularProgressIndicator());
+      }
       return _SpacesBody(firestore: _firestore, schoolId: tenant.data!);
     },
   );
@@ -62,8 +64,9 @@ class _SpacesBody extends StatelessWidget {
             retry: () {},
           );
         }
-        if (!settings.hasData || !snapshot.hasData)
+        if (!settings.hasData || !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
+        }
         final spaces = snapshot.data!.docs
             .where((d) => d.data()['active'] != false)
             .toList();
@@ -212,7 +215,7 @@ class _SpacesBody extends StatelessWidget {
         .limit(1)
         .get();
     if (refs.docs.isNotEmpty) {
-      if (context.mounted)
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -220,6 +223,7 @@ class _SpacesBody extends StatelessWidget {
             ),
           ),
         );
+      }
       return;
     }
     await space.reference.update({
@@ -346,8 +350,9 @@ class _SpaceSheetState extends State<_SpaceSheet> {
                   .toList(),
               onChanged: (v) => setState(() {
                 _type = v ?? '';
-                if (widget.existing == null)
+                if (widget.existing == null) {
                   _schedulable = SpaceRules.defaultSchedulable(_type);
+                }
               }),
             ),
             const SizedBox(height: 14),
@@ -437,10 +442,11 @@ class _SpaceSheetState extends State<_SpaceSheet> {
               (d.data()['normalizedName'] == name ||
                   (code.isNotEmpty && d.data()['normalizedCode'] == code)),
         );
-        if (duplicate)
+        if (duplicate) {
           throw StateError(
             'A space with this name or room code already exists.',
           );
+        }
         final ref = widget.existing?.reference ?? col.doc(const Uuid().v4());
         tx.set(ref, {
           'name': _name.text.trim(),
@@ -464,15 +470,15 @@ class _SpaceSheetState extends State<_SpaceSheet> {
       });
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString().replaceFirst('Bad state: ', ''))),
         );
+      }
       setState(() => _saving = false);
     }
   }
 }
-
 
 class _ModeCard extends StatelessWidget {
   const _ModeCard({

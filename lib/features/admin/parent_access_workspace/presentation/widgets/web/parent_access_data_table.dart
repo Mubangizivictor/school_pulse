@@ -54,20 +54,20 @@ class ParentAccessDataTable extends StatelessWidget {
         columns: [
           DataColumn(
             label: const Text('Parent'),
-            onSort: (_, __) => onSort(ParentAccessSortColumn.name),
+            onSort: (_, _) => onSort(ParentAccessSortColumn.name),
           ),
           DataColumn(
             label: const Text('Phone'),
-            onSort: (_, __) => onSort(ParentAccessSortColumn.phone),
+            onSort: (_, _) => onSort(ParentAccessSortColumn.phone),
           ),
           DataColumn(
             label: const Text('Linked learners'),
-            onSort: (_, __) => onSort(ParentAccessSortColumn.learners),
+            onSort: (_, _) => onSort(ParentAccessSortColumn.learners),
           ),
           const DataColumn(label: Text('Portal access')),
           DataColumn(
             label: const Text('Latest code status'),
-            onSort: (_, __) => onSort(ParentAccessSortColumn.status),
+            onSort: (_, _) => onSort(ParentAccessSortColumn.status),
           ),
           const DataColumn(label: Text('')),
         ],
@@ -77,11 +77,19 @@ class ParentAccessDataTable extends StatelessWidget {
             cells: [
               DataCell(Text(invite.parentName)),
               DataCell(Text(invite.maskedPhone)),
-              DataCell(Text('${invite.learnerCount} learner${invite.learnerCount == 1 ? '' : 's'}')),
+              DataCell(
+                Text(
+                  '${invite.learnerCount} learner${invite.learnerCount == 1 ? '' : 's'}',
+                ),
+              ),
               DataCell(_PortalAccessPill(invite: invite)),
               DataCell(AccessCodeStatusChip(invite: invite)),
               DataCell(
-                Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted(context)),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: AppColors.textMuted(context),
+                ),
               ),
             ],
           );
@@ -103,32 +111,39 @@ class _PortalAccessPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, color, surface) = switch (invite.status) {
       ParentInviteStatus.revoked => (
-          'Revoked',
-          AppColors.danger(context),
-          AppColors.dangerSurface(context),
-        ),
+        'Revoked',
+        AppColors.danger(context),
+        AppColors.dangerSurface(context),
+      ),
       ParentInviteStatus.expired => (
-          'Revoked',
-          AppColors.danger(context),
-          AppColors.dangerSurface(context),
-        ),
+        'Revoked',
+        AppColors.danger(context),
+        AppColors.dangerSurface(context),
+      ),
       ParentInviteStatus.active when invite.expiringSoon => (
-          'Pending',
-          AppColors.warning(context),
-          AppColors.warningSurface(context),
-        ),
+        'Pending',
+        AppColors.warning(context),
+        AppColors.warningSurface(context),
+      ),
       ParentInviteStatus.active => (
-          'Active',
-          AppColors.success(context),
-          AppColors.successSurface(context),
-        ),
+        'Active',
+        AppColors.success(context),
+        AppColors.successSurface(context),
+      ),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: surface, borderRadius: BorderRadius.circular(999)),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(999),
+      ),
       child: Text(
         label,
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
       ),
     );
   }

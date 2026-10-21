@@ -164,8 +164,9 @@ class _TestableGoalsScreen extends StatelessWidget {
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const CircularProgressIndicator();
         final goals = snapshot.data!;
-        if (goals.isEmpty)
+        if (goals.isEmpty) {
           return const Text('No strategic goals yet. Tap + to add one.');
+        }
         return ListView(
           children: goals
               .map(

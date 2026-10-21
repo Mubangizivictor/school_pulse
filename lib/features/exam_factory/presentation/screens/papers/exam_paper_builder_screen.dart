@@ -203,10 +203,11 @@ class _ExamPaperBuilderScreenState extends State<ExamPaperBuilderScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Paper saved.')));
-      if (widget.paperId == null)
+      if (widget.paperId == null) {
         context.pushReplacement(
           '/staff/dean/exam-factory/paper-builder?paperId=$id',
         );
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

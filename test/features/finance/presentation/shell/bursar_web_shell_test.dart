@@ -5,7 +5,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
-import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';

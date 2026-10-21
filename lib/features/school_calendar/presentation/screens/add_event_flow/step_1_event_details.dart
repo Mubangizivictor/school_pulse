@@ -95,10 +95,11 @@ class _Step1EventDetailsState extends State<Step1EventDetails> {
         picked.hour,
         picked.minute,
       );
-      if (isStart)
+      if (isStart) {
         widget.draft.startDate = changed;
-      else
+      } else {
         widget.draft.endDate = changed;
+      }
     });
   }
 

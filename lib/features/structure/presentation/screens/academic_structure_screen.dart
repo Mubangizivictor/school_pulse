@@ -789,7 +789,7 @@ class _AddStreamsSheetState extends State<_AddStreamsSheet> {
                 )
               else ...[
                 DropdownButtonFormField<String>(
-                  value: _selectedClassIds.isNotEmpty
+                  initialValue: _selectedClassIds.isNotEmpty
                       ? _selectedClassIds.first
                       : null,
                   decoration: const InputDecoration(labelText: 'Class'),
@@ -902,12 +902,13 @@ class _AddStreamsSheetState extends State<_AddStreamsSheet> {
         initiallySelected: _selectedClassIds,
       ),
     );
-    if (result != null)
+    if (result != null) {
       setState(() {
         _selectedClassIds
           ..clear()
           ..addAll(result);
       });
+    }
   }
 
   void _submit() {
@@ -2684,7 +2685,7 @@ class _ClassesBulkSetupState extends State<_ClassesBulkSetup> {
     if (value.isEmpty || level == null) return;
     if (_isTaken(value, level) ||
         _selected.any((item) => item.toLowerCase() == value.toLowerCase())) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -2692,6 +2693,7 @@ class _ClassesBulkSetupState extends State<_ClassesBulkSetup> {
             ),
           ),
         );
+      }
       return;
     }
     setState(() => _selected.add(value));
@@ -2848,10 +2850,11 @@ class _ClassesBulkSetupState extends State<_ClassesBulkSetup> {
   @override
   Widget build(BuildContext context) {
     final levels = _levels;
-    if (levels.isEmpty)
+    if (levels.isEmpty) {
       return const Center(
         child: Text('Add an education level before creating classes.'),
       );
+    }
     final level = _level ?? levels.first;
     if (_levelId != level.id) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

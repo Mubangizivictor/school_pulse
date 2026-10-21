@@ -58,7 +58,7 @@ class _Step1BasicInfoState extends State<Step1BasicInfo> {
     final label = [
       className,
       if (streamName != null) '($streamName)',
-      if (year != null) year,
+      ?year,
     ].join(' ');
     setState(() {
       _nameController.text = label;

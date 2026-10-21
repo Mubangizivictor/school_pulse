@@ -26,8 +26,9 @@ class _BursarPayrollScreenState extends State<BursarPayrollScreen> {
 
   Future<void> _call(String name, Map<String, dynamic> data) async {
     if (!await sl<NetworkInfo>().isConnected) {
-      if (mounted)
+      if (mounted) {
         _toast('This action needs internet; payroll is read-only offline.');
+      }
       return;
     }
     setState(() => _working = true);
@@ -35,11 +36,13 @@ class _BursarPayrollScreenState extends State<BursarPayrollScreen> {
       await FirebaseFunctions.instance.httpsCallable(name).call(data);
       if (mounted) _toast('Saved securely.');
     } on FirebaseFunctionsException catch (e) {
-      if (mounted)
+      if (mounted) {
         _toast(e.message ?? 'Payroll action could not be completed.');
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         _toast('Payroll action could not be completed. Try again online.');
+      }
     } finally {
       if (mounted) setState(() => _working = false);
     }
@@ -375,13 +378,15 @@ class _BursarPayrollScreenState extends State<BursarPayrollScreen> {
   );
 
   String _actionLabel(PayrollRun run, List<String> roles) {
-    if (run.status == 'draft' || run.status == 'rejected')
+    if (run.status == 'draft' || run.status == 'rejected') {
       return 'Submit for approval';
+    }
     if (run.status == 'reviewed' &&
         roles.any(
           (r) => ['headTeacher', 'director', 'schoolAdmin'].contains(r),
-        ))
+        )) {
       return 'Approve payroll';
+    }
     if (run.status == 'approved') return 'Finalise payment';
     return _pretty(run.status);
   }
@@ -391,17 +396,19 @@ class _BursarPayrollScreenState extends State<BursarPayrollScreen> {
     PayrollRun run,
     List<String> roles,
   ) async {
-    if (run.status == 'draft' || run.status == 'rejected')
+    if (run.status == 'draft' || run.status == 'rejected') {
       return _call('submitPayrollForApproval', {
         'schoolId': schoolId,
         'runId': run.id,
       });
-    if (run.status == 'reviewed')
+    }
+    if (run.status == 'reviewed') {
       return _call('decidePayrollApproval', {
         'schoolId': schoolId,
         'runId': run.id,
         'decision': 'approve',
       });
+    }
     if (run.status == 'approved') {
       return _finalisePayment(schoolId, run);
     }

@@ -77,7 +77,7 @@ class _GradingSystemsScreenState extends State<GradingSystemsScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: DropdownButtonFormField<String>(
-                  value: _filter,
+                  initialValue: _filter,
                   decoration: const InputDecoration(labelText: 'Filter'),
                   items: ['All', 'Active', 'Inactive', 'Default', ..._types]
                       .map((x) => DropdownMenuItem(value: x, child: Text(x)))
@@ -377,7 +377,7 @@ class _FormState extends State<_Form> {
       _incomplete = widget.existing?.allowIncomplete ?? false;
   late List<String> _levels = [...?widget.existing?.levelIds],
       _classes = [...?widget.existing?.classIds];
-  late List<GradeBand> _bands = [...widget.initialBands];
+  late final List<GradeBand> _bands = [...widget.initialBands];
   @override
   void dispose() {
     _name.dispose();
@@ -414,7 +414,7 @@ class _FormState extends State<_Form> {
               const SizedBox(height: 16),
               _label('Type *'),
               DropdownButtonFormField(
-                value: _type,
+                initialValue: _type,
                 decoration: const InputDecoration(
                   hintText: 'Select grading system type',
                 ),
@@ -481,19 +481,18 @@ class _FormState extends State<_Form> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _dropdown(
-                      'Decimal Places',
-                      '$_decimals',
-                      ['0', '1', '2'],
-                      (v) => setState(() => _decimals = int.parse(v)),
-                    ),
+                    child: _dropdown('Decimal Places', '$_decimals', [
+                      '0',
+                      '1',
+                      '2',
+                    ], (v) => setState(() => _decimals = int.parse(v))),
                   ),
                 ],
               ),
               _section('APPLICABILITY'),
               _label('Applies To'),
               DropdownButtonFormField(
-                value: _scope,
+                initialValue: _scope,
                 items: const [
                   DropdownMenuItem(
                     value: 'school',
@@ -611,7 +610,7 @@ class _FormState extends State<_Form> {
     children: [
       _label(label),
       DropdownButtonFormField(
-        value: value,
+        initialValue: value,
         items: values
             .map((x) => DropdownMenuItem(value: x, child: Text(x)))
             .toList(),
@@ -637,9 +636,7 @@ class _FormState extends State<_Form> {
       builder: (c) => StatefulBuilder(
         builder: (c, set) => SafeArea(
           child: Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.viewInsetsOf(c).bottom,
-            ),
+            padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(c).bottom),
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.sizeOf(c).height * 0.85,
@@ -768,7 +765,7 @@ class _FormState extends State<_Form> {
     );
     final bloc = context.read<StructureBloc>();
     bloc.add(SaveGradingSystemRequested(s));
-    for (final b in _bands)
+    for (final b in _bands) {
       bloc.add(
         SaveGradeBandRequested(
           b.copyWith(
@@ -778,6 +775,7 @@ class _FormState extends State<_Form> {
           ),
         ),
       );
+    }
     di.sl<AuditRepository>().logAction(
       schoolId: widget.schoolId,
       title: widget.existing == null

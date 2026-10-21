@@ -21,9 +21,7 @@ class StaffAttendanceOfflineQueueService {
   final StaffAttendanceQueueDataSource _dataSource;
   static const _uuid = Uuid();
 
-  StaffAttendanceOfflineQueueService({
-    required StaffAttendanceQueueDataSource dataSource,
-  }) : _dataSource = dataSource;
+  StaffAttendanceOfflineQueueService({required this._dataSource});
 
   Future<String> enqueue({
     required String institutionId,

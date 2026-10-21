@@ -27,7 +27,7 @@ class ManualPaymentService {
         .httpsCallable('getManualPaymentsForOwner')
         .call<Map<String, dynamic>>({
           'status': status == null ? 'all' : _statusWire(status),
-          if (schoolId != null) 'schoolId': schoolId,
+          'schoolId': ?schoolId,
           if (startDate != null)
             'startDateMs': startDate.millisecondsSinceEpoch,
           if (endDate != null) 'endDateMs': endDate.millisecondsSinceEpoch,

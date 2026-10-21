@@ -151,7 +151,7 @@ void main() {
           TabbedListScaffold<int>(
             tabLabels: const [],
             items: const <int>[],
-            filter: (_, __) => true,
+            filter: (_, _) => true,
             itemBuilder: (context, item) => Text('item-$item'),
             emptyTitle: 'No records',
           ),

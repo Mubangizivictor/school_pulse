@@ -50,9 +50,8 @@ class SubscriptionPaymentState extends Equatable {
 /// directly, so a settlement that lands between polls updates the UI
 /// immediately instead of waiting for the next timer tick.
 class SubscriptionPaymentCubit extends Cubit<SubscriptionPaymentState> {
-  SubscriptionPaymentCubit({required SubscriptionPaymentRepository repository})
-    : _repository = repository,
-      super(const SubscriptionPaymentState());
+  SubscriptionPaymentCubit({required this._repository})
+    : super(const SubscriptionPaymentState());
 
   final SubscriptionPaymentRepository _repository;
 

@@ -31,10 +31,10 @@ class EnrollmentAuditService {
       await callable.call<Map<String, dynamic>>({
         'schoolId': schoolId,
         'action': action,
-        if (studentId != null) 'studentId': studentId,
-        if (applicationId != null) 'applicationId': applicationId,
-        if (reason != null) 'reason': reason,
-        if (metadata != null) 'metadata': metadata,
+        'studentId': ?studentId,
+        'applicationId': ?applicationId,
+        'reason': ?reason,
+        'metadata': ?metadata,
       });
     } catch (e, st) {
       // Best-effort: never let an audit-trail failure surface as a user-

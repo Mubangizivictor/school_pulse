@@ -281,7 +281,7 @@ class StaffAttendanceCubit extends Cubit<StaffAttendanceState> {
           payloadJson: jsonEncode({
             'staffId': staffId,
             'day': _today.toIso8601String(),
-            if (location != null) 'location': location,
+            'location': ?location,
           }),
         );
         if (!_closed) {

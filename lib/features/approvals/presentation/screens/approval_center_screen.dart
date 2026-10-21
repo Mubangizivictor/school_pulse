@@ -28,10 +28,11 @@ class _ApprovalCenterScreenState extends State<ApprovalCenterScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthBloc>().state;
-    if (auth is! AuthAuthenticated)
+    if (auth is! AuthAuthenticated) {
       return const Scaffold(
         body: Center(child: Text('Sign in to view approvals.')),
       );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title ?? 'Approval Center'),
@@ -64,13 +65,15 @@ class _ApprovalCenterScreenState extends State<ApprovalCenterScreen> {
       body: StreamBuilder<List<ApprovalRequest>>(
         stream: _repository.watchInbox(auth.user.schoolId),
         builder: (context, snapshot) {
-          if (snapshot.hasError)
+          if (snapshot.hasError) {
             return _Error(
               message: 'Could not load approvals.',
               retry: () => setState(() {}),
             );
-          if (!snapshot.hasData)
+          }
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final requests = snapshot.data!;
           final visible = requests
               .where(
@@ -156,7 +159,7 @@ class _ApprovalCenterScreenState extends State<ApprovalCenterScreen> {
                     : ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: visible.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (_, i) => _RequestCard(
                           request: visible[i],
                           onTap: () => Navigator.of(context).push(
@@ -368,10 +371,11 @@ class _ApprovalDetailScreenState extends State<ApprovalDetailScreen> {
         ).showSnackBar(const SnackBar(content: Text('Decision recorded.')));
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Decision not recorded: $e')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

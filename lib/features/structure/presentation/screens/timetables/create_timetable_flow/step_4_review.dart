@@ -49,12 +49,9 @@ class Step4Review extends StatelessWidget {
               _ReviewCard(
                 title: 'Basic Information',
                 rows: {
-                  'Class': [
-                    className ?? '-',
-                    if (streamName != null) streamName,
-                  ].join(' - '),
+                  'Class': [className ?? '-', ?streamName].join(' - '),
                   'Academic Year': yearName ?? '-',
-                  if (termName != null) 'Term': termName,
+                  'Term': ?termName,
                   'Timetable Name': draft.name,
                 },
               ),

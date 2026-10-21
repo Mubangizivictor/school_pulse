@@ -62,7 +62,7 @@ class DepartmentsOverviewScreen extends StatelessWidget {
               AppSpacing.x3l,
             ),
             itemCount: departments.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 4),
+            separatorBuilder: (_, _) => const SizedBox(height: 4),
             itemBuilder: (_, i) {
               final dept = departments[i];
               final (icon, color) = _iconFor(dept.name);

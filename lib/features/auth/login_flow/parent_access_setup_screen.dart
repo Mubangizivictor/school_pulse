@@ -39,8 +39,9 @@ class _ParentAccessSetupScreenState extends State<ParentAccessSetupScreen> {
   bool get _validCode => RegExp(r'^SP\d{6}$').hasMatch(_normalCode);
   bool get _validPin {
     if (!RegExp(r'^\d{4}$').hasMatch(_pin.text) ||
-        RegExp(r'^(\d)\1{3}$').hasMatch(_pin.text))
+        RegExp(r'^(\d)\1{3}$').hasMatch(_pin.text)) {
       return false;
+    }
     final digits = _pin.text.split('').map(int.parse).toList();
     final up = List.generate(
       3,
@@ -67,18 +68,20 @@ class _ParentAccessSetupScreenState extends State<ParentAccessSetupScreen> {
         await _redeem();
       },
       verificationFailed: (_) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _busy = false;
             _error = 'We could not verify this phone number. Please try again.';
           });
+        }
       },
       codeSent: (id, _) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _busy = false;
             _verificationId = id;
           });
+        }
       },
       codeAutoRetrievalTimeout: (id) {
         _verificationId = id;
@@ -104,11 +107,12 @@ class _ParentAccessSetupScreenState extends State<ParentAccessSetupScreen> {
       );
       await _redeem();
     } on FirebaseAuthException {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _busy = false;
           _error = 'We could not verify this phone number. Please try again.';
         });
+      }
     }
   }
 
@@ -117,17 +121,19 @@ class _ParentAccessSetupScreenState extends State<ParentAccessSetupScreen> {
       final result = await FirebaseFunctions.instance
           .httpsCallable('redeemParentAccessCode')
           .call({'code': _normalCode});
-      if (mounted)
+      if (mounted) {
         setState(() {
           _summary = Map<String, dynamic>.from(result.data as Map);
           _busy = false;
         });
+      }
     } on FirebaseFunctionsException {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _busy = false;
           _error = 'This code is invalid, expired, or already used.';
         });
+      }
     }
   }
 
@@ -151,17 +157,20 @@ class _ParentAccessSetupScreenState extends State<ParentAccessSetupScreen> {
           .call({'code': _normalCode, 'pin': _pin.text});
       if (mounted) context.go('/school-splash');
     } on FirebaseFunctionsException {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _busy = false;
           _error = 'This code is invalid, expired, or already used.';
         });
+      }
     }
   }
 
   @override
   void dispose() {
-    for (final c in [_code, _phone, _otp, _pin, _confirmPin]) c.dispose();
+    for (final c in [_code, _phone, _otp, _pin, _confirmPin]) {
+      c.dispose();
+    }
     super.dispose();
   }
 

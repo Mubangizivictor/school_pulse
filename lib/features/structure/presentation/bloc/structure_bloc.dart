@@ -65,9 +65,8 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
 
   StructureBloc({
     required this.repository,
-    StructureIntegrityValidator validator = const StructureIntegrityValidator(),
-  }) : _validator = validator,
-       super(const StructureState()) {
+    this._validator = const StructureIntegrityValidator(),
+  }) : super(const StructureState()) {
     on<LoadStructureData>(_onLoad);
     on<ClearStructureData>(_onClear);
 
@@ -321,11 +320,12 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       final matches = state.academicYears.where(
         (item) => item.id == event.yearId && !item.isArchived,
       );
-      if (matches.isEmpty)
+      if (matches.isEmpty) {
         return _validationFailed(
           emit,
           'Select a valid non-archived academic year.',
         );
+      }
       await _write(
         emit,
         () => repository.setCurrentAcademicYear(event.yearId, event.schoolId),
@@ -352,8 +352,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       final matches = state.academicTerms.where(
         (item) => item.id == event.termId,
       );
-      if (matches.isEmpty)
+      if (matches.isEmpty) {
         return _validationFailed(emit, 'Select a valid term/semester.');
+      }
       final currentYearIds = state.academicYears
           .where((item) => item.isCurrent && !item.isArchived)
           .map((item) => item.id)
@@ -371,7 +372,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     });
 
     on<ConfirmAcademicCalendarRequested>((event, emit) async {
-      emit(state.copyWith(isConfirmingCalendar: true, calendarConfirmed: false));
+      emit(
+        state.copyWith(isConfirmingCalendar: true, calendarConfirmed: false),
+      );
       try {
         final callable = FirebaseFunctions.instanceFor(
           region: 'europe-west1',
@@ -381,16 +384,14 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
           if (event.termIds != null) 'termIds': event.termIds,
         });
         emit(
-          state.copyWith(
-            isConfirmingCalendar: false,
-            calendarConfirmed: true,
-          ),
+          state.copyWith(isConfirmingCalendar: false, calendarConfirmed: true),
         );
       } on FirebaseFunctionsException catch (error) {
         emit(
           state.copyWith(
             isConfirmingCalendar: false,
-            errorMessage: error.message ?? 'Could not confirm the academic calendar.',
+            errorMessage:
+                error.message ?? 'Could not confirm the academic calendar.',
           ),
         );
       } catch (error) {
@@ -470,10 +471,7 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
           'Classes with streams already configured can\'t be reordered here.',
         );
       }
-      await _write(
-        emit,
-        () => repository.reorderClasses(event.orderedClasses),
-      );
+      await _write(emit, () => repository.reorderClasses(event.orderedClasses));
     });
 
     on<SaveStreamRequested>((event, emit) async {
@@ -535,8 +533,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       await _write(emit, () => repository.addSubject(event.subject));
     });
     on<CreateSubjectsRequested>((event, emit) async {
-      if (event.subjects.isEmpty)
+      if (event.subjects.isEmpty) {
         return _validationFailed(emit, 'Choose at least one subject.');
+      }
       final schoolId = event.subjects.first.schoolId;
       if (schoolId.isEmpty ||
           event.subjects.any((item) => item.schoolId != schoolId)) {
@@ -661,8 +660,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     );
 
     on<SaveCampusRequested>((event, emit) async {
-      if (event.campus.name.trim().isEmpty)
+      if (event.campus.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter a campus name.');
+      }
       await _write(emit, () => repository.addCampus(event.campus));
     });
     on<DeleteCampusRequested>(
@@ -675,8 +675,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     );
 
     on<SaveHouseRequested>((event, emit) async {
-      if (event.house.name.trim().isEmpty)
+      if (event.house.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter a house name.');
+      }
       if (_duplicateActiveName(
         event.house.id,
         event.house.name,
@@ -695,8 +696,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     );
 
     on<SaveClubRequested>((event, emit) async {
-      if (event.club.name.trim().isEmpty)
+      if (event.club.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter a club or society name.');
+      }
       if (_duplicateActiveName(
         event.club.id,
         event.club.name,
@@ -758,8 +760,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     );
 
     on<SaveTransportRouteRequested>((event, emit) async {
-      if (event.route.name.trim().isEmpty)
+      if (event.route.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter a transport route name.');
+      }
       await _write(emit, () => repository.addTransportRoute(event.route));
     });
     on<DeleteTransportRouteRequested>((event, emit) async {
@@ -810,8 +813,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     );
 
     on<SaveAssessmentTypeRequested>((event, emit) async {
-      if (event.type.name.trim().isEmpty)
+      if (event.type.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter an assessment type name.');
+      }
       if (event.type.weightPercentage < 0 ||
           event.type.weightPercentage > 100) {
         return _validationFailed(
@@ -827,8 +831,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     );
 
     on<SaveGradingSystemRequested>((event, emit) async {
-      if (event.system.name.trim().isEmpty)
+      if (event.system.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter a grading system name.');
+      }
       // Default-switching is atomic inside the datasource's saveGradingSystem
       // (single Firestore batch: unset every other same-scope default and
       // write this one) - looping separate updateGradingSystem calls here
@@ -837,8 +842,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       await _write(emit, () => repository.addGradingSystem(event.system));
     });
     on<SaveGradingSystemWithBandsRequested>((event, emit) async {
-      if (event.system.name.trim().isEmpty)
+      if (event.system.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter a grading system name.');
+      }
       final rangeError = GradingBandValidator.validate(
         maximumMark: event.system.maximumMark,
         bands: event.bands,
@@ -1017,8 +1023,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
   }
 
   String? _validateFacility(Facility candidate, List<Facility> facilities) {
-    if (candidate.name.trim().isEmpty)
+    if (candidate.name.trim().isEmpty) {
       return 'Enter a room or learning-space name.';
+    }
     if (candidate.capacity < 0) return 'Room capacity cannot be negative.';
     if (_duplicateActiveName(
       candidate.id,
@@ -1074,8 +1081,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
           item.roomNumber.trim().toLowerCase() ==
               candidate.roomNumber.trim().toLowerCase(),
     );
-    if (duplicate)
+    if (duplicate) {
       return 'This hostel already contains a room with this number/name.';
+    }
     final allocated = rooms
         .where(
           (item) =>
@@ -1107,8 +1115,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     TransportVehicle candidate,
     List<TransportRoute> routes,
   ) {
-    if (candidate.busNumber.trim().isEmpty)
+    if (candidate.busNumber.trim().isEmpty) {
       return 'Enter a vehicle/bus number.';
+    }
     if (candidate.capacity < 0) return 'Vehicle capacity cannot be negative.';
     if (candidate.routeId.isNotEmpty &&
         !routes.any((item) => item.id == candidate.routeId && item.isActive)) {
@@ -1127,10 +1136,12 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     )) {
       return 'Select an active grading system.';
     }
-    if (candidate.grade.trim().isEmpty)
+    if (candidate.grade.trim().isEmpty) {
       return 'Enter a grade/achievement label.';
-    if (candidate.minScore > candidate.maxScore)
+    }
+    if (candidate.minScore > candidate.maxScore) {
       return 'Minimum score cannot exceed maximum score.';
+    }
     final duplicate = bands.any(
       (item) =>
           item.id != candidate.id &&
@@ -1138,8 +1149,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
           item.grade.trim().toLowerCase() ==
               candidate.grade.trim().toLowerCase(),
     );
-    if (duplicate)
+    if (duplicate) {
       return 'This grade label already exists in the grading system.';
+    }
     final overlap = bands.any(
       (item) =>
           item.id != candidate.id &&
@@ -1190,8 +1202,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
         hour < 0 ||
         hour > 23 ||
         minute < 0 ||
-        minute > 59)
+        minute > 59) {
       return null;
+    }
     return hour * 60 + minute;
   }
 

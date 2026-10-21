@@ -4,6 +4,7 @@
 /// directly (see verification_isar_models.dart, mobile-only now). Kept
 /// mutable to match the existing call sites, which mutate fields in place
 /// (e.g. `existing.status = 'revoked'`) rather than reconstructing.
+library;
 
 class CachedCredential {
   String credentialValue;

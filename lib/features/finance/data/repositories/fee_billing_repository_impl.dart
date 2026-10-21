@@ -28,12 +28,12 @@ class FeeBillingRepositoryImpl implements FeeBillingRepository {
       final callable = functions.httpsCallable('publishFeePlan');
       final result = await callable.call<Map<String, dynamic>>({
         'schoolId': schoolId,
-        if (planId != null) 'planId': planId,
+        'planId': ?planId,
         'academicYearId': academicYearId,
         'termId': termId,
         'classId': classId,
         'studentCategory': studentCategory,
-        if (name != null) 'name': name,
+        'name': ?name,
         'lines': lines.map((l) => l.toJson()).toList(),
         'createNewVersion': createNewVersion,
       });

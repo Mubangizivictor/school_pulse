@@ -213,7 +213,7 @@ class _YearsTermsScreenState extends State<YearsTermsScreen> {
                 ),
                 const Divider(),
                 DropdownButtonFormField<String?>(
-                  value: _termYearId,
+                  initialValue: _termYearId,
                   decoration: const InputDecoration(labelText: 'Academic year'),
                   items: [
                     const DropdownMenuItem<String?>(
@@ -326,9 +326,10 @@ class _YearsList extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
       itemCount: years.length + 2,
       itemBuilder: (context, index) {
-        if (index == 0)
+        if (index == 0) {
           return _YearSummary(years: allYears, totalTerms: totalTerms);
-        if (index == 1)
+        }
+        if (index == 1) {
           return _SectionHeader<_YearOrder>(
             label: 'ACADEMIC YEARS (${years.length})',
             value: order,
@@ -339,6 +340,7 @@ class _YearsList extends StatelessWidget {
             },
             onChanged: onOrderChanged,
           );
+        }
         final year = years[index - 2];
         final termCount = state.academicTerms
             .where((t) => t.academicYearId == year.id)
@@ -521,26 +523,34 @@ bool _matchesTermFilter(AcademicTerm term, _TermFilter filter) {
 
 class _StatusChip {
   static Widget? forYear(AcademicYear year) {
-    if (year.isCurrent)
+    if (year.isCurrent) {
       return const AcademicsStatusChip(label: 'Current', color: Colors.black);
-    if (year.isArchived)
+    }
+    if (year.isArchived) {
       return const AcademicsStatusChip(label: 'Inactive', color: Colors.black);
-    if (year.startDate.isAfter(DateTime.now()))
+    }
+    if (year.startDate.isAfter(DateTime.now())) {
       return const AcademicsStatusChip(label: 'Upcoming', color: Colors.black);
-    if (year.endDate.isBefore(DateTime.now()))
+    }
+    if (year.endDate.isBefore(DateTime.now())) {
       return const AcademicsStatusChip(label: 'Completed', color: Colors.black);
+    }
     return const AcademicsStatusChip(label: 'Active', color: Colors.black);
   }
 
   static Widget? forTerm(AcademicTerm term) {
-    if (term.isCurrent)
+    if (term.isCurrent) {
       return const AcademicsStatusChip(label: 'Current', color: Colors.black);
-    if (term.isArchived)
+    }
+    if (term.isArchived) {
       return const AcademicsStatusChip(label: 'Inactive', color: Colors.black);
-    if (term.startDate.isAfter(DateTime.now()))
+    }
+    if (term.startDate.isAfter(DateTime.now())) {
       return const AcademicsStatusChip(label: 'Upcoming', color: Colors.black);
-    if (term.endDate.isBefore(DateTime.now()))
+    }
+    if (term.endDate.isBefore(DateTime.now())) {
       return const AcademicsStatusChip(label: 'Completed', color: Colors.black);
+    }
     return const AcademicsStatusChip(label: 'Active', color: Colors.black);
   }
 }

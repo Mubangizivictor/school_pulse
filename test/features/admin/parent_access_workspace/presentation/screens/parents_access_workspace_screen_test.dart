@@ -7,7 +7,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/error/failures.dart';
-import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/parent_access_workspace/data/models/parent_access_invite_model.dart';
 import 'package:school_pulse/features/admin/parent_access_workspace/domain/entities/parent_access_invite.dart';
 import 'package:school_pulse/features/admin/parent_access_workspace/domain/repositories/parent_access_repository.dart';
@@ -222,8 +221,8 @@ void main() {
           'Add / link parent',
         );
         final data = tester.getSemantics(addButtonFinder).getSemanticsData();
-        expect(data.hasFlag(ui.SemanticsFlag.isButton), true);
-        expect(data.hasFlag(ui.SemanticsFlag.isEnabled), true);
+        expect(data.flagsCollection.isButton, true);
+        expect(data.flagsCollection.isEnabled, ui.Tristate.isTrue);
         expect(data.hasAction(ui.SemanticsAction.tap), true);
       },
     );

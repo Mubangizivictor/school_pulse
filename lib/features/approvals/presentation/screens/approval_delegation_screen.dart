@@ -55,7 +55,7 @@ class _ApprovalDelegationScreenState extends State<ApprovalDelegationScreen> {
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: delegations.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (_, i) {
               final d = delegations[i];
               final active = d.isActive;

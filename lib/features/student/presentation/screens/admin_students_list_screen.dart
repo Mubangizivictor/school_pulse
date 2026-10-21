@@ -315,8 +315,9 @@ class _AdminStudentsListViewState extends State<_AdminStudentsListView> {
 
             String classLabel(String classId) {
               final match = classes.where((c) => c.id == classId);
-              if (match.isEmpty)
+              if (match.isEmpty) {
                 return classId.isEmpty ? 'Unassigned' : classId;
+              }
               return match.first.name;
             }
 

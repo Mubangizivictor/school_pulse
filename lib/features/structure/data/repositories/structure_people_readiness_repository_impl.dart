@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/auth/data/models/user_model.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import '../../domain/repositories/structure_people_readiness_repository.dart';

@@ -432,11 +432,12 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('isCurrent', isEqualTo: true)
         .get();
     for (final doc in current.docs) {
-      if (doc.id != yearId)
+      if (doc.id != yearId) {
         transaction.update(doc.reference, {
           'isCurrent': false,
           'updatedAt': FieldValue.serverTimestamp(),
         });
+      }
     }
     if (year != null) {
       transaction.set(target, {

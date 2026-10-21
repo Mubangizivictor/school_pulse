@@ -78,8 +78,8 @@ enum AdminSection {
     required this.label,
     required this.icon,
     this.mobileTab,
-    String? routeSegment,
-  }) : _routeSegment = routeSegment;
+    this._routeSegment,
+  });
 
   final String slug;
   final String label;

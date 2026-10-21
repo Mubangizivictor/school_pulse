@@ -65,7 +65,9 @@ class StreamBuilderOverrides extends StatelessWidget {
       stream: repository.watchClassOverrides(plan.id),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('Could not load overrides: ${snapshot.error}'));
+          return Center(
+            child: Text('Could not load overrides: ${snapshot.error}'),
+          );
         }
         if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
@@ -112,7 +114,8 @@ class _Body extends StatelessWidget {
     for (final planSubject in levelPlanSubjects) {
       final override = overridesBySubject[planSubject.subjectId];
       if (override?.action == ClassPlanOverrideAction.remove) continue;
-      if (override != null && override.action == ClassPlanOverrideAction.modify) {
+      if (override != null &&
+          override.action == ClassPlanOverrideAction.modify) {
         result.add(
           _EffectiveSubject(
             subjectId: planSubject.subjectId,
@@ -230,8 +233,14 @@ class _Body extends StatelessWidget {
           'Remove all overrides for ${schoolClass.name}? It will fully inherit the education level plan again.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Reset')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reset'),
+          ),
         ],
       ),
     );
@@ -240,11 +249,16 @@ class _Body extends StatelessWidget {
     try {
       await repository.resetClassToInherited(plan.id, schoolClass.id);
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not reset: $error')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not reset: $error')),
+      );
     }
   }
 
-  Future<void> _addOverride(BuildContext context, List<Subject> available) async {
+  Future<void> _addOverride(
+    BuildContext context,
+    List<Subject> available,
+  ) async {
     final result = await showModalBottomSheet<_OverrideFormResult>(
       context: context,
       isScrollControlled: true,
@@ -267,12 +281,19 @@ class _Body extends StatelessWidget {
         ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not add subject: $error')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not add subject: $error')),
+      );
     }
   }
 
-  Future<void> _editOverride(BuildContext context, _EffectiveSubject item) async {
-    final subject = structure.subjects.where((s) => s.id == item.subjectId).firstOrNull;
+  Future<void> _editOverride(
+    BuildContext context,
+    _EffectiveSubject item,
+  ) async {
+    final subject = structure.subjects
+        .where((s) => s.id == item.subjectId)
+        .firstOrNull;
     final result = await showModalBottomSheet<_OverrideFormResult>(
       context: context,
       isScrollControlled: true,
@@ -298,18 +319,25 @@ class _Body extends StatelessWidget {
                   action: ClassPlanOverrideAction.modify,
                 ))
             .copyWith(
-          action: ClassPlanOverrideAction.modify,
-          isCore: result.isCore,
-          weeklyLessons: result.weeklyLessons,
-        ),
+              action: ClassPlanOverrideAction.modify,
+              isCore: result.isCore,
+              weeklyLessons: result.weeklyLessons,
+            ),
       );
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not update: $error')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not update: $error')),
+      );
     }
   }
 
-  Future<void> _removeSubjectForClass(BuildContext context, _EffectiveSubject item) async {
-    final subject = structure.subjects.where((s) => s.id == item.subjectId).firstOrNull;
+  Future<void> _removeSubjectForClass(
+    BuildContext context,
+    _EffectiveSubject item,
+  ) async {
+    final subject = structure.subjects
+        .where((s) => s.id == item.subjectId)
+        .firstOrNull;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -318,15 +346,22 @@ class _Body extends StatelessWidget {
           'Remove "${subject?.name ?? 'this subject'}" from ${schoolClass.name} only? Other classes in this level keep it.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove'),
+          ),
         ],
       ),
     );
     if (confirmed != true || !context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      if (item.override != null && item.override!.action == ClassPlanOverrideAction.add) {
+      if (item.override != null &&
+          item.override!.action == ClassPlanOverrideAction.add) {
         await repository.deleteClassOverride(item.override!.id);
       } else {
         await repository.saveClassOverride(
@@ -341,7 +376,9 @@ class _Body extends StatelessWidget {
         );
       }
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not remove: $error')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not remove: $error')),
+      );
     }
   }
 }
@@ -391,16 +428,27 @@ class _EffectiveSubjectRow extends StatelessWidget {
           subtitle: Text(
             [
               item.isCore ? 'Core' : 'Elective',
-              item.weeklyLessons == null ? 'Not set' : '${item.weeklyLessons} lessons/week',
-              if (item.isOverridden) 'Overridden' else if (inheritedFromPlan) 'Inherited',
+              item.weeklyLessons == null
+                  ? 'Not set'
+                  : '${item.weeklyLessons} lessons/week',
+              if (item.isOverridden)
+                'Overridden'
+              else if (inheritedFromPlan)
+                'Inherited',
             ].join(' • '),
             style: TextStyle(color: scheme.onSurfaceVariant),
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(icon: const Icon(Icons.edit_outlined), onPressed: onEdit),
-              IconButton(icon: const Icon(Icons.remove_circle_outline), onPressed: onRemove),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined),
+                onPressed: onEdit,
+              ),
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline),
+                onPressed: onRemove,
+              ),
             ],
           ),
         ),
@@ -444,7 +492,9 @@ class _OverrideFormSheetState extends State<_OverrideFormSheet> {
   @override
   void initState() {
     super.initState();
-    _subjectId = widget.availableSubjects.isNotEmpty ? widget.availableSubjects.first.id : null;
+    _subjectId = widget.availableSubjects.isNotEmpty
+        ? widget.availableSubjects.first.id
+        : null;
   }
 
   @override
@@ -478,18 +528,24 @@ class _OverrideFormSheetState extends State<_OverrideFormSheet> {
               const SizedBox(height: 16),
               if (!widget.lockSubject)
                 DropdownButtonFormField<String>(
-                  value: _subjectId,
+                  initialValue: _subjectId,
                   decoration: const InputDecoration(labelText: 'Subject'),
                   items: [
                     for (final subject in widget.availableSubjects)
-                      DropdownMenuItem(value: subject.id, child: Text(subject.name)),
+                      DropdownMenuItem(
+                        value: subject.id,
+                        child: Text(subject.name),
+                      ),
                   ],
                   onChanged: (value) => setState(() => _subjectId = value),
                 )
               else if (widget.availableSubjects.isNotEmpty)
                 Text(
                   widget.availableSubjects.first.name,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                  ),
                 ),
               const SizedBox(height: 16),
               Row(
@@ -500,7 +556,8 @@ class _OverrideFormSheetState extends State<_OverrideFormSheet> {
                       title: const Text('Core'),
                       value: true,
                       groupValue: _isCore,
-                      onChanged: (value) => setState(() => _isCore = value ?? true),
+                      onChanged: (value) =>
+                          setState(() => _isCore = value ?? true),
                     ),
                   ),
                   Expanded(
@@ -509,7 +566,8 @@ class _OverrideFormSheetState extends State<_OverrideFormSheet> {
                       title: const Text('Elective'),
                       value: false,
                       groupValue: _isCore,
-                      onChanged: (value) => setState(() => _isCore = value ?? true),
+                      onChanged: (value) =>
+                          setState(() => _isCore = value ?? true),
                     ),
                   ),
                 ],
@@ -524,13 +582,19 @@ class _OverrideFormSheetState extends State<_OverrideFormSheet> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 10),
-                Text(_error!, style: TextStyle(color: scheme.onSurface, fontSize: 12)),
+                Text(
+                  _error!,
+                  style: TextStyle(color: scheme.onSurface, fontSize: 12),
+                ),
               ],
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 height: 52,
-                child: FilledButton(onPressed: _submit, child: const Text('Save')),
+                child: FilledButton(
+                  onPressed: _submit,
+                  child: const Text('Save'),
+                ),
               ),
             ],
           ),
@@ -549,7 +613,10 @@ class _OverrideFormSheetState extends State<_OverrideFormSheet> {
     if (raw.isNotEmpty) {
       weekly = int.tryParse(raw);
       if (weekly == null || weekly <= 0) {
-        setState(() => _error = 'Enter a positive number of weekly lessons, or leave it blank.');
+        setState(
+          () => _error =
+              'Enter a positive number of weekly lessons, or leave it blank.',
+        );
         return;
       }
     }

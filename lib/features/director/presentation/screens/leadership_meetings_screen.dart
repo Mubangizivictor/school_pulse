@@ -59,7 +59,7 @@ class _LeadershipMeetingsScreenState extends State<LeadershipMeetingsScreen> {
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: meetings.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (_, i) => _MeetingCard(
               meeting: meetings[i],
               onTap: () => Navigator.of(context).push(

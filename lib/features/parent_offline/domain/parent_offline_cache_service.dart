@@ -14,12 +14,10 @@ class ParentOfflineCacheService {
   final NetworkInfo _networkInfo;
 
   ParentOfflineCacheService({
-    required ParentCacheDataSource cache,
-    required ParentLocalPinStore pinStore,
-    required NetworkInfo networkInfo,
-  }) : _cache = cache,
-       _pinStore = pinStore,
-       _networkInfo = networkInfo;
+    required this._cache,
+    required this._pinStore,
+    required this._networkInfo,
+  });
 
   Future<bool> get isOnline => _networkInfo.isConnected;
 

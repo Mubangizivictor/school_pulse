@@ -41,8 +41,9 @@ class _TimetablesListScreenState extends State<TimetablesListScreen> {
         MaterialPageRoute(builder: (_) => const CreateTimetableScreen()),
       )
       .then((id) {
-        if (id != null && mounted)
+        if (id != null && mounted) {
           context.push('/staff/admin/structure/timetables/$id');
+        }
       });
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -102,7 +103,7 @@ class _TimetablesListScreenState extends State<TimetablesListScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     DropdownButtonFormField<String>(
-                      value: _termId,
+                      initialValue: _termId,
                       decoration: const InputDecoration(
                         labelText: 'Academic year and term',
                       ),
@@ -172,7 +173,7 @@ class _TimetablesListScreenState extends State<TimetablesListScreen> {
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
                         itemCount: timetableRows.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        separatorBuilder: (_, _) => const Divider(height: 1),
                         itemBuilder: (_, i) {
                           final t = timetableRows[i];
                           final c = s.classes

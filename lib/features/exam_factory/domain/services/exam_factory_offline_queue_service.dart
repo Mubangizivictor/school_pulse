@@ -21,9 +21,7 @@ class ExamFactoryOfflineQueueService {
   final ExamFactoryQueueDataSource _dataSource;
   static const _uuid = Uuid();
 
-  ExamFactoryOfflineQueueService({
-    required ExamFactoryQueueDataSource dataSource,
-  }) : _dataSource = dataSource;
+  ExamFactoryOfflineQueueService({required this._dataSource});
 
   Future<String> enqueue({
     required String institutionId,

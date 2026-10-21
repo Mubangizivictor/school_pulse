@@ -104,10 +104,10 @@ class StudentBillingRepositoryImpl implements StudentBillingRepository {
         'studentId': studentId,
         'billId': billId,
         'type': type,
-        if (amountUgx != null) 'amountUgx': amountUgx,
-        if (percentage != null) 'percentage': percentage,
+        'amountUgx': ?amountUgx,
+        'percentage': ?percentage,
         'reason': reason,
-        if (evidenceReference != null) 'evidenceReference': evidenceReference,
+        'evidenceReference': ?evidenceReference,
       });
       final data = result.data;
       return Right((
@@ -145,9 +145,9 @@ class StudentBillingRepositoryImpl implements StudentBillingRepository {
         'billId': billId,
         'method': method,
         'amountUgx': amountUgx,
-        if (referenceNumber != null) 'referenceNumber': referenceNumber,
-        if (payerName != null) 'payerName': payerName,
-        if (payerGuardianId != null) 'payerGuardianId': payerGuardianId,
+        'referenceNumber': ?referenceNumber,
+        'payerName': ?payerName,
+        'payerGuardianId': ?payerGuardianId,
         if (allocations.isNotEmpty)
           'allocations': allocations
               .map((a) => {'chargeId': a.chargeId, 'amountUgx': a.amountUgx})
@@ -327,7 +327,7 @@ class StudentBillingRepositoryImpl implements StudentBillingRepository {
         'studentId': studentId,
         'channel': channel,
         'amountUgx': amountUgx,
-        if (evidenceRef != null) 'evidenceRef': evidenceRef,
+        'evidenceRef': ?evidenceRef,
       });
       return const Right(null);
     } on FirebaseFunctionsException catch (e) {

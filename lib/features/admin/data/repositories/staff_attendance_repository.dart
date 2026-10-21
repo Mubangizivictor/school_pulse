@@ -121,8 +121,8 @@ class StaffAttendanceRepositoryImpl implements StaffAttendanceRepository {
     await functions.httpsCallable('clockInStaff').call({
       'schoolId': schoolId,
       'staffId': staffId,
-      if (location != null) 'location': location,
-      if (operationId != null) 'operationId': operationId,
+      'location': ?location,
+      'operationId': ?operationId,
     });
   }
 
@@ -142,7 +142,7 @@ class StaffAttendanceRepositoryImpl implements StaffAttendanceRepository {
       'day': DateFormat('yyyy-MM-dd').format(day),
       'reason': reason,
       'patch': patch,
-      if (operationId != null) 'operationId': operationId,
+      'operationId': ?operationId,
     });
   }
 }

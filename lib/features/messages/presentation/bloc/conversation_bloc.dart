@@ -40,12 +40,8 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
   List<ChatMessage> _confirmedMessages = const [];
   List<ChatMessage> _pendingMessages = const [];
 
-  ConversationBloc({
-    required MessagesRepository repository,
-    MessageOutboxService? outbox,
-  }) : _repository = repository,
-       _outbox = outbox,
-       super(const ConversationState()) {
+  ConversationBloc({required this._repository, this._outbox})
+    : super(const ConversationState()) {
     on<ConversationOpened>(_onOpened);
     on<_ConversationUpdated>(_onConversationUpdated);
     on<_MessagesUpdated>(_onMessagesUpdated);

@@ -225,11 +225,17 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         title: Text(
           title.toUpperCase(),
-          style: TextStyle(fontWeight: FontWeight.w900, color: colors.onSurface),
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            color: colors.onSurface,
+          ),
         ),
         content: Text(
           body.toUpperCase(),
-          style: TextStyle(fontWeight: FontWeight.w700, color: colors.onSurface),
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: colors.onSurface,
+          ),
         ),
         actions: [
           TextButton(
@@ -353,8 +359,8 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
         ),
         value: value,
         onChanged: onChanged,
-        activeColor: colors.onSurface,
-        activeTrackColor: colors.onSurface.withOpacity(0.5),
+        activeThumbColor: colors.onSurface,
+        activeTrackColor: colors.onSurface.withValues(alpha: 0.5),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
     );
@@ -386,10 +392,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                 ),
               ),
               trailing: _fontSize == size
-                  ? Icon(
-                      Icons.check_circle,
-                      color: colors.onSurface,
-                    )
+                  ? Icon(Icons.check_circle, color: colors.onSurface)
                   : null,
               onTap: () async {
                 Navigator.pop(dialogContext);

@@ -22,8 +22,9 @@ class SupportCenterScreen extends StatelessWidget {
           ? (b.state as AuthAuthenticated).user
           : null,
     );
-    if (user == null)
+    if (user == null) {
       return const Scaffold(body: Center(child: SchoolPulseLoader()));
+    }
     final schoolId = user.schoolId as String;
     final requests = FirebaseFirestore.instance
         .collection('institutions')
@@ -51,14 +52,16 @@ class SupportCenterScreen extends StatelessWidget {
             .limit(100)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError)
+          if (snapshot.hasError) {
             return _State(
               icon: Icons.error_outline,
               title: 'Couldn’t load support requests',
               message: 'Check your connection and try again.',
             );
-          if (!snapshot.hasData)
+          }
+          if (!snapshot.hasData) {
             return const Center(child: SchoolPulseLoader());
+          }
           final rows = snapshot.data!.docs;
           return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: access.snapshots(),
@@ -306,12 +309,13 @@ class SupportRequestDetailScreen extends StatelessWidget {
         stream: ref.snapshots(),
         builder: (context, s) {
           if (!s.hasData) return const Center(child: SchoolPulseLoader());
-          if (!s.data!.exists)
+          if (!s.data!.exists) {
             return const _State(
               icon: Icons.search_off,
               title: 'Request unavailable',
               message: 'It may have been removed or you no longer have access.',
             );
+          }
           final d = s.data!.data()!;
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -417,13 +421,15 @@ class _Thread extends StatelessWidget {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: q.snapshots(),
       builder: (context, s) {
-        if (!s.hasData)
+        if (!s.hasData) {
           return const Padding(
             padding: EdgeInsets.all(12),
             child: SchoolPulseLoader(),
           );
-        if (s.data!.docs.isEmpty)
+        }
+        if (s.data!.docs.isEmpty) {
           return const _Section(title: 'Conversation', text: 'No replies yet.');
+        }
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -547,7 +553,7 @@ class _NewRequestSheetState extends State<_NewRequestSheet> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           DropdownButtonFormField(
-            value: module,
+            initialValue: module,
             items: const [
               'attendance',
               'students',
@@ -565,7 +571,7 @@ class _NewRequestSheetState extends State<_NewRequestSheet> {
             decoration: const InputDecoration(labelText: 'Affected module'),
           ),
           DropdownButtonFormField(
-            value: category,
+            initialValue: category,
             items: const [
               'Login / Authentication',
               'Attendance',
@@ -611,7 +617,7 @@ class _NewRequestSheetState extends State<_NewRequestSheet> {
             decoration: const InputDecoration(labelText: 'Actual behavior'),
           ),
           DropdownButtonFormField(
-            value: priority,
+            initialValue: priority,
             items: const ['low', 'normal', 'high', 'urgent']
                 .map((v) => DropdownMenuItem(value: v, child: Text(_label(v))))
                 .toList(),
@@ -634,8 +640,9 @@ class _NewRequestSheetState extends State<_NewRequestSheet> {
                       'csv',
                     ],
                   );
-                  if (picked?.files.singleOrNull != null)
+                  if (picked?.files.singleOrNull != null) {
                     setState(() => file = picked!.files.single);
+                  }
                 },
                 icon: const Icon(Icons.attach_file),
                 label: Text(
@@ -678,10 +685,11 @@ class _NewRequestSheetState extends State<_NewRequestSheet> {
         final ok =
             ['png', 'jpg', 'jpeg', 'webp', 'pdf', 'csv'].contains(ext) &&
             file!.size <= 10 * 1024 * 1024;
-        if (!ok)
+        if (!ok) {
           throw Exception(
             'Attachments must be PNG, JPG, WEBP, PDF or CSV under 10 MB.',
           );
+        }
         final path =
             'institutions/${widget.institutionId}/support/$id/${file!.name}';
         await FirebaseStorage.instance
@@ -699,10 +707,11 @@ class _NewRequestSheetState extends State<_NewRequestSheet> {
       }
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Could not submit request: $e')));
+      }
     } finally {
       if (mounted) setState(() => saving = false);
     }

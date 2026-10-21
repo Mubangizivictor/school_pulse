@@ -93,8 +93,8 @@ class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
   }) async {
     final result = await functions.httpsCallable('reallocateParentLink').call({
       'linkId': linkId,
-      if (parentName != null) 'parentName': parentName,
-      if (phoneNumber != null) 'phoneNumber': phoneNumber,
+      'parentName': ?parentName,
+      'phoneNumber': ?phoneNumber,
       'reason': reason,
     });
     return Map<String, dynamic>.from(result.data as Map);
@@ -114,7 +114,7 @@ class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
   }) async {
     final result = await functions
         .httpsCallable('listParentAccessInvites')
-        .call({'pageSize': pageSize, if (cursor != null) 'cursor': cursor});
+        .call({'pageSize': pageSize, 'cursor': ?cursor});
     return ParentAccessInvitesPage.fromCallableData(
       Map<String, dynamic>.from(result.data as Map),
     );
@@ -126,7 +126,7 @@ class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
     String? rawCode,
   }) async {
     final result = await functions.httpsCallable('createParentInvitation').call(
-      {'inviteId': inviteId, if (rawCode != null) 'rawCode': rawCode},
+      {'inviteId': inviteId, 'rawCode': ?rawCode},
     );
     return Map<String, dynamic>.from(result.data as Map);
   }
@@ -157,10 +157,10 @@ class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
   }) async {
     await functions.httpsCallable('updateParentInvitationDetails').call({
       'inviteId': inviteId,
-      if (parentName != null) 'parentName': parentName,
-      if (phoneNumber != null) 'phoneNumber': phoneNumber,
+      'parentName': ?parentName,
+      'phoneNumber': ?phoneNumber,
       // null => key omitted => unchanged. '' => clear. non-empty => set.
-      if (email != null) 'email': email,
+      'email': ?email,
     });
   }
 
@@ -181,8 +181,8 @@ class ParentAccessRemoteDataSourceImpl implements ParentAccessRemoteDataSource {
     String? studentId,
   }) async {
     final result = await functions.httpsCallable('listParentLinkAudit').call({
-      if (inviteId != null) 'inviteId': inviteId,
-      if (studentId != null) 'studentId': studentId,
+      'inviteId': ?inviteId,
+      'studentId': ?studentId,
     });
     final entries =
         (Map<String, dynamic>.from(result.data as Map)['entries'] as List?) ??

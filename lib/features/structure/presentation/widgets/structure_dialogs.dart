@@ -30,10 +30,9 @@ Future<void> showLevelFormDialog(
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController(text: existing?.name);
   final codeController = TextEditingController(text: existing?.code);
-  final others = existingLevels
-      .where((level) => level.id != existing?.id)
-      .toList()
-    ..sort((a, b) => a.order.compareTo(b.order));
+  final others =
+      existingLevels.where((level) => level.id != existing?.id).toList()
+        ..sort((a, b) => a.order.compareTo(b.order));
   String placement = 'after';
   String? relativeToId = others.isNotEmpty ? others.last.id : null;
 
@@ -49,9 +48,7 @@ Future<void> showLevelFormDialog(
   String? validateCode(String? v) {
     final code = v?.trim() ?? '';
     if (code.isEmpty) return null;
-    if (others.any(
-      (l) => l.code.trim().toLowerCase() == code.toLowerCase(),
-    )) {
+    if (others.any((l) => l.code.trim().toLowerCase() == code.toLowerCase())) {
       return 'This short code is already in use.';
     }
     return null;
@@ -70,9 +67,7 @@ Future<void> showLevelFormDialog(
     final all = [...others];
     final insertIndex = resolveOrder().clamp(0, all.length);
     all.insert(insertIndex, inserted);
-    return [
-      for (var i = 0; i < all.length; i++) all[i].copyWith(order: i),
-    ];
+    return [for (var i = 0; i < all.length; i++) all[i].copyWith(order: i)];
   }
 
   return showModalBottomSheet(
@@ -97,9 +92,7 @@ Future<void> showLevelFormDialog(
                   children: [
                     Expanded(
                       child: Text(
-                        existing != null
-                            ? 'Edit level'
-                            : 'Add custom level',
+                        existing != null ? 'Edit level' : 'Add custom level',
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(fontWeight: FontWeight.w800),
                       ),
@@ -125,7 +118,9 @@ Future<void> showLevelFormDialog(
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: nameController,
-                  decoration: const InputDecoration(hintText: 'e.g., Sixth Form'),
+                  decoration: const InputDecoration(
+                    hintText: 'e.g., Sixth Form',
+                  ),
                   validator: validateName,
                 ),
                 const SizedBox(height: 18),
@@ -224,7 +219,9 @@ Future<void> showLevelFormDialog(
                       Navigator.pop(context);
                       onSave(changed);
                     },
-                    child: Text(existing != null ? 'Save changes' : 'Add level'),
+                    child: Text(
+                      existing != null ? 'Save changes' : 'Add level',
+                    ),
                   ),
                 ),
               ],
@@ -501,6 +498,7 @@ Future<void> showAcademicYearFormDialog(
 
 class AcademicYearDateField extends StatelessWidget {
   const AcademicYearDateField({
+    super.key,
     required this.label,
     required this.value,
     required this.onTap,

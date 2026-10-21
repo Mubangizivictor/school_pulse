@@ -40,7 +40,9 @@ class MediaLinksDocsScreen extends StatelessWidget {
           ),
           bottom: TabBar(
             labelColor: AppColors.textPrimary(context),
-            unselectedLabelColor: AppColors.textPrimary(context).withOpacity(0.5),
+            unselectedLabelColor: AppColors.textPrimary(
+              context,
+            ).withValues(alpha: 0.5),
             indicatorColor: AppColors.textPrimary(context),
             indicatorWeight: 4,
             labelStyle: AppTypography.titleSmall.copyWith(
@@ -136,7 +138,10 @@ class MediaLinksDocsScreen extends StatelessWidget {
                 onTap: () => _openImage(context, message),
                 child: Container(
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.border(context), width: 1),
+                    border: Border.all(
+                      color: AppColors.border(context),
+                      width: 1,
+                    ),
                   ),
                   child: Image.network(
                     message.mediaUrl!,
@@ -186,10 +191,7 @@ class MediaLinksDocsScreen extends StatelessWidget {
                 color: AppColors.background(context),
                 border: Border.all(color: AppColors.border(context), width: 1),
               ),
-              child: Icon(
-                Icons.link,
-                color: AppColors.textPrimary(context),
-              ),
+              child: Icon(Icons.link, color: AppColors.textPrimary(context)),
             ),
             title: Text(
               link.url,

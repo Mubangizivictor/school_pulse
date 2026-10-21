@@ -36,10 +36,9 @@ class MessagingBloc extends Bloc<MessagingEvent, MessagingState> {
   String? _watchingUserId;
 
   MessagingBloc({
-    required MessagesRepository repository,
+    required this._repository,
     required AppRoleSessionCubit roleSession,
-  }) : _repository = repository,
-       _roleSession = roleSession,
+  }) : _roleSession = roleSession,
        super(MessagingState(activeRole: roleSession.state)) {
     on<MessagingStarted>(_onStarted);
     on<_ConversationsUpdated>(_onConversationsUpdated);

@@ -24,10 +24,12 @@ extension on SchoolAdminAction {
 /// portal_domains.js), since institution_memberships and the role-bearing
 /// fields on users/{uid} deny all client writes.
 class SchoolAdminManagementService {
-  SchoolAdminManagementService({FirebaseFirestore? firestore, FirebaseFunctions? functions})
-    : _firestore = firestore ?? FirebaseFirestore.instance,
-      _functions =
-          functions ?? FirebaseFunctions.instanceFor(region: 'europe-west1');
+  SchoolAdminManagementService({
+    FirebaseFirestore? firestore,
+    FirebaseFunctions? functions,
+  }) : _firestore = firestore ?? FirebaseFirestore.instance,
+       _functions =
+           functions ?? FirebaseFunctions.instanceFor(region: 'europe-west1');
 
   final FirebaseFirestore _firestore;
   final FirebaseFunctions _functions;
@@ -39,10 +41,7 @@ class SchoolAdminManagementService {
     const chars =
         'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#%';
     final random = Random.secure();
-    return List.generate(
-      14,
-      (_) => chars[random.nextInt(chars.length)],
-    ).join();
+    return List.generate(14, (_) => chars[random.nextInt(chars.length)]).join();
   }
 
   Future<void> inviteAdmin({
@@ -71,8 +70,8 @@ class SchoolAdminManagementService {
       'schoolId': schoolId,
       'targetUid': targetUid,
       'action': action.wire,
-      if (reason != null) 'reason': reason,
-      if (replacementUid != null) 'replacementUid': replacementUid,
+      'reason': ?reason,
+      'replacementUid': ?replacementUid,
     });
   }
 }

@@ -15,7 +15,9 @@ class SalaryStructureRepositoryImpl implements SalaryStructureRepository {
   });
 
   @override
-  Future<Either<Failure, ({String structureId, String versionId, int totalUgx})>>
+  Future<
+    Either<Failure, ({String structureId, String versionId, int totalUgx})>
+  >
   publishSalaryStructure({
     required String schoolId,
     String? structureId,
@@ -28,9 +30,9 @@ class SalaryStructureRepositoryImpl implements SalaryStructureRepository {
       final callable = functions.httpsCallable('publishSalaryStructure');
       final result = await callable.call<Map<String, dynamic>>({
         'schoolId': schoolId,
-        if (structureId != null) 'structureId': structureId,
+        'structureId': ?structureId,
         'designationId': designationId,
-        if (name != null) 'name': name,
+        'name': ?name,
         'lines': lines.map((l) => l.toJson()).toList(),
         'createNewVersion': createNewVersion,
       });
@@ -90,7 +92,9 @@ class SalaryStructureRepositoryImpl implements SalaryStructureRepository {
   ) async {
     try {
       final doc = await firestore
-          .doc('schools/$schoolId/salary_structures/$structureId/versions/$versionId')
+          .doc(
+            'schools/$schoolId/salary_structures/$structureId/versions/$versionId',
+          )
           .get();
       if (!doc.exists) return const Right(null);
       return Right(SalaryStructureVersion.fromJson(doc.id, doc.data()!));

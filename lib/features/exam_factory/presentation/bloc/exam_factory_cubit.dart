@@ -150,8 +150,9 @@ class ExamFactoryCubit extends Cubit<ExamFactoryState> {
       return 'This action is not allowed in the current state.';
     }
     if (message.contains('not-found')) return 'Record not found.';
-    if (message.contains('invalid-argument'))
+    if (message.contains('invalid-argument')) {
       return 'Please check the entered values.';
+    }
     return 'Something went wrong. Please try again.';
   }
 
@@ -192,10 +193,7 @@ class ExamFactoryCubit extends Cubit<ExamFactoryState> {
     return _guardedOffline(
       queueType: ExamFactoryQueueActionType.submitQuestion,
       operationId: opId,
-      payload: {
-        'questionId': questionId,
-        if (academicYearId != null) 'academicYearId': academicYearId,
-      },
+      payload: {'questionId': questionId, 'academicYearId': ?academicYearId},
       action: () => repository.submitQuestion(
         institutionId,
         questionId,
@@ -218,7 +216,7 @@ class ExamFactoryCubit extends Cubit<ExamFactoryState> {
       payload: {
         'questionId': questionId,
         'decision': decision.name,
-        if (comment != null) 'comment': comment,
+        'comment': ?comment,
       },
       action: () => repository.moderateQuestion(
         institutionId,
@@ -388,9 +386,9 @@ class ExamFactoryCubit extends Cubit<ExamFactoryState> {
       payload: {
         'sittingId': sittingId,
         'studentId': studentId,
-        if (studentName != null) 'studentName': studentName,
+        'studentName': ?studentName,
         'status': status.name,
-        if (note != null) 'note': note,
+        'note': ?note,
       },
       action: () => repository.recordAttendance(
         institutionId,
@@ -466,10 +464,10 @@ class ExamFactoryCubit extends Cubit<ExamFactoryState> {
       payload: {
         'paperId': paperId,
         'studentId': studentId,
-        if (studentName != null) 'studentName': studentName,
-        if (score != null) 'score': score,
+        'studentName': ?studentName,
+        'score': ?score,
         'isAbsent': isAbsent,
-        if (remark != null) 'remark': remark,
+        'remark': ?remark,
       },
       action: () => repository.saveMarkEntry(
         institutionId,

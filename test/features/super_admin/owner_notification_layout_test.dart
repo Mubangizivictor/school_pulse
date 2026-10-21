@@ -17,8 +17,7 @@ class _Svc extends OwnerNotificationService {
   @override
   String? get currentOwnerId => 'owner-x';
   @override
-  Stream<List<OwnerNotification>> watchNotifications() =>
-      Stream.value(_items);
+  Stream<List<OwnerNotification>> watchNotifications() => Stream.value(_items);
   @override
   Future<List<OwnerNotification>> cachedNotifications() async => const [];
   @override
@@ -34,12 +33,14 @@ OwnerNotification _n(String id, OwnerNotificationCategory c, {String? sev}) =>
     OwnerNotification.fromJson({
       'id': id,
       'category': c.wire,
-      if (sev != null) 'severity': sev,
+      'severity': ?sev,
       'type': 'evt',
       'status': id.hashCode.isEven ? 'unread' : 'read',
-      'title': 'A rather long owner notification title that should wrap onto '
+      'title':
+          'A rather long owner notification title that should wrap onto '
           'two lines and then ellipsize $id',
-      'body': 'A safe one-line summary that is also quite long and must '
+      'body':
+          'A safe one-line summary that is also quite long and must '
           'ellipsize cleanly on every width $id',
       'schoolName': 'Lakeside High School of Science and Technology',
       'reference': 'MOMO •••• 4821',
@@ -56,14 +57,11 @@ final _items = [
 ];
 
 Widget _app(Widget child, ThemeData theme, Size size) => MediaQuery(
-      data: MediaQueryData(size: size),
-      child: MaterialApp(theme: theme, home: child),
-    );
+  data: MediaQueryData(size: size),
+  child: MaterialApp(theme: theme, home: child),
+);
 
-Future<void> _expectNoOverflow(
-  WidgetTester tester,
-  Widget screen,
-) async {
+Future<void> _expectNoOverflow(WidgetTester tester, Widget screen) async {
   final themes = {'light': AppTheme.light(), 'dark': AppTheme.dark()};
   final sizes = {
     'mobile': const Size(390, 844),
@@ -87,21 +85,26 @@ Future<void> _expectNoOverflow(
 }
 
 void main() {
-  testWidgets('Owner Notifications screen — no overflow, all themes/sizes',
-      (tester) async {
+  testWidgets('Owner Notifications screen — no overflow, all themes/sizes', (
+    tester,
+  ) async {
     await _expectNoOverflow(
       tester,
       SuperAdminNotificationsScreen(service: _Svc(_items)),
     );
   });
 
-  testWidgets('Owner Notification Detail — no overflow, all themes/sizes',
-      (tester) async {
+  testWidgets('Owner Notification Detail — no overflow, all themes/sizes', (
+    tester,
+  ) async {
     await _expectNoOverflow(
       tester,
       OwnerNotificationDetailScreen(
-        notification: _n('a', OwnerNotificationCategory.billing,
-            sev: 'requires_review'),
+        notification: _n(
+          'a',
+          OwnerNotificationCategory.billing,
+          sev: 'requires_review',
+        ),
         service: _Svc(const []),
       ),
     );

@@ -454,7 +454,7 @@ class _RowListView extends StatelessWidget {
     }
     return ListView.separated(
       itemCount: rows.length,
-      separatorBuilder: (_, __) =>
+      separatorBuilder: (_, _) =>
           Divider(height: 1, color: AppColors.border(context)),
       itemBuilder: (context, index) {
         final invite = rows[index];

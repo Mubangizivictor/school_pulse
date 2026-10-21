@@ -31,18 +31,21 @@ class AcademicDepartmentsScreen extends StatelessWidget {
     return BlocProvider<StructureSetupCubit>(
       create: (_) => di.sl<StructureSetupCubit>(),
       child: Scaffold(
-        appBar: showAppBar ? AppBar(title: const Text('Academic departments')) : null,
+        appBar: showAppBar
+            ? AppBar(title: const Text('Academic departments'))
+            : null,
         backgroundColor: showAppBar ? null : Colors.transparent,
         body: BlocBuilder<StructureBloc, StructureState>(
           builder: (context, state) {
-            final departments = state.departments
-                .where((d) => d.isActive)
-                .toList()
-              ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+            final departments =
+                state.departments.where((d) => d.isActive).toList()
+                  ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
             final subjectsByDept = <String, List<Subject>>{};
             for (final subject in state.subjects.where((s) => s.isActive)) {
               if (subject.departmentId.isEmpty) continue;
-              subjectsByDept.putIfAbsent(subject.departmentId, () => []).add(subject);
+              subjectsByDept
+                  .putIfAbsent(subject.departmentId, () => [])
+                  .add(subject);
             }
             return SafeArea(
               child: Padding(
@@ -52,7 +55,10 @@ class AcademicDepartmentsScreen extends StatelessWidget {
                   children: [
                     const Text(
                       'Organise subjects together',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 19,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Text(
@@ -65,7 +71,8 @@ class AcademicDepartmentsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     _InfoBanner(
-                      text: 'You can skip this step for now and add departments later.',
+                      text:
+                          'You can skip this step for now and add departments later.',
                       action: TextButton(
                         onPressed: () => context
                             .read<StructureSetupCubit>()
@@ -91,7 +98,10 @@ class AcademicDepartmentsScreen extends StatelessWidget {
                       children: [
                         Text(
                           'Your departments (${departments.length})',
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
                         ),
                         Text(
                           MediaQuery.sizeOf(context).width >= 700
@@ -100,7 +110,9 @@ class AcademicDepartmentsScreen extends StatelessWidget {
                           textAlign: TextAlign.end,
                           style: TextStyle(
                             fontSize: 11.5,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -108,7 +120,9 @@ class AcademicDepartmentsScreen extends StatelessWidget {
                     const SizedBox(height: 10),
                     Expanded(
                       child: departments.isEmpty
-                          ? _EmptyState(onAdd: () => _openNewDepartment(context, state))
+                          ? _EmptyState(
+                              onAdd: () => _openNewDepartment(context, state),
+                            )
                           : ReorderableListView.builder(
                               padding: EdgeInsets.zero,
                               buildDefaultDragHandles: false,
@@ -128,7 +142,8 @@ class AcademicDepartmentsScreen extends StatelessWidget {
                               },
                               itemBuilder: (context, index) {
                                 final department = departments[index];
-                                final subjects = subjectsByDept[department.id] ?? const [];
+                                final subjects =
+                                    subjectsByDept[department.id] ?? const [];
                                 return Padding(
                                   key: ValueKey(department.id),
                                   padding: const EdgeInsets.only(bottom: 10),
@@ -142,7 +157,11 @@ class AcademicDepartmentsScreen extends StatelessWidget {
                                       existing: department,
                                       existingSubjects: subjects,
                                     ),
-                                    onDelete: () => _deleteDepartment(context, department, subjects),
+                                    onDelete: () => _deleteDepartment(
+                                      context,
+                                      department,
+                                      subjects,
+                                    ),
                                   ),
                                 );
                               },
@@ -224,10 +243,17 @@ class _InfoBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.info_outline_rounded, color: _infoBlueText, size: 20),
+          const Icon(
+            Icons.info_outline_rounded,
+            color: _infoBlueText,
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(text, style: const TextStyle(color: _infoBlueText, fontSize: 12.5)),
+            child: Text(
+              text,
+              style: const TextStyle(color: _infoBlueText, fontSize: 12.5),
+            ),
           ),
           if (action != null) ...[const SizedBox(width: 8), action!],
         ],
@@ -244,7 +270,8 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) => EmptyState(
     icon: Icons.folder_outlined,
     title: 'No departments yet',
-    message: 'Group related subjects together for planning and staff management.',
+    message:
+        'Group related subjects together for planning and staff management.',
     ctaLabel: 'Add department',
     onCtaPressed: onAdd,
   );
@@ -286,18 +313,28 @@ class _DepartmentRow extends StatelessWidget {
                 children: [
                   Text(
                     department.name,
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '${subjects.length} subject${subjects.length == 1 ? '' : 's'}',
-                    style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
             ),
             if (ready) ...[
-              StatusBadge(label: 'Ready', color: Colors.green.shade700, icon: Icons.check_circle),
+              StatusBadge(
+                label: 'Ready',
+                color: Colors.green.shade700,
+                icon: Icons.check_circle,
+              ),
               const SizedBox(width: 8),
             ],
             PopupMenuButton<String>(
@@ -340,7 +377,9 @@ class NewDepartmentScreen extends StatefulWidget {
 
 class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
   late final _name = TextEditingController(text: widget.existing?.name);
-  late final _description = TextEditingController(text: widget.existing?.description);
+  late final _description = TextEditingController(
+    text: widget.existing?.description,
+  );
   late final Set<String> _selectedSubjectIds = {...widget.existingSubjectIds};
   String _query = '';
   bool _saving = false;
@@ -366,8 +405,14 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
         title: const Text('Discard changes?'),
         content: const Text('You have unsaved changes to this department.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep editing')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Discard')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep editing'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Discard'),
+          ),
         ],
       ),
     );
@@ -382,10 +427,14 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
       canPop: !_dirty,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
-        if (await _confirmDiscard() && context.mounted) Navigator.of(context).pop();
+        if (await _confirmDiscard() && context.mounted) {
+          Navigator.of(context).pop();
+        }
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(edit ? 'Edit department' : 'New department')),
+        appBar: AppBar(
+          title: Text(edit ? 'Edit department' : 'New department'),
+        ),
         body: BlocBuilder<StructureBloc, StructureState>(
           builder: (context, state) {
             final subjects = [...state.subjects.where((s) => s.isActive)]
@@ -402,21 +451,28 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
                           children: [
                             const Text(
                               'Department details',
-                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 19),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 19,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Text(
                               'Create a flexible subject group for planning and staff management. '
                               'You can assign a department lead later.',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: scheme.onSurfaceVariant,
-                                height: 1.4,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                    height: 1.4,
+                                  ),
                             ),
                             const SizedBox(height: 20),
                             const Text(
                               'Department name *',
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             TextField(
@@ -426,12 +482,17 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
                                 _markDirty();
                                 setState(() {});
                               },
-                              decoration: const InputDecoration(hintText: 'e.g. Languages'),
+                              decoration: const InputDecoration(
+                                hintText: 'e.g. Languages',
+                              ),
                             ),
                             const SizedBox(height: 20),
                             const Text(
                               'Description (optional)',
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             TextField(
@@ -439,13 +500,17 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
                               maxLines: 3,
                               onChanged: (_) => _markDirty(),
                               decoration: const InputDecoration(
-                                hintText: 'e.g. Covers all languages and communication subjects',
+                                hintText:
+                                    'e.g. Covers all languages and communication subjects',
                               ),
                             ),
                             const SizedBox(height: 20),
                             const Text(
                               'Subjects (optional)',
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Container(
@@ -458,12 +523,17 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   InkWell(
-                                    onTap: () => _pickSubjects(context, subjects),
+                                    onTap: () =>
+                                        _pickSubjects(context, subjects),
                                     child: const Row(
                                       children: [
                                         Icon(Icons.search, size: 18),
                                         SizedBox(width: 8),
-                                        Expanded(child: Text('Search and add subjects...')),
+                                        Expanded(
+                                          child: Text(
+                                            'Search and add subjects...',
+                                          ),
+                                        ),
                                         Icon(Icons.expand_more),
                                       ],
                                     ),
@@ -475,13 +545,18 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
                                       runSpacing: 8,
                                       children: [
                                         for (final id in _selectedSubjectIds)
-                                          if (subjects.where((s) => s.id == id).firstOrNull
+                                          if (subjects
+                                                  .where((s) => s.id == id)
+                                                  .firstOrNull
                                               case final subject?)
                                             InputChip(
                                               label: Text(subject.name),
                                               onDeleted: () {
                                                 _markDirty();
-                                                setState(() => _selectedSubjectIds.remove(id));
+                                                setState(
+                                                  () => _selectedSubjectIds
+                                                      .remove(id),
+                                                );
                                               },
                                             ),
                                       ],
@@ -494,12 +569,19 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.info_outline, size: 16, color: scheme.onSurfaceVariant),
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 16,
+                                  color: scheme.onSurfaceVariant,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     'A subject can belong to one department at a time.',
-                                    style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: scheme.onSurfaceVariant,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -522,7 +604,10 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
                                   border: Border.all(color: scheme.error),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: Text(_error!, style: TextStyle(color: scheme.error)),
+                                child: Text(
+                                  _error!,
+                                  style: TextStyle(color: scheme.error),
+                                ),
                               ),
                             ],
                           ],
@@ -537,7 +622,8 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
                                 height: 52,
                                 child: OutlinedButton(
                                   onPressed: () async {
-                                    if (await _confirmDiscard() && context.mounted) {
+                                    if (await _confirmDiscard() &&
+                                        context.mounted) {
                                       Navigator.of(context).pop();
                                     }
                                   },
@@ -550,16 +636,23 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
                               child: SizedBox(
                                 height: 52,
                                 child: FilledButton(
-                                  onPressed: _name.text.trim().isEmpty || _saving
+                                  onPressed:
+                                      _name.text.trim().isEmpty || _saving
                                       ? null
                                       : () => _save(context, state, subjects),
                                   child: _saving
                                       ? const SizedBox(
                                           width: 20,
                                           height: 20,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
                                         )
-                                      : Text(edit ? 'Save changes' : 'Create department'),
+                                      : Text(
+                                          edit
+                                              ? 'Save changes'
+                                              : 'Create department',
+                                        ),
                                 ),
                               ),
                             ),
@@ -577,7 +670,10 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
     );
   }
 
-  Future<void> _pickSubjects(BuildContext context, List<Subject> subjects) async {
+  Future<void> _pickSubjects(
+    BuildContext context,
+    List<Subject> subjects,
+  ) async {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -596,9 +692,9 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
               children: [
                 Text(
                   'Add subjects',
-                  style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: Theme.of(
+                    sheetContext,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -615,12 +711,14 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
                     shrinkWrap: true,
                     children: [
                       for (final subject in subjects.where(
-                        (s) => s.name.toLowerCase().contains(_query.toLowerCase()),
+                        (s) =>
+                            s.name.toLowerCase().contains(_query.toLowerCase()),
                       ))
                         CheckboxListTile(
                           contentPadding: EdgeInsets.zero,
                           title: Text(subject.name),
-                          subtitle: subject.departmentId.isNotEmpty &&
+                          subtitle:
+                              subject.departmentId.isNotEmpty &&
                                   subject.departmentId != widget.existing?.id
                               ? const Text('Currently in another department')
                               : null,
@@ -674,7 +772,10 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
       headOfDepartmentStaffId: edit?.headOfDepartmentStaffId ?? '',
       displayOrder: edit?.displayOrder ?? state.departments.length,
     );
-    final validationError = _validator.validateDepartment(department, state.departments);
+    final validationError = _validator.validateDepartment(
+      department,
+      state.departments,
+    );
     if (validationError != null) {
       setState(() => _error = validationError);
       return;
@@ -704,8 +805,14 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
             '${reassignedFrom.length == 1 ? 'it' : 'them'} from the previous one.',
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Move')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Move'),
+            ),
           ],
         ),
       );
@@ -717,23 +824,32 @@ class _NewDepartmentScreenState extends State<NewDepartmentScreen> {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final removedIds = widget.existingSubjectIds.difference(_selectedSubjectIds);
+      final removedIds = widget.existingSubjectIds.difference(
+        _selectedSubjectIds,
+      );
       final removedSubjects = [
         for (final id in removedIds)
-          if (allSubjects.where((s) => s.id == id).firstOrNull case final subject?) subject,
+          ?allSubjects.where((s) => s.id == id).firstOrNull,
       ];
       final addedSubjects = [
         for (final id in _selectedSubjectIds)
-          if (allSubjects.where((s) => s.id == id).firstOrNull case final subject?)
+          if (allSubjects.where((s) => s.id == id).firstOrNull
+              case final subject?)
             if (subject.departmentId != department.id) subject,
       ];
       bloc.add(
-        SaveDepartmentWithSubjectsRequested(department, addedSubjects, removedSubjects),
+        SaveDepartmentWithSubjectsRequested(
+          department,
+          addedSubjects,
+          removedSubjects,
+        ),
       );
       _dirty = false;
       navigator.pop();
     } catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text('Could not save department: $error')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not save department: $error')),
+      );
     } finally {
       if (mounted) setState(() => _saving = false);
     }

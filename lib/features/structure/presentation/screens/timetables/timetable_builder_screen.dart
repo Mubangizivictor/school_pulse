@@ -77,10 +77,7 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
         .where((t) => t.id == timetable.termId)
         .map((t) => t.name)
         .firstOrNull;
-    final classLabel = [
-      className ?? timetable.name,
-      if (streamName != null) streamName,
-    ].join(' - ');
+    final classLabel = [className ?? timetable.name, ?streamName].join(' - ');
 
     final pdfData = await TimetablePdfGenerator.generate(
       timetable: timetable,
@@ -106,12 +103,7 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
     StructureState structureState,
   ) async {
     try {
-      final built = await _buildPdf(
-        timetable,
-        config,
-        lessons,
-        structureState,
-      );
+      final built = await _buildPdf(timetable, config, lessons, structureState);
       await TimetablePdfGenerator.print(built.pdfData);
     } catch (e) {
       if (!mounted) return;
@@ -128,14 +120,8 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
     StructureState structureState,
   ) async {
     try {
-      final built = await _buildPdf(
-        timetable,
-        config,
-        lessons,
-        structureState,
-      );
-      final fileName =
-          '${built.classLabel.replaceAll(' ', '_')}_Timetable.pdf';
+      final built = await _buildPdf(timetable, config, lessons, structureState);
+      final fileName = '${built.classLabel.replaceAll(' ', '_')}_Timetable.pdf';
       await TimetablePdfGenerator.save(built.pdfData, fileName);
     } catch (e) {
       if (!mounted) return;
@@ -229,10 +215,7 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        [
-                          className ?? timetable.name,
-                          if (streamName != null) streamName,
-                        ].join(' - '),
+                        [className ?? timetable.name, ?streamName].join(' - '),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,

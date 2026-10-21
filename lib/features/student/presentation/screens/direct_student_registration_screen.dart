@@ -191,7 +191,7 @@ class _DirectStudentRegistrationScreenState
 
   int get _feeBilledTotalUgx => (_feePlanMatch?.lines ?? const [])
       .where((l) => l.required || _selectedFeeAddOnIds.contains(l.chargeId))
-      .fold(0, (sum, l) => sum + l.amountUgx);
+      .fold(0, (total, l) => total + l.amountUgx);
 
   void _retrySnack(String message, VoidCallback retry) {
     if (!mounted) return;
@@ -207,11 +207,12 @@ class _DirectStudentRegistrationScreenState
     _yearsSub?.cancel();
     _yearsSub = _repo.watchAcademicYears(widget.schoolId).listen(
       (v) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _years = v.where((x) => !x.isArchived).toList();
             _year ??= _years.where((x) => x.isCurrent).firstOrNull;
           });
+        }
       },
       onError: (_) =>
           _retrySnack('Could not load academic years.', _subscribeYears),
@@ -222,8 +223,9 @@ class _DirectStudentRegistrationScreenState
     _classesSub?.cancel();
     _classesSub = _repo.watchClasses(widget.schoolId).listen(
       (v) {
-        if (mounted)
+        if (mounted) {
           setState(() => _classes = v.where((x) => x.isActive).toList());
+        }
         _classesLoaded = true;
       },
       onError: (_) => _retrySnack('Could not load classes.', _subscribeClasses),
@@ -245,8 +247,9 @@ class _DirectStudentRegistrationScreenState
     _termsSub?.cancel();
     _termsSub = _repo.watchAcademicTerms(widget.schoolId).listen(
       (v) {
-        if (mounted)
+        if (mounted) {
           setState(() => _terms = v.where((x) => !x.isArchived).toList());
+        }
       },
       onError: (_) =>
           _retrySnack('Could not load academic terms.', _subscribeTerms),
@@ -257,7 +260,7 @@ class _DirectStudentRegistrationScreenState
     _levelsSub?.cancel();
     _levelsSub = _repo.watchLevels(widget.schoolId).listen(
       (v) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _levels = v.where((x) => x.isActive).toList();
             _selectedLevel ??= _levels
@@ -265,6 +268,7 @@ class _DirectStudentRegistrationScreenState
                 .firstOrNull;
             _levelsLoaded = true;
           });
+        }
       },
       onError: (_) =>
           _retrySnack('Could not load education levels.', _subscribeLevels),
@@ -275,7 +279,7 @@ class _DirectStudentRegistrationScreenState
     _campusesSub?.cancel();
     _campusesSub = _repo.watchCampuses(widget.schoolId).listen(
       (v) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _campuses = v.where((x) => x.isActive).toList();
             _selectedCampus ??=
@@ -283,6 +287,7 @@ class _DirectStudentRegistrationScreenState
                 _campuses.firstOrNull;
             _campusesLoaded = true;
           });
+        }
       },
       onError: (_) =>
           _retrySnack('Could not load campuses.', _subscribeCampuses),
@@ -305,7 +310,7 @@ class _DirectStudentRegistrationScreenState
         .doc(widget.schoolId)
         .snapshots()
         .listen((v) {
-          if (mounted)
+          if (mounted) {
             setState(() {
               final data = v.data() ?? const <String, dynamic>{};
               _modules = Map<String, dynamic>.from(data['modules'] ?? {});
@@ -349,14 +354,17 @@ class _DirectStudentRegistrationScreenState
                 _entry = _entryTypeOptions.first;
               }
             });
+          }
         });
     _routesSub = _repo.watchTransportRoutes(widget.schoolId).listen((v) {
-      if (mounted)
+      if (mounted) {
         setState(() => _routes = v.where((x) => x.isActive).toList());
+      }
     });
     _vehiclesSub = _repo.watchTransportVehicles(widget.schoolId).listen((v) {
-      if (mounted)
+      if (mounted) {
         setState(() => _vehicles = v.where((x) => x.isActive).toList());
+      }
     });
     _occupancySub = _db
         .collection('students')
@@ -384,7 +392,7 @@ class _DirectStudentRegistrationScreenState
 
   int _routeCapacity(String routeId) => _vehicles
       .where((v) => v.routeId == routeId)
-      .fold(0, (sum, v) => sum + v.capacity);
+      .fold(0, (total, v) => total + v.capacity);
   int _routeAvailable(String routeId) {
     final capacity = _routeCapacity(routeId);
     if (capacity <= 0) return 0;
@@ -613,24 +621,26 @@ class _DirectStudentRegistrationScreenState
       if (generation != _saveGeneration) return;
       await _saveSupportNotes(auth.user.id);
       _draftPersisted = true;
-      if (!quiet && mounted)
+      if (!quiet && mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Saved just now')));
+      }
     } on FirebaseException catch (e) {
       if (generation != _saveGeneration) return;
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Unable to save — Retry (${e.message ?? e.code})'),
           ),
         );
+      }
     } catch (_) {
       if (generation != _saveGeneration) return;
       // Any other failure (e.g. genuinely offline, no connectivity at all)
       // must not trap the user on the current step - the draft simply
       // stays unsaved locally and the next successful save reconciles it.
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -638,9 +648,11 @@ class _DirectStudentRegistrationScreenState
             ),
           ),
         );
+      }
     } finally {
-      if (generation == _saveGeneration && mounted)
+      if (generation == _saveGeneration && mounted) {
         setState(() => _saving = false);
+      }
     }
   }
 
@@ -712,11 +724,13 @@ class _DirectStudentRegistrationScreenState
     final day = int.tryParse(parts[0]),
         month = int.tryParse(parts[1]),
         year = int.tryParse(parts[2]);
-    if (day == null || month == null || year == null)
+    if (day == null || month == null || year == null) {
       return 'Enter a valid date of birth';
+    }
     final date = DateTime(year, month, day);
-    if (date.year != year || date.month != month || date.day != day)
+    if (date.year != year || date.month != month || date.day != day) {
       return 'Enter a valid date of birth';
+    }
     final now = DateTime.now();
     if (date.isAfter(now)) return 'Date of birth must be in the past';
     var age = now.year - date.year;
@@ -882,7 +896,7 @@ class _DirectStudentRegistrationScreenState
         ),
       );
     } on FirebaseFunctionsException catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -894,8 +908,9 @@ class _DirectStudentRegistrationScreenState
             ),
           ),
         );
+      }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -903,6 +918,7 @@ class _DirectStudentRegistrationScreenState
             ),
           ),
         );
+      }
     } finally {
       if (mounted) setState(() => _enrolling = false);
     }
@@ -1429,8 +1445,9 @@ class _DirectStudentRegistrationScreenState
 
   String _savedLabel(DateTime time) {
     final now = DateTime.now();
-    if (now.difference(time).inDays == 0)
+    if (now.difference(time).inDays == 0) {
       return 'today at ${TimeOfDay.fromDateTime(time).format(context)}';
+    }
     return '${now.difference(time).inDays} days ago';
   }
 
@@ -3583,9 +3600,10 @@ class _DirectStudentRegistrationScreenState
                 firstDate: DateTime(now.year - 100),
                 lastDate: now,
               );
-              if (selected != null)
+              if (selected != null) {
                 c.text =
                     '${selected.day.toString().padLeft(2, '0')}/${selected.month.toString().padLeft(2, '0')}/${selected.year}';
+              }
             }
           : null,
       validator: dateOfBirth
@@ -3615,7 +3633,7 @@ class _DirectStudentRegistrationScreenState
     ValueChanged<String?> changed, {
     bool required = true,
   }) => DropdownButtonFormField<String>(
-    value: values.contains(value) ? value : values.first,
+    initialValue: values.contains(value) ? value : values.first,
     decoration: InputDecoration(labelText: required ? '$label *' : label),
     items: values
         .map((x) => DropdownMenuItem(value: x, child: Text(x)))
@@ -3630,7 +3648,7 @@ class _DirectStudentRegistrationScreenState
     ValueChanged<T?> changed, {
     bool required = true,
   }) => DropdownButtonFormField<T>(
-    value: value,
+    initialValue: value,
     decoration: InputDecoration(labelText: required ? '$label *' : label),
     items: values
         .map((x) => DropdownMenuItem(value: x, child: Text(labelOf(x))))
@@ -3643,8 +3661,9 @@ class _DirectStudentRegistrationScreenState
 
   String? _phoneError(String digits) {
     if (digits.isEmpty) return 'Phone number is required';
-    if (!RegExp(r'^[0-9]+$').hasMatch(digits))
+    if (!RegExp(r'^[0-9]+$').hasMatch(digits)) {
       return 'Enter a valid phone number';
+    }
     if (digits.length < 7 || digits.length > 12) {
       return 'Enter a valid phone number';
     }
@@ -3693,7 +3712,7 @@ class _DirectStudentRegistrationScreenState
                     SizedBox(
                       width: 92,
                       child: DropdownButtonFormField<String>(
-                        value: code,
+                        initialValue: code,
                         decoration: const InputDecoration(labelText: 'Code *'),
                         items: _phoneCodes
                             .map(
@@ -3754,7 +3773,7 @@ class _DirectStudentRegistrationScreenState
                 if (n.text.trim().isNotEmpty &&
                     r.text.trim().isNotEmpty &&
                     _phoneError(p.text.trim()) == null &&
-                    _emailError(e.text) == null)
+                    _emailError(e.text) == null) {
                   Navigator.pop(c, {
                     'id': old?['id'] ?? _uuid.v4(),
                     'name': n.text.trim(),
@@ -3765,6 +3784,7 @@ class _DirectStudentRegistrationScreenState
                     'pickup': pickup,
                     'emergencyConsent': pickup,
                   });
+                }
               },
               child: const Text('Save'),
             ),
@@ -3772,16 +3792,21 @@ class _DirectStudentRegistrationScreenState
         ),
       ),
     );
-    if (v != null && mounted)
+    if (v != null && mounted) {
       setState(() {
-        if (v['primary'] == true)
-          for (final g in _guardians) g['primary'] = false;
+        if (v['primary'] == true) {
+          for (final g in _guardians) {
+            g['primary'] = false;
+          }
+        }
         final i = _guardians.indexWhere((x) => x['id'] == v['id']);
-        if (i < 0)
+        if (i < 0) {
           _guardians.add(v);
-        else
+        } else {
           _guardians[i] = v;
+        }
       });
+    }
   }
 
   Future<void> _existing() async {
@@ -3811,7 +3836,7 @@ class _DirectStudentRegistrationScreenState
         ],
       ),
     );
-    if (v != null && v.isNotEmpty)
+    if (v != null && v.isNotEmpty) {
       setState(
         () => _guardians.add({
           'id': _uuid.v4(),
@@ -3824,6 +3849,7 @@ class _DirectStudentRegistrationScreenState
           'emergencyConsent': false,
         }),
       );
+    }
   }
 
   final _documentUploader = StudentDocumentUploader();
@@ -3939,11 +3965,9 @@ class _DirectStudentRegistrationScreenState
               'guardianId': guardian['id'],
               'schoolId': widget.schoolId,
               'method': method,
-              if (signatureDataUrl != null)
-                'signatureDataUrl': signatureDataUrl,
-              if (witnessName != null) 'witnessName': witnessName,
-              if (witnessRelationship != null)
-                'witnessRelationship': witnessRelationship,
+              'signatureDataUrl': ?signatureDataUrl,
+              'witnessName': ?witnessName,
+              'witnessRelationship': ?witnessRelationship,
             });
       }
     } on FirebaseFunctionsException catch (e) {

@@ -35,7 +35,7 @@ void main() {
               ),
             ],
             isLoading: false,
-            onStartRollCall: (_, __) {},
+            onStartRollCall: (_, _) {},
           ),
         ),
       );
@@ -57,7 +57,7 @@ void main() {
             dormitories: const [],
             attendanceRecords: const [],
             isLoading: false,
-            onStartRollCall: (_, __) {},
+            onStartRollCall: (_, _) {},
           ),
         ),
       );
@@ -76,7 +76,7 @@ void main() {
             dormitories: const [],
             attendanceRecords: const [],
             isLoading: true,
-            onStartRollCall: (_, __) {},
+            onStartRollCall: (_, _) {},
           ),
         ),
       );
@@ -98,7 +98,7 @@ void main() {
             dormitories: const [],
             attendanceRecords: const [],
             isLoading: false,
-            onStartRollCall: (_, __) {},
+            onStartRollCall: (_, _) {},
           ),
         ),
       );
