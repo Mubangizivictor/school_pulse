@@ -172,7 +172,7 @@ void main() {
     );
 
     expect(find.text('Something went wrong.'), findsOneWidget);
-    expect(find.text('Try Again'), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
   });
 
   testWidgets(
