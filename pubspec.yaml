@@ -68,6 +68,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2
   device_info_plus: ^11.2.0
   firebase_app_check: ^0.3.2+10
+  firebase_crashlytics: ^4.3.10
 dev_dependencies:
   flutter_test:
     sdk: flutter

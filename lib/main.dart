@@ -12,6 +12,7 @@ import 'package:school_pulse/features/notifications/notification_coordinator.dar
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:school_pulse/app/router.dart';
+import 'package:school_pulse/core/observability/app_observability.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/firebase_options.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -102,6 +103,10 @@ void main() async {
       rethrow;
     }
   }
+
+  // Global error hooks (Crashlytics on mobile, console on web). Installed
+  // right after Firebase so startup failures below are captured too.
+  await AppObservability.initCrashReporting();
 
   // Local Firebase Emulator Suite wiring, opt-in only via
   // `--dart-define=USE_FIREBASE_EMULATOR=true` (e.g. `flutter run -d chrome
@@ -212,6 +217,7 @@ void main() async {
     PortalRuntime.tenant = portal.tenant;
     themeProvider.updateBranding(portal.tenant!.branding);
   }
+  AppObservability.trackScreenViews(router);
   runApp(
     ChangeNotifierProvider.value(
       value: themeProvider,
@@ -379,6 +385,10 @@ class _SchoolPulseAppViewState extends State<SchoolPulseAppView> {
               // offline read/acknowledge queue, and replays a deep link that
               // was stashed while signed out.
               di.sl<NotificationCoordinator>().onSignedIn(state.user);
+              AppObservability.onSignedIn(
+                role: state.user.role.name,
+                schoolId: state.user.schoolId,
+              );
 
               // Drains any NFC/QR/manual attendance marked while offline -
               // fires on cold-start session restore and on interactive
@@ -436,6 +446,7 @@ class _SchoolPulseAppViewState extends State<SchoolPulseAppView> {
               // the tray stops the next user of a shared device seeing the
               // previous user's alerts.
               di.sl<NotificationCoordinator>().onSignedOut();
+              AppObservability.onSignedOut();
               context.read<InstitutionContextCubit>().clear();
               context.read<StructureBloc>().add(const ClearStructureData());
               // Drops the inbox subscription and every cached conversation/
