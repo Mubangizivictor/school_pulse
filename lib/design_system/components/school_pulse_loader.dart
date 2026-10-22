@@ -4,8 +4,9 @@ import 'package:school_pulse/design_system/brand/brand_assets.dart';
 /// The global School Pulse loading indicator.
 ///
 /// It plays the brand loading animation (the pulse travelling along the
-/// mark), adapts to the active color scheme, and falls back to a still frame
-/// with a gentle fade when the platform requests reduced motion.
+/// mark), adapts to the active color scheme, and falls back to the static
+/// mark with a gentle fade when the platform requests reduced motion (no
+/// single animation frame shows the whole mark).
 class SchoolPulseLoader extends StatefulWidget {
   static const double smallSize = 40;
   static const double mediumSize = 72;
@@ -71,7 +72,7 @@ class _SchoolPulseLoaderState extends State<SchoolPulseLoader>
     final logo = RepaintBoundary(
       child: Image.asset(
         reducedMotion
-            ? BrandAssets.loadingFrame(context)
+            ? BrandAssets.logoMark(context)
             : BrandAssets.loadingGif(context),
         width: widget.size,
         height: widget.size,
