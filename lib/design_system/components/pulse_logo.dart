@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/brand/brand_assets.dart';
-import 'package:school_pulse/design_system/brand/brand_assets.dart';
 
 enum PulseLogoVariant {
   /// 16:9 Horizontal format with text and mark
