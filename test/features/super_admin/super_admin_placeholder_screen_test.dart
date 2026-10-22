@@ -1,11 +1,12 @@
 // Proves SuperAdminPlaceholderScreen (the generic "coming in a later
 // phase" placeholder for owner console sections without a backing screen
-// yet) renders its title, icon, and message, and defaults the message when
+// yet) renders its title, illustration, and message, and defaults the message when
 // one isn't provided. This is a trivial, static widget - one smoke-render
 // test plus the default-message case is sufficient coverage, per the
 // task's own guidance not to over-invest here.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:school_pulse/design_system/brand/brand_assets.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_placeholder_screen.dart';
 
 void main() {
@@ -24,7 +25,13 @@ void main() {
 
     expect(find.text('Future Section'), findsWidgets);
     expect(find.text('This section ships in Q4.'), findsOneWidget);
-    expect(find.byIcon(Icons.rocket_launch_outlined), findsOneWidget);
+    // EmptyState draws the brand illustration in place of the icon.
+    expect(
+      find.byWidgetPredicate(
+        (w) => w is BrandStateImage && w.state == BrandState.empty,
+      ),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
