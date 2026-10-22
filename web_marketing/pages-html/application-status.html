@@ -162,6 +162,14 @@
         actionLink(data.appUrl || 'login.html', 'Go to School Pulse', true);
         return;
       }
+      if (paymentStatus === 'trial' && data.appReady) {
+        var trialEnd = data.trialEndsAt ? new Date(data.trialEndsAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+        badge('badge-green', 'Approved — free trial active');
+        detailText('Your 30-day free trial is active' + (trialEnd ? ' until ' + trialEnd : '') + '. Sign in to School Pulse with the administrator account you registered and start setting up. Choose a plan any time before the trial ends to keep full access; if you don\'t, your school becomes read-only and your data is kept.');
+        actionLink(data.appUrl || 'login.html', 'Go to School Pulse', true);
+        actionLink(data.paymentUrl || 'payment.html', 'Choose a plan and pay', false);
+        return;
+      }
       if (paymentStatus === 'under_review') {
         badge('badge-amber', 'Payment under review');
         detailText('We received your payment proof and are verifying it. This usually takes one business day.');
