@@ -122,7 +122,13 @@ class _NotificationScaffold extends StatelessWidget {
         ),
         title: Row(
           children: [
-            Text('Notifications', style: AppTypography.headlineSmall),
+            Flexible(
+              child: Text(
+                'Notifications',
+                style: AppTypography.headlineSmall,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             if (unreadCount > 0) ...[
               const SizedBox(width: AppSpacing.m),
               Container(

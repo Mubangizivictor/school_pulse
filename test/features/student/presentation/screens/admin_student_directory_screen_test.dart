@@ -36,7 +36,8 @@ class _FakeAuthBloc extends Cubit<AuthState> implements AuthBloc {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _FakeStructureBloc extends Cubit<StructureState> implements StructureBloc {
+class _FakeStructureBloc extends Cubit<StructureState>
+    implements StructureBloc {
   _FakeStructureBloc(super.initialState);
 
   @override
@@ -60,7 +61,8 @@ class _FakeStudentsBloc extends Cubit<StudentsState> implements StudentsBloc {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _FakeAttendanceBloc extends Cubit<AttendanceState> implements AttendanceBloc {
+class _FakeAttendanceBloc extends Cubit<AttendanceState>
+    implements AttendanceBloc {
   _FakeAttendanceBloc(super.initialState);
 
   @override
@@ -183,7 +185,8 @@ void main() {
 
   tearDown(() {
     if (di.sl.isRegistered<StudentsBloc>()) di.sl.unregister<StudentsBloc>();
-    if (di.sl.isRegistered<AttendanceBloc>()) di.sl.unregister<AttendanceBloc>();
+    if (di.sl.isRegistered<AttendanceBloc>())
+      di.sl.unregister<AttendanceBloc>();
   });
 
   Widget buildSubject() {
@@ -223,10 +226,7 @@ void main() {
       ],
     );
 
-    return MaterialApp.router(
-      theme: AppTheme.light(),
-      routerConfig: router,
-    );
+    return MaterialApp.router(theme: AppTheme.light(), routerConfig: router);
   }
 
   Future<void> setSurfaceSize(WidgetTester tester, Size size) async {
@@ -246,7 +246,9 @@ void main() {
       expect(find.byType(RefreshIndicator), findsNothing);
     });
 
-    testWidgets('shows error state with retry on StudentsError', (tester) async {
+    testWidgets('shows error state with retry on StudentsError', (
+      tester,
+    ) async {
       studentsBloc.emit(const StudentsError('network down'));
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
@@ -259,21 +261,24 @@ void main() {
       expect(studentsBloc.events, contains(isA<LoadSchoolStudents>()));
     });
 
-    testWidgets('shows empty state offering Add learner when no students exist', (
-      tester,
-    ) async {
-      studentsBloc.emit(const StudentsLoaded([]));
-      await tester.pumpWidget(buildSubject());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'shows empty state offering Add learner when no students exist',
+      (tester) async {
+        studentsBloc.emit(const StudentsLoaded([]));
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
 
-      expect(find.text('No students found'), findsOneWidget);
-      expect(find.text('Add learner'), findsWidgets);
-    });
+        expect(find.text('No students found'), findsOneWidget);
+        expect(find.text('Add learner'), findsWidgets);
+      },
+    );
 
     testWidgets('empty state offers Clear filters when filters applied', (
       tester,
     ) async {
-      studentsBloc.emit(StudentsLoaded([_student(id: 's1', name: 'Aarav Sharma')]));
+      studentsBloc.emit(
+        StudentsLoaded([_student(id: 's1', name: 'Aarav Sharma')]),
+      );
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
@@ -286,21 +291,26 @@ void main() {
   });
 
   group('directory content', () {
-    testWidgets('renders learner rows with name, admission no. and class/stream', (
-      tester,
-    ) async {
-      studentsBloc.emit(
-        StudentsLoaded([
-          _student(id: 's1', name: 'Aarav Sharma', admissionNumber: 'ADM-2025-0001'),
-        ]),
-      );
-      await tester.pumpWidget(buildSubject());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'renders learner rows with name, admission no. and class/stream',
+      (tester) async {
+        studentsBloc.emit(
+          StudentsLoaded([
+            _student(
+              id: 's1',
+              name: 'Aarav Sharma',
+              admissionNumber: 'ADM-2025-0001',
+            ),
+          ]),
+        );
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
 
-      expect(find.text('Aarav Sharma'), findsOneWidget);
-      expect(find.textContaining('ADM-2025-0001'), findsWidgets);
-      expect(find.textContaining('10-A'), findsWidgets);
-    });
+        expect(find.text('Aarav Sharma'), findsOneWidget);
+        expect(find.textContaining('ADM-2025-0001'), findsWidgets);
+        expect(find.textContaining('10-A'), findsWidgets);
+      },
+    );
 
     testWidgets('search filters the learner list', (tester) async {
       studentsBloc.emit(
@@ -347,10 +357,7 @@ void main() {
     ) async {
       studentsBloc.emit(
         StudentsLoaded(
-          List.generate(
-            45,
-            (i) => _student(id: 's$i', name: 'Learner $i'),
-          ),
+          List.generate(45, (i) => _student(id: 's$i', name: 'Learner $i')),
         ),
       );
       await tester.pumpWidget(buildSubject());
@@ -359,7 +366,9 @@ void main() {
       expect(find.textContaining('Show more'), findsOneWidget);
     });
 
-    testWidgets('tapping a learner row navigates to profile route', (tester) async {
+    testWidgets('tapping a learner row navigates to profile route', (
+      tester,
+    ) async {
       studentsBloc.emit(
         StudentsLoaded([_student(id: 's1', name: 'Aarav Sharma')]),
       );
@@ -489,7 +498,10 @@ void main() {
       await tester.pumpWidget(buildSubject());
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Showing 1 to 40 of 45 learners'), findsOneWidget);
+      expect(
+        find.textContaining('Showing 1 to 40 of 45 learners'),
+        findsOneWidget,
+      );
       expect(find.textContaining('Show more'), findsNothing);
 
       await tester.ensureVisible(find.text('2'));
@@ -497,7 +509,10 @@ void main() {
       await tester.tap(find.text('2'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Showing 41 to 45 of 45 learners'), findsOneWidget);
+      expect(
+        find.textContaining('Showing 41 to 45 of 45 learners'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('desktop table shows a parent-link indicator', (tester) async {
@@ -513,55 +528,69 @@ void main() {
   });
 
   group('status tabs', () {
-    testWidgets('All/Active/Pending tabs show real counts and filter the list', (
-      tester,
-    ) async {
-      studentsBloc.emit(
-        StudentsLoaded([
-          _student(id: 's1', name: 'Aarav Sharma', status: StudentStatus.active),
-          _student(id: 's2', name: 'Priya Singh', status: StudentStatus.pendingAdmission),
-          _student(id: 's3', name: 'Zara Khan', status: StudentStatus.withdrawn),
-        ]),
-      );
-      await tester.pumpWidget(buildSubject());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'All/Active/Pending tabs show real counts and filter the list',
+      (tester) async {
+        studentsBloc.emit(
+          StudentsLoaded([
+            _student(
+              id: 's1',
+              name: 'Aarav Sharma',
+              status: StudentStatus.active,
+            ),
+            _student(
+              id: 's2',
+              name: 'Priya Singh',
+              status: StudentStatus.pendingAdmission,
+            ),
+            _student(
+              id: 's3',
+              name: 'Zara Khan',
+              status: StudentStatus.withdrawn,
+            ),
+          ]),
+        );
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
 
-      expect(find.text('All (3)'), findsOneWidget);
-      expect(find.text('Active (1)'), findsOneWidget);
-      expect(find.text('Pending (1)'), findsOneWidget);
+        expect(find.text('All (3)'), findsOneWidget);
+        expect(find.text('Active (1)'), findsOneWidget);
+        expect(find.text('Pending (1)'), findsOneWidget);
 
-      await tester.tap(find.text('Active (1)'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Active (1)'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Aarav Sharma'), findsOneWidget);
-      expect(find.text('Priya Singh'), findsNothing);
-      expect(find.text('Zara Khan'), findsNothing);
+        expect(find.text('Aarav Sharma'), findsOneWidget);
+        expect(find.text('Priya Singh'), findsNothing);
+        expect(find.text('Zara Khan'), findsNothing);
 
-      await tester.tap(find.text('Pending (1)'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Pending (1)'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('Priya Singh'), findsOneWidget);
-      expect(find.text('Aarav Sharma'), findsNothing);
-    });
+        expect(find.text('Priya Singh'), findsOneWidget);
+        expect(find.text('Aarav Sharma'), findsNothing);
+      },
+    );
   });
 
   group('parent link and day/boarding', () {
-    testWidgets('desktop table shows numeric parent-link count and boarding type', (
-      tester,
-    ) async {
-      final linked = _student(
-        id: 's1',
-        name: 'Aarav Sharma',
-        parentIds: const ['p1', 'p2'],
-      );
-      studentsBloc.emit(StudentsLoaded([linked]));
-      await setSurfaceSize(tester, const Size(1440, 900));
-      await tester.pumpWidget(buildSubject());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'desktop table shows numeric parent-link count and boarding type',
+      (tester) async {
+        final linked = _student(
+          id: 's1',
+          name: 'Aarav Sharma',
+          parentIds: const ['p1', 'p2'],
+        );
+        studentsBloc.emit(StudentsLoaded([linked]));
+        await setSurfaceSize(tester, const Size(1440, 900));
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
 
-      expect(find.text('Linked · 2'), findsOneWidget);
-      expect(find.text('Day scholar'), findsOneWidget);
-    });
+        expect(find.text('Linked · 2'), findsOneWidget);
+        expect(find.text('Day scholar'), findsOneWidget);
+      },
+    );
   });
 
   group('education level filter', () {
@@ -590,8 +619,16 @@ void main() {
     ) async {
       studentsBloc.emit(
         StudentsLoaded([
-          _student(id: 's1', name: 'Aarav Sharma', status: StudentStatus.enrolled),
-          _student(id: 's2', name: 'Priya Singh', status: StudentStatus.withdrawn),
+          _student(
+            id: 's1',
+            name: 'Aarav Sharma',
+            status: StudentStatus.enrolled,
+          ),
+          _student(
+            id: 's2',
+            name: 'Priya Singh',
+            status: StudentStatus.withdrawn,
+          ),
         ]),
       );
       await setSurfaceSize(tester, const Size(1440, 900));
@@ -608,6 +645,17 @@ void main() {
 
       expect(find.text('Aarav Sharma'), findsNothing);
       expect(find.text('Priya Singh'), findsOneWidget);
+      // The filter pills scroll horizontally; bring the trailing button in.
+      await tester.scrollUntilVisible(
+        find.text('Clear filters'),
+        200,
+        scrollable: find
+            .ancestor(
+              of: find.text('Status'),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
       expect(find.text('Clear filters'), findsOneWidget);
     });
   });
