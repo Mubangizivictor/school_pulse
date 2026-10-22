@@ -316,6 +316,8 @@ describe('Super Admin - Schools: lifecycle + applications', () => {
     assert.equal(app.paymentStatus, 'trial');
     assert.equal(app.appReady, true);
     assert.equal(app.trialEndsAt, schoolDoc.subscriptionExpiry);
+    // Required by the official approval document behind the approval email.
+    assert.ok(app.approvedAt, 'approvedAt must be set');
 
     const user = (await db.doc(`users/${APPLICANT_UID}`).get()).data();
     assert.equal(user.role, 'schoolAdmin');

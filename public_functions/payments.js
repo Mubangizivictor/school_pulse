@@ -597,6 +597,9 @@ exports.approveSchoolApplication = onCall(
         paymentStatus: 'trial',
         appReady: true,
         trialEndsAt: trialEndsMs,
+        // documents/official_document_service.js refuses to issue the approval
+        // document (and so the approval email) without this timestamp.
+        approvedAt: serverTime,
         appUrl: APP_URL,
         reviewedAt: serverTime,
         reviewedBy: owner.uid,
