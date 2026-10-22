@@ -13,8 +13,8 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
   Timer? _resendTimer;
 
   RegistrationBloc({RegistrationService? service})
-      : _service = service ?? RegistrationService.instance,
-        super(const RegistrationState()) {
+    : _service = service ?? RegistrationService.instance,
+      super(const RegistrationState()) {
     on<RegistrationStarted>((event, emit) {
       emit(state.copyWith(step: RegWizardStep.schoolDetails));
     });
@@ -28,19 +28,23 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
       emit(state.copyWith(step: RegWizardStep.calendar));
     });
     on<CalendarSubmitted>((event, emit) {
-      emit(state.copyWith(
-        schoolYear: event.schoolYear,
-        term: event.term,
-        termStart: event.termStart,
-        termEnd: event.termEnd,
-        step: RegWizardStep.studentCount,
-      ));
+      emit(
+        state.copyWith(
+          schoolYear: event.schoolYear,
+          term: event.term,
+          termStart: event.termStart,
+          termEnd: event.termEnd,
+          step: RegWizardStep.studentCount,
+        ),
+      );
     });
     on<StudentCountSubmitted>((event, emit) {
-      emit(state.copyWith(
-        studentCount: event.studentCount,
-        step: RegWizardStep.address,
-      ));
+      emit(
+        state.copyWith(
+          studentCount: event.studentCount,
+          step: RegWizardStep.address,
+        ),
+      );
     });
     on<RegionSelected>((event, emit) {
       emit(state.copyWith(region: event.region, district: ''));
@@ -68,18 +72,26 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
       emit(state.copyWith(clearProofFile: true));
     });
     on<ManualPaymentDetailsChanged>((event, emit) {
-      emit(state.copyWith(
-        paymentMethod: event.method,
-        payerName: event.payerName,
-        paymentReference: event.reference,
-        paymentDate: event.paymentDate,
-        paymentNote: event.note,
-      ));
+      emit(
+        state.copyWith(
+          paymentMethod: event.method,
+          payerName: event.payerName,
+          paymentReference: event.reference,
+          paymentDate: event.paymentDate,
+          paymentNote: event.note,
+        ),
+      );
     });
     on<PaymentSubmitPressed>(_onPaymentSubmitPressed);
     on<PaymentStatusCheckRequested>(_onPaymentContextLoadRequested);
     on<RetryRequested>((event, emit) {
-      emit(state.copyWith(offline: false, clearSubmitError: true, clearPaymentError: true));
+      emit(
+        state.copyWith(
+          offline: false,
+          clearSubmitError: true,
+          clearPaymentError: true,
+        ),
+      );
     });
     on<_ResendCooldownTicked>((event, emit) {
       emit(state.copyWith(resendCooldownSeconds: event.remaining));
@@ -92,7 +104,10 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
     return super.close();
   }
 
-  void _onStepBack(RegistrationStepBack event, Emitter<RegistrationState> emit) {
+  void _onStepBack(
+    RegistrationStepBack event,
+    Emitter<RegistrationState> emit,
+  ) {
     final order = [
       RegWizardStep.welcome,
       RegWizardStep.schoolDetails,
@@ -110,28 +125,32 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
     SchoolDetailsSubmitted event,
     Emitter<RegistrationState> emit,
   ) {
-    emit(state.copyWith(
-      schoolName: event.schoolName,
-      schoolType: event.schoolType,
-      contactPhone: event.contactPhone,
-      contactEmail: event.contactEmail,
-      prefix: event.prefix,
-      step: RegWizardStep.adminAccount,
-    ));
+    emit(
+      state.copyWith(
+        schoolName: event.schoolName,
+        schoolType: event.schoolType,
+        contactPhone: event.contactPhone,
+        contactEmail: event.contactEmail,
+        prefix: event.prefix,
+        step: RegWizardStep.adminAccount,
+      ),
+    );
   }
 
   Future<void> _onAdminAccountCreateRequested(
     AdminAccountCreateRequested event,
     Emitter<RegistrationState> emit,
   ) async {
-    emit(state.copyWith(
-      adminFullName: event.fullName,
-      adminRole: event.role,
-      adminEmail: event.email,
-      adminPhone: event.phone,
-      adminPhase: AdminAccountPhase.creating,
-      clearAdminError: true,
-    ));
+    emit(
+      state.copyWith(
+        adminFullName: event.fullName,
+        adminRole: event.role,
+        adminEmail: event.email,
+        adminPhone: event.phone,
+        adminPhase: AdminAccountPhase.creating,
+        clearAdminError: true,
+      ),
+    );
     try {
       // A visitor returning to an in-progress registration already has a
       // verified session for this email — skip straight to verified,
@@ -144,7 +163,10 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
         return;
       }
       try {
-        await _service.createAccount(email: event.email, password: event.password);
+        await _service.createAccount(
+          email: event.email,
+          password: event.password,
+        );
       } on FirebaseAuthException catch (e) {
         if (e.code == 'email-already-in-use') {
           await _service.signIn(email: event.email, password: event.password);
@@ -153,23 +175,36 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
         }
       }
       await _service.requestEmailVerification();
-      emit(state.copyWith(
-        adminPhase: AdminAccountPhase.verificationSent,
-        resendCooldownSeconds: 60,
-      ));
+      emit(
+        state.copyWith(
+          adminPhase: AdminAccountPhase.verificationSent,
+          resendCooldownSeconds: 60,
+        ),
+      );
       _startResendCooldown();
     } on FirebaseAuthException catch (e) {
-      emit(state.copyWith(
-        adminPhase: AdminAccountPhase.failed,
-        adminError: e.message ?? 'Could not create the account. Please try again.',
-      ));
+      emit(
+        state.copyWith(
+          adminPhase: AdminAccountPhase.failed,
+          adminError:
+              e.message ?? 'Could not create the account. Please try again.',
+        ),
+      );
     } on RegistrationApiException catch (e) {
-      emit(state.copyWith(adminPhase: AdminAccountPhase.failed, adminError: e.message));
+      emit(
+        state.copyWith(
+          adminPhase: AdminAccountPhase.failed,
+          adminError: e.message,
+        ),
+      );
     } catch (_) {
-      emit(state.copyWith(
-        adminPhase: AdminAccountPhase.failed,
-        adminError: 'Something went wrong. Please check your connection and try again.',
-      ));
+      emit(
+        state.copyWith(
+          adminPhase: AdminAccountPhase.failed,
+          adminError:
+              'Something went wrong. Please check your connection and try again.',
+        ),
+      );
     }
   }
 
@@ -189,16 +224,22 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
     if (state.resendCooldownSeconds > 0) return;
     try {
       await _service.requestEmailVerification();
-      emit(state.copyWith(
-        adminPhase: AdminAccountPhase.verificationSent,
-        resendCooldownSeconds: 60,
-        clearAdminError: true,
-      ));
+      emit(
+        state.copyWith(
+          adminPhase: AdminAccountPhase.verificationSent,
+          resendCooldownSeconds: 60,
+          clearAdminError: true,
+        ),
+      );
       _startResendCooldown();
     } on RegistrationApiException catch (e) {
       emit(state.copyWith(adminError: e.message));
     } catch (_) {
-      emit(state.copyWith(adminError: 'Could not resend the email. Please try again.'));
+      emit(
+        state.copyWith(
+          adminError: 'Could not resend the email. Please try again.',
+        ),
+      );
     }
   }
 
@@ -206,23 +247,32 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
     AdminVerificationCheckRequested event,
     Emitter<RegistrationState> emit,
   ) async {
-    emit(state.copyWith(adminPhase: AdminAccountPhase.checking, clearAdminError: true));
+    emit(
+      state.copyWith(
+        adminPhase: AdminAccountPhase.checking,
+        clearAdminError: true,
+      ),
+    );
     try {
       final verified = await _service.reloadAndCheckVerified();
       if (verified) {
         emit(state.copyWith(adminPhase: AdminAccountPhase.verified));
       } else {
-        emit(state.copyWith(
-          adminPhase: AdminAccountPhase.waitingVerification,
-          adminError:
-              'Still not verified yet. Check your inbox (and spam folder), click the link, then try again.',
-        ));
+        emit(
+          state.copyWith(
+            adminPhase: AdminAccountPhase.waitingVerification,
+            adminError:
+                'Still not verified yet. Check your inbox (and spam folder), click the link, then try again.',
+          ),
+        );
       }
     } catch (_) {
-      emit(state.copyWith(
-        adminPhase: AdminAccountPhase.waitingVerification,
-        adminError: 'Could not check verification status. Please try again.',
-      ));
+      emit(
+        state.copyWith(
+          adminPhase: AdminAccountPhase.waitingVerification,
+          adminError: 'Could not check verification status. Please try again.',
+        ),
+      );
     }
   }
 
@@ -230,34 +280,41 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
     SubdomainChanged event,
     Emitter<RegistrationState> emit,
   ) async {
-    final sanitized = event.subdomain
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9-]'), '');
-    emit(state.copyWith(
-      subdomain: sanitized,
-      slugAvailable: null,
-      slugMessage: null,
-    ));
+    final sanitized = event.subdomain.toLowerCase().replaceAll(
+      RegExp(r'[^a-z0-9-]'),
+      '',
+    );
+    emit(
+      state.copyWith(
+        subdomain: sanitized,
+        slugAvailable: null,
+        slugMessage: null,
+      ),
+    );
     if (sanitized.length < 3) return;
     emit(state.copyWith(checkingSlug: true));
     try {
       final result = await _service.checkSlugAvailability(sanitized);
       if (state.subdomain != sanitized) return;
-      emit(state.copyWith(
-        checkingSlug: false,
-        slugAvailable: result.available,
-        slugMessage: result.available
-            ? 'Available'
-            : (result.reason == 'invalid_or_reserved'
-                ? 'This web address is not allowed. Try another.'
-                : 'Already taken. Try another.'),
-      ));
+      emit(
+        state.copyWith(
+          checkingSlug: false,
+          slugAvailable: result.available,
+          slugMessage: result.available
+              ? 'Available'
+              : (result.reason == 'invalid_or_reserved'
+                    ? 'This web address is not allowed. Try another.'
+                    : 'Already taken. Try another.'),
+        ),
+      );
     } catch (_) {
-      emit(state.copyWith(
-        checkingSlug: false,
-        slugAvailable: null,
-        slugMessage: 'Could not check availability right now.',
-      ));
+      emit(
+        state.copyWith(
+          checkingSlug: false,
+          slugAvailable: null,
+          slugMessage: 'Could not check availability right now.',
+        ),
+      );
     }
   }
 
@@ -267,18 +324,27 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
   ) async {
     if (state.submitPhase == SubmitPhase.submitting) return;
     final tier = tierForCount(state.studentCount);
-    final plan = kTierLabelToPlan[tier.label];
+    final plan = tier.plan;
     if (plan == null) {
-      emit(state.copyWith(
-        submitPhase: SubmitPhase.failed,
-        submitError:
-            'Your student count needs a custom plan. Please contact support to continue.',
-      ));
+      emit(
+        state.copyWith(
+          submitPhase: SubmitPhase.failed,
+          submitError:
+              'Your student count needs a custom plan. Please contact support to continue.',
+        ),
+      );
       return;
     }
-    emit(state.copyWith(submitPhase: SubmitPhase.submitting, clearSubmitError: true));
+    emit(
+      state.copyWith(
+        submitPhase: SubmitPhase.submitting,
+        clearSubmitError: true,
+      ),
+    );
     final nameParts = state.adminFullName.trim().split(RegExp(r'\s+'));
-    final firstName = nameParts.isNotEmpty ? nameParts.first : state.adminFullName;
+    final firstName = nameParts.isNotEmpty
+        ? nameParts.first
+        : state.adminFullName;
     final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
     try {
       final result = await _service.submitSchoolApplication({
@@ -314,18 +380,25 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
         'termsAccepted': state.termsAccepted,
         'marketingOptIn': false,
       });
-      emit(state.copyWith(
-        submitPhase: SubmitPhase.submitted,
-        applicationId: result['applicationId'] as String?,
-        applicationStatus: ApplicationStatus.pendingReview,
-      ));
+      emit(
+        state.copyWith(
+          submitPhase: SubmitPhase.submitted,
+          applicationId: result['applicationId'] as String?,
+          applicationStatus: ApplicationStatus.pendingReview,
+        ),
+      );
     } on RegistrationApiException catch (e) {
-      emit(state.copyWith(submitPhase: SubmitPhase.failed, submitError: e.message));
+      emit(
+        state.copyWith(submitPhase: SubmitPhase.failed, submitError: e.message),
+      );
     } catch (_) {
-      emit(state.copyWith(
-        submitPhase: SubmitPhase.failed,
-        submitError: 'Could not submit your registration. Please check your connection and try again.',
-      ));
+      emit(
+        state.copyWith(
+          submitPhase: SubmitPhase.failed,
+          submitError:
+              'Could not submit your registration. Please check your connection and try again.',
+        ),
+      );
     }
   }
 
@@ -337,19 +410,24 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
     try {
       final result = await _service.getSchoolApplicationStatus();
       final status = _mapStatus(result['status'] as String?);
-      emit(state.copyWith(
-        statusLoading: false,
-        applicationStatus: status,
-        rejectionReason: result['rejectionReason'] as String?,
-        appReady: result['appReady'] == true,
-      ));
+      emit(
+        state.copyWith(
+          statusLoading: false,
+          applicationStatus: status,
+          rejectionReason: result['rejectionReason'] as String?,
+          appReady: result['appReady'] == true,
+        ),
+      );
     } on RegistrationApiException catch (e) {
       emit(state.copyWith(statusLoading: false, statusError: e.message));
     } catch (_) {
-      emit(state.copyWith(
-        statusLoading: false,
-        statusError: 'Could not check your registration status. Please try again.',
-      ));
+      emit(
+        state.copyWith(
+          statusLoading: false,
+          statusError:
+              'Could not check your registration status. Please try again.',
+        ),
+      );
     }
   }
 
@@ -370,22 +448,37 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
     RegistrationEvent event,
     Emitter<RegistrationState> emit,
   ) async {
-    emit(state.copyWith(paymentPhase: PaymentPhase.loadingContext, clearPaymentError: true));
+    emit(
+      state.copyWith(
+        paymentPhase: PaymentPhase.loadingContext,
+        clearPaymentError: true,
+      ),
+    );
     try {
       final result = await _service.getManualPaymentContext();
-      emit(state.copyWith(
-        paymentPhase: PaymentPhase.contextLoaded,
-        paymentContext: result,
-        paymentStatus: (result['paymentStatus'] as String?) ?? '',
-        paymentRejectionReason: result['paymentRejectionReason'] as String?,
-      ));
+      emit(
+        state.copyWith(
+          paymentPhase: PaymentPhase.contextLoaded,
+          paymentContext: result,
+          paymentStatus: (result['paymentStatus'] as String?) ?? '',
+          paymentRejectionReason: result['paymentRejectionReason'] as String?,
+        ),
+      );
     } on RegistrationApiException catch (e) {
-      emit(state.copyWith(paymentPhase: PaymentPhase.failed, paymentError: e.message));
+      emit(
+        state.copyWith(
+          paymentPhase: PaymentPhase.failed,
+          paymentError: e.message,
+        ),
+      );
     } catch (_) {
-      emit(state.copyWith(
-        paymentPhase: PaymentPhase.failed,
-        paymentError: 'Could not load payment instructions. Please try again.',
-      ));
+      emit(
+        state.copyWith(
+          paymentPhase: PaymentPhase.failed,
+          paymentError:
+              'Could not load payment instructions. Please try again.',
+        ),
+      );
     }
   }
 
@@ -394,16 +487,27 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
     Emitter<RegistrationState> emit,
   ) async {
     if (state.proofFile == null) {
-      emit(state.copyWith(paymentError: 'Please upload proof of payment first.'));
+      emit(
+        state.copyWith(paymentError: 'Please upload proof of payment first.'),
+      );
       return;
     }
-    if (state.payerName.trim().isEmpty || state.paymentReference.trim().length < 3) {
-      emit(state.copyWith(
-        paymentError: 'Payer name and a transaction/receipt reference (min 3 characters) are required.',
-      ));
+    if (state.payerName.trim().isEmpty ||
+        state.paymentReference.trim().length < 3) {
+      emit(
+        state.copyWith(
+          paymentError:
+              'Payer name and a transaction/receipt reference (min 3 characters) are required.',
+        ),
+      );
       return;
     }
-    emit(state.copyWith(paymentPhase: PaymentPhase.uploadingProof, clearPaymentError: true));
+    emit(
+      state.copyWith(
+        paymentPhase: PaymentPhase.uploadingProof,
+        clearPaymentError: true,
+      ),
+    );
     try {
       final proofPath = await _service.uploadPaymentProof(
         state.proofFile!,
@@ -420,19 +524,31 @@ class RegistrationBloc extends Bloc<RegistrationEvent, RegistrationState> {
         'paymentDate': (state.paymentDate ?? DateTime.now()).toIso8601String(),
         'note': state.paymentNote,
         'proofStoragePath': proofPath,
-        'submissionId': 'sp_${DateTime.now().millisecondsSinceEpoch}_${state.paymentReference.hashCode.abs()}',
+        'submissionId':
+            'sp_${DateTime.now().millisecondsSinceEpoch}_${state.paymentReference.hashCode.abs()}',
       });
-      emit(state.copyWith(
-        paymentPhase: PaymentPhase.submitted,
-        paymentStatus: (result['status'] as String?) ?? 'awaiting_confirmation',
-      ));
+      emit(
+        state.copyWith(
+          paymentPhase: PaymentPhase.submitted,
+          paymentStatus:
+              (result['status'] as String?) ?? 'awaiting_confirmation',
+        ),
+      );
     } on RegistrationApiException catch (e) {
-      emit(state.copyWith(paymentPhase: PaymentPhase.failed, paymentError: e.message));
+      emit(
+        state.copyWith(
+          paymentPhase: PaymentPhase.failed,
+          paymentError: e.message,
+        ),
+      );
     } catch (_) {
-      emit(state.copyWith(
-        paymentPhase: PaymentPhase.failed,
-        paymentError: 'Could not submit your payment proof. Please check your connection and try again.',
-      ));
+      emit(
+        state.copyWith(
+          paymentPhase: PaymentPhase.failed,
+          paymentError:
+              'Could not submit your payment proof. Please check your connection and try again.',
+        ),
+      );
     }
   }
 }

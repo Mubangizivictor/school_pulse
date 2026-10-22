@@ -11,7 +11,8 @@ class Step4StudentsPricingPage extends StatefulWidget {
   const Step4StudentsPricingPage({super.key});
 
   @override
-  State<Step4StudentsPricingPage> createState() => _Step4StudentsPricingPageState();
+  State<Step4StudentsPricingPage> createState() =>
+      _Step4StudentsPricingPageState();
 }
 
 class _Step4StudentsPricingPageState extends State<Step4StudentsPricingPage> {
@@ -22,7 +23,9 @@ class _Step4StudentsPricingPageState extends State<Step4StudentsPricingPage> {
   void initState() {
     super.initState();
     final s = context.read<RegistrationBloc>().state;
-    _count = TextEditingController(text: s.studentCount > 0 ? '${s.studentCount}' : '');
+    _count = TextEditingController(
+      text: s.studentCount > 0 ? '${s.studentCount}' : '',
+    );
   }
 
   @override
@@ -39,8 +42,12 @@ class _Step4StudentsPricingPageState extends State<Step4StudentsPricingPage> {
       return;
     }
     final tier = tierForCount(_n);
-    if (tier.label == 'Custom') {
-      setState(() => _error = 'For 1,201+ students, please contact support for a custom plan');
+    if (tier.plan == null) {
+      setState(
+        () => _error =
+            'For more than 1,500 students or multiple campuses, please contact '
+            'us for an Enterprise quote',
+      );
       return;
     }
     context.read<RegistrationBloc>().add(StudentCountSubmitted(_n));
@@ -49,13 +56,18 @@ class _Step4StudentsPricingPageState extends State<Step4StudentsPricingPage> {
   @override
   Widget build(BuildContext context) {
     final tier = tierForCount(_n);
-    final total = tier.price != null ? tier.price! * _n : null;
+    final yearly = yearlyPrice(tier);
     return RegStepScaffold(
       step: 4,
       title: 'Student count & pricing',
-      onBack: () => context.read<RegistrationBloc>().add(const RegistrationStepBack()),
+      onBack: () =>
+          context.read<RegistrationBloc>().add(const RegistrationStepBack()),
       onContinue: _continue,
-      infoBanner: const RegInfoBanner('Pricing is per term. You will confirm payment in the next step.'),
+      infoBanner: const RegInfoBanner(
+        'Start with a free $kTrialDays-day trial of every Pro feature, no '
+        'payment needed. After the trial, pick a plan or the account becomes '
+        'read-only. Your data is never deleted.',
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -67,7 +79,11 @@ class _Step4StudentsPricingPageState extends State<Step4StudentsPricingPage> {
             onChanged: (_) => setState(() => _error = null),
             decoration: const InputDecoration(
               hintText: '565',
-              suffixIcon: Icon(Icons.groups_outlined, color: RegColors.textMuted, size: 19),
+              suffixIcon: Icon(
+                Icons.groups_outlined,
+                color: RegColors.textMuted,
+                size: 19,
+              ),
             ),
           ),
           const Padding(
@@ -79,7 +95,10 @@ class _Step4StudentsPricingPageState extends State<Step4StudentsPricingPage> {
           ),
           if (_error != null) ...[
             const SizedBox(height: 8),
-            Text(_error!, style: const TextStyle(color: RegColors.red, fontSize: 12)),
+            Text(
+              _error!,
+              style: const TextStyle(color: RegColors.red, fontSize: 12),
+            ),
           ],
           const SizedBox(height: 18),
           if (_n > 0)
@@ -93,19 +112,65 @@ class _Step4StudentsPricingPageState extends State<Step4StudentsPricingPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Pricing summary', style: TextStyle(color: RegColors.textMuted, fontSize: 12.5, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$_n students × ${formatUgx(tier.price)}',
-                    style: const TextStyle(color: RegColors.textPrimary, fontSize: 13.5),
+                  const Text(
+                    'Pricing summary',
+                    style: TextStyle(
+                      color: RegColors.textMuted,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    formatUgx(total),
-                    style: const TextStyle(color: RegColors.textPrimary, fontSize: 24, fontWeight: FontWeight.w800),
+                    '${tier.label} plan · $_n students',
+                    style: const TextStyle(
+                      color: RegColors.textPrimary,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    tier.price == null ? 'Custom quote' : formatUgx(tier.price),
+                    style: const TextStyle(
+                      color: RegColors.textPrimary,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 4),
-                  const Text('Per term', style: TextStyle(color: RegColors.textMuted, fontSize: 11.5)),
+                  Text(
+                    yearly == null
+                        ? "We'll tailor a plan with you"
+                        : 'Per term · or ${formatUgx(yearly)} per year (about 10% off)',
+                    style: const TextStyle(
+                      color: RegColors.textMuted,
+                      fontSize: 11.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  for (final item in tier.includes)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.check,
+                            size: 15,
+                            color: RegColors.textMuted,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              item,
+                              style: const TextStyle(
+                                color: RegColors.textPrimary,
+                                fontSize: 12.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
