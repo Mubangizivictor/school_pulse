@@ -1,7 +1,10 @@
-# Launcher icons are committed as finished files from the Roof beat brand
-# pack (design/brand/README.md). This config only reproduces them; do not
-# run it unless the masters change. adaptive_icon_monochrome needs
-# flutter_launcher_icons >= 0.14.0.
+# Reference only - do NOT run `dart run flutter_launcher_icons`. The launcher
+# icons are committed as the finished Roof beat brand-pack files, and the
+# generator is not equivalent: it re-renders every iOS/web icon, re-adds the
+# unused iOS 50/57/72 px sizes, writes a second values/colors.xml that
+# duplicates ic_launcher_background (build error), and wraps the adaptive
+# layers in a 16% inset that shrinks the icon. If the masters change, replace
+# the files from the brand pack instead.
 flutter_launcher_icons:
   image_path: "assets/branding/launcher_icon.png"
   android: "ic_launcher"
