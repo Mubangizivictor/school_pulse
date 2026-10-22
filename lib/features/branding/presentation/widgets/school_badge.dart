@@ -4,10 +4,14 @@ import 'package:flutter/material.dart';
 
 /// A single safe rendering point for tenant badge artwork.
 class SchoolBadge extends StatefulWidget {
-  const SchoolBadge({super.key, this.badgeUrl, this.size = 112});
+  const SchoolBadge({super.key, this.badgeUrl, this.size = 112, this.fallback});
 
   final String? badgeUrl;
   final double size;
+
+  /// Shown instead of the generic placeholder when there is no badge, or it
+  /// fails to load.
+  final Widget? fallback;
 
   @override
   State<SchoolBadge> createState() => _SchoolBadgeState();
@@ -56,7 +60,8 @@ class _SchoolBadgeState extends State<SchoolBadge> {
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(widget.size * .24);
-    final placeholder = _SchoolBadgePlaceholder(size: widget.size);
+    final placeholder =
+        widget.fallback ?? _SchoolBadgePlaceholder(size: widget.size);
     if (!_hasBadge || _timedOut) return placeholder;
 
     return Container(
@@ -74,9 +79,7 @@ class _SchoolBadgeState extends State<SchoolBadge> {
         errorBuilder: (_, _, _) => placeholder,
         frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
           if (frame != null) _timeoutTimer?.cancel();
-          return frame == null && !wasSynchronouslyLoaded
-              ? placeholder
-              : child;
+          return frame == null && !wasSynchronouslyLoaded ? placeholder : child;
         },
       ),
     );

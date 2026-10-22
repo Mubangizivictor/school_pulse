@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_tokens.g.dart' as tokens;
 import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
+import 'package:school_pulse/design_system/brand/brand_assets.dart';
 import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
@@ -147,7 +148,16 @@ class _WelcomeBrandState extends State<_WelcomeBrand> {
         label: 'School Pulse',
         child: Column(
           children: [
-            SchoolBadge(badgeUrl: badgeUrl, size: 84),
+            SchoolBadge(
+              badgeUrl: badgeUrl,
+              size: 84,
+              fallback: Image.asset(
+                BrandAssets.logoMark(context),
+                width: 84,
+                height: 84,
+                fit: BoxFit.contain,
+              ),
+            ),
             const SizedBox(height: AppSpacing.l),
             Text(
               schoolName.toUpperCase(),
