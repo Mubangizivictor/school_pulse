@@ -343,6 +343,8 @@ Each step uses `SetupWizardShell`, saves a draft, and can be revisited.
 ### 7.3 Release
 - [ ] App icons, splash, store screenshots, privacy policy, terms.
 - [ ] Android: signed release, Play Store internal track.
+- [ ] Change Android package id from `com.example.school_pulse` to a real one (e.g. `com.schoolpulseapp.app`); Play Store rejects `com.example`. Re-run `flutterfire configure` after.
+- [ ] Firebase Console → Crashlytics: click **Enable** (logs show `firebase_crashlytics_enabled:false` on Android, 2026-10-22).
 - [ ] iOS: distribution cert, TestFlight.
 - [ ] Web: `flutter build web --release` → `firebase deploy --only hosting`.
 - [ ] Production functions, rules and indexes deployed.
