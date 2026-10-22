@@ -109,9 +109,30 @@ flutter:
   generate: true
 
   assets:
+    - assets/fonts/
     - assets/loading_icon/loading_for_dark_mode.png
     - assets/loading_icon/loading_for_light_mode.png
     - assets/logos/
     - assets/launcher_icons/
     - assets/splash/splash_dark_mode.png
     - assets/splash/splash_light_mode.png
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Variable.ttf
+          weight: 700
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-Variable.ttf
+          weight: 800

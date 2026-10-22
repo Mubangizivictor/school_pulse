@@ -1,0 +1,117 @@
+/* GENERATED, DO NOT EDIT. Run: dart run tool/generate_theme.dart */
+:root {
+  --sp-primary: #1F4FD1;
+  --sp-on-primary: #FFFFFF;
+  --sp-primary-hover: #1A42B0;
+  --sp-primary-soft: #E8EEFC;
+  --sp-on-primary-soft: #163A9C;
+  --sp-secondary: #0E1B3D;
+  --sp-on-secondary: #FFFFFF;
+  --sp-accent: #D4A017;
+  --sp-on-accent: #0E1B3D;
+  --sp-accent-soft: #FBF3DC;
+  --sp-on-accent-soft: #7A5A06;
+  --sp-background: #F6F6F2;
+  --sp-surface: #FFFFFF;
+  --sp-surface-alt: #EFEFEA;
+  --sp-border: #DCDCD4;
+  --sp-border-strong: #C3C3BA;
+  --sp-text: #141B2D;
+  --sp-text-muted: #535B6C;
+  --sp-text-subtle: #6E7585;
+  --sp-text-on-dark: #FFFFFF;
+  --sp-success: #13703A;
+  --sp-success-soft: #E6F4EA;
+  --sp-warning: #A14A07;
+  --sp-warning-soft: #FDF0E1;
+  --sp-error: #B42318;
+  --sp-error-soft: #FCE9E7;
+  --sp-info: #1F4FD1;
+  --sp-info-soft: #E8EEFC;
+  --sp-focus-ring: #1F4FD1;
+  --sp-shadow: rgba(14, 27, 61, 0.08);
+  --sp-radius-sm: 6px;
+  --sp-radius-md: 10px;
+  --sp-radius-lg: 14px;
+  --sp-radius-xl: 20px;
+  --sp-radius-pill: 999px;
+  --sp-radius-app-icon: 24%;
+  --sp-space-xs: 4px;
+  --sp-space-sm: 8px;
+  --sp-space-md: 12px;
+  --sp-space-lg: 16px;
+  --sp-space-xl: 24px;
+  --sp-space-2xl: 32px;
+  --sp-space-3xl: 48px;
+  --sp-space-4xl: 64px;
+  --sp-font-display: Plus Jakarta Sans, sans-serif;
+  --sp-font-body: Inter, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+  --sp-primary: #7A9BFF;
+  --sp-on-primary: #0A1330;
+  --sp-primary-hover: #94AFFF;
+  --sp-primary-soft: #1B2A55;
+  --sp-on-primary-soft: #C6D4FF;
+  --sp-secondary: #E9EDF7;
+  --sp-on-secondary: #0E1B3D;
+  --sp-accent: #E5B536;
+  --sp-on-accent: #0E1B3D;
+  --sp-accent-soft: #3A2F12;
+  --sp-on-accent-soft: #F3D98A;
+  --sp-background: #0A0F1F;
+  --sp-surface: #111933;
+  --sp-surface-alt: #18223F;
+  --sp-border: #27324F;
+  --sp-border-strong: #3A4668;
+  --sp-text: #EDF0F7;
+  --sp-text-muted: #A6AEC2;
+  --sp-text-subtle: #8790A6;
+  --sp-text-on-dark: #FFFFFF;
+  --sp-success: #4ADE80;
+  --sp-success-soft: #123222;
+  --sp-warning: #FBBF24;
+  --sp-warning-soft: #3A2A0B;
+  --sp-error: #F87171;
+  --sp-error-soft: #3D1517;
+  --sp-info: #7A9BFF;
+  --sp-info-soft: #1B2A55;
+  --sp-focus-ring: #7A9BFF;
+  --sp-shadow: rgba(0, 0, 0, 0.40);
+  }
+}
+
+[data-theme="dark"] {
+  --sp-primary: #7A9BFF;
+  --sp-on-primary: #0A1330;
+  --sp-primary-hover: #94AFFF;
+  --sp-primary-soft: #1B2A55;
+  --sp-on-primary-soft: #C6D4FF;
+  --sp-secondary: #E9EDF7;
+  --sp-on-secondary: #0E1B3D;
+  --sp-accent: #E5B536;
+  --sp-on-accent: #0E1B3D;
+  --sp-accent-soft: #3A2F12;
+  --sp-on-accent-soft: #F3D98A;
+  --sp-background: #0A0F1F;
+  --sp-surface: #111933;
+  --sp-surface-alt: #18223F;
+  --sp-border: #27324F;
+  --sp-border-strong: #3A4668;
+  --sp-text: #EDF0F7;
+  --sp-text-muted: #A6AEC2;
+  --sp-text-subtle: #8790A6;
+  --sp-text-on-dark: #FFFFFF;
+  --sp-success: #4ADE80;
+  --sp-success-soft: #123222;
+  --sp-warning: #FBBF24;
+  --sp-warning-soft: #3A2A0B;
+  --sp-error: #F87171;
+  --sp-error-soft: #3D1517;
+  --sp-info: #7A9BFF;
+  --sp-info-soft: #1B2A55;
+  --sp-focus-ring: #7A9BFF;
+  --sp-shadow: rgba(0, 0, 0, 0.40);
+}

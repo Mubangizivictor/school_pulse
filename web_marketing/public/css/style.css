@@ -1,127 +1,52 @@
 /* School Pulse marketing site — shared stylesheet */
+@import url('./tokens.css');
 
 :root {
   /* Brand accent — blue, used sparingly (CTAs, links, active states, highlights) */
-  --color-primary: #2563EB;
-  --color-primary-dark: #1D4ED8;
-  --color-primary-light: #3B82F6;
-  --color-primary-soft: #EFF6FF; /* tinted backgrounds for badges/active states only */
-  --color-primary-soft-border: #BFDBFE;
+  --color-primary: var(--sp-primary);
+  --color-primary-dark: var(--sp-primary-hover);
+  --color-primary-light: var(--sp-primary);
+  --color-primary-soft: var(--sp-primary-soft);
+  --color-primary-soft-border: var(--sp-border);
 
   /* Ink / near-black text + dark surfaces */
-  --color-ink: #0F172A;
-  --color-ink-soft: #334155;
-  --color-muted: #64748B;
+  --color-ink: var(--sp-text);
+  --color-ink-soft: var(--sp-text-muted);
+  --color-muted: var(--sp-text-subtle);
 
   /* Neutral surfaces — majors are black & white, not blue */
-  --color-bg: #FFFFFF;
-  --color-surface: #F5F5F5;      /* alternating section / neutral panel background */
-  --color-surface-alt: #FAFAFA;  /* lighter neutral panel background */
-  --color-card: #FFFFFF;         /* card / mockup / price-card surface */
-  --color-border: #E5E7EB;
-  --color-white: #FFFFFF;
+  --color-bg: var(--sp-background);
+  --color-surface: var(--sp-surface-alt);
+  --color-surface-alt: var(--sp-surface);
+  --color-card: var(--sp-surface);
+  --color-border: var(--sp-border);
+  --color-white: var(--sp-text-on-dark);
 
   /* Header / overlay surfaces */
-  --color-header-bg: rgba(255,255,255,.92);
+  --color-header-bg: var(--sp-surface);
 
   /* Always-dark full-bleed surfaces (footer, CTA banner) */
-  --color-ink-surface: #0F172A;
+  --color-ink-surface: var(--sp-secondary);
 
   /* Semantic status — out of scope for the blue reduction, kept as-is */
-  --color-success: #16A34A;
-  --color-success-bg: #DCFCE7;
-  --color-success-text: #15803D;
-  --color-error: #DC2626;
-  --color-error-bg: #FEE2E2;
-  --color-error-text: #B91C1C;
-  --color-warning: #D97706;
-  --color-warning-bg: #FEF3C7;
-  --color-warning-text: #B45309;
+  --color-success: var(--sp-success);
+  --color-success-bg: var(--sp-success-soft);
+  --color-success-text: var(--sp-success);
+  --color-error: var(--sp-error);
+  --color-error-bg: var(--sp-error-soft);
+  --color-error-text: var(--sp-error);
+  --color-warning: var(--sp-warning);
+  --color-warning-bg: var(--sp-warning-soft);
+  --color-warning-text: var(--sp-warning);
 
-  --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
-  --shadow-sm: 0 1px 2px rgba(15,23,42,.06);
-  --shadow-md: 0 4px 16px rgba(15,23,42,.08);
-  --shadow-lg: 0 12px 32px rgba(15,23,42,.12);
+  --radius-sm: var(--sp-radius-sm);
+  --radius-md: var(--sp-radius-md);
+  --radius-lg: var(--sp-radius-lg);
+  --shadow-sm: 0 1px 2px var(--sp-shadow);
+  --shadow-md: 0 4px 16px var(--sp-shadow);
+  --shadow-lg: 0 12px 32px var(--sp-shadow);
   --container: 1200px;
-  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-}
-
-/* ---------- Dark mode (system preference) ---------- */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --color-primary: #3B82F6;
-    --color-primary-dark: #60A5FA;
-    --color-primary-light: #60A5FA;
-    --color-primary-soft: rgba(59,130,246,.16);
-    --color-primary-soft-border: rgba(59,130,246,.35);
-
-    --color-ink: #F8FAFC;
-    --color-ink-soft: #CBD5E1;
-    --color-muted: #94A3B8;
-
-    --color-bg: #000000;
-    --color-surface: #141414;
-    --color-surface-alt: #111111;
-    --color-card: #141414;
-    --color-border: #2A2A2A;
-    --color-white: #FFFFFF;
-
-    --color-header-bg: rgba(10,10,10,.85);
-    --color-ink-surface: #0A0A0A;
-
-    --color-success: #4ADE80;
-    --color-success-bg: rgba(74,222,128,.16);
-    --color-success-text: #86EFAC;
-    --color-error: #F87171;
-    --color-error-bg: rgba(248,113,113,.16);
-    --color-error-text: #FCA5A5;
-    --color-warning: #FBBF24;
-    --color-warning-bg: rgba(251,191,36,.16);
-    --color-warning-text: #FCD34D;
-
-    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
-    --shadow-md: 0 4px 16px rgba(0,0,0,.5);
-    --shadow-lg: 0 12px 32px rgba(0,0,0,.6);
-  }
-}
-
-/* ---------- Dark mode (manual override, always wins) ---------- */
-:root[data-theme="dark"] {
-  --color-primary: #3B82F6;
-  --color-primary-dark: #60A5FA;
-  --color-primary-light: #60A5FA;
-  --color-primary-soft: rgba(59,130,246,.16);
-  --color-primary-soft-border: rgba(59,130,246,.35);
-
-  --color-ink: #F8FAFC;
-  --color-ink-soft: #CBD5E1;
-  --color-muted: #94A3B8;
-
-  --color-bg: #000000;
-  --color-surface: #141414;
-  --color-surface-alt: #111111;
-  --color-card: #141414;
-  --color-border: #2A2A2A;
-  --color-white: #FFFFFF;
-
-  --color-header-bg: rgba(10,10,10,.85);
-  --color-ink-surface: #0A0A0A;
-
-  --color-success: #4ADE80;
-  --color-success-bg: rgba(74,222,128,.16);
-  --color-success-text: #86EFAC;
-  --color-error: #F87171;
-  --color-error-bg: rgba(248,113,113,.16);
-  --color-error-text: #FCA5A5;
-  --color-warning: #FBBF24;
-  --color-warning-bg: rgba(251,191,36,.16);
-  --color-warning-text: #FCD34D;
-
-  --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
-  --shadow-md: 0 4px 16px rgba(0,0,0,.5);
-  --shadow-lg: 0 12px 32px rgba(0,0,0,.6);
+  --font: var(--sp-font-body);
 }
 
 * { box-sizing: border-box; }

@@ -13,6 +13,7 @@ Firebase project: `school-pulse-3d95b` (see `.firebaserc`).
 ### Flutter app
 ```bash
 flutter analyze                          # static analysis — must be zero new warnings/errors
+dart run tool/generate_theme.dart        # regenerate Flutter and marketing-site tokens
 dart format <files>                      # format touched files before committing
 flutter test                             # full test suite
 flutter test test/features/<feature>/    # a feature's tests only
@@ -65,3 +66,4 @@ Never deploy without running the relevant tests/analyze first, and never weaken 
 4. Don't assume a single fixed curriculum, term structure, class naming, or grading model — the platform must support Ugandan and international schools, K–12, and custom structures. Avoid hard-coded regional defaults (e.g. defaulting country to Uganda, fixed district lists, fixed term names) in new or edited onboarding code.
 5. For money, health, student data, attendance, gate access, or notifications: explicitly consider authorization, auditability, and offline/failure behavior — these domains have existing audit-log and offline-queue patterns to extend, not replace.
 6. When multiple similar-looking modules exist for the same concept, check git history/comments for which one is actually wired into the router/DI before extending either — dead, unwired duplicates (fully built out, tested, but never referenced outside their own folder) have existed in this codebase before.
+7. Parent theme: all colours, fonts and sizes come from `design/tokens/school_pulse_theme.json` via generated tokens. Never hard-code them.
