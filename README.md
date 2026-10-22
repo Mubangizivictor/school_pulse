@@ -14,6 +14,9 @@ A modern school management system standardizing the experience across Web and Mo
 - **Allocation Locking**: Once a student is allocated to a parent, they cannot be reallocated by non-admin users.
 - **Admin Authority**: Only School Administrators have the permission to edit or reallocate student-parent links.
 
+### Parent Theme
+- **Parent theme**: all colours, fonts and sizes come from `design/tokens/school_pulse_theme.json` via generated tokens. Never hard-code them. After editing the JSON, run `dart run tool/generate_theme.dart` to regenerate the Flutter tokens and the website's `tokens.css`.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

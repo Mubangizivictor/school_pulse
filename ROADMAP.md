@@ -28,6 +28,8 @@ Step A (business tasks) runs in parallel with every step.
    - Put short notes (decisions, blockers) under the step as `Note:` lines.
    - Commit: `git add ROADMAP.md && git commit -m "docs(roadmap): step N done"`.
 
+6. Parent theme: all colours, fonts and sizes come from `design/tokens/school_pulse_theme.json` via generated tokens. Never hard-code them. Regenerate with `dart run tool/generate_theme.dart`.
+
 Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (tested + committed) · `[!]` blocked (say on what)
 
 Who: **Claude** = the AI agent does it. **Victor** = only the owner can do it
