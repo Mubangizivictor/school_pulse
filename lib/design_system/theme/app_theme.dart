@@ -24,16 +24,18 @@ class AppTheme {
       tertiary: colors.accent,
       onTertiary: colors.onAccent,
       error: colors.error,
-      onError: colors.textOnDark,
+      onError: colors.onError,
       surface: colors.surface,
       onSurface: colors.text,
       outline: colors.border,
       outlineVariant: colors.borderStrong,
-      shadow: colors.background,
-      scrim: colors.background,
+      shadow: colors.shadow,
+      scrim: colors.shadow.withValues(alpha: 0.5),
       inverseSurface: colors.text,
       onInverseSurface: colors.background,
-      inversePrimary: colors.primary,
+      inversePrimary: brightness == Brightness.light
+          ? AppColors.dark.primary
+          : AppColors.light.primary,
     );
     final textTheme = TextTheme(
       displayLarge: AppText.display,
@@ -58,6 +60,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: brightness,
+      fontFamily: AppText.body.fontFamily,
       colorScheme: scheme,
       scaffoldBackgroundColor: colors.background,
       canvasColor: colors.background,
@@ -67,7 +70,7 @@ class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: colors.background,
         foregroundColor: colors.text,
-        surfaceTintColor: colors.background,
+        surfaceTintColor: AppColorValues.transparent,
         titleTextStyle: AppText.title.copyWith(color: colors.text),
         systemOverlayStyle: brightness == Brightness.dark
             ? SystemUiOverlayStyle.light
