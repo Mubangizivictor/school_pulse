@@ -15,8 +15,14 @@ const ALLOWED_ORIGINS = new Set([
   'http://localhost:4321',
 ]);
 
+// Local dev servers (Next.js site on :3000, Flutter web on any port) are only
+// trusted when these functions run inside the Firebase emulator - never in a
+// deployed function.
+const LOCAL_ORIGIN_RE = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
 function isAllowedOrigin(origin) {
-  return ALLOWED_ORIGINS.has(origin);
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  return process.env.FUNCTIONS_EMULATOR === 'true' && LOCAL_ORIGIN_RE.test(String(origin || ''));
 }
 
 module.exports = { ALLOWED_ORIGINS, isAllowedOrigin };

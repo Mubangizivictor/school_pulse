@@ -10,6 +10,10 @@
 // out), so this talks to it directly rather than reusing that helper.
 (function () {
   var FUNCTIONS_BASE = 'https://europe-west1-school-pulse-3d95b.cloudfunctions.net';
+  // Localhost -> Functions emulator, matching registration-auth.js.
+  if (/^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)) {
+    FUNCTIONS_BASE = 'http://127.0.0.1:5001/school-pulse-3d95b/europe-west1';
+  }
   var DEBOUNCE_MS = 450;
 
   // Sanitizes free-typed input down to the charset the backend accepts

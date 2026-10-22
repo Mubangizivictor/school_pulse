@@ -18,6 +18,15 @@
   };
   var FUNCTIONS_BASE = 'https://europe-west1-school-pulse-3d95b.cloudfunctions.net';
 
+  // Served from localhost (npm run dev / next start) -> talk to the local
+  // Firebase Emulator Suite instead of production, so testing the register
+  // flow never creates real accounts or applications. Start the emulators
+  // first: firebase emulators:start (ports from firebase.json).
+  var USE_EMULATOR = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname);
+  if (USE_EMULATOR) {
+    FUNCTIONS_BASE = 'http://127.0.0.1:5001/' + FIREBASE_CONFIG.projectId + '/europe-west1';
+  }
+
   function loadScript(src) {
     return new Promise(function (resolve, reject) {
       var s = document.createElement('script');
@@ -35,7 +44,14 @@
       .then(function () { return loadScript('https://www.gstatic.com/firebasejs/' + FIREBASE_SDK_VERSION + '/firebase-auth-compat.js'); })
       .then(function () { return loadScript('https://www.gstatic.com/firebasejs/' + FIREBASE_SDK_VERSION + '/firebase-storage-compat.js'); })
       .then(function () {
-        if (!window.firebase.apps.length) window.firebase.initializeApp(FIREBASE_CONFIG);
+        if (!window.firebase.apps.length) {
+          window.firebase.initializeApp(FIREBASE_CONFIG);
+          if (USE_EMULATOR) {
+            window.firebase.auth().useEmulator('http://127.0.0.1:9099');
+            window.firebase.storage().useEmulator('127.0.0.1', 9199);
+            console.info('School Pulse: using the local Firebase emulators');
+          }
+        }
         return window.firebase;
       });
     return sdkReady;

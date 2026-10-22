@@ -29,8 +29,12 @@ class RegistrationService {
   RegistrationService._();
   static final RegistrationService instance = RegistrationService._();
 
-  static const _functionsBase =
-      'https://europe-west1-school-pulse-3d95b.cloudfunctions.net';
+  // Matches main.dart's opt-in emulator wiring, so a
+  // --dart-define=USE_FIREBASE_EMULATOR=true run sends these HTTP calls to the
+  // Functions emulator along with its emulator-issued ID token.
+  static const _functionsBase = bool.fromEnvironment('USE_FIREBASE_EMULATOR')
+      ? 'http://127.0.0.1:5001/school-pulse-3d95b/europe-west1'
+      : 'https://europe-west1-school-pulse-3d95b.cloudfunctions.net';
 
   FirebaseAuth get _auth => FirebaseAuth.instance;
   FirebaseFunctions get _functions =>
@@ -76,7 +80,11 @@ class RegistrationService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
-      throw RegistrationApiException(401, 'not_signed_in', 'Please sign in first.');
+      throw RegistrationApiException(
+        401,
+        'not_signed_in',
+        'Please sign in first.',
+      );
     }
     final token = await user.getIdToken();
     final uri = Uri.parse('$_functionsBase/$name');
@@ -100,7 +108,8 @@ class RegistrationService {
       throw RegistrationApiException(
         res.statusCode,
         (data['error'] as String?) ?? 'unknown_error',
-        (data['message'] as String?) ?? 'Something went wrong. Please try again.',
+        (data['message'] as String?) ??
+            'Something went wrong. Please try again.',
       );
     }
     return data;
@@ -141,7 +150,11 @@ class RegistrationService {
   Future<String> uploadPaymentProof(File file, String fileName) async {
     final user = _auth.currentUser;
     if (user == null) {
-      throw RegistrationApiException(401, 'not_signed_in', 'Please sign in first.');
+      throw RegistrationApiException(
+        401,
+        'not_signed_in',
+        'Please sign in first.',
+      );
     }
     final safeName = fileName.replaceAll(RegExp(r'[^A-Za-z0-9_.-]'), '_');
     final path =
@@ -151,9 +164,7 @@ class RegistrationService {
     return path;
   }
 
-  Future<Map<String, dynamic>> submitManualPayment(
-    Map<String, dynamic> body,
-  ) {
+  Future<Map<String, dynamic>> submitManualPayment(Map<String, dynamic> body) {
     return _call('submitManualPayment', method: 'POST', body: body);
   }
 }
