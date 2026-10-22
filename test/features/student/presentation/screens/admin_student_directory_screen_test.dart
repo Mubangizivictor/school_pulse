@@ -185,8 +185,9 @@ void main() {
 
   tearDown(() {
     if (di.sl.isRegistered<StudentsBloc>()) di.sl.unregister<StudentsBloc>();
-    if (di.sl.isRegistered<AttendanceBloc>())
+    if (di.sl.isRegistered<AttendanceBloc>()) {
       di.sl.unregister<AttendanceBloc>();
+    }
   });
 
   Widget buildSubject() {
