@@ -150,6 +150,10 @@ Status: `[~]` in progress (started 2026-10-22)
 - [ ] Victor: read the site in Chrome and approve the wording.
 - [ ] Claude: deploy with `tool/deploy_web.sh` once approved.
 
+Note (2026-10-22): prices done in `web_marketing/public/js/pricing-config.js` (single source; tiers carry the backend `plan`). The Pricing page had been deleted in b088f053 and nav/footer links 404'd on the live site; restored as `pages-html/pricing.html`. Offline claim now says attendance only. Not deployed yet.
+Note: backend trial is 14 days (`public_functions/portal_domains.js` `TRIAL_DAYS`) but A1 says 30; the site now says 30. Align the backend in Step 18 (or sooner if Victor wants).
+Remaining in Step 1: website copy (headline etc. from the pricing doc), wizard + emails E2E, Super Admin approve/reject, Victor's approval, deploy.
+
 Commands: `cd web_marketing && npm run dev && npm test`; deploy `tool/deploy_web.sh`.
 Done when: the live site shows the final prices, and a test school can register, get the email, and be approved in Super Admin.
 
