@@ -22,7 +22,9 @@ class _ApplicationStatusPageState extends State<ApplicationStatusPage> {
   @override
   void initState() {
     super.initState();
-    context.read<RegistrationBloc>().add(const ApplicationStatusCheckRequested());
+    context.read<RegistrationBloc>().add(
+      const ApplicationStatusCheckRequested(),
+    );
   }
 
   @override
@@ -40,8 +42,8 @@ class _ApplicationStatusPageState extends State<ApplicationStatusPage> {
               child: status == ApplicationStatus.rejected
                   ? _buildRejected(context, state)
                   : status == ApplicationStatus.approved
-                      ? _buildApproved(context, state)
-                      : _buildPendingReview(context, state),
+                  ? _buildApproved(context, state)
+                  : _buildPendingReview(context, state),
             ),
           ),
         );
@@ -55,26 +57,46 @@ class _ApplicationStatusPageState extends State<ApplicationStatusPage> {
         const SizedBox(height: 12),
         const Icon(Icons.access_time_rounded, color: RegColors.amber, size: 48),
         const SizedBox(height: 14),
-        const Text('Registration submitted', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: RegColors.textPrimary)),
+        const Text(
+          'Registration submitted',
+          style: TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.w700,
+            color: RegColors.textPrimary,
+          ),
+        ),
         const SizedBox(height: 6),
-        const Text('Your registration is awaiting platform review.', style: TextStyle(fontSize: 13, color: RegColors.textMuted), textAlign: TextAlign.center),
+        const Text(
+          'Your registration is awaiting platform review.',
+          style: TextStyle(fontSize: 13, color: RegColors.textMuted),
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 20),
         if (state.applicationId != null) _ReferenceCard(state.applicationId!),
         const SizedBox(height: 18),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: RegColors.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: RegColors.border)),
+          decoration: BoxDecoration(
+            color: RegColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: RegColors.border),
+          ),
           child: const RegStatusTimeline(
             labels: ['Submitted', 'Under review', 'Approved', 'Payment'],
             currentIndex: 1,
           ),
         ),
         const SizedBox(height: 16),
-        const RegInfoBanner('You will be notified by SMS and email once there is an update.'),
+        const RegInfoBanner(
+          'You will be notified by SMS and email once there is an update.',
+        ),
         if (state.statusError != null) ...[
           const SizedBox(height: 10),
-          Text(state.statusError!, style: const TextStyle(color: RegColors.red, fontSize: 12)),
+          Text(
+            state.statusError!,
+            style: const TextStyle(color: RegColors.red, fontSize: 12),
+          ),
         ],
         const Spacer(),
         SizedBox(
@@ -82,9 +104,18 @@ class _ApplicationStatusPageState extends State<ApplicationStatusPage> {
           child: FilledButton(
             onPressed: state.statusLoading
                 ? null
-                : () => context.read<RegistrationBloc>().add(const ApplicationStatusCheckRequested()),
+                : () => context.read<RegistrationBloc>().add(
+                    const ApplicationStatusCheckRequested(),
+                  ),
             child: state.statusLoading
-                ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                ? const SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                 : const Text('Check registration status'),
           ),
         ),
@@ -107,21 +138,47 @@ class _ApplicationStatusPageState extends State<ApplicationStatusPage> {
         const SizedBox(height: 12),
         const Icon(Icons.check_circle, color: RegColors.green, size: 48),
         const SizedBox(height: 14),
-        const Text('Registration approved', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: RegColors.textPrimary)),
+        const Text(
+          'Registration approved',
+          style: TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.w700,
+            color: RegColors.textPrimary,
+          ),
+        ),
         const SizedBox(height: 6),
-        const Text('Your school has been approved.', style: TextStyle(fontSize: 13, color: RegColors.textMuted)),
+        const Text(
+          'Your school has been approved.',
+          style: TextStyle(fontSize: 13, color: RegColors.textMuted),
+        ),
         const SizedBox(height: 20),
         if (state.applicationId != null) _ReferenceCard(state.applicationId!),
         const SizedBox(height: 12),
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: RegColors.greenSoft, borderRadius: BorderRadius.circular(11), border: Border.all(color: RegColors.green.withValues(alpha: 0.4))),
+          decoration: BoxDecoration(
+            color: RegColors.greenSoft,
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(color: RegColors.green.withValues(alpha: 0.4)),
+          ),
           child: const Row(
             children: [
-              Icon(Icons.check_circle_outline, color: RegColors.green, size: 18),
+              Icon(
+                Icons.check_circle_outline,
+                color: RegColors.green,
+                size: 18,
+              ),
               SizedBox(width: 10),
-              Expanded(child: Text('You can now proceed to make payment using the instructions provided.', style: TextStyle(color: RegColors.textPrimary, fontSize: 12.5))),
+              Expanded(
+                child: Text(
+                  'Your 30-day free trial has started. Sign in to School Pulse to set up your school. Choose a plan any time before the trial ends.',
+                  style: TextStyle(
+                    color: RegColors.textPrimary,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -129,10 +186,10 @@ class _ApplicationStatusPageState extends State<ApplicationStatusPage> {
         SizedBox(
           width: double.infinity,
           child: FilledButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PaymentPage()),
-            ),
-            child: const Text('Continue to payment instructions'),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const PaymentPage())),
+            child: const Text('Choose a plan and pay'),
           ),
         ),
       ],
@@ -145,21 +202,50 @@ class _ApplicationStatusPageState extends State<ApplicationStatusPage> {
         const SizedBox(height: 12),
         const Icon(Icons.cancel, color: RegColors.red, size: 48),
         const SizedBox(height: 14),
-        const Text('Registration not approved', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: RegColors.textPrimary)),
+        const Text(
+          'Registration not approved',
+          style: TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.w700,
+            color: RegColors.textPrimary,
+          ),
+        ),
         const SizedBox(height: 6),
-        const Text('Your registration needs changes before it can be approved.', style: TextStyle(fontSize: 13, color: RegColors.textMuted), textAlign: TextAlign.center),
+        const Text(
+          'Your registration needs changes before it can be approved.',
+          style: TextStyle(fontSize: 13, color: RegColors.textMuted),
+          textAlign: TextAlign.center,
+        ),
         const SizedBox(height: 20),
         if (state.rejectionReason != null && state.rejectionReason!.isNotEmpty)
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: RegColors.redSoft, borderRadius: BorderRadius.circular(11), border: Border.all(color: RegColors.red.withValues(alpha: 0.4))),
+            decoration: BoxDecoration(
+              color: RegColors.redSoft,
+              borderRadius: BorderRadius.circular(11),
+              border: Border.all(color: RegColors.red.withValues(alpha: 0.4)),
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Reason', style: TextStyle(color: RegColors.red, fontSize: 11.5, fontWeight: FontWeight.w700)),
+                const Text(
+                  'Reason',
+                  style: TextStyle(
+                    color: RegColors.red,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Text(state.rejectionReason!, style: const TextStyle(color: RegColors.textPrimary, fontSize: 13, height: 1.4)),
+                Text(
+                  state.rejectionReason!,
+                  style: const TextStyle(
+                    color: RegColors.textPrimary,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
               ],
             ),
           ),
@@ -194,21 +280,39 @@ class _ReferenceCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: RegColors.surface, borderRadius: BorderRadius.circular(11), border: Border.all(color: RegColors.border)),
+      decoration: BoxDecoration(
+        color: RegColors.surface,
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(color: RegColors.border),
+      ),
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Reference ID', style: TextStyle(color: RegColors.textMuted, fontSize: 11.5)),
+                const Text(
+                  'Reference ID',
+                  style: TextStyle(color: RegColors.textMuted, fontSize: 11.5),
+                ),
                 const SizedBox(height: 4),
-                Text(reference, style: const TextStyle(color: RegColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w700)),
+                Text(
+                  reference,
+                  style: const TextStyle(
+                    color: RegColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.copy_outlined, size: 17, color: RegColors.textMuted),
+            icon: const Icon(
+              Icons.copy_outlined,
+              size: 17,
+              color: RegColors.textMuted,
+            ),
             onPressed: () => Clipboard.setData(ClipboardData(text: reference)),
           ),
         ],

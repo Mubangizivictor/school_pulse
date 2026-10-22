@@ -255,6 +255,8 @@ class _RenewalReadOnlyGate extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final underReview = institution.isPaymentUnderReview;
+    // A school that never paid is here because its free trial ran out.
+    final trialEnded = !institution.hasEverActivated;
 
     return Stack(
       fit: StackFit.expand,
@@ -285,7 +287,11 @@ class _RenewalReadOnlyGate extends StatelessWidget {
                         const SizedBox(height: 14),
                         Text(
                           underReview
-                              ? 'Renewal payment under review'
+                              ? (trialEnded
+                                    ? 'Payment under review'
+                                    : 'Renewal payment under review')
+                              : trialEnded
+                              ? 'Your free trial has ended'
                               : 'Subscription renewal required',
                           textAlign: TextAlign.center,
                           style: theme.textTheme.titleLarge?.copyWith(
@@ -296,6 +302,10 @@ class _RenewalReadOnlyGate extends StatelessWidget {
                         Text(
                           underReview
                               ? 'Your dashboard stays visible while we verify the renewal payment, but School Pulse actions remain locked until approval.'
+                              : trialEnded
+                              ? (isSchoolAdmin
+                                    ? 'Your school is now read-only. Everything you entered is kept and still visible. Choose a plan and pay to unlock School Pulse again.'
+                                    : 'Your school\'s free trial has ended, so School Pulse is read-only. Ask the School Administrator to choose a plan.')
                               : isSchoolAdmin
                               ? 'Your paid period has ended. The dashboard remains visible, but every action is locked until the full renewal payment is verified.'
                               : 'Your school subscription has expired. The dashboard remains visible but locked. Ask the School Administrator to renew School Pulse.',
@@ -312,7 +322,11 @@ class _RenewalReadOnlyGate extends StatelessWidget {
                             child: FilledButton.icon(
                               onPressed: onPay,
                               icon: const Icon(Icons.open_in_new_rounded),
-                              label: const Text('Renew Subscription'),
+                              label: Text(
+                                trialEnded
+                                    ? 'Choose a plan'
+                                    : 'Renew Subscription',
+                              ),
                             ),
                           ),
                         ],

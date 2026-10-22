@@ -97,12 +97,21 @@ class InstitutionContext extends Equatable {
   /// completely inaccessible until the SaaS Owner approves the payment.
   bool get isInitialPaymentRequired {
     if (hasEverActivated) return false;
+    // The free trial set on approval gives full access with no payment until
+    // it ends; the server then flips accessMode to 'readOnly'.
+    if (isInActiveTrial) return false;
     return subscriptionStatus == 'awaiting_payment' ||
         subscriptionStatus == 'payment_review' ||
         subscriptionStatus == 'payment_due' ||
         subscriptionStatus == 'rejected' ||
         status == SchoolStatus.trial;
   }
+
+  /// Inside the unexpired free trial started when the school was approved.
+  bool get isInActiveTrial =>
+      subscriptionStatus == 'trial' &&
+      subscriptionExpiry != null &&
+      subscriptionExpiry!.isAfter(DateTime.now());
 
   /// Renewal: after at least one successful activation the dashboard may stay
   /// visible, but all interaction is blocked once the paid period has ended
