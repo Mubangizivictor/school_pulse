@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Metadata } from 'next';
+import { siteMetadata } from './root-head';
 
 // The site's pages live, unchanged, as the original hand-written HTML in
 // pages-html/. At build time each one is split into its <title>, meta
@@ -51,7 +52,12 @@ export function listSlugs(): string[] {
 
 export function pageMetadata(slug: string): Metadata {
   const { title, description } = readPage(slug);
-  return description ? { title, description } : { title };
+  const text = description ? { title, description } : { title };
+  return {
+    ...text,
+    openGraph: { ...siteMetadata.openGraph, ...text },
+    twitter: { ...siteMetadata.twitter, ...text },
+  };
 }
 
 export function StaticPage({ slug }: { slug: string }) {

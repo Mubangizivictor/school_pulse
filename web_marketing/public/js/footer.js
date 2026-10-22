@@ -7,7 +7,7 @@
       <div class="footer-top-row">
         <div class="footer-brand">
           <a href="index.html" class="brand" style="color:var(--sp-text-on-dark);">
-            <span class="brand-mark"><img src="assets/logos/icon-dark.png" alt="" width="28" height="28" style="height:100%;width:auto;display:block;"></span>
+            <span class="brand-mark"><img src="brand/logo_mark_dark.svg" alt="" width="37" height="28" style="height:100%;width:auto;display:block;"></span>
             School Pulse
           </a>
           <p>School management built for Ugandan schools.</p>

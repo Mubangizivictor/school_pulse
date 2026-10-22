@@ -1,4 +1,6 @@
-import { RootHead } from '@/lib/root-head';
+import { RootHead, siteMetadata } from '@/lib/root-head';
+
+export const metadata = siteMetadata;
 
 // register-school and payment use <body class="reg-body">.
 export default function RegLayout({ children }: { children: React.ReactNode }) {
