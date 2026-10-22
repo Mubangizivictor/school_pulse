@@ -18,6 +18,7 @@ import 'package:school_pulse/design_system/responsive/app_responsive_content.dar
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_tokens.g.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
@@ -524,7 +525,7 @@ class MoneyText extends StatelessWidget {
 /// Fee/payment status pill. Green for settled states, red for problem
 /// states, neutral grey for in-progress - contrast is AA in both themes
 /// because the tokens carry a per-brightness value.
-enum FinanceStatusTone { positive, negative, neutral }
+enum FinanceStatusTone { positive, warning, negative, neutral }
 
 class FinanceStatusChip extends StatelessWidget {
   final String label;
@@ -568,15 +569,19 @@ class FinanceStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<AppColors>()!;
     late final Color fg;
     late final Color bg;
     switch (tone) {
       case FinanceStatusTone.positive:
-        fg = AppColors.success(context);
-        bg = AppColors.successSurface(context);
+        fg = tokens.success;
+        bg = tokens.successSoft;
+      case FinanceStatusTone.warning:
+        fg = tokens.warning;
+        bg = tokens.warningSoft;
       case FinanceStatusTone.negative:
-        fg = AppColors.danger(context);
-        bg = AppColors.dangerSurface(context);
+        fg = tokens.error;
+        bg = tokens.errorSoft;
       case FinanceStatusTone.neutral:
         fg = AppColors.textSecondary(context);
         bg = AppColors.surfaceContainer(context);

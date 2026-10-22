@@ -112,7 +112,7 @@ class _BursarWebStudentsScreenState extends State<BursarWebStudentsScreen> {
       return (label: 'Paid', tone: FinanceStatusTone.positive);
     }
     if (v.totalPaid > 0) {
-      return (label: 'Partial', tone: FinanceStatusTone.neutral);
+      return (label: 'Partial', tone: FinanceStatusTone.warning);
     }
     return (label: 'Overdue', tone: FinanceStatusTone.negative);
   }

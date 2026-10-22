@@ -379,7 +379,7 @@ class _StudentRow extends StatelessWidget {
         : v.isFullyPaid
         ? (label: 'Paid', tone: FinanceStatusTone.positive)
         : v.totalPaid > 0
-        ? (label: 'Partial', tone: FinanceStatusTone.neutral)
+        ? (label: 'Partial', tone: FinanceStatusTone.warning)
         : (label: 'Overdue', tone: FinanceStatusTone.negative);
 
     final balance = v?.balance ?? 0;
