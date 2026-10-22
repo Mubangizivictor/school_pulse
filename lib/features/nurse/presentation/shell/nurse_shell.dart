@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/theme/app_tokens.g.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/nurse/presentation/clinic_ui.dart';
 
@@ -19,7 +20,8 @@ class NurseShell extends StatelessWidget {
     final wide = MediaQuery.sizeOf(context).width >= 720;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedColor = ClinicUi.foreground(context);
-    final unselectedColor = isDark ? Colors.white70 : ClinicUi.muted;
+    final tokens = Theme.of(context).extension<AppColors>()!;
+    final unselectedColor = isDark ? tokens.textMuted : ClinicUi.muted;
     final rail = NavigationRail(
       selectedIndex: index,
       onDestinationSelected: (value) => _goToDestination(context, value),
@@ -58,7 +60,7 @@ class NurseShell extends StatelessWidget {
               data: NavigationBarThemeData(
                 backgroundColor: ClinicUi.background(context),
                 indicatorColor: isDark
-                    ? Colors.white.withValues(alpha: 0.16)
+                    ? tokens.text.withValues(alpha: 0.16)
                     : ClinicUi.black.withValues(alpha: 0.10),
                 iconTheme: WidgetStateProperty.resolveWith((states) {
                   return IconThemeData(

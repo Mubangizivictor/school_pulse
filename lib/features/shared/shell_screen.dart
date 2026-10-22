@@ -651,7 +651,7 @@ class StaffShell extends StatelessWidget {
                         ),
                         child: IntrinsicHeight(
                           child: NavigationRail(
-                            backgroundColor: Colors.transparent,
+                            backgroundColor: AppColors.transparent,
                             extended: MediaQuery.of(context).size.width > 1200,
                             selectedIndex: _calculateSelectedIndex(context),
                             onDestinationSelected: (idx) =>
@@ -759,9 +759,9 @@ class StaffShell extends StatelessWidget {
                 child: NavigationBar(
                   height: 64,
                   backgroundColor: AppColors.surfaceElevated(context),
-                  surfaceTintColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  indicatorColor: Colors.transparent,
+                  surfaceTintColor: AppColors.transparent,
+                  shadowColor: AppColors.transparent,
+                  indicatorColor: AppColors.transparent,
                   selectedIndex: _calculateSelectedIndex(context),
                   onDestinationSelected: (idx) => _onItemTapped(idx, context),
                   destinations: destinations.map((d) {

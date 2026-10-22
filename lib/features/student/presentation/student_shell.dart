@@ -145,7 +145,7 @@ class StudentShell extends StatelessWidget {
                   ),
                   Expanded(
                     child: NavigationRail(
-                      backgroundColor: Colors.transparent,
+                      backgroundColor: AppColors.transparent,
                       extended: MediaQuery.of(context).size.width > 1200,
                       selectedIndex: _calculateSelectedIndex(context),
                       onDestinationSelected: (idx) =>

@@ -282,7 +282,7 @@ class _Item extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: Material(
-        color: selected ? AppColors.primary(context) : Colors.transparent,
+        color: selected ? AppColors.primary(context) : AppColors.transparent,
         borderRadius: AppRadius.medium,
         child: InkWell(
           onTap: onTap,

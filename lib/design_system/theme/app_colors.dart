@@ -100,6 +100,6 @@ class AppColors {
       _tokens(context).infoSoft;
   static Color disabled(BuildContext context) => _tokens(context).textSubtle;
   static Color focus(BuildContext context) => _tokens(context).focusRing;
-  static Color shadow(BuildContext context) => _tokens(context).background;
+  static Color shadow(BuildContext context) => _tokens(context).shadow;
   static Color overlay(BuildContext context) => transparent;
 }

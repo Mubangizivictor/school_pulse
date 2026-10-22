@@ -82,7 +82,7 @@ class SuperAdminBottomNavigation extends StatelessWidget {
           boxShadow: [
             if (!isDark)
               BoxShadow(
-                color: Colors.black.withValues(alpha: .10),
+                color: AppColors.shadow(context),
                 blurRadius: 18,
                 offset: const Offset(0, -5),
               ),
@@ -100,8 +100,8 @@ class SuperAdminBottomNavigation extends StatelessWidget {
           ),
           child: NavigationBar(
             height: 72,
-            backgroundColor: Colors.transparent,
-            surfaceTintColor: Colors.transparent,
+            backgroundColor: AppColors.transparent,
+            surfaceTintColor: AppColors.transparent,
             indicatorColor: AppColors.information(context),
             labelTextStyle: WidgetStateProperty.resolveWith(
               (states) => TextStyle(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/theme/app_tokens.g.dart';
 
 import 'package:school_pulse/design_system/app_components.dart';
 
@@ -371,7 +372,7 @@ class _StepRail extends StatelessWidget {
                     child: Material(
                       color: isCurrent
                           ? scheme.primary.withValues(alpha: 0.08)
-                          : Colors.transparent,
+                          : AppColorValues.transparent,
                       borderRadius: BorderRadius.circular(10),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(10),

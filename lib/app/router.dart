@@ -4041,7 +4041,7 @@ class ParentShell extends StatelessWidget {
                   ),
                   Expanded(
                     child: NavigationRail(
-                      backgroundColor: Colors.transparent,
+                      backgroundColor: AppColors.transparent,
                       extended: MediaQuery.of(context).size.width > 1200,
                       selectedIndex: _calculateSelectedIndex(context),
                       onDestinationSelected: (idx) =>
@@ -4146,10 +4146,15 @@ class _LogoutButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
         child: TextButton.icon(
           onPressed: onPressed,
-          icon: const Icon(Icons.logout_rounded, color: AppColors.black),
+          icon: Icon(
+            Icons.logout_rounded,
+            color: AppColors.textPrimary(context),
+          ),
           label: Text(
             'Logout',
-            style: AppTypography.labelLarge.copyWith(color: AppColors.black),
+            style: AppTypography.labelLarge.copyWith(
+              color: AppColors.textPrimary(context),
+            ),
           ),
           style: TextButton.styleFrom(
             alignment: Alignment.centerLeft,
@@ -4160,7 +4165,7 @@ class _LogoutButton extends StatelessWidget {
     }
 
     return IconButton(
-      icon: const Icon(Icons.logout_rounded, color: AppColors.black),
+      icon: Icon(Icons.logout_rounded, color: AppColors.textPrimary(context)),
       onPressed: onPressed,
       tooltip: 'Logout',
     );

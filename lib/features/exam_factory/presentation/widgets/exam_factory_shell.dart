@@ -34,11 +34,15 @@ class ExamFactoryScaffold extends StatelessWidget {
       listener: (context, state) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(
+            content: Row(
               children: [
-                Icon(Icons.cloud_off_outlined, size: 18, color: Colors.white),
-                SizedBox(width: 10),
-                Expanded(
+                Icon(
+                  Icons.cloud_off_outlined,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.onInverseSurface,
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
                   child: Text(
                     'Saved offline. It will sync automatically once you are back online.',
                   ),
