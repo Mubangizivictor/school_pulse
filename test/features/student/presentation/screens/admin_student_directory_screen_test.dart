@@ -651,7 +651,7 @@ void main() {
         200,
         scrollable: find
             .ancestor(
-              of: find.text('Status'),
+              of: find.text('Day / boarding').first,
               matching: find.byType(Scrollable),
             )
             .first,
