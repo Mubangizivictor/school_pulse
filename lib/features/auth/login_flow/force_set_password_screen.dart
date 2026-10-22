@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/components/pulse_button.dart';
 import 'package:school_pulse/design_system/components/pulse_text_field.dart';
-import 'package:school_pulse/design_system/components/pulse_logo.dart';
+import 'package:school_pulse/design_system/brand/brand_assets.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -182,10 +182,12 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Center(
-                        child: PulseLogo(
-                          size: 80,
-                          variant: PulseLogoVariant.auth,
+                      Center(
+                        child: Image.asset(
+                          BrandAssets.logoMark(context),
+                          width: 84,
+                          height: 84,
+                          fit: BoxFit.contain,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.x4l),
