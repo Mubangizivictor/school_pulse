@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_radius.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_shadows.dart';
-import '../theme/app_motion.dart';
+import 'package:school_pulse/design_system/theme/app_motion.dart';
+import 'package:school_pulse/design_system/theme/app_tokens.g.dart';
 
 enum PulseCardVariant { standard, elevated, outlined, glass }
 
@@ -31,85 +28,39 @@ class PulseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    final effectiveBorderRadius = BorderRadius.circular(
-      borderRadius ?? AppRadius.l,
-    );
-    final effectivePadding = padding ?? const EdgeInsets.all(AppSpacing.xl);
-
+    final colors = Theme.of(context).extension<AppColors>()!;
+    final radius = BorderRadius.circular(borderRadius ?? AppRadius.lg);
+    final background =
+        backgroundColor ??
+        switch (variant) {
+          PulseCardVariant.standard => colors.surface,
+          PulseCardVariant.elevated => colors.surface,
+          PulseCardVariant.outlined => colors.background,
+          PulseCardVariant.glass => colors.surfaceAlt,
+        };
     return AnimatedContainer(
       duration: AppMotion.fast,
-      decoration: _buildDecoration(context, isDark, effectiveBorderRadius),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: radius,
+        border: hasBorder
+            ? Border.all(color: borderColor ?? colors.border)
+            : null,
+        boxShadow: variant == PulseCardVariant.elevated
+            ? [BoxShadow(color: colors.background, blurRadius: AppSpacing.md)]
+            : null,
+      ),
       child: Material(
-        color: Colors.transparent,
+        color: background,
         child: InkWell(
           onTap: onTap,
-          borderRadius: effectiveBorderRadius,
-          child: Padding(padding: effectivePadding, child: child),
+          borderRadius: radius,
+          child: Padding(
+            padding: padding ?? const EdgeInsets.all(AppSpacing.lg),
+            child: child,
+          ),
         ),
       ),
     );
-  }
-
-  BoxDecoration _buildDecoration(
-    BuildContext context,
-    bool isDark,
-    BorderRadius borderRadius,
-  ) {
-    switch (variant) {
-      case PulseCardVariant.standard:
-        return BoxDecoration(
-          color:
-              backgroundColor ??
-              (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
-          borderRadius: borderRadius,
-          border: hasBorder
-              ? Border.all(
-                  color:
-                      borderColor ??
-                      (isDark ? AppColors.borderDark : AppColors.borderLight),
-                  width: 1,
-                )
-              : null,
-          boxShadow: isDark ? null : AppShadows.subtle,
-        );
-      case PulseCardVariant.elevated:
-        return BoxDecoration(
-          color:
-              backgroundColor ??
-              (isDark ? AppColors.elevatedSurfaceDark : AppColors.surfaceLight),
-          borderRadius: borderRadius,
-          boxShadow: isDark
-              ? AppShadows.card
-                    .map((s) => s.copyWith(color: Colors.black))
-                    .toList()
-              : AppShadows.card,
-          border: isDark
-              ? Border.all(color: AppColors.borderDark, width: 1)
-              : null,
-        );
-      case PulseCardVariant.outlined:
-        return BoxDecoration(
-          color: backgroundColor ?? Colors.transparent,
-          borderRadius: borderRadius,
-          border: Border.all(
-            color:
-                borderColor ??
-                (isDark ? AppColors.borderDark : AppColors.borderLight),
-            width: 1.5,
-          ),
-        );
-      case PulseCardVariant.glass:
-        return BoxDecoration(
-          color: backgroundColor ?? (isDark ? Colors.white : Colors.white),
-          borderRadius: borderRadius,
-          border: Border.all(
-            color: isDark ? Colors.white : Colors.white,
-            width: 1,
-          ),
-        );
-    }
   }
 }

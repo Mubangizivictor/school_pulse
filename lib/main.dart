@@ -465,7 +465,7 @@ class _SchoolPulseAppViewState extends State<SchoolPulseAppView> {
             title: themeProvider.branding?.schoolName ?? 'School Pulse',
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
-            themeMode: themeProvider.themeMode,
+            themeMode: ThemeMode.system,
             routerConfig: router,
             builder: (context, child) => AttendanceSyncLifecycleGate(
               child: MessageSyncLifecycleGate(

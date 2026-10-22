@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/theme/app_theme.dart' as monochrome;
+import 'package:school_pulse/design_system/theme/app_tokens.g.dart';
 
 /// Legacy import façade. The implementation lives in the authoritative theme.
 class AppTheme {
@@ -61,20 +62,12 @@ class SemanticColors extends ThemeExtension<SemanticColors> {
   SemanticColors lerp(ThemeExtension<SemanticColors>? other, double t) =>
       other is SemanticColors ? (t < .5 ? this : other) : this;
 
-  static const light = SemanticColors(
-    success: Color(0xFF1E8E3E),
-    warning: Color(0xFFB25E00),
-    error: Color(0xFFD03434),
-    info: Color(0xFF3A6EA5),
-    primaryBlue: Color(0xFF3A6EA5),
-    errorRed: Color(0xFFD03434),
-  );
-  static const dark = SemanticColors(
-    success: Color(0xFF4CAF6D),
-    warning: Color(0xFFE0A64B),
-    error: Color(0xFFE5605F),
-    info: Color(0xFF7CA7D8),
-    primaryBlue: Color(0xFF7CA7D8),
-    errorRed: Color(0xFFE5605F),
+  factory SemanticColors.fromTokens(AppColors colors) => SemanticColors(
+    success: colors.success,
+    warning: colors.warning,
+    error: colors.error,
+    info: colors.info,
+    primaryBlue: colors.primary,
+    errorRed: colors.error,
   );
 }
