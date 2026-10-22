@@ -8,6 +8,8 @@ flutter_native_splash:
   image_dark: "assets/branding/splash_dark_mode.png"
   branding: "assets/branding/wordmark_light.png"
   branding_dark: "assets/branding/wordmark_dark.png"
+  # Keeps the wordmark clear of the iOS home indicator / Android nav bar.
+  branding_bottom_padding: 48
   android_12:
     color: "#FFFFFF"
     image: "android/app/src/main/res/drawable-xxxhdpi/android12splash.png"
