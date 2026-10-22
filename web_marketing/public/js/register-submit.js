@@ -8,7 +8,7 @@
 //     districts, so the visitor can't pick a mismatched pair.
 //   - the real Step 6 submit: builds the exact submitSchoolApplication body
 //     shape, maps the wizard's pricing tier label to the backend's plan
-//     enum, blocks submission for the "Custom"/1201+ tier (no fixed price
+//     enum, blocks submission for the Enterprise/1501+ tier (no fixed price
 //     to submit), and handles every documented error code inline.
 (function () {
   // Full district list per region, generated from
@@ -24,19 +24,10 @@
     Western: ['Buhweju', 'Buliisa', 'Bundibugyo', 'Bunyangabu', 'Bushenyi', 'Fort Portal', 'Hoima', 'Ibanda', 'Isingiro', 'Kabale', 'Kabarole', 'Kagadi', 'Kakumiro', 'Kamwenge', 'Kanungu', 'Kasese', 'Kibaale', 'Kikuube', 'Kiruhura', 'Kisoro', 'Kyegegwa', 'Kyenjojo', 'Masindi', 'Mbarara', 'Mitooma', 'Ntoroko', 'Ntungamo', 'Rubirizi', 'Rukiga', 'Rukungiri', 'Rwampara', 'Sheema'],
   };
 
-  // Marketing site shows 5 tiers (incl. "Custom" for 1201+); the backend's
-  // `plan` field only accepts Starter/Growth/Pro/Enterprise. "Standard" is
-  // the marketing label for what the backend calls "Pro" — there are 4
-  // paid backend plans and 4 self-serve marketing tiers below Custom, so
-  // this is a 1:1 rename, not a lossy collapse. "Custom" has no backend
-  // plan value at all (no fixed price) and is handled as a hard block
-  // before reaching submit, never coerced into one of the 4 allowed values.
-  var TIER_LABEL_TO_PLAN = {
-    Starter: 'Starter',
-    Growth: 'Growth',
-    Standard: 'Pro',
-    Enterprise: 'Enterprise',
-  };
+  // Each pricing tier carries its backend plan enum (Starter/Growth/Pro) in
+  // pricing-config.js. Enterprise has no plan value (no fixed price) and is
+  // handled as a hard block before reaching submit, never coerced into one
+  // of the allowed values.
 
   function byName(name) {
     var wizardEl = document.getElementById('registerWizard');
@@ -384,7 +375,7 @@
   function buildBody() {
     var studentCount = Number(val('studentCount')) || 0;
     var tier = window.getTierForCount(studentCount);
-    var plan = TIER_LABEL_TO_PLAN[tier.label];
+    var plan = tier.plan || null;
     return {
       body: {
         school: {
@@ -495,7 +486,7 @@
       var built = buildBody();
 
       if (!built.plan) {
-        // Custom/1201+ tier — no fixed price, cannot self-serve-submit.
+        // Enterprise/1501+ tier — no fixed price, cannot self-serve-submit.
         customNotice.style.display = 'block';
         return;
       }

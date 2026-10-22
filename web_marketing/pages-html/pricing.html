@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pricing — School Pulse</title>
+<meta name="description" content="Simple termly pricing for School Pulse: Starter, Growth, Pro and Enterprise plans, priced by number of learners. Free 30-day trial, 10% off when you pay for the year.">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
+<link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+<style>
+  .pricing-calc { padding: 22px; background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); }
+  .pricing-calc-label { font-weight: 600; font-size: 14px; color: var(--color-ink-soft); margin-bottom: 10px; }
+  .pricing-calc-result {
+    display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px;
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-border);
+  }
+  .pricing-calc-tier { display: flex; align-items: center; gap: 8px; font-size: 14.5px; color: var(--color-ink-soft); }
+  .pricing-calc-tier .badge-tier {
+    display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; background: var(--color-success-bg); color: var(--color-success-text);
+  }
+  .pricing-calc-price { display: flex; align-items: baseline; gap: 6px; }
+  .pricing-calc-price .amt { font-size: 26px; font-weight: 800; color: var(--color-ink); letter-spacing: -.01em; }
+  .pricing-calc-price .per { font-size: 12.5px; font-weight: 500; color: var(--color-muted); }
+  @media (max-width: 480px) {
+    .pricing-calc { padding: 16px; }
+    .pricing-calc-price .amt { font-size: 22px; }
+  }
+  .section-compact { padding: 32px 0; }
+  @media (max-width: 640px) { .section-compact { padding: 22px 0; } }
+</style>
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="hero" style="padding-bottom:0;">
+    <div class="container">
+      <div class="section-head" style="margin:0 auto 8px;">
+        <span class="eyebrow">Pricing</span>
+        <h1>Pricing that grows with your school</h1>
+        <p class="lead">One predictable price per term, based on how many learners you have. No setup fees, no hidden charges. Try every Pro feature free for 30 days, no payment needed.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-compact">
+    <div class="container">
+      <div class="pricing-calc">
+        <label for="estimatorSlider" class="pricing-calc-label">How many learners does your school have?</label>
+        <input type="range" id="estimatorSlider" min="1" max="2000" value="450">
+        <div class="pricing-calc-result">
+          <span class="pricing-calc-tier">
+            <span id="estimatorCount"></span> students
+            &nbsp;·&nbsp; <span class="badge-tier" id="estimatorTier"></span>
+          </span>
+          <span class="pricing-calc-price" id="estimatorPriceWrap">
+            <span class="amt" id="estimatorPrice"></span>
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-compact">
+    <div class="container">
+      <div class="grid grid-4" id="pricingTiersGrid"></div>
+      <p class="text-center" style="margin-top:16px; font-size:14px; color:var(--color-muted);">Pay for 3 terms upfront and save about 10%. After the free trial your school picks a plan; if it doesn't, the account becomes read-only and your data is kept.</p>
+    </div>
+  </section>
+
+  <section class="section-compact section-alt">
+    <div class="container">
+      <div class="section-head" style="margin-bottom:20px;">
+        <span class="eyebrow">Compare</span>
+        <h2>Compare plans</h2>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" id="comparisonTable" style="min-width:760px;">
+          <thead><tr id="comparisonHeadRow"><th>Feature</th></tr></thead>
+          <tbody id="comparisonBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-compact">
+    <div class="container">
+      <div class="card text-center" style="max-width:760px; margin:0 auto; padding:28px;">
+        <h3 style="margin-bottom:8px;">Need a custom solution?</h3>
+        <p style="margin-bottom:16px;">Schools with more than 1,500 learners, multiple campuses, or special requirements: the Enterprise plan is built with you.</p>
+        <a href="contact.html" class="btn btn-primary">Talk to us</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section-compact">
+    <div class="container">
+      <div class="cta-banner">
+        <h2>Ready to get started?</h2>
+        <p>Register your school today and start your free 30-day trial. You can change plans later.</p>
+        <div class="btn-row" style="justify-content:center;">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/pricing-config.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script src="js/pricing-estimator.js"></script>
+<script>
+  var popularLabel = window.POPULAR_TIER;
+  var check = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;color:var(--color-success);"><path d="M20 6L9 17l-5-5"/></svg>';
+  var dash = '<span style="color:var(--color-muted);">—</span>';
+  // Lowest plan that includes each feature (0 Starter, 1 Growth, 2 Pro, 3 Enterprise).
+  function from(level) { return function (tier, i) { return i >= level ? check : dash; }; }
+  var rows = [
+    { label: 'Setup wizard, students and staff', cell: from(0) },
+    { label: 'Parents app', cell: from(0) },
+    { label: 'Attendance', cell: from(0) },
+    { label: 'Announcements and timetable', cell: from(0) },
+    { label: 'Fees, Bursar and receipts', cell: from(1) },
+    { label: 'Mobile money payments', cell: from(1) },
+    { label: 'Exams and report cards', cell: from(1) },
+    { label: 'Director and Dean dashboards, analytics', cell: from(2) },
+    { label: 'NFC/QR student IDs', cell: from(2) },
+    { label: 'Financial clearance', cell: from(2) },
+    { label: 'Multiple campuses, custom features, on-site training', cell: from(3) },
+    { label: 'Support', cell: function (tier) { return tier.support; } }
+  ];
+
+  var grid = document.getElementById('pricingTiersGrid');
+  var headRow = document.getElementById('comparisonHeadRow');
+  var body = document.getElementById('comparisonBody');
+
+  function renderMessage(container, text) {
+    container.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--color-muted, #666);">' + text + '</p>';
+  }
+
+  function renderPricing() {
+    var tiers = window.PRICING_TIERS;
+
+    if (!tiers.length) {
+      renderMessage(grid, 'Pricing is being updated — <a href="contact.html">contact us</a> for current rates.');
+      headRow.innerHTML = '<th>Feature</th>';
+      body.innerHTML = '';
+      return;
+    }
+
+    grid.innerHTML = '';
+    tiers.forEach(function (tier) {
+      var range = tier.max === null ? ('More than ' + (tier.min - 1).toLocaleString('en-UG') + ' learners') : ('Up to ' + tier.max.toLocaleString('en-UG') + ' learners');
+      var isPopular = tier.label === popularLabel;
+      var isCustom = tier.price === null || tier.price === undefined;
+      var items = tier.includes || [];
+      var itemsHtml = items.map(function (i) {
+        return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>' + i + '</li>';
+      }).join('');
+
+      var priceHtml = isCustom
+        ? '<div class="price-amount"><span class="price-value">Talk to us</span></div>'
+        : '<div class="price-amount">' +
+            '<span class="price-currency">UGX</span>' +
+            '<span class="price-value">' + Number(tier.price).toLocaleString('en-UG') + '</span>' +
+            '<span class="price-per">/ term</span>' +
+          '</div>' +
+          '<div style="font-size:12.5px; color:var(--color-muted); margin:-6px 0 12px;">or ' + window.formatUGX(window.yearlyPrice(tier)) + ' / year</div>';
+
+      grid.innerHTML += '' +
+        '<div class="price-card' + (isPopular ? ' popular' : '') + '" data-tier-card="' + tier.label + '">' +
+          (isPopular ? '<span class="tag">Most Popular</span>' : '') +
+          '<div class="price-card-head">' +
+            '<h3>' + tier.label + '</h3>' +
+            '<div class="price-range">' + range + '</div>' +
+          '</div>' +
+          priceHtml +
+          '<ul class="checklist price-features">' + itemsHtml + '</ul>' +
+          '<a href="' + (isCustom ? 'contact.html' : 'register-school.html') + '" class="btn ' + (isPopular ? 'btn-primary' : 'btn-outline') + ' btn-block">' + (isCustom ? 'Talk to us' : 'Start free trial') + '</a>' +
+        '</div>';
+    });
+
+    // Comparison table
+    headRow.innerHTML = '<th>Feature</th>';
+    tiers.forEach(function (tier) {
+      headRow.innerHTML += '<th>' + tier.label + '</th>';
+    });
+
+    body.innerHTML = '';
+    rows.forEach(function (row) {
+      var tr = '<tr><td style="font-weight:600; color:var(--color-ink);">' + row.label + '</td>';
+      tiers.forEach(function (tier, i) {
+        tr += '<td>' + row.cell(tier, i) + '</td>';
+      });
+      tr += '</tr>';
+      body.innerHTML += tr;
+    });
+  }
+
+  renderPricing();
+</script>
+</body>
+</html>

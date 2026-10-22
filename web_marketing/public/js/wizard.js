@@ -373,6 +373,23 @@
       return tier.min.toLocaleString('en-UG') + ' – ' + tier.max.toLocaleString('en-UG');
     }
 
+    // Step 4 "What's included" list follows the matched plan.
+    function renderIncludes(tier) {
+      var list = document.getElementById('estIncludes');
+      if (!list || !tier || !tier.includes) return;
+      var tickHtml = (window.ICONS && window.ICONS.check) || '';
+      list.innerHTML = '';
+      tier.includes.forEach(function (item) {
+        var li = document.createElement('li');
+        var t = document.createElement('span');
+        t.className = 'price-tick';
+        t.innerHTML = tickHtml;
+        li.appendChild(t);
+        li.appendChild(document.createTextNode(' ' + item));
+        list.appendChild(li);
+      });
+    }
+
     function updatePriceSummary() {
       var countInput = wizardEl.querySelector('[name="studentCount"]');
       if (!countInput) return;
@@ -428,6 +445,7 @@
             if (estSub) { estSub.hidden = false; estSub.textContent = 'per term'; }
           }
           if (bandNote) bandNote.hidden = false;
+          renderIncludes(tier);
         }
       }
     }

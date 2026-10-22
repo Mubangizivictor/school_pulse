@@ -107,7 +107,7 @@
       <div class="section-head">
         <span class="eyebrow">Pricing</span>
         <h2>Simple pricing. Per term.</h2>
-        <p>Pay per learner, per term. No setup fees, no surprises. <a href="pricing.html">See full pricing details →</a></p>
+        <p>One price per term, based on your number of learners. No setup fees, no surprises. Free 30-day trial. <a href="pricing.html">See full pricing details →</a></p>
       </div>
       <div class="grid grid-4" id="homePricingGrid"></div>
     </div>
@@ -127,7 +127,7 @@
   document.getElementById('icon-academics').innerHTML = window.ICONS.academics;
 
   var trustItems = [
-    [window.ICONS.offline, 'Works offline'],
+    [window.ICONS.offline, 'Attendance works offline'],
     [window.ICONS.secure, 'Bank-grade security'],
     [window.ICONS.scales, 'Scales with your school'],
     [window.ICONS.support, 'Local Uganda support']
@@ -137,7 +137,7 @@
   });
 
   var grid = document.getElementById('homePricingGrid');
-  var popularLabel = 'Standard';
+  var popularLabel = window.POPULAR_TIER;
 
   function renderHomePricing() {
     var tiers = window.PRICING_TIERS;
@@ -149,7 +149,7 @@
 
     grid.innerHTML = '';
     tiers.forEach(function (tier) {
-      var range = tier.max === null ? (tier.min + '+ learners') : (tier.min + '–' + tier.max + ' learners');
+      var range = tier.max === null ? ('More than ' + (tier.min - 1).toLocaleString('en-UG') + ' learners') : ('Up to ' + tier.max.toLocaleString('en-UG') + ' learners');
       var isPopular = tier.label === popularLabel;
       var isCustom = tier.price === null || tier.price === undefined;
       var priceHtml = isCustom
