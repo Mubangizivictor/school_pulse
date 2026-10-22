@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/theme/app_tokens.g.dart'
+    show AppText;
 
 /// Colors for the public school-registration wizard only. The app-wide
 /// AppColors.electricBlue is black (this app has no blue accent), but the
@@ -27,7 +29,7 @@ ThemeData regTheme() {
   return ThemeData(
     brightness: Brightness.dark,
     scaffoldBackgroundColor: RegColors.background,
-    fontFamily: 'Roboto',
+    fontFamily: AppText.body.fontFamily,
     colorScheme: const ColorScheme.dark(
       primary: RegColors.blue,
       surface: RegColors.surface,
@@ -72,9 +74,7 @@ ThemeData regTheme() {
         foregroundColor: Colors.white,
         disabledBackgroundColor: RegColors.blue.withValues(alpha: 0.4),
         minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(11),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
     ),
@@ -83,9 +83,7 @@ ThemeData regTheme() {
         foregroundColor: RegColors.textPrimary,
         side: const BorderSide(color: RegColors.border),
         minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(11),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
     ),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/theme/app_tokens.g.dart'
+    show AppText;
 
 import '../domain/portal_tenant.dart';
 
@@ -39,16 +41,13 @@ class PortalPublicHomeScreen extends StatelessWidget {
       theme: ThemeData(
         colorSchemeSeed: primary,
         useMaterial3: true,
-        fontFamily: 'Inter',
+        fontFamily: AppText.body.fontFamily,
       ),
       home: Scaffold(
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 48,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 520),
                 child: Column(
@@ -171,7 +170,10 @@ class _ContactBlock extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (tenant.address?.isNotEmpty ?? false)
-            _ContactRow(icon: Icons.location_on_outlined, text: tenant.address!),
+            _ContactRow(
+              icon: Icons.location_on_outlined,
+              text: tenant.address!,
+            ),
           if (tenant.phone?.isNotEmpty ?? false)
             _ContactRow(icon: Icons.call_outlined, text: tenant.phone!),
           if (tenant.email?.isNotEmpty ?? false)
