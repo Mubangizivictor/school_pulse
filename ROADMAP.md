@@ -1,396 +1,465 @@
-# School Pulse — Final Roadmap to Launch
+# School Pulse — Checklist to Production
 
-> **Rule #1 for every human or AI session:** say which step number you are on,
-> work ONLY on that step, and do not start the next step until the current one
-> meets the Definition of Done. New ideas go to the **Parking Lot** at the bottom.
+> This is the ONLY plan. It replaces the old ROADMAP.md (Phases 0–7) and
+> BUSINESS_CHECKLIST.md. The old versions are in git history
+> (`git show 8f2f53c3:ROADMAP.md`).
 
-Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (tested + committed)
+## ▶ Current step
 
-Snapshot when written (2026-10-21): `flutter analyze` = 0 errors, ~326 warnings/infos.
-57 feature folders under `lib/features/`. Many modules are partly built in parallel.
-This roadmap's goal is to finish the modules a school needs, in dependency order.
+**Step 1 — Website and school registration** (status: `[~]` in progress, started 2026-10-22)
+
+Step A (business tasks) runs in parallel with every step.
 
 ---
 
-## Definition of Done (applies to EVERY step)
+## Rules for every person or AI agent working on this
+
+1. Read this file, then `CLAUDE.md` and `PROJECT_CONTEXT.md`.
+2. Say which step you are on. Work **only** on the current step. Don't start the
+   next step until the current one passes its **Done when** check and the
+   Definition of Done below.
+3. Anything unrelated you notice goes in the **Parking Lot**. Don't fix it now.
+4. Commit in small commits with clear messages.
+5. **How to update this file when you finish a piece of work:**
+   - Tick the item: `- [ ]` → `- [x]`.
+   - When every item in a step is ticked and its **Done when** passes, change the
+     step's status to `[x]` with the date, e.g. `Status: [x] done 2026-11-03`.
+   - Move the **▶ Current step** block at the top to the next step and set it to `[~]`.
+   - Put short notes (decisions, blockers) under the step as `Note:` lines.
+   - Commit: `git add ROADMAP.md && git commit -m "docs(roadmap): step N done"`.
+
+Status legend: `[ ]` not started · `[~]` in progress · `[x]` done (tested + committed) · `[!]` blocked (say on what)
+
+Who: **Claude** = the AI agent does it. **Victor** = only the owner can do it
+(accounts, money, schools, testing on real phones, approvals).
+
+### How to brief another AI agent (copy-paste)
+
+> We are working on School Pulse. Read `ROADMAP.md` and `CLAUDE.md`.
+> We are on **Step N only**. Do not touch other modules.
+> Finish it to the Definition of Done, tick the boxes in `ROADMAP.md`, move the
+> Current step marker, and commit. Unrelated findings go to the Parking Lot.
+
+---
+
+## Definition of Done (applies to every step)
 
 A step is only `[x]` when all of these are true:
 
 1. Every screen in the step has real data. No placeholder text, no "coming soon", no fake numbers.
 2. Every screen handles **loading, empty, error and offline** states.
 3. Layout works on **phone (iPhone 17 Pro Max sim)**, **tablet**, and **web desktop (Chrome)**.
-4. Every write is tenant-scoped (`schoolId`), and allowed or blocked correctly by `firestore.rules`. There is a rules test for each new collection.
+4. Every write is tenant-scoped (`schoolId`) and allowed or blocked correctly by `firestore.rules`, with a rules test for each new collection.
 5. Every callable function checks `request.auth`, role and institution (pattern: `requireSchoolAdmin()`).
 6. Sensitive actions (money, health, student data, attendance, gate) write an audit log.
 7. `flutter analyze` adds no new warnings. `dart format` has been run on touched files.
 8. Unit/bloc tests exist for the logic. The relevant `functions` test script passes.
 9. Manual E2E: walked through on the simulator **and** on web as the real role.
-10. Committed in small commits with a clear message. This file is updated to `[x]`.
+10. Committed in small commits. This file is updated.
 
 ---
 
-## PHASE 0 — Stabilise the ground (no new features) ✅ COMPLETE 2026-10-21
+## Commands used in every step
 
-> Next: Phase 1.1.
+Run from the project folder in a terminal (VS Code: Terminal → New Terminal).
 
-### 0.1 Scope freeze
-- [x] Read this file end to end. Agree on the launch module list (Phases 1–7). (Working agreement 2026-10-21.)
-- [x] Anything not listed goes into the Parking Lot. Don't touch it until after launch.
+| What | Command |
+| --- | --- |
+| Get the latest code | `cd ~/Desktop/apps/school_pulse && git pull origin structure-module` |
+| Start the test database (leave it running) | `export JAVA_HOME=$(/usr/libexec/java_home -v 21) && firebase emulators:start` |
+| Load demo data (2nd terminal) | `cd functions && npm run seed:demo-school` |
+| Run on iPhone simulator | `flutter run -d "iPhone 17 Pro Max"` |
+| Run in Chrome | `flutter run -d chrome --web-port=8080` |
+| Run on Victor's iPhone | `flutter run -d "iPhone (wireless)"` |
+| Check code + tests | `flutter analyze && flutter test` |
+| One feature's tests | `flutter test test/features/<feature>/` |
+| Backend tests | `cd functions && npm run <script>` (list: `npm run` in `functions/`) |
+| Preview the website | `cd web_marketing && npm run dev` → http://localhost:3000 |
+| Deploy the website + web app | `tool/deploy_web.sh` (never a plain `flutter build web`: it overwrites the homepage) |
 
-### 0.2 Clean repo state
-- [x] `git status` is clean. All WIP is committed or deliberately deleted.
-- [x] List all `git stash list` entries. For each one, decide whether to apply it via `git show stash@{n}:<path>` or drop it. Write the decision down here.
-  - Decisions (2026-10-21). All 8 stashes were backed up first as patches in `~/Desktop/school_pulse_stash_backup/stash_{0..7}.patch`.
-    - stash 0 (finance/nurse/parent report-card): **dropped**. The nurse/health commits in the tree are newer.
-    - stash 1 (lesson attendance BLoC): **kept parked**. Now `stash@{0}`. See Phase 3.1.
-    - stash 2 (reports_dashboard WIP): **dropped**.
-    - stash 3 (admissions polish): **dropped**.
-    - stash 4 (message outbox/NFC): **dropped**. Already landed; the outbox impl was split into mobile/web/factory files.
-    - stash 5 (public location.js + Uganda regions): **dropped**. It breaks the no-regional-defaults rule.
-    - stash 6 (pre-gate_ops-rebuild snapshot): **dropped**. Too stale.
-    - stash 7 (old logo/launcher assets + super-admin dialogs): **dropped**. See Parking Lot.
-    - The stray `# ` line in README.md was reverted.
-- [x] Merge `structure-module` → `main` at end of Phase 0, after tests are green. A PR is open for Victor to review and merge.
-
-### 0.3 Warnings and tests
-- [x] Fix all `unawaited_return_in_try_block` warnings (attendance_hub repo, staff_identity_bloc, communication_attachments_uploader, student_identity_bloc, nfc_scan_flow_mixin, nfc_credential_repository_impl).
-- [x] Fix the unused-variable warnings (e.g. `academic_structure_screen.dart:2289`).
-- [x] Bring analyzer issues from ~326 down to < 50. Errors and warnings must be zero. **Now 49, 0 errors, 0 warnings** (2026-10-21).
-  - Remaining infos: 25 `use_build_context_synchronously`, 23 `deprecated_member_use` (Radio `groupValue`/`onChanged` → `RadioGroup`, `onReorder` → `onReorderItem`), 1 `library_private_types_in_public_api`. Each needs a behavioural check, not a mechanical edit.
-- [x] Run `flutter test`. Record the failing tests here, then fix or delete each one with a reason.
-  - 2026-10-21: 22 failing at start, all pre-existing (they also failed at 997f721b). 18 fixed. All were stale tests, except one real bug:
-    - super_admin route/source tests ×6: the routes became flat guarded siblings (99d9a4e2) and payment review a bottom sheet (0542e14b).
-    - attendance offline queue ×6: the fixture `createdAt` was hard-coded to 2026-08-16 and aged past the 30-day retention window. It is now relative to now.
-    - attendance roster, id_generator (`-S-` segment), id_card (byte-size heuristic → page count), permission evaluator (catalog v3), notification list ×2 (button is disabled, not hidden).
-    - **Real bug:** `month_calendar_grid` overflowed 2.5px at 320px width. Fixed.
-  - `class_teacher_dashboard_test.dart` ×4: updated to the 43ceddc5 design, which Victor confirmed is the spec. This also fixed the greeting's first-name regex. **Suite fully green.**
-- [x] Run every `functions/package.json` test script. Record and fix failures.
-  - 2026-10-21: all 25 other scripts pass. One stale assertion was fixed: `staff-attendance-corrections:emulator`, where the trail's `changedFields` correctly includes the defaulted `location`.
-- [x] `npm run test:rules` and `npm run test:storage-rules` are green. Rules 271/271 after 2 stale tests were updated (no rule changes). Storage 23/23.
-  - Needs JDK ≥ 21: `export JAVA_HOME=/opt/homebrew/opt/openjdk@21 PATH=$JAVA_HOME/bin:$PATH` (default `java` is 17). The storage run exits non-zero from an emulator crash on shutdown, after the tests pass.
-
-### 0.4 Dead code audit
-- [x] For each of the 57 feature folders, mark it **WIRED** (referenced by router/DI), **UNWIRED**, or **DUPLICATE**.
-  - Audit 2026-10-21: there are **60** folders now, and `school_onboarding` is already gone (deleted in de9345d8). "Router" includes `super_admin_routes.dart`; "DI" includes `super_admin_injection.dart`.
-  - **WIRED (direct router/DI refs), 52:** academic, admin, announcements, appointments, approvals, attendance, attendance_hub, auth, biometrics, branding, catering, communication_center, data_management, dean, director, discipline, exam_factory, exams, finance, games, gate_ops, headteacher, health, hr, institution, institution_health, integrations, inventory, lesson_plans, library, matron, messages, module_control, notifications, nurse, parent, parent_access, parent_offline, patron, portal, profile, registration, relationships, religion, reports, school_calendar, school_directory, shared, structure, student, student_identity, subscription_payment, super_admin, teacher, transport, verification.
-  - **WIRED indirectly (0 router/DI refs, but imported by wired features), 3:**
-    - `billing`: pricing-band and subscription-cycle data, used by super_admin (8 files) and structure's calendar confirmation.
-    - `qr_scanner`: used by library, exams, finance and catering.
-    - `attendance_summary`: one entity, used by attendance, student and teacher.
-  - **UNWIRED, 1:** `librarian`, a single `librarian_dashboard.dart` with zero references in lib/ or test/. The `/staff/librarian` route already renders `library`'s `LibraryDashboardScreen`.
-- [x] For each pair, choose ONE winner. Delete or archive the loser in one commit per pair. Approved 2026-10-21: `librarian/` deleted (22c6deaa). attendance → attendance_hub is deferred to Phase 3.1. The other pairs are layers, so they stay.
-  | Pair | Verdict | Evidence |
-  |---|---|---|
-  | `library` vs `librarian` | **Winner `library`. Delete `librarian/`** (1 file) | `librarian` has 0 refs. `/staff/librarian` → `LibraryDashboardScreen` (router.dart:1491). `library` has a full DI stack (repo, eligibility, local and remote sources). |
-  | `attendance` vs `attendance_hub` | **Winner `attendance_hub`.** Move the 3 still-routed legacy screens, then delete `attendance/` | hub owns DI (bloc, repo, offline queue) and has 8 commits since Aug 21 vs 4. `/staff/attendance` already uses hub's NFC/QR/manual screens, but `AttendanceMethodScreen`, `AttendanceSummaryScreen` and `AttendanceListScreen` still come from `attendance/` (router.dart:3288-3340). This is a move, not a pure delete, so it fits Phase 3.1. |
-  | `exams` vs `exam_factory` | **Not duplicates. Keep both** | `exams` = assessments/marks (`AssessmentBloc`, `ExamsRepository` in DI, `ExamsDashboardScreen` routed). `exam_factory` = the exam-paper production workflow with its own offline queue (21 router refs). Different domains. |
-  | `nurse` vs `health` | **Layers, not duplicates.** Keep; fold `nurse/` into `health/presentation` later | `health` = data/domain (6 DI registrations) + clinic screens. `nurse` = the shell + More/medicine screens only (router only, 0 DI). Health is in the Parking Lot, so leave it until after launch. |
-  | `parent` / `parent_access` / `parent_offline` | **Layers. Keep all three** | `parent` = parent UI (15 router refs). `parent_access` = module guard/resolver (`ParentModuleGuard`, `ParentAccessCubit`). `parent_offline` = cache/queue/PIN store (DI). Optional later: nest them under `parent/`. |
-  | `messages` / `communication_center` / `announcements` | **Distinct. Keep all three** | Separate collections: `conversations`/`messages` (1:1 chat with outbox, 20 commits since Aug 21), `communication_campaigns`/`templates` (bulk campaigns), `announcements` (feed). Product question for later: should campaigns publish into announcements? |
-  | `billing` / `subscription_payment` / `super_admin` billing | **Layers. Keep.** Maybe move `billing/` → `super_admin/` later | `billing` = shared data and entities (used by super_admin + structure). `subscription_payment` = school-side pay cubit (DI). `super_admin` = owner-console screens. |
-  | `school_onboarding` vs `structure` | **Done.** `structure` won | `school_onboarding` deleted in de9345d8. |
-
-### 0.5 Shared foundations
-- [x] The design system (`lib/design_system/`) has: buttons, inputs, cards, list tiles, empty state, error state, loading skeleton, responsive scaffold, data table, stat tile, filter bar, confirmation dialog. Fill any gaps.
-  - Inventory 2026-10-21:
-    - **Exist:** buttons (`PulseButton`, `PrimaryButton`, `SecondaryButton`), inputs (`PulseTextField`, `AppSearchField`, `PhoneNumberField`, `SearchablePickerField`), cards (`PulseCard`, `AppCard`), empty state (`EmptyState`), loading skeleton (`Skeleton`, `SchoolPulseLoader`), data table (`PulseTable`), stat tile (`DashboardStatCard`, `AnalyticalStatCard`).
-    - **Partial:** responsive scaffold. `ResponsiveBuilder` + `AppResponsiveContent` exist, but there is no scaffold. `WizardScaffold` is wizard-only.
-    - **Built 2026-10-21:** `AppListTile`, `AppErrorState` (replaced the 4 private `_ErrorState` copies), `AppFilterBar`, `showAppConfirmationDialog`/`AppConfirmationDialog`, and `AppResponsiveScaffold`, with tests in `test/design_system/shared_components_test.dart`.
-    - Previously missing: list tile (only domain-specific ones exist: `ChatListTile`, `BedListTile`, `GatekeeperActionTile`); error state (4+ private `_ErrorState`/`_ErrorView` copies and `ExamFactoryErrorState`; `AlertBanner` is the closest shared widget); filter bar (only a private `_FilterBar`); confirmation dialog (only `ReauthPasswordDialog` and a private `_LogoutConfirmationDialog`).
-- [x] One standard pattern for offline writes (queue) and one for audit logs, documented in `PROJECT_CONTEXT.md`.
-- [x] Notification init in `main.dart` is time-bounded (already fixed, so verify it). Verified: `.timeout(2s)` on `NotificationService().initialize()`. The coordinator init is local-only, and `checkInitialMessage` is unawaited.
-- [x] App Check, Crashlytics/error logging and analytics are enabled.
-  - 2026-10-21 check: App Check is activated on Android/iOS (debug → Play Integrity/App Attest) but **not enforced** server-side, and **skipped on web** (no reCAPTCHA v3 key). **Crashlytics is not installed**, and there is no `FlutterError.onError`/`PlatformDispatcher.onError` hook. `firebase_analytics` is in pubspec but **never called**. **Done 2026-10-21:** Crashlytics plus global error hooks, and analytics (route-pattern screen views, login/logout, role/school_id properties, no personal data). See `lib/core/observability/app_observability.dart`. App Check stays in monitor-only mode; enforcement is tracked in 7.1. Launch verified on the iPhone 17 Pro Max simulator and Chrome.
-- [x] Create a seed script that builds a **demo school** (2 terms, 6 classes, 10 staff, 60 students, 40 parents) in the emulator, so every later step has data to test with.
-  - `cd functions && npm run seed:demo-school`, with emulators running. Emulator-only guard; idempotent. Admin `admin@demo-school.test` / `Demo@1234`. Parents sign in with `DEMOP001`–`DEMOP040`, PIN `1234`. Verified 2026-10-21: exact counts, max 2 parents per student, no student without a parent.
+Demo logins (emulator only): admin `admin@demo-school.test` / `Demo@1234`;
+parents `DEMOP001`–`DEMOP040`, PIN `1234`.
 
 ---
 
-## PHASE 1 — The school exists (Foundation)
+## Where the app stands (2026-10-22)
 
-### 1.1 Public website and school registration
-- [ ] Marketing site (`web_marketing/`, Next.js export): home, features, pricing, contact pages are final.
-- [ ] `/register-school` 6-step wizard: school info → owner account → contact → plan → payment/trial → confirmation.
-- [ ] Email verification and the welcome email (production email system).
-- [ ] Super Admin can see, approve or reject new schools.
-- [ ] Deploy via `tool/deploy_web.sh`.
+Phase 0 (stabilise) is done and merged into `main` (PR #6). Much of the rest is
+built but has never been checked against the Definition of Done, so many steps
+are "verify and finish", not "build from zero". This table comes from code, git
+history and notes; modules were not re-tested when it was written.
 
-### 1.2 Authentication and roles
-- [ ] Login flows: email/password, phone OTP (if used), parent access code, staff identity.
-- [ ] Forgot password / reset.
-- [ ] First-login forced password change.
-- [ ] Role resolution → correct shell for: Super Admin, School Admin, Headteacher, Director, Dean (DOS), Bursar, Class Teacher, Subject Teacher, Nurse, Matron, Patron, Librarian, Gate, Parent, Student.
-- [ ] Router guards: wrong role → redirect, no institution → redirect, suspended school → blocked screen.
-- [ ] Logout clears local cache (Isar) and the FCM token.
-- [ ] Rules test: a user from school A cannot read school B.
+| Area | State | Step |
+| --- | --- | --- |
+| Repo, tests, analyzer, demo data | Done: 0 errors, 0 warnings, suite green | Phase 0 |
+| Crashlytics, analytics, error logging | Done; App Check monitor-only | 29 |
+| Website + register-school wizard | Built; prices and copy not final | 1 |
+| Super Admin console | Built and consolidated (`lib/features/super_admin/`) | 3 |
+| Setup wizard (16 steps) | Built | 4 |
+| Add Staff wizard | Code complete, needs E2E | 6 |
+| Parents module | Redesigned and shipped | 8 |
+| Attendance + history + Sheets export | Built; `attendance` → `attendance_hub` merge pending | 10 |
+| Class / Subject Teacher panels | Mostly built; Resources, timetable, More outstanding | 12 |
+| Notifications (`lib/features/notifications/`) | Built — extend, don't rebuild | 13 |
+| Bursar / finance | All 8 areas built, E2E-green on simulator; not deployed | 15 |
+| Financial entitlements, report card clearance | Built and deployed | 16 |
+| SaaS billing screens | Wired to backend, not E2E tested | 18 |
+| Director dashboards | ~11 files with TODOs / fake data | 24 |
+| Android package id | Still `com.example.school_pulse` (Play Store rejects it) | 31 |
+| iOS push | Blocked until Apple Developer account (A5) | A5, 13 |
 
-### 1.3 Super Admin (platform owner console)
-- [ ] School list, status, plan and usage.
-- [ ] Suspend / reactivate a school.
-- [ ] Plans and pricing management.
-- [ ] Platform billing: invoices, payments received.
-- [ ] Support: impersonate (read-only) or view a school's setup health.
-- [ ] Platform audit log.
+---
 
-### 1.4 School setup wizard (`lib/features/structure/`, 16 steps)
-Each step uses `SetupWizardShell`, saves a draft, and can be revisited.
-- [ ] 1. Institution profile: name, logo, motto, address, country (no default), contacts.
-- [ ] 2. Academic years.
-- [ ] 3. Academic calendar and terms: custom term names and dates, holidays.
-- [ ] 4. Education levels: nursery/primary/O-level/A-level/international, all custom.
-- [ ] 5. Classes.
-- [ ] 6. Streams.
-- [ ] 7. Subjects: per level, compulsory/optional, codes.
-- [ ] 8. Teaching plans: subject ↔ class ↔ periods per week.
-- [ ] 9. Departments.
-- [ ] 10. Responsibilities: HOD, class teacher, patron, etc.
-- [ ] 11. Assessment and grading: grading scales, divisions/points, weightings, custom models.
-- [ ] 12. Spaces: rooms, labs, dorms.
-- [ ] 13. Operations: day/boarding, school hours, attendance config.
-- [ ] 14. Feature toggles: which modules this school uses.
-- [ ] 15. Timetables: generate or manual, with clash detection.
-- [ ] 16. Review and validation: lists missing pieces, then "Go live".
-- [ ] Setup progress percentage is shown on the admin dashboard until complete.
+## Step A — Business tasks (Victor, start now, runs in parallel)
 
-### 1.5 Branding
-- [ ] School colours and logo applied in app, report cards, receipts and ID cards.
+These take days or weeks to come through, and later steps wait on them.
+
+- [x] A1. Prices and trial decided (2026-10-22):
+  | Plan | Price per term | Students | Includes |
+  | --- | --- | --- | --- |
+  | Starter | UGX 350,000 | up to 300 | Setup wizard, students and staff, parents app, attendance, announcements, timetable |
+  | Growth (most popular) | UGX 550,000 | up to 700 | Starter + fees and Bursar, receipts, mobile money, report cards, exams |
+  | Pro | UGX 800,000 | up to 1,500 | Growth + Director/Dean dashboards, analytics, NFC/QR student IDs, financial clearance |
+  | Enterprise | Custom quote | 1,500+ or multiple campuses | Everything + multi-campus, dedicated support, custom features, on-site training |
+  - Yearly (3 terms upfront): about 10% off (e.g. Growth UGX 1,485,000/year).
+  - Free trial: 30 days, all Pro features, no payment. After it, the school picks a plan or becomes read-only; data is never deleted.
+  - Pilot school: free first term for feedback and a testimonial.
+- [ ] A2. Answer the open pricing questions (main one: which plan gets boarding, health, library, transport). Suggestion: none at launch, they're in the Parking Lot. *Needed by Step 1.*
+- [ ] A3. Business email (e.g. support@schoolpulseapp.com). *Needed by Step 1.* Done when you can send and receive from it.
+- [ ] A4. Mobile money provider chosen (Flutterwave / Pesapal / MTN MoMo) and merchant registration submitted. *Needed by Step 17.* Done when you have sandbox API keys.
+- [ ] A5. Apple Developer account ($99/yr). *Needed by Step 13 (iOS push) and Step 31.*
+- [ ] A6. Google Play Console account ($25 once). *Needed by Step 31.*
+- [ ] A7. Firebase Blaze plan + budget alert (Firebase Console → Usage and billing). *Needed by Step 15 (first production deploy).*
+- [ ] A8. Company registration with URSB decided and started. *Needed before taking money from schools.*
+- [ ] A9. Privacy policy + terms drafted (Claude can draft); PDPO registration (Uganda Data Protection and Privacy Act). *Needed by Step 31.*
+- [ ] A10. Pilot school found and agreed. *Needed by Step 32.*
+- [ ] A11. Pilot school's real setup collected: classes, streams, subjects, fee structure, sample report card, term dates. *Needed by Step 32; useful for Steps 4 and 20.*
+
+Weekly habit: Friday, review this file and the Parking Lot.
+
+---
+
+## PHASE 1 — The school exists
+
+### Step 1 — Website and school registration
+Status: `[~]` in progress (started 2026-10-22)
+
+- [ ] Claude: put the A1 prices into the website and the register-school plan step (Growth = "up to 700"); apply the website copy; remove the "payments save offline" claim until Step 15 ships offline payment capture.
+- [ ] Claude: check the 6-step `/register-school` wizard end to end (school info → owner account → contact → plan → payment/trial → confirmation) and the verification + welcome emails.
+- [ ] Claude: check Super Admin can approve and reject a new school.
+- [ ] Victor: read the site in Chrome and approve the wording.
+- [ ] Claude: deploy with `tool/deploy_web.sh` once approved.
+
+Commands: `cd web_marketing && npm run dev && npm test`; deploy `tool/deploy_web.sh`.
+Done when: the live site shows the final prices, and a test school can register, get the email, and be approved in Super Admin.
+
+### Step 2 — Login and roles
+Status: `[ ]`
+
+- [ ] Claude: test every login type (email/password, phone OTP if used, parent access code, staff identity), forgot password, first-login password change.
+- [ ] Claude: each role lands on its shell: Super Admin, School Admin, Headteacher, Director, Dean, Bursar, Class Teacher, Subject Teacher, Nurse, Matron, Patron, Librarian, Gate, Parent, Student.
+- [ ] Claude: guards — wrong role, no institution, suspended school are redirected/blocked.
+- [ ] Claude: logout clears Isar cache and the FCM token; rules test that school A can't read school B.
+- [ ] Victor: log in as admin, teacher and parent on your iPhone.
+
+Commands: `cd functions && npm run test:rules`; then run on the simulator with the demo logins.
+Done when: every role reaches its own home screen and the cross-school rules test passes.
+
+### Step 3 — Super Admin console
+Status: `[ ]`
+
+- [ ] Claude: verify school list (status, plan, usage), suspend/reactivate, plans and pricing (A1 prices), platform invoices and payments, setup-health view, platform audit log.
+
+Commands: `cd functions && npm run test:rules:super-admin-console`; `flutter run -d chrome --web-port=8080`.
+Done when: suspending the demo school blocks its login, and reactivating restores it.
+
+### Step 4 — School setup wizard (`lib/features/structure/`, 16 steps)
+Status: `[ ]`
+
+- [ ] Claude: walk all 16 steps with the demo school (profile, academic years, calendar/terms, levels, classes, streams, subjects, teaching plans, departments, responsibilities, assessment/grading, spaces, operations, feature toggles, timetables, review). Each uses `SetupWizardShell`, saves a draft, can be revisited, has no Uganda-only defaults.
+- [ ] Claude: setup progress % shows on the admin dashboard until "Go live".
+- [ ] Victor: if A11 is done, enter the pilot school's real classes and subjects as a test.
+
+Commands: `flutter test test/features/structure/`; run on simulator and Chrome.
+Done when: a fresh school goes from step 1 to "Go live" on phone and web with no errors.
+
+### Step 5 — Branding
+Status: `[ ]`
+
+- [ ] Claude: school colours and logo applied in app, report cards, receipts and ID cards.
+
+Done when: changing the demo school's logo changes it in all four places.
 
 ---
 
 ## PHASE 2 — People
 
-### 2.1 Staff
-- [ ] Add Staff wizard (all stages): personal → contact → roles → department/subjects → classes → documents → account creation → review.
-- [ ] Custom roles (currently "coming soon" in `stage_03_roles.dart`), or remove the option.
-- [ ] Staff list: search, filter by role/department, status.
-- [ ] Staff profile: edit, deactivate, reset login, reassign classes.
-- [ ] Bulk staff import (CSV/Excel), with a validation preview.
-- [ ] Staff ID card generation.
+### Step 6 — Staff
+Status: `[ ]`
 
-### 2.2 Students
-- [ ] Direct registration (single student) with a draft save.
-- [ ] Bulk import (CSV/Excel), with a validation preview and duplicate detection.
-- [ ] Student list: search, filter by class/stream/status.
-- [ ] Student profile tabs: bio, guardians, academics, attendance, finance, health, discipline, documents.
-- [ ] Documents upload: allow PDF (`admin_student_documents_screen.dart` TODO).
-- [ ] Promote class at year end (bulk).
-- [ ] Transfer in / transfer out / withdraw / graduate flows (`student_profile_tabs.dart` TODO).
-- [ ] Student ID, QR and NFC card (student_identity, verification).
+- [ ] Add Staff wizard E2E (personal → contact → roles → department/subjects → classes → documents → account → review).
+- [ ] Custom roles (`stage_03_roles.dart` "coming soon"): build or remove.
+- [ ] Staff list (search, filter, status) and profile (edit, deactivate, reset login, reassign classes).
+- [ ] Bulk staff import (CSV/Excel) with validation preview.
+- [ ] Staff ID cards.
 
-### 2.3 Parents
+Commands: `cd functions && npm run test:create-staff-account:emulator && npm run test:create-staff-invitation:emulator`.
+Done when: Victor adds a teacher on his phone and that teacher can log in.
+
+### Step 7 — Students
+Status: `[ ]`
+
+- [ ] Single registration with draft save; bulk import with validation preview and duplicate detection.
+- [ ] Student list (search, filter by class/stream/status) and profile tabs (bio, guardians, academics, attendance, finance, health, discipline, documents).
+- [ ] Documents accept PDF (`admin_student_documents_screen.dart` TODO).
+- [ ] Year-end bulk promotion; transfer in/out, withdraw, graduate (`student_profile_tabs.dart` TODO).
+- [ ] Student ID, QR and NFC card (`student_identity`, `verification`).
+
+Done when: 60 demo students import from one CSV and one class is promoted.
+
+### Step 8 — Parents
+Status: `[ ]`
+
 - [ ] Parent creation and access codes.
-- [ ] Link parent ↔ student (max 2 parents per student, enforced in rules AND function).
-- [ ] Admin-only reallocation, finished (`TODO(guardian-reallocation)`).
-- [ ] Resend access code: build the Cloud Function (`TODO(parent-access)`).
-- [ ] Parent workspace in admin: list, search, link status.
-- [ ] Guardian contact resolution via ParentStudentRelationship → ParentAccessCode everywhere.
+- [ ] Max 2 parents per student enforced in rules AND functions; admin-only reallocation (`TODO(guardian-reallocation)`).
+- [ ] Resend access code Cloud Function (`TODO(parent-access)`).
+- [ ] Parent workspace in admin; guardian contacts resolved via ParentStudentRelationship → ParentAccessCode everywhere.
 
-### 2.4 School directory
-- [ ] Staff and parent directory, respecting privacy rules per role.
+Commands: `cd functions && npm run test:create-parent-access-code:emulator && npm run test:parent-invitations:emulator && npm run test:list-parent-access-invites:emulator`.
+Done when: a 3rd parent link is refused and a resent code works.
+
+### Step 9 — School directory
+Status: `[ ]`
+
+- [ ] Staff and parent directory, with privacy rules per role.
+
+Done when: a parent can't see other parents' phone numbers.
 
 ---
 
 ## PHASE 3 — Daily operations
 
-### 3.1 Attendance
-- [ ] Choose one module (`attendance_hub`). Delete or merge `attendance` and `attendance_summary`.
-  - Phase 0.4 decision: winner `attendance_hub`. First move `AttendanceMethodScreen`, `AttendanceSummaryScreen` and `AttendanceListScreen` (still routed from `attendance/`, router.dart:3288-3340) and the `attendance_summary` entity into hub, then delete `attendance/` and `attendance_summary/`.
-- [ ] Class register: mark present/absent/late/excused, works offline and syncs later.
-- [ ] Staff attendance (`watchToday` etc.).
-- [ ] Attendance history (previous attendances).
-- [ ] Absence → parent notification.
-- [ ] Reports: daily, weekly, per class, per student, chronic absentees.
-- [ ] Google Sheets export (per-school OAuth).
-- Kept worktrees to review here (`.claude/worktrees/…`, all committed, with unmerged commits):
-  - `agent-abf93cab`: real Subject Teacher attendance replacing the mock (1 commit; this is the source of stash 1).
-  - `agent-a7aaac82`: teacher attendance/roll-call unification merge, phases 1–n (10 commits).
-  - `agent-a14eca92`: Subject Teacher `lesson_attendance` rules test coverage (10 commits).
-  - `agent-ac81db02`: tests for scan-triggered marking and duplicate protection (8 commits).
-  - `agent-a304dc17`: parent absence-alert notifications for attendance (9 commits).
-  - `agent-a4fef698`: TeacherLessonsBloc test coverage (5 commits).
-- Note: lesson attendance BLoC (stash 1 patch: `~/Desktop/school_pulse_stash_backup/stash_1.patch`, also still parked as `stash@{0}`).
+### Step 10 — Attendance
+Status: `[ ]`
 
-### 3.2 Timetable
-- [ ] View timetable per class, per teacher, per room.
-- [ ] Substitutions / cover lessons.
-- [ ] Teacher "my lessons today".
+- [ ] Move `AttendanceMethodScreen`, `AttendanceSummaryScreen`, `AttendanceListScreen` (still routed from `attendance/`, router.dart ~3288-3340) and the `attendance_summary` entity into `attendance_hub`, then delete `attendance/` and `attendance_summary/`.
+- [ ] Review the parked worktrees in `.claude/worktrees/`: `agent-abf93cab` (real Subject Teacher attendance), `agent-a7aaac82` (roll-call unification, 10 commits), `agent-a14eca92` (lesson_attendance rules tests), `agent-ac81db02` (scan marking tests), `agent-a304dc17` (parent absence alerts), `agent-a4fef698` (TeacherLessonsBloc tests). Lesson attendance BLoC patch: `~/Desktop/school_pulse_stash_backup/stash_1.patch` (also `stash@{0}`).
+- [ ] Class register (present/absent/late/excused) works offline and syncs.
+- [ ] Staff attendance (`watchToday`), attendance history, absence → parent notification.
+- [ ] Reports (daily, weekly, per class, per student, chronic absentees); Google Sheets export (per-school OAuth).
+- [ ] Victor: mark a register on your phone in airplane mode, then reconnect.
 
-### 3.3 Teacher panels
-- [ ] Subject Teacher: my classes, lesson plans, homework, marks entry, resources.
-- [ ] Class Teacher: register, class list, student notes, Resources, timetable, More (outstanding).
+Commands: `cd functions && npm run test:staff-attendance-corrections:emulator && npm run test:staff-shifts`.
+Done when: the offline register syncs and the parent gets the absence alert.
+
+### Step 11 — Timetable
+Status: `[ ]`
+
+- [ ] Views per class, teacher and room; substitutions/cover; teacher "my lessons today".
+
+Done when: a teacher sees today's lessons on their home screen.
+
+### Step 12 — Teacher panels
+Status: `[ ]`
+
+- [ ] Subject Teacher: classes, lesson plans, homework, marks entry, resources.
+- [ ] Class Teacher: register, class list, notes, Resources, timetable, More.
 - [ ] Lesson plans: create, submit, DOS approval (`lesson_plans`, `approvals`).
-- [ ] Homework: create and attach files; students view and download attachments (`student_homework_screen.dart` TODO).
+- [ ] Homework with attachments; students can download them (`student_homework_screen.dart` TODO).
 
-### 3.4 Communication
-- [ ] One messaging stack. Decide between `messages`, `communication_center` and `announcements`.
-- [ ] Announcements (school-wide, per class, per role).
-- [ ] 1-to-1 messaging (parent ↔ teacher, staff ↔ staff).
-- [ ] SMS and email fallback for parents without the app.
-- [ ] Message templates (director "coming soon").
-- [ ] Notifications: push + in-app inbox + deep links (existing `lib/features/notifications/` module, extend it, don't rebuild).
+Done when: a teacher posts homework with a file and a student opens it.
 
-### 3.5 School calendar and appointments
-- [ ] Calendar events, term dates and holidays visible to every role.
-- [ ] Appointments: parent books time with a teacher or admin.
+### Step 13 — Communication
+Status: `[ ]` (iOS push needs A5)
+
+- [ ] Confirm the split: `messages` (1:1 chat), `communication_center` (bulk campaigns), `announcements` (feed).
+- [ ] Announcements (school, class, role); 1-to-1 messaging (parent ↔ teacher, staff ↔ staff).
+- [ ] SMS and email fallback for parents without the app; message templates.
+- [ ] Push + in-app inbox + deep links (extend `lib/features/notifications/`).
+
+Done when: an announcement reaches a parent's phone as a push and opens the right screen.
+
+### Step 14 — Calendar and appointments
+Status: `[ ]`
+
+- [ ] Term dates, holidays and events visible to every role; parents book a teacher or admin.
+
+Done when: a parent books a slot and the teacher sees it.
 
 ---
 
 ## PHASE 4 — Money
 
-### 4.1 Bursar / Finance (code done, needs to ship)
-- [ ] `firebase deploy --only functions,firestore:rules,firestore:indexes`.
-- [ ] Fee structures per class/term, discounts, scholarships.
-- [ ] Invoicing / billing per student per term (academic-calendar billing).
-- [ ] Payments: cash, bank, mobile money. Receipts (PDF) and reversals with audit.
-- [ ] Petty cash, suppliers, payment vouchers, expenses.
-- [ ] Bank reconciliation.
-- [ ] Reports engine: collections, arrears, defaulters list, income vs expense.
-- [ ] Offline queue for payment capture.
-- [ ] Desktop deep-link routing.
-- [ ] Real E2E pass on production with one test school.
+### Step 15 — Bursar / finance (code done, needs to ship)
+Status: `[ ]` (needs A7)
 
-### 4.2 Financial entitlements and clearance
-- [ ] Entitlement decisions (exam/report-card/gate/meals by fee status).
-- [ ] Report Card Financial Clearance Phase 2: commit, test and deploy.
-- [ ] Parent sees their balance and a clear restriction message.
+- [ ] Offline queue for payment capture; desktop deep-link routing.
+- [ ] Verify fee structures, invoicing, payments (cash, bank, mobile money), PDF receipts, reversals with audit, petty cash, suppliers, vouchers, expenses, bank reconciliation, reports (collections, arrears, defaulters, income vs expense).
+- [ ] Victor: approve the first production deploy.
+- [ ] Deploy and run one real E2E pass on production with a test school.
 
-### 4.3 Parent payments
-- [ ] Parent pays fees in-app (mobile money gateway), with automatic receipt and reconciliation.
+Commands: `cd functions && npm run test:finance-operations:emulator && npm run test:finance-reconciliation:emulator && npm run test:finance-governance:emulator && npm run test:student-fee-billing:emulator && npm run test:payment-codes:emulator`; then `firebase use school-pulse-3d95b && firebase deploy --only functions,firestore:rules,firestore:indexes`.
+Done when: a test payment on production prints a receipt and shows on the defaulters report.
 
-### 4.4 SaaS subscription (school pays School Pulse)
-- [ ] Billing and plans screens wired to the backend. E2E test.
-- [ ] Trial → paid → overdue → suspended lifecycle, with reminders.
+### Step 16 — Financial entitlements and clearance
+Status: `[ ]`
+
+- [ ] Exam / report card / gate / meal decisions by fee status.
+- [ ] Report Card Financial Clearance Phase 2 verified and deployed.
+- [ ] Parent sees balance and a clear restriction message.
+
+Commands: `cd functions && npm run test:financial-entitlements:emulator && npm run test:report-card-release-exceptions:emulator && npm run test:report-card-bursar:emulator`.
+Done when: a parent with arrears sees the restriction message instead of the report card.
+
+### Step 17 — Parents pay in the app
+Status: `[ ]` (needs A4)
+
+- [ ] Mobile money checkout, automatic receipt and reconciliation.
+
+Done when: a sandbox payment clears a demo balance with no manual step.
+
+### Step 18 — SaaS subscription (school pays School Pulse)
+Status: `[ ]`
+
+- [ ] Billing and plans screens E2E with A1 prices.
+- [ ] Trial → paid → overdue → suspended (read-only, data kept), with reminders.
+
+Commands: `cd functions && npm run test:academic-calendar-billing && npm run test:academic-calendar-billing:emulator`.
+Done when: a trial school becomes read-only after its trial, with its data kept.
 
 ---
 
 ## PHASE 5 — Academics
 
-### 5.1 Exams
-- [ ] Choose one module (`exam_factory` vs `exams`).
-- [ ] Exam setup: exam types, sittings, weightings per term.
-- [ ] Marks entry per subject teacher (offline-capable), with lock after deadline.
-- [ ] DOS moderation and approval.
-- [ ] Results computation: averages, positions, grades, divisions/points (configurable).
+### Step 19 — Exams
+Status: `[ ]`
 
-### 5.2 Report cards
-- [ ] Report card templates (configurable per school/level).
-- [ ] Teacher and headteacher comments.
-- [ ] Generate PDF in bulk per class.
-- [ ] Publish to parents, with the clearance check applied.
-- [ ] Document verification (QR on report card → public verify page).
+- [ ] Keep both modules: `exams` = assessments/marks, `exam_factory` = paper production.
+- [ ] Exam setup (types, sittings, weightings per term); offline marks entry locked after deadline; DOS moderation.
+- [ ] Results: averages, positions, grades, divisions/points (configurable).
 
-### 5.3 Academic analytics
-- [ ] Per-subject averages, per-class performance, term-over-term trends. **This data unblocks the Director/Dean TODOs.**
+Done when: a class's marks produce correct positions and grades.
+
+### Step 20 — Report cards
+Status: `[ ]`
+
+- [ ] Templates per school/level; teacher and headteacher comments.
+- [ ] Bulk PDF per class; publish to parents with the clearance check.
+- [ ] QR on report card → public verify page.
+- [ ] Victor: compare one generated card with the pilot school's sample (A11).
+
+Commands: `cd functions && npm run test:report-card-engine && npm run test:report-card-workflow:emulator`.
+Done when: a class's report cards generate as one PDF and the QR opens the verify page.
+
+### Step 21 — Academic analytics
+Status: `[ ]`
+
+- [ ] Per-subject averages, per-class performance, term-over-term trends (this unblocks Director/Dean).
+
+Done when: the numbers match a hand calculation for one class.
 
 ---
 
 ## PHASE 6 — Role dashboards (read-only views over Phases 1–5)
 
-### 6.1 School Admin
-- [ ] Admin dashboard: setup progress, today's attendance, fees collected, alerts.
-- [ ] Admin desktop shell (sidebar + IndexedStack sections) and the mobile More screen.
-- [ ] Module control (feature toggles at runtime).
-- [ ] Data management: export/backup.
+Done when (every step here): every number on screen comes from real demo data, and
+`grep -rni "coming soon\|TODO" lib/features/<module>` shows nothing left for that screen.
 
-### 6.2 Headteacher
+### Step 22 — School Admin
+Status: `[ ]`
+- [ ] Dashboard (setup progress, today's attendance, fees collected, alerts), desktop shell, mobile More, module control, data export/backup.
+
+### Step 23 — Headteacher
+Status: `[ ]`
 - [ ] Dashboard: attendance, academics, discipline, staff, approvals queue.
 
-### 6.3 Director (10 screens with TODOs, wire them to real data)
-- [ ] `financial_overview_screen`: monthly revenue series.
-- [ ] `finance_analytics_screen`: revenue, expense, collection trend.
-- [ ] `director_reports_screen`: department expenditure, term trends, subject averages, lesson coverage, inventory.
-- [ ] `school_performance_screen`: historical-terms trend.
-- [ ] `academic_overview_screen`: per-subject averages, per-class list.
-- [ ] `student_analytics_screen`: admissions/withdrawals/transfers, performance, discipline.
-- [ ] `staff_overview_screen`: teaching vs non-teaching split, workload.
-- [ ] `parent_engagement_screen`: active parents, messages sent/opened.
-- [ ] `incidents_screen`: needs an incident repository (or reuse discipline).
-- [ ] `communication_screen`: message templates.
+### Step 24 — Director
+Status: `[ ]`
+- [ ] Real data in `financial_overview_screen`, `finance_analytics_screen`, `director_reports_screen`, `school_performance_screen`, `academic_overview_screen`, `student_analytics_screen`, `staff_overview_screen`, `parent_engagement_screen`, `incidents_screen`, `communication_screen`.
 
-### 6.4 Dean of Studies
-- [ ] Dean dashboard and shell (beware the stashed 777-line rewrite, reconcile it first).
-- [ ] Lesson plan approvals, timetable, marks moderation, academic reports.
+### Step 25 — Dean of Studies
+Status: `[ ]`
+- [ ] Dashboard and shell (reconcile Victor's stashed 777-line dean_dashboard rewrite first), lesson plan approvals, timetable, marks moderation, academic reports.
 
-### 6.5 Parent app
-- [ ] Home: children switcher, today's attendance, fees balance, announcements.
-- [ ] Per child: results/report cards, attendance history, homework, timetable, health notes.
-- [ ] Pay fees, message teacher, book appointment.
-- [ ] Offline mode (`parent_offline`).
+### Step 26 — Parent app
+Status: `[ ]`
+- [ ] Children switcher, attendance, fees balance, announcements; per child results, attendance, homework, timetable, health notes; pay fees, message teacher, book appointment; offline mode (`parent_offline`).
 
-### 6.6 Student app
+### Step 27 — Student app
+Status: `[ ]`
 - [ ] Timetable, homework, results, announcements, library loans, ID card.
 
-### 6.7 Discipline
-- [ ] Incident recording, sanctions, parent notification, history on the student profile.
+### Step 28 — Discipline
+Status: `[ ]`
+- [ ] Incidents, sanctions, parent notification, history on the student profile.
 
 ---
 
 ## PHASE 7 — Launch
 
-### 7.1 Security
-- [ ] Full `firestore.rules` and `storage.rules` review. Every collection has a tenant check and a test.
-- [ ] Every callable has an auth + role + institution check.
-- [ ] Run `/security-review` on the branch.
-- [ ] App Check enforced in production.
-  - Get a reCAPTCHA v3 (or Enterprise) site key and activate App Check on web (it is skipped today). Register the debug tokens, then turn on enforcement for Firestore, Storage and the callables (`enforceAppCheck`). Phase 0 left it in monitor-only mode.
-- [ ] Backup policy for Firestore (scheduled exports).
+### Step 29 — Security
+Status: `[ ]`
 
-### 7.2 Quality
-- [ ] Full regression on iPhone sim, Android emulator, Chrome, and a real low-end Android phone.
-- [ ] Performance: cold start < 3s, lists paginated, images cached.
-- [ ] Slow/no network tested for attendance, payments and marks entry.
+- [ ] Claude: review every collection in `firestore.rules` / `storage.rules` (tenant check + test) and every callable (auth + role + institution); run `/security-review` on the branch.
+- [ ] Victor: create a reCAPTCHA v3 site key (Google Cloud console) for web App Check.
+- [ ] Claude: register debug tokens, then enforce App Check for Firestore, Storage and callables (`enforceAppCheck`).
+- [ ] Daily Firestore backups: `gcloud firestore backups schedules create --database='(default)' --recurrence=daily --retention=14w`.
 
-### 7.3 Release
-- [ ] App icons, splash, store screenshots, privacy policy, terms.
-- [ ] Android: signed release, Play Store internal track.
-- [ ] Change Android package id from `com.example.school_pulse` to a real one (e.g. `com.schoolpulseapp.app`); Play Store rejects `com.example`. Re-run `flutterfire configure` after.
-- [ ] Firebase Console → Crashlytics: click **Enable** (logs show `firebase_crashlytics_enabled:false` on Android, 2026-10-22).
-- [ ] iOS: distribution cert, TestFlight.
-- [ ] Web: `flutter build web --release` → `firebase deploy --only hosting`.
-- [ ] Production functions, rules and indexes deployed.
+Commands: `cd functions && npm run test:rules && npm run test:storage-rules`.
+Done when: rules tests pass, App Check shows "Enforced" in the Firebase Console, and a backup exists the next day.
 
-### 7.4 Pilot
-- [ ] Onboard ONE real school with real data.
-- [ ] Two weeks of daily use. Collect bugs into a list and fix only bugs, no features.
-- [ ] User guides: admin, teacher, bursar, parent (short PDFs or videos).
-- [ ] Support channel (WhatsApp/email) and an issue tracker.
+### Step 30 — Quality
+Status: `[ ]`
 
-### 7.5 Go live
-- [ ] Open registration to more schools.
-- [ ] Monitoring: Crashlytics, function error alerts, billing alerts.
+- [ ] Claude: full regression on iPhone sim, Android emulator, Chrome.
+- [ ] Victor: one day on a cheap Android phone and your iPhone, including weak network for attendance, payments, marks.
+- [ ] Claude: cold start < 3s, lists paginated, images cached.
+
+Done when: the bug list from Victor's test day is empty.
+
+### Step 31 — Store releases
+Status: `[ ]` (needs A5, A6, A9)
+
+- [ ] Claude: change Android package id from `com.example.school_pulse` (e.g. `com.schoolpulseapp.app`), then `flutterfire configure`.
+- [ ] Claude: app icons, splash, store screenshots; privacy policy and terms pages (A9).
+- [ ] Victor: Firebase Console → Crashlytics → **Enable** (Android shows `firebase_crashlytics_enabled:false`).
+- [ ] Victor + Claude: Android signing key (keep a backup — losing it means no more updates); `flutter build appbundle --release`; Victor uploads to Play internal track.
+- [ ] Victor: sign in to Xcode with the Apple Developer account; `flutter build ipa --release`; Victor uploads to TestFlight.
+- [ ] Claude: production deploy — `tool/deploy_web.sh` and `firebase deploy --only functions,firestore:rules,firestore:indexes,storage`.
+
+Done when: the app installs from Play internal track and TestFlight on Victor's phones, and the live site opens the latest app.
+
+### Step 32 — Pilot
+Status: `[ ]` (needs A10, A11)
+
+- [ ] Victor: onboard the pilot school with real data (Claude helps with setup).
+- [ ] Two weeks of daily use; Claude fixes bugs only, no new features.
+- [ ] Claude: short user guides for admin, teacher, bursar, parent.
+- [ ] Victor: support WhatsApp and business email (A3) on the website; an issue list.
+
+Done when: two weeks of use with no open serious bugs.
+
+### Step 33 — Go live
+Status: `[ ]`
+
+- [ ] Claude: alerts for crashes (Crashlytics), function errors and Firebase spending.
+- [ ] Victor: open registration to more schools.
+
+Done when: a school Victor has never met registers, pays and starts using School Pulse without help.
 
 ---
 
-## PARKING LOT — v2 (after launch only)
+## PARKING LOT — after launch only
 
-Built or partly built, but NOT required to launch. Do not work on these until Phase 7 is done:
+Partly built but NOT needed to launch. Don't touch until Step 33 is done. New ideas go here.
 
-- Gate operations (gate_ops: pickup release and dashboard are "coming soon")
-- Health / Nurse sick bay
-- Boarding (matron, dorms, boarding settings "coming soon")
-- Transport
-- Catering / meals
-- Library / Librarian (scanner, add resource, procurement TODOs)
-- Inventory / stores and assets
-- HR (leave, payroll)
-- Biometrics
+- Gate operations (pickup release and dashboard "coming soon")
+- Health / Nurse sick bay (fold `nurse/` into `health/presentation` later)
+- Boarding (matron, dorms), Transport, Catering / meals
+- Library / Librarian, Inventory / stores and assets
+- HR (leave, payroll), Biometrics
 - Patron / clubs, Games, Religion
-- Integrations (third-party)
-- Institution health scoring
-- Any new idea that comes up during Phases 0–7
-- Kept worktrees with uncommitted work (`.claude/worktrees/…`); review when their module comes up:
-  - `agent-a040b126` (branch `security-owner-settings`): owner security settings in super_admin, 6 files.
-  - `agent-a4dedd7b` (`agent-notifications-settings`): notification settings in super_admin, plus `firestore.rules`, 10 files.
-  - `agent-a76df3e0` (`help-support-module`): help/support module (super_admin, rules, pubspec), 14 files.
-  - Unclassified: `agent-a64ad55c` (dean router + structure, 6 files), `agent-ab1f35fe` (inline Structure setup + dean + tests, 43 files), `agent-aea8c764` (functions, 1 file).
-- Lesson attendance BLoC (stash 1 patch)
-- Old logo/launcher assets in `~/Desktop/school_pulse_stash_backup/stash_7.patch`
-
----
-
-## How to brief an AI agent (copy-paste)
-
-> We are working on School Pulse. Read `ROADMAP.md` and `CLAUDE.md`.
-> We are on **step X.Y only**. Do not touch other modules.
-> Finish it to the Definition of Done, tick the boxes in `ROADMAP.md`, and commit.
-> If you find something unrelated, add it to the Parking Lot. Don't fix it.
+- Third-party integrations, Institution health scoring
+- Parked worktrees (`.claude/worktrees/`): `agent-a040b126` owner security settings, `agent-a4dedd7b` notification settings (+ `firestore.rules`), `agent-a76df3e0` help/support module, `agent-a64ad55c` dean router + structure, `agent-ab1f35fe` inline Structure setup + dean + tests, `agent-aea8c764` functions (1 file)
+- Old logo/launcher assets: `~/Desktop/school_pulse_stash_backup/stash_7.patch`
+- Product question: should communication campaigns publish into announcements?
