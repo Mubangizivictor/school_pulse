@@ -23,16 +23,16 @@
   }
   .sw-site-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--color-border); }
   .sw-site-brand { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .sw-site-badge { width: 30px; height: 30px; border-radius: 8px; background: var(--color-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; }
+  .sw-site-badge { width: 30px; height: 30px; border-radius: 8px; background: var(--color-primary); color: var(--sp-on-primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0; }
   .sw-site-brand-name { font-weight: 800; font-size: 13.5px; line-height: 1.15; }
   .sw-site-links { display: flex; gap: 4px; }
   .sw-site-links svg { width: 18px; height: 18px; color: var(--color-ink-soft); }
-  .sw-site-portal { display: inline-flex; align-items: center; gap: 6px; background: var(--color-ink); color: #fff; border-radius: 999px; padding: 6px 12px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+  .sw-site-portal { display: inline-flex; align-items: center; gap: 6px; background: var(--color-ink-surface); color: var(--sp-text-on-dark); border-radius: 999px; padding: 6px 12px; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
   .sw-site-portal svg { width: 12px; height: 12px; }
 
   .sw-site-hero { padding: 18px; }
   .sw-site-hero-img {
-    background: linear-gradient(180deg, rgba(15,23,42,0.05), rgba(15,23,42,0.02)), var(--color-surface);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--sp-text) 5%, transparent), color-mix(in srgb, var(--sp-text) 2%, transparent)), var(--color-surface);
     border-radius: var(--radius-md);
     padding: 20px;
     position: relative;
@@ -65,7 +65,7 @@
     padding: 6px 12px; color: var(--color-ink-soft);
   }
   .sw-benefit-swatches { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
-  .sw-benefit-swatches .sw-icon-mini { width: 22px; height: 22px; border-radius: 6px; background: var(--color-ink); color: #fff; display: flex; align-items: center; justify-content: center; }
+  .sw-benefit-swatches .sw-icon-mini { width: 22px; height: 22px; border-radius: 6px; background: var(--color-ink-surface); color: var(--sp-text-on-dark); display: flex; align-items: center; justify-content: center; }
   .sw-benefit-swatches .sw-icon-mini svg { width: 12px; height: 12px; }
   .sw-swatch { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--color-border); }
 
@@ -162,10 +162,10 @@
           <p>Upload your badge and pick your brand colours — the site matches your identity.</p>
           <div class="sw-benefit-swatches">
             <span class="sw-icon-mini" id="icon-shield-mini"></span>
-            <span class="sw-swatch" style="background:#0F172A;"></span>
-            <span class="sw-swatch" style="background:#60A5FA;"></span>
-            <span class="sw-swatch" style="background:#fff;"></span>
-            <span class="sw-swatch" style="background:#CBD5E1;"></span>
+            <span class="sw-swatch" style="background:var(--sp-brand-navy);"></span>
+            <span class="sw-swatch" style="background:var(--sp-brand-royal);"></span>
+            <span class="sw-swatch" style="background:var(--sp-surface);"></span>
+            <span class="sw-swatch" style="background:var(--sp-brand-gold);"></span>
           </div>
         </div>
         <div class="card sw-benefit-card">
