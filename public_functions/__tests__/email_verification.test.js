@@ -66,7 +66,7 @@ test('verification action URL points at the real, already-existing School Pulse 
   // URL - matches the url every sendEmailVerification() call in
   // register.astro previously used, so existing users mid-registration see
   // identical post-verification behavior.
-  assert.equal(VERIFICATION_ACTION_SETTINGS.url, 'https://schoolpulseapp.com/register?verified=1');
+  assert.equal(VERIFICATION_ACTION_SETTINGS.url, 'https://schoolpulseapp.com/register-school?verified=1');
 });
 test('handleCodeInApp is false (the website\'s /auth/action page consumes the action code via applyActionCode, not an in-app deep link)', () => {
   assert.equal(VERIFICATION_ACTION_SETTINGS.handleCodeInApp, false);
@@ -140,7 +140,7 @@ test('verification_url is present as a key even with empty input (never entirely
 
 console.log('\nSender mapping');
 test('email_verification sends from the security@ sender, matching other account-security emails', () => {
-  assert.equal(senderForTemplate('email_verification'), 'School Pulse <security@schoolpulseapp.com>');
+  assert.equal(senderForTemplate('email_verification'), 'School Pulse <security@mail.schoolpulseapp.com>');
 });
 
 console.log('\nNo secret/credential leakage');

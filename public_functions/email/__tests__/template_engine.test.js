@@ -16,6 +16,7 @@ const REQUIRED_TEMPLATE_IDS = [
   'appointment_requested', 'appointment_confirmed', 'appointment_rescheduled', 'appointment_cancelled', 'appointment_reminder',
   'report_available', 'report_published',
   'important_announcement', 'support_update', 'billing_action_required',
+  'cycle_invoice_issued', 'cycle_reminder', 'cycle_grace_expiring',
 ];
 
 let passed = 0;
@@ -129,7 +130,7 @@ test('plain text includes title and support email, excludes html tags', () => {
   const rendered = TEMPLATES.password_reset({ email: 'user@example.com', resetUrl: 'https://schoolpulseapp.com/reset' });
   const plain = renderPlainText(rendered);
   assert.ok(plain.includes('Reset your password'));
-  assert.ok(plain.includes('support@schoolpulse.victorbee.com'));
+  assert.ok(plain.includes('support@schoolpulseapp.com'));
   assert.ok(!/<[a-z][\s\S]*>/i.test(plain), 'plain text should not contain html tags');
 });
 

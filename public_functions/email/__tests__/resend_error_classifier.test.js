@@ -190,7 +190,7 @@ async function main() {
     const payload = buildLocalPayload('application_approved', { schoolName: 'Test School', applicationId: 'app_1', adminName: 'Jane' }, 'admin@test.school', null);
     assert.ok(payload.subject && payload.subject.length > 0, 'fallback payload must have a real subject (unlike the hosted payload, which sets it to null)');
     assert.ok(payload.html.includes('Test School'), 'fallback HTML must contain the real rendered content');
-    assert.equal(payload.from.includes('applications@schoolpulse.victorbee.com'), true);
+    assert.equal(payload.from.includes('applications@mail.schoolpulseapp.com'), true);
   });
   await asyncTest('attemptSend degrades safely (UNKNOWN_ERROR, retryable=true) rather than throwing when Resend is unreachable/misconfigured - proves the fallback attempt itself cannot crash the delivery', async () => {
     const payload = buildLocalPayload('application_approved', { schoolName: 'Test School', applicationId: 'app_1' }, 'admin@test.school', null);
