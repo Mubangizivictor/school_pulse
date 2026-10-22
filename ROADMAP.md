@@ -6,7 +6,7 @@
 
 ## ▶ Current step
 
-**Step 1 — Website and school registration** (status: `[~]` in progress, started 2026-10-22)
+**Step 1 — Website and school registration** (status: `[!]` blocked on A7 (Firebase billing), started 2026-10-22)
 
 Step A (business tasks) runs in parallel with every step.
 
@@ -124,7 +124,7 @@ These take days or weeks to come through, and later steps wait on them.
   - Yearly (3 terms upfront): about 10% off (e.g. Growth UGX 1,485,000/year).
   - Free trial: 30 days, all Pro features, no payment. After it, the school picks a plan or becomes read-only; data is never deleted.
   - Pilot school: free first term for feedback and a testimonial.
-- [ ] A2. Answer the open pricing questions (main one: which plan gets boarding, health, library, transport). Suggestion: none at launch, they're in the Parking Lot. *Needed by Step 1.*
+- [x] A2. Answer the open pricing questions (main one: which plan gets boarding, health, library, transport). Suggestion: none at launch, they're in the Parking Lot. *Needed by Step 1.* Decided 2026-10-22: boarding, health, library and transport are in no plan at launch (Parking Lot).
 - [ ] A3. Business email (e.g. support@schoolpulseapp.com). *Needed by Step 1.* Done when you can send and receive from it.
 - [ ] A4. Mobile money provider chosen (Flutterwave / Pesapal / MTN MoMo) and merchant registration submitted. *Needed by Step 17.* Done when you have sandbox API keys.
 - [ ] A5. Apple Developer account ($99/yr). *Needed by Step 13 (iOS push) and Step 31.*
@@ -142,12 +142,12 @@ Weekly habit: Friday, review this file and the Parking Lot.
 ## PHASE 1 — The school exists
 
 ### Step 1 — Website and school registration
-Status: `[~]` in progress (started 2026-10-22)
+Status: `[!]` blocked on A7 (Firebase billing) (started 2026-10-22)
 
 - [x] Claude: put the A1 prices into the website and the register-school plan step (Growth = "up to 700"); apply the website copy; remove the "payments save offline" claim until Step 15 ships offline payment capture.
 - [x] Claude: check the 6-step `/register-school` wizard end to end (school info → owner account → contact → plan → payment/trial → confirmation) and the verification + welcome emails.
 - [x] Claude: check Super Admin can approve and reject a new school.
-- [ ] Victor: read the site in Chrome and approve the wording.
+- [x] Victor: read the site in Chrome and approve the wording (also updated the Resend `application-approved` template).
 - [ ] Claude: deploy with `tool/deploy_web.sh` once approved.
 
 Note (2026-10-22): prices done in `web_marketing/public/js/pricing-config.js` (single source; tiers carry the backend `plan`). The Pricing page had been deleted in b088f053 and nav/footer links 404'd on the live site; restored as `pages-html/pricing.html`. Offline claim now says attendance only. Not deployed yet.
@@ -162,6 +162,8 @@ Note: A3: emails already use support@schoolpulseapp.com; A2 still open (no plan 
 Note: the app's welcome screen has no "Register your school" entry; on phones the app wizard is only reachable by URL.
 Note: the app's Super Admin approve/reject screens were not clicked through (owner login needs MFA); the same callables were tested over HTTP + emulator suites.
 Remaining in Step 1: Victor's wording approval in Chrome, Resend template edit, deploy (website + functions).
+
+Note (2026-10-22): checks green from structure-module 6446bb6a (web npm test, public_functions npm test, school-lifecycle-applications 21/21 + portal-domains-lifecycle 14/14 emulator, flutter analyze 49 infos only, registration/institution tests 29/29). Website + web app DEPLOYED with `tool/deploy_web.sh` (live). Functions NOT deployed: `firebase deploy` failed with Secret Manager 403 "requires billing to be enabled" (RESEND_API_KEY), and the live public functions return 503, so live registration is down until billing (A7) is on. Once it is, deploy: `firebase deploy --only functions:publicwebsite:{approveSchoolApplication,getSchoolApplicationStatus,submitSchoolApplication,submitManualPayment,approveManualPayment,rejectManualPayment,checkSubscriptionLifecycle,notifyOwnerOfSchoolApplication,createSchoolPortal,syncPortalDomainProjection}` (each as its own comma-separated `functions:publicwebsite:<name>`), then register a test school with mubangizivic@gmail.com, confirm the emails, approve in Super Admin.
 
 Commands: `cd web_marketing && npm run dev && npm test`; deploy `tool/deploy_web.sh`.
 Done when: the live site shows the final prices, and a test school can register, get the email, and be approved in Super Admin.
