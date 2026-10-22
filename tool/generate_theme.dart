@@ -99,6 +99,14 @@ ${instance(light)}
 ${instance(dark)}
   );
 
+  /// Tokens for [context]; falls back to the brightness default when the
+  /// theme carries no AppColors extension (e.g. a bare MaterialApp).
+  static AppColors of(BuildContext context) {
+    final theme = Theme.of(context);
+    return theme.extension<AppColors>() ??
+        (theme.brightness == Brightness.dark ? dark : light);
+  }
+
   @override
   AppColors copyWith({$copyParams}) => AppColors(
 $copyFields

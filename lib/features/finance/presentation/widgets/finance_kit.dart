@@ -570,7 +570,7 @@ class FinanceStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = Theme.of(context).extension<theme_tokens.AppColors>()!;
+    final tokens = theme_tokens.AppColors.of(context);
     late final Color fg;
     late final Color bg;
     switch (tone) {

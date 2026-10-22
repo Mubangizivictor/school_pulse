@@ -20,7 +20,7 @@ class NurseShell extends StatelessWidget {
     final wide = MediaQuery.sizeOf(context).width >= 720;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedColor = ClinicUi.foreground(context);
-    final tokens = Theme.of(context).extension<AppColors>()!;
+    final tokens = AppColors.of(context);
     final unselectedColor = isDark ? tokens.textMuted : ClinicUi.muted;
     final rail = NavigationRail(
       selectedIndex: index,

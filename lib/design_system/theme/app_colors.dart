@@ -3,7 +3,7 @@ import 'package:school_pulse/design_system/theme/app_tokens.g.dart' as tokens;
 
 /// Legacy façade for feature code not yet migrated to `ThemeExtension` access.
 /// Every value is sourced from generated parent tokens; new code should use
-/// `Theme.of(context).extension<tokens.AppColors>()!` directly.
+/// `tokens.AppColors.of(context)` directly.
 class AppColors {
   AppColors._();
 
@@ -64,7 +64,7 @@ class AppColors {
   static const disabledDark = tokens.AppColorValues.darkTextSubtle;
 
   static tokens.AppColors _tokens(BuildContext context) =>
-      Theme.of(context).extension<tokens.AppColors>()!;
+      tokens.AppColors.of(context);
   static Color primary(BuildContext context) => _tokens(context).primary;
   static Color primaryStrong(BuildContext context) =>
       _tokens(context).primaryHover;
