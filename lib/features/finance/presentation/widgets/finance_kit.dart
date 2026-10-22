@@ -18,7 +18,8 @@ import 'package:school_pulse/design_system/responsive/app_responsive_content.dar
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
-import 'package:school_pulse/design_system/theme/app_tokens.g.dart';
+import 'package:school_pulse/design_system/theme/app_tokens.g.dart'
+    as theme_tokens;
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
@@ -569,7 +570,7 @@ class FinanceStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = Theme.of(context).extension<AppColors>()!;
+    final tokens = Theme.of(context).extension<theme_tokens.AppColors>()!;
     late final Color fg;
     late final Color bg;
     switch (tone) {
