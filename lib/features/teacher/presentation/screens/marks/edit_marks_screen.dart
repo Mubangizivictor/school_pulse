@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/teacher/domain/entities/subject_assessment.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
 
@@ -52,7 +53,9 @@ class _EditMarksScreenState extends State<EditMarksScreen> {
           return Scaffold(
             backgroundColor: theme.scaffoldBackgroundColor,
             appBar: AppBar(title: const Text('Edit Mark')),
-            body: const Center(child: Text('This mark is no longer available.')),
+            body: const Center(
+              child: Text('This mark is no longer available.'),
+            ),
           );
         }
 
@@ -122,7 +125,10 @@ class _EditMarksScreenState extends State<EditMarksScreen> {
                 const SizedBox(height: 32),
                 Text(
                   'Mark (out of ${component.maximumMark.toStringAsFixed(0)})',
-                  style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 14),
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Container(
@@ -135,9 +141,7 @@ class _EditMarksScreenState extends State<EditMarksScreen> {
                   child: TextField(
                     controller: _markController,
                     style: TextStyle(color: theme.colorScheme.onSurface),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                    ),
+                    decoration: const InputDecoration(border: InputBorder.none),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -146,7 +150,10 @@ class _EditMarksScreenState extends State<EditMarksScreen> {
                 const SizedBox(height: 24),
                 Text(
                   'Reason for change *',
-                  style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 14),
+                  style: TextStyle(
+                    color: theme.colorScheme.onSurface,
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Container(
@@ -176,7 +183,7 @@ class _EditMarksScreenState extends State<EditMarksScreen> {
                     padding: const EdgeInsets.only(top: 16),
                     child: Text(
                       state.errorMessage!,
-                      style: const TextStyle(color: Colors.red),
+                      style: TextStyle(color: AppColors.danger(context)),
                     ),
                   ),
                 const Spacer(),

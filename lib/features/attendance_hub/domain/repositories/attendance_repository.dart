@@ -46,6 +46,13 @@ abstract class AttendanceRepository {
   /// for the next sweep rather than raising an error.
   Future<void> syncPendingAttendance(String schoolId);
 
+  /// Clears every locally-queued attendance record on this device,
+  /// regardless of school/user - called on logout and on account switch so
+  /// the next person to sign in on this device never sees or resumes a
+  /// previous operator's queued marks. A no-op on platforms with no local
+  /// cache (web).
+  Future<void> clearLocalQueue();
+
   /// Records returned are restricted to [access] - a Class Teacher only
   /// sees Previous Attendance sessions for their assigned classes, never the
   /// whole school's history.

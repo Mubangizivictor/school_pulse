@@ -7,10 +7,9 @@ import '../../domain/repositories/subscription_payment_repository.dart';
 class SubscriptionPaymentRepositoryImpl
     implements SubscriptionPaymentRepository {
   SubscriptionPaymentRepositoryImpl({
-    required FirebaseFunctions functions,
-    required FirebaseFirestore firestore,
-  }) : _functions = functions,
-       _firestore = firestore;
+    required this._functions,
+    required this._firestore,
+  });
 
   final FirebaseFunctions _functions;
   final FirebaseFirestore _firestore;

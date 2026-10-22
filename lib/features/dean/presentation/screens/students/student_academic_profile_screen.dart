@@ -51,7 +51,7 @@ class _StudentAcademicProfileScreenState
       child: Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(
-          backgroundColor: AppColors.surface(context),
+          backgroundColor: AppColors.surfaceContainer(context),
           title: Text('Student Profile', style: AppTypography.titleLarge),
         ),
         body: BlocConsumer<DeanBloc, DeanState>(
@@ -135,7 +135,7 @@ class _StudentAcademicProfileScreenState
 
     return Container(
       width: double.infinity,
-      color: AppColors.surface(context),
+      color: AppColors.surfaceContainer(context),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.xl,
         AppSpacing.l,

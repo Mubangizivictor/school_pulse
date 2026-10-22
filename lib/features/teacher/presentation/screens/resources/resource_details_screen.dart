@@ -19,7 +19,9 @@ class ResourceDetailsScreen extends StatelessWidget {
       return Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(title: const Text('Resource Details')),
-        body: const Center(child: Text('This resource is no longer available.')),
+        body: const Center(
+          child: Text('This resource is no longer available.'),
+        ),
       );
     }
 
@@ -47,7 +49,7 @@ class ResourceDetailsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: iconData.$2.withValues(alpha: 0.1),
+                      color: iconData.$2,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(iconData.$1, color: iconData.$2, size: 32),
@@ -127,30 +129,30 @@ class ResourceDetailsScreen extends StatelessWidget {
                       ? Icons.open_in_new
                       : Icons.remove_red_eye_outlined,
                   label: resource.isLink ? 'Open' : 'Preview',
-                  color: Colors.blue,
+                  color: Colors.black,
                   onTap: () => _open(context, resource),
                 ),
                 _ActionButton(
                   icon: Icons.file_download_outlined,
-                  label: 'Download',
-                  color: Colors.green,
-                  onTap: resource.isFolder
+                  label: 'Save Offline',
+                  color: AppColors.success(context),
+                  onTap: resource.isFolder || resource.isLink
                       ? null
-                      : () => _open(context, resource),
+                      : () => context.read<ClassResourceBloc>().add(
+                          ClassResourceDownloadRequested(resource),
+                        ),
                 ),
                 _ActionButton(
                   icon: Icons.share_outlined,
                   label: 'Share',
-                  color: Colors.orange,
-                  onTap: () => context.push(
-                    '/staff/resources/share',
-                    extra: resource,
-                  ),
+                  color: Colors.black,
+                  onTap: () =>
+                      context.push('/staff/resources/share', extra: resource),
                 ),
                 _ActionButton(
                   icon: Icons.delete_outline,
                   label: 'Remove',
-                  color: Colors.red,
+                  color: AppColors.danger(context),
                   onTap: () => _confirmRemove(context, resource),
                 ),
               ],
@@ -170,11 +172,12 @@ class ResourceDetailsScreen extends StatelessWidget {
       return;
     }
     final uri = Uri.tryParse(url);
-    if (uri == null || !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+    if (uri == null ||
+        !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Could not open this resource.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open this resource.')),
+        );
       }
     }
   }
@@ -195,8 +198,14 @@ class ResourceDetailsScreen extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: const Text('Remove', style: TextStyle(color: Colors.red)),
+              leading: Icon(
+                Icons.delete_outline,
+                color: AppColors.danger(context),
+              ),
+              title: Text(
+                'Remove',
+                style: TextStyle(color: AppColors.danger(context)),
+              ),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _confirmRemove(context, resource);
@@ -242,22 +251,32 @@ class ResourceDetailsScreen extends StatelessWidget {
 
   static String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
   static (IconData, Color) _iconFor(ClassResourceKind kind) => switch (kind) {
-    ClassResourceKind.document => (Icons.picture_as_pdf, Colors.red),
-    ClassResourceKind.spreadsheet => (Icons.grid_on, Colors.green),
-    ClassResourceKind.presentation => (Icons.slideshow, Colors.orange),
-    ClassResourceKind.image => (Icons.image, Colors.green),
-    ClassResourceKind.audio => (Icons.audiotrack, Colors.teal),
-    ClassResourceKind.video => (Icons.videocam, Colors.purple),
-    ClassResourceKind.link => (Icons.link, Colors.blue),
-    ClassResourceKind.folder => (Icons.folder, Colors.amber),
-    ClassResourceKind.other => (Icons.insert_drive_file, Colors.grey),
+    ClassResourceKind.document => (Icons.picture_as_pdf, Colors.black),
+    ClassResourceKind.spreadsheet => (Icons.grid_on, Colors.black),
+    ClassResourceKind.presentation => (Icons.slideshow, Colors.black),
+    ClassResourceKind.image => (Icons.image, Colors.black),
+    ClassResourceKind.audio => (Icons.audiotrack, Colors.black),
+    ClassResourceKind.video => (Icons.videocam, Colors.black),
+    ClassResourceKind.link => (Icons.link, Colors.black),
+    ClassResourceKind.folder => (Icons.folder, Colors.black),
+    ClassResourceKind.other => (Icons.insert_drive_file, Colors.black),
   };
 }
 
@@ -312,7 +331,7 @@ class _InfoTile extends StatelessWidget {
             height: 1,
             indent: 52,
             endIndent: 16,
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
+            color: Theme.of(context).dividerColor,
           ),
       ],
     );

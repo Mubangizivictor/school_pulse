@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -22,7 +22,7 @@ class MessagesListScreen extends StatefulWidget {
   State<MessagesListScreen> createState() => _MessagesListScreenState();
 }
 
-enum _InboxFilter { all, unread, groups, official }
+enum _InboxFilter { all, unread, groups, official, school, teachers }
 
 class _MessagesListScreenState extends State<MessagesListScreen> {
   _InboxFilter _filter = _InboxFilter.all;
@@ -58,165 +58,287 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: colors.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
           'Messages',
-          style: AppTypography.headlineMedium.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+          style: AppTypography.titleLarge.copyWith(
+            color: colors.onSurface,
+            fontWeight: FontWeight.w900,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_square, color: Colors.white),
+      ),
+      // The empty state owns the first-conversation affordance.  Showing the
+      // pen alongside it duplicates the same action and makes the empty
+      // screen visually noisy.  Once there is any conversation, the FAB
+      // becomes the compact compose affordance.
+      floatingActionButton: BlocBuilder<MessagingBloc, MessagingState>(
+        bloc: context.messagingBloc,
+        builder: (context, state) {
+          final hasConversations = state.conversations?.isNotEmpty ?? false;
+          if (!hasConversations) return const SizedBox.shrink();
+          return FloatingActionButton(
             onPressed: () => context.push('/messages/new'),
-          ),
-        ],
+            tooltip: 'New message',
+            backgroundColor: colors.onSurface,
+            foregroundColor: colors.surface,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.edit_rounded),
+          );
+        },
       ),
       body: MessagingUserBuilder(
-        builder: (context, user) =>
-            BlocBuilder<MessagingBloc, MessagingState>(
-              bloc: context.messagingBloc,
-              builder: (context, state) {
-                final conversations = state.conversations;
-                return Column(
-                  children: [
-                    Padding(
+        builder: (context, user) => BlocBuilder<MessagingBloc, MessagingState>(
+          bloc: context.messagingBloc,
+          builder: (context, state) {
+            final conversations = state.conversations;
+            _reconcileArchivedIfNeeded(conversations);
+            final isParent = user.roles.contains(UserRole.parent);
+            return ResponsiveBuilder(
+              builder: (context, layout) {
+                final searchBar = _buildSearchBar(context);
+                final filterRow = _buildFilterRow(context, user, conversations);
+                final lockNotice = isParent
+                    ? _buildParentLockNotice(context)
+                    : const SizedBox.shrink();
+                final content = Builder(
+                  builder: (context) {
+                    if (state.conversationsError != null) {
+                      return _buildError(state.conversationsError!);
+                    }
+                    if (conversations == null) {
+                      return const Center(child: SchoolPulseLoader());
+                    }
+                    final visible = _applyFilter(conversations, user);
+                    if (visible.isEmpty) {
+                      return _buildEmptyState(
+                        isWide: layout != ResponsiveLayout.mobile,
+                      );
+                    }
+                    return ListView.builder(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
                       ),
-                      child: InkWell(
-                        onTap: () => context.push('/messages/search'),
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
+                      itemCount: visible.length,
+                      itemBuilder: (context, index) {
+                        final chat = visible[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: ChatListTile(
+                            chat: chat,
+                            onTap: () =>
+                                context.push('/messages/chat/${chat.id}'),
+                            onLongPress: () =>
+                                _showChatActions(context, user, chat),
                           ),
-                          decoration: BoxDecoration(
-                            color: AppColors.surfaceDark,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.1),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.search,
-                                color: Colors.white54,
-                                size: 22,
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Search messages',
-                                style: AppTypography.bodyLarge.copyWith(
-                                  color: Colors.white54,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        );
+                      },
+                    );
+                  },
+                );
+
+                if (layout == ResponsiveLayout.mobile) {
+                  return Column(
+                    children: [
+                      lockNotice,
+                      searchBar,
+                      filterRow,
+                      Expanded(child: content),
+                    ],
+                  );
+                }
+
+                final isDesktop = layout == ResponsiveLayout.desktop;
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1280),
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        isDesktop ? 32 : 20,
+                        20,
+                        isDesktop ? 32 : 20,
+                        24,
                       ),
-                    ),
-                    SizedBox(
-                      height: 48,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _FilterChip(
-                            label: 'All',
-                            isSelected: _filter == _InboxFilter.all,
-                            onTap: () =>
-                                setState(() => _filter = _InboxFilter.all),
-                          ),
-                          _FilterChip(
-                            label: 'Unread',
-                            isSelected: _filter == _InboxFilter.unread,
-                            onTap: () =>
-                                setState(() => _filter = _InboxFilter.unread),
-                          ),
-                          _FilterChip(
-                            label: 'Groups',
-                            isSelected: _filter == _InboxFilter.groups,
-                            onTap: () =>
-                                setState(() => _filter = _InboxFilter.groups),
-                          ),
-                          _FilterChip(
-                            label: 'Official',
-                            isSelected: _filter == _InboxFilter.official,
-                            onTap: () => setState(
-                              () => _filter = _InboxFilter.official,
+                          Expanded(
+                            child: Column(
+                              children: [
+                                lockNotice,
+                                searchBar,
+                                filterRow,
+                                const SizedBox(height: 8),
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: colors.surface,
+                                      border: Border.all(
+                                        color: colors.onSurface,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: content,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          _FilterChip(
-                            label: 'Archived',
-                            isSelected: false,
-                            onTap: () => context.push('/messages/archived'),
-                          ),
-                          // Only appears when something is actually waiting,
-                          // so the chip row stays as short as it was for
-                          // most people.
-                          if (_pendingRequests(conversations) > 0)
-                            _FilterChip(
-                              label:
-                                  'Requests (${_pendingRequests(conversations)})',
-                              isSelected: false,
-                              onTap: () => context.push('/messages/requests'),
-                            ),
+                          if (isDesktop) ...[
+                            const SizedBox(width: 24),
+                            const _MessagingTipsPanel(),
+                          ],
                         ],
                       ),
                     ),
-                    Expanded(
-                      child: Builder(
-                        builder: (context) {
-                          if (state.conversationsError != null) {
-                            return _buildError(state.conversationsError!);
-                          }
-                          if (conversations == null) {
-                            return const Center(child: SchoolPulseLoader());
-                          }
-
-                          _reconcileArchived(conversations);
-                          final visible = _applyFilter(conversations);
-                          if (visible.isEmpty) {
-                            return _buildEmptyState();
-                          }
-                          return ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            itemCount: visible.length,
-                            itemBuilder: (context, index) {
-                              final chat = visible[index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: ChatListTile(
-                                  chat: chat,
-                                  onTap: () =>
-                                      context.push('/messages/chat/${chat.id}'),
-                                  onLongPress: () =>
-                                      _showChatActions(context, user, chat),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                  ),
                 );
               },
-            ),
+            );
+          },
+        ),
       ),
     );
+  }
+
+  void _reconcileArchivedIfNeeded(List<ChatConversation>? conversations) {
+    if (conversations != null) _reconcileArchived(conversations);
+  }
+
+  Widget _buildParentLockNotice(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.lock_outline_rounded,
+            size: 14,
+            color: colors.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'You can message school contacts only',
+            style: AppTypography.bodySmall.copyWith(
+              color: colors.onSurfaceVariant,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+      child: Semantics(
+        button: true,
+        label: 'Search messages',
+        child: InkWell(
+          onTap: () => context.push('/messages/search'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  color: colors.onSurfaceVariant,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Search conversations',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: colors.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterRow(
+    BuildContext context,
+    UserEntity user,
+    List<ChatConversation>? conversations,
+  ) {
+    final isParent = user.roles.contains(UserRole.parent);
+    final filters = isParent
+        ? [_InboxFilter.all, _InboxFilter.school, _InboxFilter.teachers]
+        : [
+            _InboxFilter.all,
+            _InboxFilter.unread,
+            _InboxFilter.groups,
+            _InboxFilter.official,
+          ];
+
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        children: [
+          ...filters.map(
+            (f) => _FilterChip(
+              label: _filterLabel(f),
+              isSelected: _filter == f,
+              onTap: () => setState(() => _filter = f),
+            ),
+          ),
+          _FilterChip(
+            label: 'Archived',
+            isSelected: false,
+            onTap: () => context.push('/messages/archived'),
+          ),
+          // Only appears when something is actually waiting,
+          // so the chip row stays as short as it was for
+          // most people.
+          if (_pendingRequests(conversations) > 0)
+            _FilterChip(
+              label: 'Requests (${_pendingRequests(conversations)})',
+              isSelected: false,
+              onTap: () => context.push('/messages/requests'),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _filterLabel(_InboxFilter filter) {
+    switch (filter) {
+      case _InboxFilter.all:
+        return 'All';
+      case _InboxFilter.unread:
+        return 'Unread';
+      case _InboxFilter.groups:
+        return 'Groups';
+      case _InboxFilter.official:
+        return 'Official';
+      case _InboxFilter.school:
+        return 'School';
+      case _InboxFilter.teachers:
+        return 'Teachers';
+    }
   }
 
   /// A 1:1 chat someone started that this user hasn't accepted yet. Only
@@ -228,7 +350,10 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
   int _pendingRequests(List<ChatConversation>? all) =>
       all == null ? 0 : all.where(_isRequest).length;
 
-  List<ChatConversation> _applyFilter(List<ChatConversation> all) {
+  List<ChatConversation> _applyFilter(
+    List<ChatConversation> all,
+    UserEntity user,
+  ) {
     // Archived chats and unaccepted requests each live behind their own
     // screen; everything else is filtered by the chip row.
     final visible = all.where((c) => !c.isArchived && !_isRequest(c));
@@ -240,13 +365,25 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
       case _InboxFilter.groups:
         return visible.where((c) => c.type == ChatType.group).toList();
       case _InboxFilter.official:
-        // "Official" is the school's one-way traffic: broadcast lists and
-        // announcement channels.
+      case _InboxFilter.school:
+        // "Official" / "School" is the school's one-way traffic: broadcast
+        // lists and announcement channels.
         return visible
             .where(
               (c) => c.type == ChatType.broadcast || c.type == ChatType.channel,
             )
             .toList();
+      case _InboxFilter.teachers:
+        // Filter conversations involving teachers.
+        return visible.where((c) {
+          return c.participants.any(
+            (p) =>
+                p.id != user.id &&
+                (p.role.toLowerCase().contains('teacher') ||
+                    p.role.toLowerCase().contains('head') ||
+                    p.role.toLowerCase().contains('tutor')),
+          );
+        }).toList();
     }
   }
 
@@ -255,92 +392,105 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     UserEntity user,
     ChatConversation chat,
   ) {
+    final colors = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceDark,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: colors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.m),
-              child: Text(
-                chat.title,
-                style: AppTypography.titleMedium.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(top: BorderSide(color: colors.onSurface, width: 1)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.m),
+                child: Text(
+                  chat.title.toUpperCase(),
+                  style: AppTypography.titleMedium.copyWith(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
-            ),
-            ListTile(
-              leading: Icon(
-                chat.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                color: Colors.white70,
+              ListTile(
+                leading: Icon(
+                  chat.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                  color: colors.onSurface,
+                ),
+                title: Text(
+                  (chat.isPinned ? 'Unpin' : 'Pin to top').toUpperCase(),
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  context.messagingBloc.add(
+                    ConversationPinnedSet(chat.id, !chat.isPinned),
+                  );
+                },
               ),
-              title: Text(
-                chat.isPinned ? 'Unpin' : 'Pin to top',
-                style: const TextStyle(color: Colors.white),
+              ListTile(
+                leading: Icon(
+                  chat.isMuted
+                      ? Icons.notifications_off
+                      : Icons.notifications_none,
+                  color: colors.onSurface,
+                ),
+                title: Text(
+                  (chat.isMuted ? 'Unmute' : 'Mute').toUpperCase(),
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  context.messagingBloc.add(
+                    ConversationMutedSet(chat.id, !chat.isMuted),
+                  );
+                },
               ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                context.messagingBloc.add(
-                  ConversationPinnedSet(chat.id, !chat.isPinned),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                chat.isMuted
-                    ? Icons.notifications_off
-                    : Icons.notifications_none,
-                color: Colors.white70,
+              ListTile(
+                leading: Icon(Icons.archive_outlined, color: colors.onSurface),
+                title: Text(
+                  'ARCHIVE',
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  context.messagingBloc.add(
+                    ConversationArchivedSet(chat.id, true),
+                  );
+                },
               ),
-              title: Text(
-                chat.isMuted ? 'Unmute' : 'Mute',
-                style: const TextStyle(color: Colors.white),
+              ListTile(
+                leading: Icon(Icons.delete_outline, color: colors.onSurface),
+                title: Text(
+                  (chat.type == ChatType.direct ? 'Delete chat' : 'Exit group')
+                      .toUpperCase(),
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  context.messagingBloc.add(
+                    ConversationLeaveRequested(chat.id),
+                  );
+                },
               ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                context.messagingBloc.add(
-                  ConversationMutedSet(chat.id, !chat.isMuted),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.archive_outlined,
-                color: Colors.white70,
-              ),
-              title: const Text(
-                'Archive',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                context.messagingBloc.add(
-                  ConversationArchivedSet(chat.id, true),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.delete_outline,
-                color: Colors.redAccent,
-              ),
-              title: Text(
-                chat.type == ChatType.direct ? 'Delete chat' : 'Exit group',
-                style: const TextStyle(color: Colors.redAccent),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                context.messagingBloc.add(ConversationLeaveRequested(chat.id));
-              },
-            ),
-            const SizedBox(height: AppSpacing.s),
-          ],
+              const SizedBox(height: AppSpacing.s),
+            ],
+          ),
         ),
       ),
     );
@@ -356,18 +506,22 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
             Icon(
               Icons.cloud_off,
               size: 56,
-              color: Colors.white.withValues(alpha: 0.3),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: AppSpacing.m),
             Text(
               'Could not load your messages',
-              style: AppTypography.titleMedium.copyWith(color: Colors.white),
+              style: AppTypography.titleMedium.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: AppSpacing.s),
             Text(
               '$error',
               textAlign: TextAlign.center,
-              style: AppTypography.bodySmall.copyWith(color: Colors.white54),
+              style: AppTypography.bodySmall.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -375,65 +529,156 @@ class _MessagesListScreenState extends State<MessagesListScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
+  Widget _buildEmptyState({bool isWide = false}) {
+    final colors = Theme.of(context).colorScheme;
+    return Align(
+      alignment: Alignment.topCenter,
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x3l),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(40),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceDark,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        padding: const EdgeInsets.fromLTRB(24, 72, 24, 24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: isWide ? 380 : 360),
+          child: Column(
+            children: [
+              Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerHighest,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: 38,
+                  color: colors.onSurface,
+                ),
               ),
-              child: Icon(
-                Icons.chat_bubble_outline_rounded,
-                size: 80,
-                color: AppColors.electricBlue.withValues(alpha: 0.3),
+              const SizedBox(height: 24),
+              Text(
+                'No conversations yet',
+                style: AppTypography.headlineSmall.copyWith(
+                  color: colors.onSurface,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-            ),
-            const SizedBox(height: 32),
-            Text(
-              'No Conversations Yet',
-              style: AppTypography.headlineSmall.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+              const SizedBox(height: 12),
+              Text(
+                'Start a conversation with teachers, parents, or school staff.',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: colors.onSurface,
+                  height: 1.45,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Stay connected with teachers, parents, and school staff. Start a new conversation below.',
-              textAlign: TextAlign.center,
-              style: AppTypography.bodyMedium.copyWith(
-                color: Colors.white60,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 40),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => context.push('/messages/new'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.electricBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: 240,
+                child: ElevatedButton(
+                  onPressed: () => context.push('/messages/new'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colors.onSurface,
+                    foregroundColor: colors.surface,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
                   ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  'Start Messaging',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  child: const Text(
+                    'Start a conversation',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// Wide-viewport (desktop) side panel: static guidance only, no live data,
+/// no new message actions - matches the reference "Messaging tips" panel.
+class _MessagingTipsPanel extends StatelessWidget {
+  const _MessagingTipsPanel();
+
+  static const _tips = [
+    (
+      Icons.groups_outlined,
+      'Stay in the loop',
+      'Communicate with staff, parents, and teachers in one place.',
+    ),
+    (
+      Icons.notifications_none,
+      'Never miss important updates',
+      'Check unread messages and enable notifications.',
+    ),
+    (
+      Icons.verified_user_outlined,
+      'Keep conversations organized',
+      'Use groups and filters to find what you need quickly.',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 260,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'MESSAGING TIPS',
+            style: AppTypography.titleMedium.copyWith(
+              color: colors.onSurface,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 16),
+          for (final tip in _tips) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: colors.surface,
+                    border: Border.all(color: colors.onSurface, width: 1),
+                  ),
+                  child: Icon(tip.$1, size: 18, color: colors.onSurface),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tip.$2.toUpperCase(),
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: colors.onSurface,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        tip.$3.toUpperCase(),
+                        style: AppTypography.bodySmall.copyWith(
+                          color: colors.onSurface,
+                          height: 1.4,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+          ],
+        ],
       ),
     );
   }
@@ -452,26 +697,26 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
         label: Text(label),
         selected: isSelected,
         onSelected: (_) => onTap?.call(),
-        selectedColor: AppColors.electricBlue,
-        backgroundColor: AppColors.surfaceDark,
+        selectedColor: colors.onSurface,
+        backgroundColor: colors.surfaceContainerHighest,
         labelStyle: TextStyle(
-          color: isSelected ? Colors.white : Colors.white60,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? colors.surface : colors.onSurface,
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: isSelected
-                ? AppColors.electricBlue
-                : Colors.white.withValues(alpha: 0.05),
-          ),
+          side: BorderSide(color: Colors.transparent),
         ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        visualDensity: VisualDensity.compact,
         showCheckmark: false,
       ),
     );

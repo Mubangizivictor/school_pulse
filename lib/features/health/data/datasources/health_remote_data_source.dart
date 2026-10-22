@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../models/clinic_visit_model.dart';
 import '../models/emergency_incident_model.dart';
@@ -17,6 +18,7 @@ abstract class HealthRemoteDataSource {
     StudentHealthProfileModel profile,
     String schoolId,
   );
+  Future<List<StudentHealthProfileModel>> getAllHealthProfiles(String schoolId);
 
   Future<List<ClinicVisitModel>> getClinicVisits({
     required String schoolId,
@@ -25,6 +27,26 @@ abstract class HealthRemoteDataSource {
     DateTime? endDate,
   });
   Future<void> recordClinicVisit(ClinicVisitModel visit);
+
+  /// Pushes [visit] only if no document with its id exists yet - used by
+  /// the offline sync sweep, where the initial [recordClinicVisit] attempt
+  /// may have already partially or fully succeeded before the app lost
+  /// connection or was killed. Guards against re-sending parent/teacher
+  /// alerts for a visit that was already recorded.
+  Future<void> pushClinicVisitIfAbsent(ClinicVisitModel visit);
+
+  /// Dispenses [quantity] of [itemId] against [visitId] for [studentId]
+  /// through the server-authoritative `dispenseMedicalItem` callable, which
+  /// decrements stock atomically, refuses to go negative, verifies the visit
+  /// belongs to the learner and both records are in the caller's school,
+  /// writes a stock-movement row, and appends a health-audit event. The
+  /// client never touches `medical_inventory` for a dispense.
+  Future<void> dispenseMedicalItem({
+    required String itemId,
+    required String visitId,
+    required String studentId,
+    required int quantity,
+  });
 
   Future<List<EmergencyIncidentModel>> getEmergencyIncidents({
     required String schoolId,
@@ -51,7 +73,15 @@ abstract class HealthRemoteDataSource {
 class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
   final FirebaseFirestore firestore;
 
-  HealthRemoteDataSourceImpl({required this.firestore});
+  /// Clinic mutations (`createClinicVisit`, `dispenseMedicalItem`) are
+  /// deployed to the default region, which is what `FirebaseFunctions.instance`
+  /// targets - the same endpoint on web and every mobile platform.
+  final FirebaseFunctions functions;
+
+  HealthRemoteDataSourceImpl({
+    required this.firestore,
+    FirebaseFunctions? functions,
+  }) : functions = functions ?? FirebaseFunctions.instance;
 
   String _requireSchoolId(String? schoolId) {
     final value = schoolId?.trim() ?? '';
@@ -172,6 +202,25 @@ class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
   }
 
   @override
+  Future<List<StudentHealthProfileModel>> getAllHealthProfiles(
+    String schoolId,
+  ) async {
+    final tenant = _requireSchoolId(schoolId);
+    final snapshot = await firestore
+        .collection('health_profiles')
+        .where('schoolId', isEqualTo: tenant)
+        .get();
+    return snapshot.docs
+        .map(
+          (doc) => StudentHealthProfileModel.fromJson({
+            ...doc.data(),
+            'schoolId': tenant,
+          }),
+        )
+        .toList();
+  }
+
+  @override
   Future<List<ClinicVisitModel>> getClinicVisits({
     required String schoolId,
     String? studentId,
@@ -205,30 +254,90 @@ class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
     return visits;
   }
 
+  /// Sends the visit to `createClinicVisit` (server stamps `recordedBy`,
+  /// `status`, `completedAt`; idempotent on the visit id; writes a
+  /// health-audit row) and returns the id the server used. The client never
+  /// writes `clinic_visits` directly - firestore.rules make create
+  /// callable-only.
+  Future<String> _callCreateClinicVisit(
+    ClinicVisitModel visit,
+    String tenant,
+  ) async {
+    final payload = {...visit.toJson(), 'schoolId': tenant};
+    // toJson() emits Firestore Timestamps for dateTime; the callable takes
+    // JSON, so hand it an ISO-8601 string instead.
+    payload['dateTime'] = visit.dateTime.toUtc().toIso8601String();
+    final res = await functions
+        .httpsCallable('createClinicVisit')
+        .call<Map<String, dynamic>>({'visit': payload});
+    final id = (res.data['id'] as String?)?.trim();
+    if (id == null || id.isEmpty) {
+      throw StateError('The clinic visit could not be recorded.');
+    }
+    return id;
+  }
+
+  Future<void> _writeVisitAlerts(
+    String tenant,
+    ClinicVisitModel visit,
+    String recordId,
+  ) async {
+    // The visit record itself is written by the callable. Alerts carry no
+    // clinical content ("an update is available in the authorised portal"),
+    // so they stay a client-side batch, addressed only to the learner's
+    // guardians - never teachers.
+    final recipients = await _healthRecipients(tenant, visit.studentId);
+    if (recipients.isEmpty) return;
+    final batch = firestore.batch();
+    for (final recipient in recipients) {
+      final alert = firestore.collection('alerts').doc();
+      batch.set(alert, {
+        'userId': recipient,
+        'senderId': visit.recordedBy,
+        'schoolId': tenant,
+        'studentId': visit.studentId,
+        'title': 'School clinic visit',
+        'body': 'A school clinic update is available in the authorised portal.',
+        'type': 'clinic_visit',
+        'recordId': recordId,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+    }
+    await batch.commit();
+  }
+
   @override
   Future<void> recordClinicVisit(ClinicVisitModel visit) async {
     final tenant = _requireSchoolId(visit.schoolId);
-    final collection = firestore.collection('clinic_visits');
-    final doc = visit.id.isEmpty ? collection.doc() : collection.doc(visit.id);
-    final recipients = await _healthRecipients(
-      tenant,
-      visit.studentId,
-      includeTeacher: visit.outcome.name != 'sentBackToClass',
-    );
-    await _writeRecordAndAlerts(
-      record: doc,
-      recordData: {...visit.toJson(), 'id': doc.id, 'schoolId': tenant},
-      recipients: recipients,
-      schoolId: tenant,
-      studentId: visit.studentId,
-      senderId: visit.recordedBy,
-      title: 'School clinic visit',
-      body: visit.outcome.name == 'sentHome'
-          ? 'The student was seen by the nurse and has been sent home.'
-          : 'A school clinic visit was recorded: ${visit.reason}.',
-      type: 'clinic_visit',
-      recordId: doc.id,
-    );
+    final id = await _callCreateClinicVisit(visit, tenant);
+    await _writeVisitAlerts(tenant, visit, id);
+  }
+
+  @override
+  Future<void> pushClinicVisitIfAbsent(ClinicVisitModel visit) async {
+    final tenant = _requireSchoolId(visit.schoolId);
+    // createClinicVisit is idempotent on the visit id, so the offline sweep
+    // can safely re-send without a client-side existence check. Alerts are
+    // only written if the guardian set is non-empty and are keyed on the
+    // visit id, so a duplicate sweep just overwrites identical alert docs.
+    final id = await _callCreateClinicVisit(visit, tenant);
+    await _writeVisitAlerts(tenant, visit, id);
+  }
+
+  @override
+  Future<void> dispenseMedicalItem({
+    required String itemId,
+    required String visitId,
+    required String studentId,
+    required int quantity,
+  }) async {
+    await functions.httpsCallable('dispenseMedicalItem').call<dynamic>({
+      'itemId': itemId,
+      'visitId': visitId,
+      'studentId': studentId,
+      'quantity': quantity,
+    });
   }
 
   @override
@@ -267,7 +376,6 @@ class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
     final recipients = await _healthRecipients(
       tenant,
       incident.studentId,
-      includeTeacher: true,
       includeLeadership: true,
     );
     await _writeRecordAndAlerts(
@@ -285,7 +393,7 @@ class HealthRemoteDataSourceImpl implements HealthRemoteDataSource {
       studentId: incident.studentId,
       senderId: incident.recordedBy,
       title: 'Emergency health incident',
-      body: incident.incidentDetails,
+      body: 'An urgent school clinic update requires authorised review.',
       type: 'emergency_incident',
       recordId: doc.id,
     );

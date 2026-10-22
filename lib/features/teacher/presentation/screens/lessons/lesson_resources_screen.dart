@@ -34,19 +34,19 @@ class LessonResourcesScreen extends StatelessWidget {
                   context,
                   'Linear Equations Notes.pdf',
                   '1.4 MB • 20 May 2025',
-                  Colors.orange,
+                  Colors.black,
                 ),
                 _buildResourceItem(
                   context,
                   'Linear Equations Slides.pptx',
                   '2.6 MB • 20 May 2025',
-                  Colors.red,
+                  Colors.black,
                 ),
                 _buildResourceItem(
                   context,
                   'Practice Questions.docx',
                   '820 KB • 20 May 2025',
-                  Colors.blue,
+                  Colors.black,
                 ),
               ],
             ),
@@ -134,7 +134,7 @@ class LessonResourcesScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
+              color: iconColor,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(Icons.description, color: iconColor, size: 24),

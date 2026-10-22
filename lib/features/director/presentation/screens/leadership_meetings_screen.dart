@@ -11,7 +11,8 @@ import '../widgets/director_drawer.dart';
 class LeadershipMeetingsScreen extends StatefulWidget {
   const LeadershipMeetingsScreen({super.key});
   @override
-  State<LeadershipMeetingsScreen> createState() => _LeadershipMeetingsScreenState();
+  State<LeadershipMeetingsScreen> createState() =>
+      _LeadershipMeetingsScreenState();
 }
 
 class _LeadershipMeetingsScreenState extends State<LeadershipMeetingsScreen> {
@@ -21,7 +22,9 @@ class _LeadershipMeetingsScreenState extends State<LeadershipMeetingsScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthBloc>().state;
     if (auth is! AuthAuthenticated) {
-      return const Scaffold(body: Center(child: Text('Sign in to view meetings.')));
+      return const Scaffold(
+        body: Center(child: Text('Sign in to view meetings.')),
+      );
     }
     final schoolId = auth.user.schoolId;
     return Scaffold(
@@ -40,19 +43,23 @@ class _LeadershipMeetingsScreenState extends State<LeadershipMeetingsScreen> {
         stream: _repository.watchMeetings(schoolId),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Could not load meetings: ${snapshot.error}'));
+            return Center(
+              child: Text('Could not load meetings: ${snapshot.error}'),
+            );
           }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
           final meetings = snapshot.data!;
           if (meetings.isEmpty) {
-            return const Center(child: Text('No meetings recorded yet. Tap + to add one.'));
+            return const Center(
+              child: Text('No meetings recorded yet. Tap + to add one.'),
+            );
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: meetings.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (_, i) => _MeetingCard(
               meeting: meetings[i],
               onTap: () => Navigator.of(context).push(
@@ -107,7 +114,9 @@ class _LeadershipMeetingsScreenState extends State<LeadershipMeetingsScreen> {
                   initialValue: type,
                   decoration: const InputDecoration(labelText: 'Type'),
                   items: MeetingType.values
-                      .map((t) => DropdownMenuItem(value: t, child: Text(t.name)))
+                      .map(
+                        (t) => DropdownMenuItem(value: t, child: Text(t.name)),
+                      )
                       .toList(),
                   onChanged: (v) => setState(() => type = v ?? type),
                 ),
@@ -115,13 +124,17 @@ class _LeadershipMeetingsScreenState extends State<LeadershipMeetingsScreen> {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('Date'),
-                  subtitle: Text(DateFormat.yMMMd().add_jm().format(scheduledAt)),
+                  subtitle: Text(
+                    DateFormat.yMMMd().add_jm().format(scheduledAt),
+                  ),
                   trailing: const Icon(Icons.calendar_today),
                   onTap: () async {
                     final picked = await showDatePicker(
                       context: ctx,
                       initialDate: scheduledAt,
-                      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                      firstDate: DateTime.now().subtract(
+                        const Duration(days: 30),
+                      ),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
                     if (picked != null) setState(() => scheduledAt = picked);
@@ -185,20 +198,20 @@ class _MeetingCard extends StatelessWidget {
       onTap: onTap,
       child: Row(
         children: [
-          Icon(
-            switch (meeting.type) {
-              MeetingType.board => Icons.gavel,
-              MeetingType.management => Icons.groups,
-              MeetingType.department => Icons.account_tree,
-            },
-            color: Colors.teal,
-          ),
+          Icon(switch (meeting.type) {
+            MeetingType.board => Icons.gavel,
+            MeetingType.management => Icons.groups,
+            MeetingType.department => Icons.account_tree,
+          }, color: Colors.black),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(meeting.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  meeting.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 Text(
                   '${meeting.type.name} • ${DateFormat.yMMMd().format(meeting.scheduledAt)}',
                   style: Theme.of(context).textTheme.bodySmall,
@@ -210,13 +223,13 @@ class _MeetingCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.12),
+                color: Colors.black,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 '$pendingActions open',
                 style: const TextStyle(
-                  color: Colors.orange,
+                  color: Colors.black,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                 ),
@@ -257,9 +270,16 @@ class _MeetingDetailScreenState extends State<_MeetingDetailScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Add decision'),
-        content: TextField(controller: controller, maxLines: 2, autofocus: true),
+        content: TextField(
+          controller: controller,
+          maxLines: 2,
+          autofocus: true,
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text.trim()),
             child: const Text('Add'),
@@ -360,7 +380,11 @@ class _MeetingDetailScreenState extends State<_MeetingDetailScreen> {
   }
 
   Future<void> _toggleAction(int index) async {
-    await widget.repository.toggleActionCompleted(widget.schoolId, _meeting, index);
+    await widget.repository.toggleActionCompleted(
+      widget.schoolId,
+      _meeting,
+      index,
+    );
     final updatedActions = [..._meeting.actions];
     updatedActions[index] = updatedActions[index].copyWith(
       completed: !updatedActions[index].completed,
@@ -401,13 +425,21 @@ class _MeetingDetailScreenState extends State<_MeetingDetailScreen> {
             const SizedBox(height: 16),
           ],
           if (_meeting.participants.isNotEmpty) ...[
-            const Text('Participants', style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Participants',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             Wrap(
               spacing: 6,
               runSpacing: 6,
               children: _meeting.participants
-                  .map((p) => Chip(label: Text(p), visualDensity: VisualDensity.compact))
+                  .map(
+                    (p) => Chip(
+                      label: Text(p),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  )
                   .toList(),
             ),
             const SizedBox(height: 16),
@@ -415,7 +447,10 @@ class _MeetingDetailScreenState extends State<_MeetingDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Decisions', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Decisions',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               TextButton.icon(
                 onPressed: _addDecision,
                 icon: const Icon(Icons.add, size: 18),
@@ -441,7 +476,10 @@ class _MeetingDetailScreenState extends State<_MeetingDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Action items', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Action items',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               TextButton.icon(
                 onPressed: _addAction,
                 icon: const Icon(Icons.add, size: 18),
@@ -463,7 +501,9 @@ class _MeetingDetailScreenState extends State<_MeetingDetailScreen> {
                 title: Text(
                   e.value.description,
                   style: TextStyle(
-                    decoration: e.value.completed ? TextDecoration.lineThrough : null,
+                    decoration: e.value.completed
+                        ? TextDecoration.lineThrough
+                        : null,
                   ),
                 ),
                 subtitle: Text(

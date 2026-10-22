@@ -4,6 +4,7 @@ import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/injection_container.dart';
 import '../../domain/entities/calendar_event.dart';
 import '../../domain/entities/calendar_event_type.dart';
@@ -26,7 +27,11 @@ enum _ViewMode { calendar, list }
 /// grid with colored event dots, legend covering all 9 event types,
 /// search + filters (persisted across the two views), and the Add Event CTA.
 class CalendarOverviewScreen extends StatefulWidget {
-  const CalendarOverviewScreen({super.key});
+  /// Parent-facing calendar is intentionally view-only. Calendar management
+  /// remains available through the staff/admin calendar workflow.
+  final bool readOnly;
+
+  const CalendarOverviewScreen({super.key, this.readOnly = true});
   @override
   State<CalendarOverviewScreen> createState() => _CalendarOverviewScreenState();
 }
@@ -72,7 +77,6 @@ class _CalendarOverviewScreenState extends State<CalendarOverviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthBloc>().state;
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
@@ -84,18 +88,7 @@ class _CalendarOverviewScreenState extends State<CalendarOverviewScreen> {
             icon: Icon(_filters.isEmpty ? Icons.tune_outlined : Icons.tune),
             onPressed: _showFilters,
           ),
-          IconButton(
-            icon: Icon(
-              _mode == _ViewMode.calendar
-                  ? Icons.format_list_bulleted
-                  : Icons.calendar_month_outlined,
-            ),
-            onPressed: () => setState(
-              () => _mode = _mode == _ViewMode.calendar
-                  ? _ViewMode.list
-                  : _ViewMode.calendar,
-            ),
-          ),
+          const NotificationBellButton(),
         ],
       ),
       body: BlocBuilder<SchoolCalendarBloc, SchoolCalendarState>(
@@ -109,6 +102,7 @@ class _CalendarOverviewScreenState extends State<CalendarOverviewScreen> {
           }
           if (state is! SchoolCalendarLoaded) return const SizedBox();
           final events = _visible(state.events);
+          final canManage = state.canManage && !widget.readOnly;
           return SafeArea(
             child: Center(
               child: ConstrainedBox(
@@ -124,10 +118,10 @@ class _CalendarOverviewScreenState extends State<CalendarOverviewScreen> {
                     ),
                     Expanded(
                       child: _mode == _ViewMode.calendar
-                          ? _calendar(events, state.canManage)
-                          : _list(events, state.canManage),
+                          ? _calendar(events, canManage)
+                          : _list(events, canManage),
                     ),
-                    if (state.canManage && user is AuthAuthenticated)
+                    if (canManage)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                         child: SizedBox(
@@ -150,67 +144,98 @@ class _CalendarOverviewScreenState extends State<CalendarOverviewScreen> {
     );
   }
 
-  Widget _calendar(List<CalendarEvent> events, bool canManage) =>
-      SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _calendar(
+    List<CalendarEvent> events,
+    bool canManage,
+  ) => SingleChildScrollView(
+    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+    child: Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline,
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                    onPressed: () => setState(
+                      () => _month = DateTime(_month.year, _month.month - 1),
+                    ),
+                    icon: const Icon(Icons.chevron_left_rounded),
+                  ),
+                  Text(
+                    monthLabel(_month),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => setState(
+                      () => _month = DateTime(_month.year, _month.month + 1),
+                    ),
+                    icon: const Icon(Icons.chevron_right_rounded),
+                  ),
+                ],
+              ),
+              MonthCalendarGrid(
+                month: _month,
+                events: events,
+                onDayTap: (day) {
+                  final dayEvents = events
+                      .where(
+                        (event) =>
+                            isSameDay(event.startDate, day) ||
+                            (event.startDate.isBefore(day) &&
+                                event.endDate.isAfter(day)),
+                      )
+                      .toList();
+                  if (dayEvents.isNotEmpty) {
+                    _showDay(day, dayEvents, canManage);
+                  } else if (canManage) {
+                    _openAdd(date: day);
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        if (events
+            .where(
+              (event) =>
+                  event.startDate.year == _month.year &&
+                  event.startDate.month == _month.month,
+            )
+            .isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 28),
+            child: Column(
               children: [
-                IconButton(
-                  onPressed: () => setState(
-                    () => _month = DateTime(_month.year, _month.month - 1),
-                  ),
-                  icon: const Icon(Icons.chevron_left),
+                Icon(
+                  Icons.event_available_outlined,
+                  size: 28,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+                const SizedBox(height: 8),
                 Text(
-                  monthLabel(_month),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                IconButton(
-                  onPressed: () => setState(
-                    () => _month = DateTime(_month.year, _month.month + 1),
-                  ),
-                  icon: const Icon(Icons.chevron_right),
+                  'No events this month',
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
             ),
-            MonthCalendarGrid(
-              month: _month,
-              events: events,
-              onDayTap: (day) {
-                final dayEvents = events
-                    .where(
-                      (event) =>
-                          isSameDay(event.startDate, day) ||
-                          (event.startDate.isBefore(day) &&
-                              event.endDate.isAfter(day)),
-                    )
-                    .toList();
-                if (dayEvents.isNotEmpty) {
-                  _showDay(day, dayEvents, canManage);
-                } else if (canManage) {
-                  _openAdd(date: day);
-                }
-              },
-            ),
-            const SizedBox(height: 26),
-            const _Legend(),
-            if (events
-                .where(
-                  (event) =>
-                      event.startDate.year == _month.year &&
-                      event.startDate.month == _month.month,
-                )
-                .isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 36),
-                child: Text('No events scheduled'),
-              ),
-          ],
-        ),
-      );
+          ),
+        if (events.isNotEmpty) ...[const SizedBox(height: 20), const _Legend()],
+      ],
+    ),
+  );
 
   Widget _list(List<CalendarEvent> events, bool canManage) => Column(
     children: [
@@ -324,7 +349,7 @@ class _Toggle extends StatelessWidget {
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainer(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
@@ -338,7 +363,7 @@ class _Toggle extends StatelessWidget {
   Widget _tab(BuildContext context, String label, _ViewMode target) => Expanded(
     child: InkWell(
       onTap: () => onChanged(target),
-      borderRadius: BorderRadius.circular(6),
+      borderRadius: BorderRadius.circular(11),
       child: Container(
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -346,7 +371,7 @@ class _Toggle extends StatelessWidget {
           color: mode == target
               ? AppColors.primary(context)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(11),
         ),
         child: Text(
           label,

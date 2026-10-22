@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/assessment_grading_entities.dart';
 import '../../domain/entities/campus_entities.dart';
@@ -7,6 +8,7 @@ import '../../domain/entities/timetable_config.dart';
 import '../../domain/entities/transport_structure_entities.dart';
 import '../../domain/repositories/structure_repository.dart';
 import '../../domain/services/structure_integrity_validator.dart';
+import '../../domain/services/grading_band_validator.dart';
 import 'structure_event.dart';
 import 'structure_state.dart';
 
@@ -63,9 +65,8 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
 
   StructureBloc({
     required this.repository,
-    StructureIntegrityValidator validator = const StructureIntegrityValidator(),
-  }) : _validator = validator,
-       super(const StructureState()) {
+    this._validator = const StructureIntegrityValidator(),
+  }) : super(const StructureState()) {
     on<LoadStructureData>(_onLoad);
     on<ClearStructureData>(_onClear);
 
@@ -280,6 +281,17 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       (event, emit) async =>
           _write(emit, () => repository.archiveLevel(event.levelId)),
     );
+    on<ReorderLevelsRequested>(
+      (event, emit) async =>
+          _write(emit, () => repository.reorderLevels(event.orderedLevels)),
+    );
+    on<SaveLevelWithReorderRequested>((event, emit) async {
+      for (final level in event.levels) {
+        final error = _validator.validateLevel(level, state.levels);
+        if (error != null) return _validationFailed(emit, error);
+      }
+      await _write(emit, () => repository.saveLevelsBatch(event.levels));
+    });
 
     on<SaveAcademicYearRequested>((event, emit) async {
       final error = _validator.validateAcademicYear(
@@ -300,15 +312,20 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       }
       await _write(emit, () => repository.deleteAcademicYear(event.yearId));
     });
+    on<ArchiveAcademicYearRequested>(
+      (event, emit) async =>
+          _write(emit, () => repository.archiveAcademicYear(event.yearId)),
+    );
     on<SetCurrentAcademicYearRequested>((event, emit) async {
       final matches = state.academicYears.where(
         (item) => item.id == event.yearId && !item.isArchived,
       );
-      if (matches.isEmpty)
+      if (matches.isEmpty) {
         return _validationFailed(
           emit,
           'Select a valid non-archived academic year.',
         );
+      }
       await _write(
         emit,
         () => repository.setCurrentAcademicYear(event.yearId, event.schoolId),
@@ -327,12 +344,17 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     on<DeleteAcademicTermRequested>((event, emit) async {
       await _write(emit, () => repository.deleteAcademicTerm(event.termId));
     });
+    on<ArchiveAcademicTermRequested>(
+      (event, emit) async =>
+          _write(emit, () => repository.archiveAcademicTerm(event.termId)),
+    );
     on<SetCurrentAcademicTermRequested>((event, emit) async {
       final matches = state.academicTerms.where(
         (item) => item.id == event.termId,
       );
-      if (matches.isEmpty)
+      if (matches.isEmpty) {
         return _validationFailed(emit, 'Select a valid term/semester.');
+      }
       final currentYearIds = state.academicYears
           .where((item) => item.isCurrent && !item.isArchived)
           .map((item) => item.id)
@@ -349,6 +371,39 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       );
     });
 
+    on<ConfirmAcademicCalendarRequested>((event, emit) async {
+      emit(
+        state.copyWith(isConfirmingCalendar: true, calendarConfirmed: false),
+      );
+      try {
+        final callable = FirebaseFunctions.instanceFor(
+          region: 'europe-west1',
+        ).httpsCallable('confirmAcademicCalendar');
+        await callable.call(<String, dynamic>{
+          'schoolId': event.schoolId,
+          if (event.termIds != null) 'termIds': event.termIds,
+        });
+        emit(
+          state.copyWith(isConfirmingCalendar: false, calendarConfirmed: true),
+        );
+      } on FirebaseFunctionsException catch (error) {
+        emit(
+          state.copyWith(
+            isConfirmingCalendar: false,
+            errorMessage:
+                error.message ?? 'Could not confirm the academic calendar.',
+          ),
+        );
+      } catch (error) {
+        emit(
+          state.copyWith(
+            isConfirmingCalendar: false,
+            errorMessage: error.toString(),
+          ),
+        );
+      }
+    });
+
     on<SaveClassRequested>((event, emit) async {
       final error = _validator.validateClass(
         event.schoolClass,
@@ -358,6 +413,40 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       );
       if (error != null) return _validationFailed(emit, error);
       await _write(emit, () => repository.addClass(event.schoolClass));
+    });
+    on<CreateClassesRequested>((event, emit) async {
+      if (event.classes.isEmpty) {
+        return _validationFailed(emit, 'Choose at least one class.');
+      }
+      final schoolId = event.classes.first.schoolId;
+      if (schoolId.isEmpty ||
+          event.classes.any((item) => item.schoolId != schoolId)) {
+        return _validationFailed(
+          emit,
+          'Classes must belong to one institution.',
+        );
+      }
+      final seen = <String>{};
+      final candidateClasses = [...state.classes];
+      for (final schoolClass in event.classes) {
+        final nameKey =
+            '${schoolClass.levelId}|${schoolClass.name.trim().toLowerCase()}';
+        if (!seen.add(nameKey)) {
+          return _validationFailed(
+            emit,
+            'Each selected class must have a unique name.',
+          );
+        }
+        final error = _validator.validateClass(
+          schoolClass,
+          levels: state.levels,
+          classes: candidateClasses,
+          streams: state.streams,
+        );
+        if (error != null) return _validationFailed(emit, error);
+        candidateClasses.add(schoolClass);
+      }
+      await _write(emit, () => repository.addClasses(event.classes));
     });
     on<DeleteClassRequested>((event, emit) async {
       if (state.streams.any((item) => item.classId == event.classId)) {
@@ -372,6 +461,18 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       (event, emit) async =>
           _write(emit, () => repository.archiveClass(event.classId)),
     );
+    on<ReorderClassesRequested>((event, emit) async {
+      final hasStreams = event.orderedClasses.any(
+        (item) => state.streams.any((stream) => stream.classId == item.id),
+      );
+      if (hasStreams) {
+        return _validationFailed(
+          emit,
+          'Classes with streams already configured can\'t be reordered here.',
+        );
+      }
+      await _write(emit, () => repository.reorderClasses(event.orderedClasses));
+    });
 
     on<SaveStreamRequested>((event, emit) async {
       final error = _validator.validateStream(
@@ -381,6 +482,38 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       );
       if (error != null) return _validationFailed(emit, error);
       await _write(emit, () => repository.addStream(event.stream));
+    });
+    on<CreateStreamsRequested>((event, emit) async {
+      if (event.streams.isEmpty) {
+        return _validationFailed(emit, 'Choose at least one stream.');
+      }
+      final schoolId = event.streams.first.schoolId;
+      if (schoolId.isEmpty ||
+          event.streams.any((item) => item.schoolId != schoolId)) {
+        return _validationFailed(
+          emit,
+          'Streams must belong to one institution.',
+        );
+      }
+      final seen = <String>{};
+      final candidateStreams = [...state.streams];
+      for (final stream in event.streams) {
+        final nameKey = '${stream.classId}|${stream.name.trim().toLowerCase()}';
+        if (!seen.add(nameKey)) {
+          return _validationFailed(
+            emit,
+            'Each selected stream must have a unique name within its class.',
+          );
+        }
+        final error = _validator.validateStream(
+          stream,
+          classes: state.classes,
+          streams: candidateStreams,
+        );
+        if (error != null) return _validationFailed(emit, error);
+        candidateStreams.add(stream);
+      }
+      await _write(emit, () => repository.addStreams(event.streams));
     });
     on<DeleteStreamRequested>((event, emit) async {
       await _write(emit, () => repository.deleteStream(event.streamId));
@@ -399,6 +532,30 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       if (error != null) return _validationFailed(emit, error);
       await _write(emit, () => repository.addSubject(event.subject));
     });
+    on<CreateSubjectsRequested>((event, emit) async {
+      if (event.subjects.isEmpty) {
+        return _validationFailed(emit, 'Choose at least one subject.');
+      }
+      final schoolId = event.subjects.first.schoolId;
+      if (schoolId.isEmpty ||
+          event.subjects.any((item) => item.schoolId != schoolId)) {
+        return _validationFailed(
+          emit,
+          'Subjects must belong to one institution.',
+        );
+      }
+      final candidates = [...state.subjects];
+      for (final subject in event.subjects) {
+        final error = _validator.validateSubject(
+          subject,
+          subjects: candidates,
+          departments: state.departments,
+        );
+        if (error != null) return _validationFailed(emit, error);
+        candidates.add(subject);
+      }
+      await _write(emit, () => repository.addSubjects(event.subjects));
+    });
     on<DeleteSubjectRequested>((event, emit) async {
       return _validationFailed(
         emit,
@@ -409,6 +566,12 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       (event, emit) async =>
           _write(emit, () => repository.archiveSubject(event.subjectId)),
     );
+    on<ReorderSubjectsRequested>((event, emit) async {
+      await _write(
+        emit,
+        () => repository.reorderSubjects(event.orderedSubjects),
+      );
+    });
 
     on<SaveDepartmentRequested>((event, emit) async {
       final error = _validator.validateDepartment(
@@ -417,6 +580,21 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       );
       if (error != null) return _validationFailed(emit, error);
       await _write(emit, () => repository.addDepartment(event.department));
+    });
+    on<SaveDepartmentWithSubjectsRequested>((event, emit) async {
+      final error = _validator.validateDepartment(
+        event.department,
+        state.departments,
+      );
+      if (error != null) return _validationFailed(emit, error);
+      await _write(
+        emit,
+        () => repository.saveDepartmentWithSubjects(
+          event.department,
+          event.addedSubjects,
+          event.removedSubjects,
+        ),
+      );
     });
     on<DeleteDepartmentRequested>((event, emit) async {
       if (state.subjects.any(
@@ -433,6 +611,12 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
       (event, emit) async =>
           _write(emit, () => repository.archiveDepartment(event.departmentId)),
     );
+    on<ReorderDepartmentsRequested>((event, emit) async {
+      await _write(
+        emit,
+        () => repository.reorderDepartments(event.orderedDepartments),
+      );
+    });
 
     on<SaveDesignationRequested>((event, emit) async {
       final error = _validator.validateDesignation(
@@ -476,8 +660,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     );
 
     on<SaveCampusRequested>((event, emit) async {
-      if (event.campus.name.trim().isEmpty)
+      if (event.campus.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter a campus name.');
+      }
       await _write(emit, () => repository.addCampus(event.campus));
     });
     on<DeleteCampusRequested>(
@@ -490,8 +675,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     );
 
     on<SaveHouseRequested>((event, emit) async {
-      if (event.house.name.trim().isEmpty)
+      if (event.house.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter a house name.');
+      }
       if (_duplicateActiveName(
         event.house.id,
         event.house.name,
@@ -510,8 +696,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     );
 
     on<SaveClubRequested>((event, emit) async {
-      if (event.club.name.trim().isEmpty)
+      if (event.club.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter a club or society name.');
+      }
       if (_duplicateActiveName(
         event.club.id,
         event.club.name,
@@ -573,8 +760,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     );
 
     on<SaveTransportRouteRequested>((event, emit) async {
-      if (event.route.name.trim().isEmpty)
+      if (event.route.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter a transport route name.');
+      }
       await _write(emit, () => repository.addTransportRoute(event.route));
     });
     on<DeleteTransportRouteRequested>((event, emit) async {
@@ -625,8 +813,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     );
 
     on<SaveAssessmentTypeRequested>((event, emit) async {
-      if (event.type.name.trim().isEmpty)
+      if (event.type.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter an assessment type name.');
+      }
       if (event.type.weightPercentage < 0 ||
           event.type.weightPercentage > 100) {
         return _validationFailed(
@@ -642,20 +831,29 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     );
 
     on<SaveGradingSystemRequested>((event, emit) async {
-      if (event.system.name.trim().isEmpty)
+      if (event.system.name.trim().isEmpty) {
         return _validationFailed(emit, 'Enter a grading system name.');
-      await _write(emit, () async {
-        if (event.system.isDefault) {
-          for (final current in state.gradingSystems.where(
-            (item) => item.id != event.system.id && item.isDefault,
-          )) {
-            await repository.updateGradingSystem(
-              current.copyWith(isDefault: false),
-            );
-          }
-        }
-        await repository.addGradingSystem(event.system);
-      });
+      }
+      // Default-switching is atomic inside the datasource's saveGradingSystem
+      // (single Firestore batch: unset every other same-scope default and
+      // write this one) - looping separate updateGradingSystem calls here
+      // would defeat that atomicity by reintroducing a window with either
+      // zero or two defaults if a write failed partway through.
+      await _write(emit, () => repository.addGradingSystem(event.system));
+    });
+    on<SaveGradingSystemWithBandsRequested>((event, emit) async {
+      if (event.system.name.trim().isEmpty) {
+        return _validationFailed(emit, 'Enter a grading system name.');
+      }
+      final rangeError = GradingBandValidator.validate(
+        maximumMark: event.system.maximumMark,
+        bands: event.bands,
+      );
+      if (rangeError != null) return _validationFailed(emit, rangeError);
+      await _write(
+        emit,
+        () => repository.saveGradingSystemWithBands(event.system, event.bands),
+      );
     });
     on<DeleteGradingSystemRequested>((event, emit) async {
       if (state.gradeBands.any(
@@ -790,6 +988,12 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
   }
 
   void _validationFailed(Emitter<StructureState> emit, String message) {
+    // Emit errorMessage as a null->value transition on every failure (even
+    // repeats of the same message) so the UI's `listenWhen` (which compares
+    // against the previous state) always sees a change and re-shows the
+    // SnackBar with a fresh dismiss timer, instead of silently no-op'ing
+    // because the text happened to match the last shown error.
+    emit(state.copyWith(isLoading: false, errorMessage: null));
     emit(state.copyWith(isLoading: false, errorMessage: message));
   }
 
@@ -819,8 +1023,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
   }
 
   String? _validateFacility(Facility candidate, List<Facility> facilities) {
-    if (candidate.name.trim().isEmpty)
+    if (candidate.name.trim().isEmpty) {
       return 'Enter a room or learning-space name.';
+    }
     if (candidate.capacity < 0) return 'Room capacity cannot be negative.';
     if (_duplicateActiveName(
       candidate.id,
@@ -876,8 +1081,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
           item.roomNumber.trim().toLowerCase() ==
               candidate.roomNumber.trim().toLowerCase(),
     );
-    if (duplicate)
+    if (duplicate) {
       return 'This hostel already contains a room with this number/name.';
+    }
     final allocated = rooms
         .where(
           (item) =>
@@ -909,8 +1115,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     TransportVehicle candidate,
     List<TransportRoute> routes,
   ) {
-    if (candidate.busNumber.trim().isEmpty)
+    if (candidate.busNumber.trim().isEmpty) {
       return 'Enter a vehicle/bus number.';
+    }
     if (candidate.capacity < 0) return 'Vehicle capacity cannot be negative.';
     if (candidate.routeId.isNotEmpty &&
         !routes.any((item) => item.id == candidate.routeId && item.isActive)) {
@@ -929,10 +1136,12 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
     )) {
       return 'Select an active grading system.';
     }
-    if (candidate.grade.trim().isEmpty)
+    if (candidate.grade.trim().isEmpty) {
       return 'Enter a grade/achievement label.';
-    if (candidate.minScore > candidate.maxScore)
+    }
+    if (candidate.minScore > candidate.maxScore) {
       return 'Minimum score cannot exceed maximum score.';
+    }
     final duplicate = bands.any(
       (item) =>
           item.id != candidate.id &&
@@ -940,8 +1149,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
           item.grade.trim().toLowerCase() ==
               candidate.grade.trim().toLowerCase(),
     );
-    if (duplicate)
+    if (duplicate) {
       return 'This grade label already exists in the grading system.';
+    }
     final overlap = bands.any(
       (item) =>
           item.id != candidate.id &&
@@ -992,8 +1202,9 @@ class StructureBloc extends Bloc<StructureEvent, StructureState> {
         hour < 0 ||
         hour > 23 ||
         minute < 0 ||
-        minute > 59)
+        minute > 59) {
       return null;
+    }
     return hour * 60 + minute;
   }
 

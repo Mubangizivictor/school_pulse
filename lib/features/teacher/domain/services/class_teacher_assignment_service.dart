@@ -54,6 +54,14 @@ abstract class ClassTeacherAssignmentService {
     bool forceRefresh = false,
   });
 
+  /// Same resolution [resolveActiveAssignment] does, but against a list the
+  /// caller already fetched - so a screen that just loaded every assignment
+  /// to populate a switcher does not pay for a second identical Firestore
+  /// round trip just to find the one that is a Class Teacher row.
+  StaffRoleAssignment? resolveActiveAssignmentFrom(
+    List<StaffRoleAssignment> assignments,
+  );
+
   /// Every Class Teacher row on the profile including suspended and expired
   /// ones, so the panel can say why a class disappeared rather than just
   /// dropping it.

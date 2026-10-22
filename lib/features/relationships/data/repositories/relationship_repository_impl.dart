@@ -39,6 +39,16 @@ class RelationshipRepositoryImpl implements RelationshipRepository {
   }
 
   @override
+  Future<Either<Failure, List<ParentStudentRelationship>>>
+  getRelationshipsForSchool(String schoolId) async {
+    try {
+      return Right(await remoteDataSource.getRelationshipsForSchool(schoolId));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, ParentStudentRelationship>> createRelationship({
     required String schoolId,
     required String studentId,
@@ -48,6 +58,13 @@ class RelationshipRepositoryImpl implements RelationshipRepository {
     bool isLegalGuardian = false,
     bool isPrimaryGuardian = false,
     required String createdBy,
+    bool? financialAccess,
+    bool? academicAccess,
+    bool? attendanceAccess,
+    bool? medicalAccess,
+    bool? emergencyContactAccess,
+    bool? pickupAuthorized,
+    bool? communicationPermission,
   }) async {
     try {
       final data = {
@@ -58,13 +75,13 @@ class RelationshipRepositoryImpl implements RelationshipRepository {
         'type': type.name,
         'isLegalGuardian': isLegalGuardian,
         'isPrimaryGuardian': isPrimaryGuardian,
-        'financialAccess': false,
-        'academicAccess': true,
-        'attendanceAccess': true,
-        'medicalAccess': false,
-        'emergencyContactAccess': true,
-        'pickupAuthorized': false,
-        'communicationPermission': true,
+        'financialAccess': financialAccess ?? false,
+        'academicAccess': academicAccess ?? true,
+        'attendanceAccess': attendanceAccess ?? true,
+        'medicalAccess': medicalAccess ?? false,
+        'emergencyContactAccess': emergencyContactAccess ?? true,
+        'pickupAuthorized': pickupAuthorized ?? false,
+        'communicationPermission': communicationPermission ?? true,
         'status': RelationshipStatus.active.name,
         'createdBy': createdBy,
         'createdAt': Timestamp.now(),

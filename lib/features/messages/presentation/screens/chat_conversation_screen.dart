@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -21,6 +22,9 @@ import 'package:school_pulse/features/messages/presentation/bloc/conversation_bl
 import 'package:school_pulse/features/messages/presentation/messaging_context.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/attachment_composers.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/message_bubble.dart';
+import 'package:school_pulse/features/parent/widgets/child_selector_sheet.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 class ChatConversationScreen extends StatelessWidget {
@@ -232,7 +236,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
         // rather than failing when the selection includes someone else's.
         if (allMine)
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            icon: const Icon(Icons.delete_outline, color: Colors.black),
             tooltip: 'Delete',
             onPressed: () => _confirmDeleteMany(selected),
           ),
@@ -261,8 +265,26 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
       appBar: AppBar(
         backgroundColor: isDark ? AppColors.bgDark : Colors.white,
         elevation: 0,
-        leadingWidth: 40,
-        titleSpacing: 0,
+        toolbarHeight: 72,
+        // Keep the title clear of the screen edge. Previously titleSpacing
+        // was zero without a leading widget, which let the avatar sit flush
+        // against the device edge on routes that had no back affordance.
+        leadingWidth: 52,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: AppSpacing.s),
+          child: IconButton(
+            tooltip: 'Back to messages',
+            icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/messages');
+              }
+            },
+          ),
+        ),
+        titleSpacing: AppSpacing.s,
         title: InkWell(
           // Broadcast lists and channels have their own info screen (it is
           // about recipients and delivery, not group membership).
@@ -274,38 +296,60 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           ),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AppColors.electricBlue,
-                backgroundImage: conversation.avatarUrl != null
-                    ? NetworkImage(conversation.avatarUrl!)
-                    : null,
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.grey850 : AppColors.grey100,
+                  border: Border.all(
+                    color: isDark ? AppColors.borderDark : AppColors.black,
+                    width: 1,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  image: conversation.avatarUrl != null
+                      ? DecorationImage(
+                          image: NetworkImage(conversation.avatarUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                alignment: Alignment.center,
                 child: conversation.avatarUrl != null
                     ? null
                     : Text(
                         _initials(conversation.title),
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
                           fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
               ),
-              const SizedBox(width: AppSpacing.s),
+              const SizedBox(width: AppSpacing.m),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       conversation.title,
-                      style: AppTypography.titleMedium.copyWith(fontSize: 16),
+                      style: AppTypography.titleMedium.copyWith(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      conversation.subtitle ?? '',
+                      [
+                        if ((conversation.subtitle ?? '').isNotEmpty)
+                          conversation.subtitle!,
+                        if ((user.schoolName ?? '').isNotEmpty)
+                          user.schoolName!,
+                      ].join(' · '),
                       style: AppTypography.labelSmall.copyWith(
                         color: AppColors.textMuted(context),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -317,17 +361,21 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.videocam_outlined),
-            onPressed: () =>
-                context.showMessagingSnack('Video calls are not available yet'),
+          Padding(
+            padding: const EdgeInsets.only(right: AppSpacing.s),
+            child: PopupMenuButton<String>(
+              tooltip: 'Conversation options',
+              icon: const Icon(Icons.more_horiz_rounded),
+              onSelected: (value) {
+                if (value == 'info') {
+                  context.push('/messages/chat/${widget.chatId}/info');
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'info', child: Text('Conversation info')),
+              ],
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.phone_outlined),
-            onPressed: () =>
-                context.showMessagingSnack('Voice calls are not available yet'),
-          ),
-          const SizedBox(width: 4),
         ],
       ),
       body: _buildChatBody(context, isDark, user, conversation, convoState),
@@ -343,6 +391,8 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
   ) {
     return Column(
       children: [
+        if (user.roles.contains(UserRole.parent))
+          _buildChildContextSelector(context),
         if (conversation.pinnedMessageContent != null)
           _buildPinnedBanner(context, isDark, conversation),
         Expanded(
@@ -381,57 +431,87 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                   return false;
                 },
                 child: ListView.builder(
-                  padding: const EdgeInsets.all(AppSpacing.m),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.m,
+                  ),
                   reverse: true,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message = messages[messages.length - 1 - index];
-                    return MessageBubble(
-                      message: message,
-                      isGroup: conversation.type != ChatType.direct,
-                      textScale: _preferences.textScale,
-                      isSelected: _selectedIds.contains(message.id),
-                      selectionMode: _selectedIds.isNotEmpty,
-                      onToggleSelected: () => _toggleSelected(message.id),
-                      onSelect: () => _toggleSelected(message.id),
-                      onReply: () => setState(() {
-                        _replyTo = message;
-                        _editing = null;
-                      }),
-                      onForward: () => _forward(user, message),
-                      onStar: () => context.read<ConversationBloc>().add(
-                        ConversationMessageStarredSet(
-                          message.id,
-                          !message.isStarred,
+                    final sourceIndex = messages.length - 1 - index;
+                    final message = messages[sourceIndex];
+                    final older = sourceIndex + 1 < messages.length
+                        ? messages[sourceIndex + 1]
+                        : null;
+                    final showDate =
+                        older == null ||
+                        !DateUtils.isSameDay(
+                          message.timestamp,
+                          older.timestamp,
+                        );
+                    return Column(
+                      children: [
+                        if (showDate)
+                          _buildDateSeparator(context, message.timestamp),
+                        MessageBubble(
+                          message: message,
+                          senderAvatarUrl: _participantAvatar(
+                            conversation,
+                            message.senderId,
+                          ),
+                          isGroup: conversation.type != ChatType.direct,
+                          textScale: _preferences.textScale,
+                          isSelected: _selectedIds.contains(message.id),
+                          selectionMode: _selectedIds.isNotEmpty,
+                          onToggleSelected: () => _toggleSelected(message.id),
+                          onSelect: () => _toggleSelected(message.id),
+                          onReply: () => setState(() {
+                            _replyTo = message;
+                            _editing = null;
+                          }),
+                          onForward: () => _forward(user, message),
+                          onStar: () => context.read<ConversationBloc>().add(
+                            ConversationMessageStarredSet(
+                              message.id,
+                              !message.isStarred,
+                            ),
+                          ),
+                          onCopy: () {
+                            Clipboard.setData(
+                              ClipboardData(text: message.content),
+                            );
+                            context.showMessagingSnack('Copied to clipboard');
+                          },
+                          onEdit:
+                              message.isMe && message.type == MessageType.text
+                              ? () {
+                                  setState(() {
+                                    _editing = message;
+                                    _replyTo = null;
+                                    _messageController.text = message.content;
+                                  });
+                                }
+                              : null,
+                          onDelete: message.isMe
+                              ? () => _confirmDelete(message)
+                              : null,
+                          onPin: () => context.read<ConversationBloc>().add(
+                            ConversationMessagePinnedSet(
+                              message,
+                              !message.isPinned,
+                            ),
+                          ),
+                          onReact: (emoji) =>
+                              context.read<ConversationBloc>().add(
+                                ConversationMessageReacted(message.id, emoji),
+                              ),
+                          onVote: (option) => context
+                              .read<ConversationBloc>()
+                              .add(ConversationPollVoted(message.id, option)),
+                          onOpenContact: (contactId) =>
+                              _openSharedContact(user, contactId),
                         ),
-                      ),
-                      onCopy: () {
-                        Clipboard.setData(ClipboardData(text: message.content));
-                        context.showMessagingSnack('Copied to clipboard');
-                      },
-                      onEdit: message.isMe && message.type == MessageType.text
-                          ? () {
-                              setState(() {
-                                _editing = message;
-                                _replyTo = null;
-                                _messageController.text = message.content;
-                              });
-                            }
-                          : null,
-                      onDelete: message.isMe
-                          ? () => _confirmDelete(message)
-                          : null,
-                      onPin: () => context.read<ConversationBloc>().add(
-                        ConversationMessagePinnedSet(message, !message.isPinned),
-                      ),
-                      onReact: (emoji) => context.read<ConversationBloc>().add(
-                        ConversationMessageReacted(message.id, emoji),
-                      ),
-                      onVote: (option) => context.read<ConversationBloc>().add(
-                        ConversationPollVoted(message.id, option),
-                      ),
-                      onOpenContact: (contactId) =>
-                          _openSharedContact(user, contactId),
+                      ],
                     );
                   },
                 ),
@@ -441,6 +521,52 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
         ),
         if (convoState.uploading || _sendingLocation)
           const LinearProgressIndicator(minHeight: 2),
+        if (convoState.messages?.any((message) => message.isSending) ?? false)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.cloud_off_outlined,
+                  size: 14,
+                  color: AppColors.textMuted(context),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Will send when online',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (_selectedIds.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 7),
+            color: isDark ? AppColors.bgDark : Colors.white,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.verified_user_outlined,
+                  size: 14,
+                  color: AppColors.textMuted(context),
+                ),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    'Messages are recorded for school safeguarding.',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textMuted(context),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         // The composer is out of the way while a selection is active.
         if (_selectedIds.isNotEmpty)
           const SizedBox.shrink()
@@ -452,6 +578,68 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
     );
   }
 
+  Widget _buildChildContextSelector(BuildContext context) {
+    return BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
+      builder: (context, state) {
+        if (state is! SelectedStudentLoaded) return const SizedBox.shrink();
+        final student = state.student;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () => ChildSelectorSheet.show(context),
+              icon: const Icon(Icons.person_outline_rounded, size: 16),
+              label: Text(
+                student.name,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.labelMedium.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 34),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String? _participantAvatar(ChatConversation conversation, String userId) {
+    for (final participant in conversation.participants) {
+      if (participant.id == userId) return participant.avatarUrl;
+    }
+    return null;
+  }
+
+  Widget _buildDateSeparator(BuildContext context, DateTime date) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 14),
+    child: Row(
+      children: [
+        const Expanded(child: Divider()),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            DateUtils.isSameDay(date, DateTime.now())
+                ? 'Today'
+                : DateFormat('d MMM yyyy').format(date),
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textMuted(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const Expanded(child: Divider()),
+      ],
+    ),
+  );
+
   Widget _buildPinnedBanner(
     BuildContext context,
     bool isDark,
@@ -460,34 +648,52 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
     return InkWell(
       onTap: () => context.push('/messages/pinned'),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        color: isDark
-            ? AppColors.electricBlue.withValues(alpha: 0.1)
-            : Colors.blue.withValues(alpha: 0.05),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.grey850 : AppColors.grey50,
+          border: Border(
+            bottom: BorderSide(
+              color: isDark ? AppColors.borderDark : AppColors.grey200,
+            ),
+          ),
+        ),
         child: Row(
           children: [
-            const Icon(Icons.push_pin, size: 14, color: AppColors.electricBlue),
+            Icon(
+              Icons.push_pin,
+              size: 14,
+              color: isDark ? AppColors.white : AppColors.black,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pinned: ${conversation.pinnedMessageContent}',
+                    'Pinned Message',
                     style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.electricBlue,
-                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.white : AppColors.black,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 10,
                     ),
+                  ),
+                  Text(
+                    conversation.pinnedMessageContent ?? '',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textMuted(context),
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
             IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.close,
                 size: 16,
-                color: AppColors.electricBlue,
+                color: AppColors.textMuted(context),
               ),
               onPressed: () => context.read<ConversationBloc>().add(
                 ConversationMessagePinnedSet(
@@ -546,14 +752,14 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.s,
-        vertical: AppSpacing.s,
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.m,
       ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.bgDark : Colors.white,
         border: Border(
           top: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            color: isDark ? AppColors.borderDark : AppColors.grey200,
           ),
         ),
       ),
@@ -570,82 +776,92 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.add_circle_outline,
-                      color: AppColors.electricBlue,
-                      size: 28,
+                      color: isDark ? AppColors.white : AppColors.black,
+                      size: 26,
                     ),
                     onPressed: () =>
                         _showAttachmentMenu(context, user, conversation),
                   ),
                   Expanded(
                     child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.m,
+                        horizontal: AppSpacing.l,
                       ),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.surfaceDark
-                            : AppColors.bgLight,
-                        borderRadius: BorderRadius.circular(24),
+                        color: isDark ? AppColors.grey850 : AppColors.grey50,
+                        borderRadius: BorderRadius.circular(22),
                         border: Border.all(
                           color: isDark
                               ? AppColors.borderDark
-                              : AppColors.borderLight,
+                              : AppColors.grey200,
                         ),
                       ),
                       child: TextField(
                         controller: _messageController,
                         // "Enter is send" turns the return key into a send
                         // button; otherwise it stays a newline.
-                        maxLines: _preferences.enterIsSend ? 1 : 4,
+                        maxLines: 4,
                         minLines: 1,
-                        textInputAction: _preferences.enterIsSend
-                            ? TextInputAction.send
-                            : TextInputAction.newline,
-                        onSubmitted: _preferences.enterIsSend
-                            ? (_) => _send(user, conversation)
-                            : null,
+                        textInputAction: TextInputAction.newline,
+                        onSubmitted: (_) {
+                          if (_preferences.enterIsSend && _composerHadText) {
+                            _send(user, conversation);
+                          }
+                        },
                         textCapitalization: TextCapitalization.sentences,
-                        style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black87,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: isDark ? Colors.white : Colors.black,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: 'Type a message...',
-                          hintStyle: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 14,
+                          hintStyle: AppTypography.bodyMedium.copyWith(
+                            color: AppColors.textMuted(context),
                           ),
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 10),
-                          suffixIcon: Icon(
-                            Icons.emoji_emotions_outlined,
-                            color: Colors.grey,
-                            size: 20,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                          ),
+                          suffixIcon: IconButton(
+                            tooltip: 'Add emoji',
+                            icon: Icon(
+                              Icons.emoji_emotions_outlined,
+                              color: isDark ? AppColors.white : AppColors.black,
+                              size: 21,
+                            ),
+                            onPressed: _showEmojiPicker,
                           ),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.s),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: CircleAvatar(
-                      radius: 22,
-                      backgroundColor: AppColors.electricBlue,
-                      child: IconButton(
-                        icon: Icon(
-                          _composerHadText ? Icons.send : Icons.mic,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        onPressed: _composerHadText
-                            ? () => _send(user, conversation)
-                            : _startRecording,
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _composerHadText
+                          ? (isDark ? AppColors.white : AppColors.black)
+                          : (isDark ? AppColors.grey850 : AppColors.grey100),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      tooltip: _composerHadText
+                          ? 'Send message'
+                          : 'Write a message to send',
+                      icon: Icon(
+                        Icons.send_rounded,
+                        color: _composerHadText
+                            ? (isDark ? AppColors.black : AppColors.white)
+                            : AppColors.textMuted(context),
+                        size: 20,
                       ),
+                      onPressed: _composerHadText
+                          ? () => _send(user, conversation)
+                          : null,
                     ),
                   ),
                 ],
@@ -667,10 +883,15 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
         vertical: AppSpacing.s,
       ),
       decoration: BoxDecoration(
-        color: AppColors.electricBlue.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? AppColors.grey850 : AppColors.grey50,
         border: Border(
-          left: BorderSide(color: AppColors.electricBlue, width: 3),
+          left: BorderSide(
+            color: isDark ? AppColors.white : AppColors.black,
+            width: 3,
+          ),
+          bottom: BorderSide(
+            color: isDark ? AppColors.borderDark : AppColors.grey200,
+          ),
         ),
       ),
       child: Row(
@@ -678,7 +899,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           Icon(
             isEditing ? Icons.edit_outlined : Icons.reply,
             size: 16,
-            color: AppColors.electricBlue,
+            color: isDark ? AppColors.white : AppColors.black,
           ),
           const SizedBox(width: AppSpacing.s),
           Expanded(
@@ -690,8 +911,8 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
                       ? 'Editing message'
                       : 'Replying to ${draft.senderName}',
                   style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.electricBlue,
-                    fontWeight: FontWeight.bold,
+                    color: isDark ? AppColors.white : AppColors.black,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
                 Text(
@@ -706,7 +927,11 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close, size: 16),
+            icon: Icon(
+              Icons.close,
+              size: 16,
+              color: AppColors.textMuted(context),
+            ),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
             onPressed: () => setState(() {
@@ -747,6 +972,53 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
         ConversationMessageSendRequested(content: text, replyTo: replyTo),
       );
     }
+  }
+
+  /// A lightweight picker keeps the composer useful without adding a second
+  /// keyboard dependency. It inserts at the cursor, so emoji can be used in
+  /// the middle of a draft as well as at the end.
+  Future<void> _showEmojiPicker() async {
+    const emojis = ['😀', '😊', '👍', '❤️', '👏', '🙏', '🎉', '📚', '✅', '❗'];
+    final emoji = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+          child: Wrap(
+            alignment: WrapAlignment.spaceEvenly,
+            spacing: 8,
+            runSpacing: 8,
+            children: emojis
+                .map(
+                  (item) => IconButton(
+                    tooltip: item,
+                    onPressed: () => Navigator.pop(sheetContext, item),
+                    icon: Text(item, style: const TextStyle(fontSize: 26)),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ),
+    );
+    if (emoji == null || !mounted) return;
+
+    final current = _messageController.value;
+    final selection = current.selection.isValid
+        ? current.selection
+        : TextSelection.collapsed(offset: current.text.length);
+    final updated = current.text.replaceRange(
+      selection.start,
+      selection.end,
+      emoji,
+    );
+    final cursor = selection.start + emoji.length;
+    _messageController.value = TextEditingValue(
+      text: updated,
+      selection: TextSelection.collapsed(offset: cursor),
+    );
   }
 
   Future<void> _forward(UserEntity user, ChatMessage message) async {
@@ -820,7 +1092,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -849,7 +1121,7 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: const Text('Delete', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -1183,16 +1455,19 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
     return Row(
       children: [
         IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+          icon: Icon(
+            Icons.delete_outline,
+            color: isDark ? AppColors.white : AppColors.black,
+          ),
           tooltip: 'Discard',
           onPressed: () => _stopRecording(send: false),
         ),
         const SizedBox(width: 4),
         Container(
-          width: 10,
-          height: 10,
-          decoration: const BoxDecoration(
-            color: Colors.redAccent,
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: AppColors.danger(context),
             shape: BoxShape.circle,
           ),
         ),
@@ -1201,18 +1476,25 @@ class _ChatConversationViewState extends State<_ChatConversationView> {
           child: Text(
             'Recording  ${formatClipDuration(_recordedFor)}',
             style: AppTypography.bodyMedium.copyWith(
-              color: isDark ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : Colors.black,
+              fontWeight: FontWeight.w900,
             ),
           ),
         ),
         Padding(
           padding: const EdgeInsets.only(bottom: 4),
-          child: CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColors.electricBlue,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.white : AppColors.black,
+            ),
             child: IconButton(
-              icon: const Icon(Icons.send, color: Colors.white, size: 20),
+              icon: Icon(
+                Icons.send,
+                color: isDark ? AppColors.black : AppColors.white,
+                size: 18,
+              ),
               onPressed: () => _stopRecording(
                 send: true,
                 user: user,
@@ -1268,8 +1550,11 @@ class AttachmentsMenu extends StatelessWidget {
       margin: const EdgeInsets.all(AppSpacing.m),
       padding: const EdgeInsets.all(AppSpacing.l),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: isDark ? AppColors.bgDark : Colors.white,
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.black,
+          width: 1,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1282,49 +1567,41 @@ class AttachmentsMenu extends StatelessWidget {
               _AttachmentItem(
                 icon: Icons.image,
                 kind: AttachmentKind.photos,
-                color: Colors.purple,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.camera_alt,
                 kind: AttachmentKind.camera,
-                color: Colors.pink,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.insert_drive_file,
                 kind: AttachmentKind.document,
-                color: Colors.blue,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.headset,
                 kind: AttachmentKind.audio,
-                color: Colors.orange,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.location_on,
                 kind: AttachmentKind.location,
-                color: Colors.green,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.person,
                 kind: AttachmentKind.contact,
-                color: Colors.teal,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.poll,
                 kind: AttachmentKind.poll,
-                color: Colors.amber,
                 onSelected: onSelected,
               ),
               _AttachmentItem(
                 icon: Icons.event,
                 kind: AttachmentKind.event,
-                color: Colors.cyan,
                 onSelected: onSelected,
               ),
             ],
@@ -1332,7 +1609,13 @@ class AttachmentsMenu extends StatelessWidget {
           const SizedBox(height: AppSpacing.m),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: isDark ? Colors.white : Colors.black,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
         ],
       ),
@@ -1343,18 +1626,17 @@ class AttachmentsMenu extends StatelessWidget {
 class _AttachmentItem extends StatelessWidget {
   final IconData icon;
   final AttachmentKind kind;
-  final Color color;
   final ValueChanged<AttachmentKind>? onSelected;
 
   const _AttachmentItem({
     required this.icon,
     required this.kind,
-    required this.color,
     this.onSelected,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onSelected == null ? null : () => onSelected!(kind),
       child: Column(
@@ -1363,13 +1645,22 @@ class _AttachmentItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: isDark ? AppColors.white : AppColors.black,
             ),
-            child: Icon(icon, color: color),
+            child: Icon(
+              icon,
+              color: isDark ? AppColors.black : AppColors.white,
+              size: 20,
+            ),
           ),
-          const SizedBox(height: 4),
-          Text(kind.label, style: const TextStyle(fontSize: 10)),
+          const SizedBox(height: 6),
+          Text(
+            kind.label,
+            style: AppTypography.labelSmall.copyWith(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
         ],
       ),
     );
@@ -1398,19 +1689,22 @@ class _ForwardSheetState extends State<_ForwardSheet> {
         maxHeight: MediaQuery.of(context).size.height * 0.7,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: isDark ? AppColors.bgDark : Colors.white,
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.black,
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Forward to',
+            'FORWARD TO',
             style: AppTypography.titleMedium.copyWith(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: AppSpacing.s),
+          const SizedBox(height: AppSpacing.m),
           Flexible(
             child: ListView.builder(
               shrinkWrap: true,
@@ -1419,16 +1713,31 @@ class _ForwardSheetState extends State<_ForwardSheet> {
                 final chat = widget.conversations[index];
                 final selected = _selected.contains(chat.id);
                 return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.electricBlue.withValues(
-                      alpha: 0.1,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.grey850 : AppColors.grey100,
+                      border: Border.all(
+                        color: isDark ? AppColors.borderDark : AppColors.black,
+                      ),
                     ),
+                    alignment: Alignment.center,
                     child: Text(
                       chat.title.isEmpty ? '?' : chat.title[0].toUpperCase(),
-                      style: const TextStyle(color: AppColors.electricBlue),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
-                  title: Text(chat.title, style: AppTypography.titleSmall),
+                  title: Text(
+                    chat.title,
+                    style: AppTypography.titleSmall.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   subtitle: Text(
                     chat.subtitle ?? '',
                     style: AppTypography.bodySmall.copyWith(
@@ -1436,10 +1745,8 @@ class _ForwardSheetState extends State<_ForwardSheet> {
                     ),
                   ),
                   trailing: Icon(
-                    selected
-                        ? Icons.check_circle
-                        : Icons.radio_button_unchecked,
-                    color: selected ? AppColors.electricBlue : Colors.grey,
+                    selected ? Icons.check_box : Icons.check_box_outline_blank,
+                    color: isDark ? Colors.white : Colors.black,
                   ),
                   onTap: () => setState(() {
                     selected
@@ -1450,7 +1757,7 @@ class _ForwardSheetState extends State<_ForwardSheet> {
               },
             ),
           ),
-          const SizedBox(height: AppSpacing.s),
+          const SizedBox(height: AppSpacing.m),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -1458,17 +1765,15 @@ class _ForwardSheetState extends State<_ForwardSheet> {
                   ? null
                   : () => Navigator.pop(context, _selected.toList()),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.electricBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                backgroundColor: isDark ? AppColors.white : AppColors.black,
+                foregroundColor: isDark ? AppColors.black : AppColors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: const RoundedRectangleBorder(),
                 elevation: 0,
               ),
               child: const Text(
-                'Forward',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                'FORWARD',
+                style: TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
           ),

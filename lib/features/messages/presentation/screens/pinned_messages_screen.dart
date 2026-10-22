@@ -59,10 +59,8 @@ class PinnedMessagesScreen extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: AppSpacing.m),
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.surfaceDark : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.electricBlue.withValues(alpha: 0.3),
-                      ),
+                      borderRadius: BorderRadius.zero,
+                      border: Border.all(color: AppColors.textPrimary(context), width: 1),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.m),
@@ -71,17 +69,18 @@ class PinnedMessagesScreen extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.push_pin,
                                 size: 16,
-                                color: AppColors.electricBlue,
+                                color: AppColors.textPrimary(context),
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'Pinned by ${ref.message.senderName}',
+                                  'PINNED BY ${ref.message.senderName.toUpperCase()}',
                                   style: AppTypography.labelSmall.copyWith(
-                                    color: AppColors.electricBlue,
+                                    color: AppColors.textPrimary(context),
+                                    fontWeight: FontWeight.w900,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -117,16 +116,17 @@ class PinnedMessagesScreen extends StatelessWidget {
                                 ),
                               ),
                               TextButton(
-                                onPressed: () => context.messages
-                                    .setMessagePinned(
+                                onPressed: () =>
+                                    context.messages.setMessagePinned(
                                       ref.conversationId,
                                       ref.message,
                                       false,
                                     ),
                                 child: Text(
-                                  'Unpin',
+                                  'UNPIN',
                                   style: AppTypography.labelSmall.copyWith(
-                                    color: AppColors.electricBlue,
+                                    color: AppColors.textPrimary(context),
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
                               ),

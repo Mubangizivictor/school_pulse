@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
@@ -12,9 +13,31 @@ import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
 import 'package:school_pulse/injection_container.dart';
 
 /// Missed Lessons — lists all [LessonRecord]s with [LessonStatus.missed],
-/// each tagged Resolved/Unresolved from the out-of-band resolved map.
-class MissedLessonsScreen extends StatelessWidget {
+/// each tagged Resolved/Unresolved from the out-of-band resolved map, split
+/// into Unresolved/Resolved tabs.
+class MissedLessonsScreen extends StatefulWidget {
   const MissedLessonsScreen({super.key});
+
+  @override
+  State<MissedLessonsScreen> createState() => _MissedLessonsScreenState();
+}
+
+class _MissedLessonsScreenState extends State<MissedLessonsScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  final Set<String> _locallyResolved = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,29 +46,50 @@ class MissedLessonsScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(
-          backgroundColor: AppColors.surface(context),
+          backgroundColor: AppColors.surfaceContainer(context),
           title: Text('Missed Lessons', style: AppTypography.titleLarge),
         ),
         body: BlocBuilder<DeanBloc, DeanState>(
           builder: (context, state) {
             if (state is MissedLessonsLoaded) {
-              if (state.lessons.isEmpty) {
-                return const EmptyState(
-                  icon: Icons.check_circle_outline,
-                  title: 'No missed lessons',
-                  message: 'Every scheduled lesson has been delivered.',
-                );
-              }
-              return ListView.separated(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                itemCount: state.lessons.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(height: AppSpacing.l),
-                itemBuilder: (context, index) {
-                  final lesson = state.lessons[index];
-                  final resolved = state.resolvedById[lesson.id] ?? false;
-                  return _MissedLessonCard(lesson: lesson, resolved: resolved);
-                },
+              final unresolved = state.lessons
+                  .where(
+                    (l) =>
+                        !(state.resolvedById[l.id] ?? false) &&
+                        !_locallyResolved.contains(l.id),
+                  )
+                  .toList();
+              final resolved = state.lessons
+                  .where(
+                    (l) =>
+                        (state.resolvedById[l.id] ?? false) ||
+                        _locallyResolved.contains(l.id),
+                  )
+                  .toList();
+              return Column(
+                children: [
+                  TabBar(
+                    controller: _tabController,
+                    tabs: [
+                      Tab(text: 'Unresolved (${unresolved.length})'),
+                      Tab(text: 'Resolved (${resolved.length})'),
+                    ],
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _MissedLessonsList(
+                          lessons: unresolved,
+                          resolved: false,
+                          onReschedule: (lesson) =>
+                              _showRescheduleSheet(context, lesson),
+                        ),
+                        _MissedLessonsList(lessons: resolved, resolved: true),
+                      ],
+                    ),
+                  ),
+                ],
               );
             }
             if (state is DeanError) {
@@ -61,13 +105,81 @@ class MissedLessonsScreen extends StatelessWidget {
       ),
     );
   }
+
+  Future<void> _showRescheduleSheet(
+    BuildContext context,
+    LessonRecord lesson,
+  ) async {
+    final newDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 60)),
+    );
+    if (newDate == null || !context.mounted) return;
+    final newTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(lesson.scheduledAt),
+    );
+    if (newTime == null || !context.mounted) return;
+
+    setState(() => _locallyResolved.add(lesson.id));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '${lesson.subjectName} • ${lesson.className} rescheduled to '
+          '${DateFormat('d MMM').format(newDate)} at ${newTime.format(context)}',
+        ),
+      ),
+    );
+  }
+}
+
+class _MissedLessonsList extends StatelessWidget {
+  final List<LessonRecord> lessons;
+  final bool resolved;
+  final void Function(LessonRecord)? onReschedule;
+
+  const _MissedLessonsList({
+    required this.lessons,
+    required this.resolved,
+    this.onReschedule,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (lessons.isEmpty) {
+      return EmptyState(
+        icon: resolved ? Icons.history : Icons.check_circle_outline,
+        title: resolved ? 'No resolved lessons' : 'No missed lessons',
+        message: resolved
+            ? 'Resolved missed lessons will appear here.'
+            : 'Every scheduled lesson has been delivered.',
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      itemCount: lessons.length,
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.l),
+      itemBuilder: (context, index) => _MissedLessonCard(
+        lesson: lessons[index],
+        resolved: resolved,
+        onReschedule: onReschedule,
+      ),
+    );
+  }
 }
 
 class _MissedLessonCard extends StatelessWidget {
   final LessonRecord lesson;
   final bool resolved;
+  final void Function(LessonRecord)? onReschedule;
 
-  const _MissedLessonCard({required this.lesson, required this.resolved});
+  const _MissedLessonCard({
+    required this.lesson,
+    required this.resolved,
+    this.onReschedule,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -128,20 +240,35 @@ class _MissedLessonCard extends StatelessWidget {
               ),
             ],
           ),
-          if (lesson.remarks != null) ...[
-            const SizedBox(height: AppSpacing.m),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.m),
-              decoration: BoxDecoration(
-                color: AppColors.background(context),
-                borderRadius: AppRadius.small,
+          const SizedBox(height: AppSpacing.m),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.m),
+            decoration: BoxDecoration(
+              color: AppColors.background(context),
+              borderRadius: AppRadius.small,
+            ),
+            child: Text(
+              lesson.remarks ?? 'No reason provided',
+              style: AppTypography.bodySmall.copyWith(
+                color: lesson.remarks != null
+                    ? AppColors.textMuted(context)
+                    : AppColors.textMuted(context),
+                fontStyle: lesson.remarks == null
+                    ? FontStyle.italic
+                    : FontStyle.normal,
               ),
-              child: Text(
-                lesson.remarks!,
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textMuted(context),
-                ),
+            ),
+          ),
+          if (!resolved) ...[
+            const SizedBox(height: AppSpacing.l),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: onReschedule == null
+                    ? null
+                    : () => onReschedule!(lesson),
+                child: const Text('Reschedule'),
               ),
             ),
           ],

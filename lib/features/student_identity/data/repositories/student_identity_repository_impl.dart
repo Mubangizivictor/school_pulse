@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../../../student/domain/entities/student.dart';
 import '../../../student/data/models/student_model.dart';
+import '../../domain/entities/credential_history_entry.dart';
 import '../../domain/entities/student_identity.dart';
 import '../../domain/repositories/student_identity_repository.dart';
 import '../models/student_identity_model.dart';
@@ -49,6 +51,27 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     );
   }
 
+  /// The `issueStudentIdentity` callable above already validated the caller
+  /// belongs to this student's school using a fresh Admin SDK read - the
+  /// client read right after it is client-rules-gated and re-checks the
+  /// same tenancy via the caller's cached ID token. A token restored on app
+  /// launch (or shortly after a role/school change) can briefly disagree
+  /// with what the callable just proved server-side, surfacing as a
+  /// spurious permission-denied on an otherwise-authorized read. One forced
+  /// token refresh + retry clears that window without weakening the rule.
+  Future<DocumentSnapshot<Map<String, dynamic>>> _getStudentDocWithTokenRefresh(
+    String studentId,
+  ) async {
+    final ref = firestore.collection('students').doc(studentId);
+    try {
+      return await ref.get();
+    } on FirebaseException catch (e) {
+      if (e.code != 'permission-denied') rethrow;
+      await FirebaseAuth.instance.currentUser?.getIdToken(true);
+      return ref.get();
+    }
+  }
+
   /// Canonical identity bootstrap.
   ///
   /// The callable validates the authenticated staff member and the Student
@@ -72,7 +95,7 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
       );
       final returned = StudentIdentityModel.fromFirestore(identityData);
 
-      final studentDoc = await firestore.collection('students').doc(studentId).get();
+      final studentDoc = await _getStudentDocWithTokenRefresh(studentId);
       if (!studentDoc.exists) {
         return Left(
           ServerFailure('Student record not found while preparing identity.'),
@@ -97,6 +120,9 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
         schoolStudentId: returned.schoolStudentId,
         qrCodeData: returned.qrCodeData,
         nfcStatus: returned.nfcStatus,
+        qrCredentialStatus: returned.qrCredentialStatus,
+        issuedAt: returned.issuedAt,
+        lastPrintedAt: returned.lastPrintedAt,
       );
 
       await localCache.save(student: student, identity: model);
@@ -152,9 +178,7 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
     StudentIdentity identity,
   ) async {
     try {
-      final callable = functions.httpsCallable(
-        'regenerateStudentQrCredential',
-      );
+      final callable = functions.httpsCallable('regenerateStudentQrCredential');
       final result = await callable.call<Map<String, dynamic>>({
         'studentId': identity.studentId,
       });
@@ -180,6 +204,9 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
         schoolStudentId: identity.schoolStudentId,
         qrCodeData: newQrCodeData,
         nfcStatus: identity.nfcStatus,
+        qrCredentialStatus: 'active',
+        issuedAt: identity.issuedAt,
+        lastPrintedAt: identity.lastPrintedAt,
       );
       await _cacheQrCredential(updated);
       return Right(updated);
@@ -219,23 +246,23 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
           studentId: student.id,
           schoolPrefix: _schoolPrefix(student, student.studentCode),
         );
-        await identityResult.fold(
-          (_) async {},
-          (identity) async {
-            final model = identity is StudentIdentityModel
-                ? identity
-                : StudentIdentityModel(
-                    studentId: identity.studentId,
-                    schoolId: student.schoolId,
-                    uniqueSystemId: identity.uniqueSystemId,
-                    schoolStudentId: identity.schoolStudentId,
-                    qrCodeData: identity.qrCodeData,
-                    nfcStatus: identity.nfcStatus,
-                  );
-            await localCache.save(student: student, identity: model);
-            await _cacheQrCredential(model);
-          },
-        );
+        await identityResult.fold((_) async {}, (identity) async {
+          final model = identity is StudentIdentityModel
+              ? identity
+              : StudentIdentityModel(
+                  studentId: identity.studentId,
+                  schoolId: student.schoolId,
+                  uniqueSystemId: identity.uniqueSystemId,
+                  schoolStudentId: identity.schoolStudentId,
+                  qrCodeData: identity.qrCodeData,
+                  nfcStatus: identity.nfcStatus,
+                  qrCredentialStatus: identity.qrCredentialStatus,
+                  issuedAt: identity.issuedAt,
+                  lastPrintedAt: identity.lastPrintedAt,
+                );
+          await localCache.save(student: student, identity: model);
+          await _cacheQrCredential(model);
+        });
       }
       return const Right(null);
     } catch (e) {
@@ -249,7 +276,10 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   ) async {
     try {
       // New canonical path: NFC/QR credentials carry Student.id directly.
-      final direct = await firestore.collection('students').doc(reference).get();
+      final direct = await firestore
+          .collection('students')
+          .doc(reference)
+          .get();
       if (direct.exists) {
         return Right(StudentModel.fromMap(direct.data()!, direct.id));
       }
@@ -267,7 +297,10 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
       if (identityDoc.docs.isEmpty) return const Right(null);
 
       final studentId = identityDoc.docs.first.data()['studentId'];
-      final studentDoc = await firestore.collection('students').doc(studentId).get();
+      final studentDoc = await firestore
+          .collection('students')
+          .doc(studentId)
+          .get();
       if (!studentDoc.exists) return const Right(null);
       return Right(StudentModel.fromMap(studentDoc.data()!, studentDoc.id));
     } catch (e) {
@@ -276,13 +309,36 @@ class StudentIdentityRepositoryImpl implements StudentIdentityRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateNfcStatus(
-    String studentId,
-    String nfcStatus,
-  ) async {
-    // NFC lifecycle persistence belongs to the secure credential service /
-    // Cloud Function. Client-side writes to top-level student_identities are
-    // intentionally avoided because that collection is not a client write API.
-    return const Right(null);
+  Future<Either<Failure, List<CredentialHistoryEntry>>> getCredentialHistory({
+    required String studentId,
+    required String schoolId,
+  }) async {
+    try {
+      final snapshot = await firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('credential_history')
+          .where('studentId', isEqualTo: studentId)
+          .orderBy('createdAt', descending: true)
+          .limit(50)
+          .get();
+      return Right(
+        snapshot.docs.map((doc) {
+          final data = doc.data();
+          final createdAt = data['createdAt'];
+          return CredentialHistoryEntry(
+            action: data['action'] as String? ?? 'unknown',
+            credentialType: data['credentialType'] as String? ?? '',
+            reason: data['reason'] as String?,
+            createdAt: createdAt is Timestamp
+                ? createdAt.toDate()
+                : DateTime.now(),
+            actorNameSnapshot: data['actorNameSnapshot'] as String?,
+          );
+        }).toList(),
+      );
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 }

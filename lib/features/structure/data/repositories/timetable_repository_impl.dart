@@ -64,4 +64,54 @@ class TimetableRepositoryImpl implements TimetableRepository {
     required String schoolId,
     required String lessonId,
   }) => remoteDataSource.deleteLesson(schoolId: schoolId, lessonId: lessonId);
+
+  @override
+  Future<Timetable?> getPublishedTimetableForTarget(Timetable timetable) =>
+      remoteDataSource.getPublishedTimetableForTarget(timetable);
+
+  @override
+  Future<void> markValidated({
+    required String schoolId,
+    required String timetableId,
+    required String validatedBy,
+  }) => remoteDataSource.markValidated(
+    schoolId: schoolId,
+    timetableId: timetableId,
+    validatedBy: validatedBy,
+  );
+
+  @override
+  Future<void> publishTimetable({
+    required Timetable timetable,
+    required String publishedBy,
+    DateTime? effectiveFrom,
+  }) => remoteDataSource.publishTimetable(
+    timetable: timetable,
+    publishedBy: publishedBy,
+    effectiveFrom: effectiveFrom,
+  );
+
+  @override
+  Future<void> archiveTimetable({
+    required String schoolId,
+    required String timetableId,
+    required String archivedBy,
+  }) => remoteDataSource.archiveTimetable(
+    schoolId: schoolId,
+    timetableId: timetableId,
+    archivedBy: archivedBy,
+  );
+
+  @override
+  Future<void> appendAuditEntry(TimetableAuditEntry entry) =>
+      remoteDataSource.appendAuditEntry(entry);
+
+  @override
+  Stream<List<TimetableAuditEntry>> watchAuditTrail({
+    required String schoolId,
+    required String timetableId,
+  }) => remoteDataSource.watchAuditTrail(
+    schoolId: schoolId,
+    timetableId: timetableId,
+  );
 }

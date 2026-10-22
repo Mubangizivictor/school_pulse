@@ -137,7 +137,7 @@ class _SchoolNotificationSettingsScreenState
         child: Center(
           child: Text(
             'Sign in to manage school notification settings',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: Colors.white),
           ),
         ),
       );
@@ -153,7 +153,7 @@ class _SchoolNotificationSettingsScreenState
             child: Text(
               'Only school leadership may change notification settings.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: Colors.white),
             ),
           ),
         ),
@@ -178,7 +178,7 @@ class _SchoolNotificationSettingsScreenState
           const Text(
             'Switching a category off stops it reaching anyone at this school. '
             'Safety categories cannot be switched off.',
-            style: TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: Colors.white, fontSize: 12),
           ),
           const SizedBox(height: 12),
           ..._categories.map((category) => _categoryTile(policy, category)),
@@ -205,7 +205,7 @@ class _SchoolNotificationSettingsScreenState
           const Text(
             'The most detail any user may show on a locked screen. Users may '
             'choose to show less, never more.',
-            style: TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: Colors.white, fontSize: 12),
           ),
           const SizedBox(height: 12),
           _actionTile(
@@ -220,7 +220,7 @@ class _SchoolNotificationSettingsScreenState
           const Text(
             'Applies to users who have not set their own. Emergency alerts '
             'always override quiet hours.',
-            style: TextStyle(color: Colors.white54, fontSize: 12),
+            style: TextStyle(color: Colors.white, fontSize: 12),
           ),
           const SizedBox(height: 12),
           _actionTile(
@@ -288,14 +288,14 @@ class _SchoolNotificationSettingsScreenState
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: config.color.withValues(alpha: 0.2),
+            color: config.color,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(config.icon, color: config.color, size: 20),
@@ -315,14 +315,14 @@ class _SchoolNotificationSettingsScreenState
               : disabled
               ? 'Disabled for this school'
               : 'Users may mute this',
-          style: const TextStyle(color: Colors.white60, fontSize: 12),
+          style: const TextStyle(color: Colors.white, fontSize: 12),
         ),
         trailing: alwaysOn
-            ? const Icon(Icons.lock_outline, color: Colors.white38, size: 20)
+            ? const Icon(Icons.lock_outline, color: Colors.white, size: 20)
             : PopupMenuButton<String>(
                 enabled: !_saving,
-                color: const Color(0xFF1E293B),
-                icon: const Icon(Icons.more_vert, color: Colors.white54),
+                color: Colors.black,
+                icon: const Icon(Icons.more_vert, color: Colors.white),
                 onSelected: (choice) =>
                     _applyCategoryChoice(policy, category, choice),
                 itemBuilder: (_) => const [
@@ -344,7 +344,7 @@ class _SchoolNotificationSettingsScreenState
                     value: 'disabled',
                     child: Text(
                       'Disable school-wide',
-                      style: TextStyle(color: Color(0xFFE11D48)),
+                      style: TextStyle(color: Colors.black),
                     ),
                   ),
                 ],
@@ -454,7 +454,7 @@ class _SchoolNotificationSettingsScreenState
   ) {
     return showModalBottomSheet<T>(
       context: context,
-      backgroundColor: const Color(0xFF1E293B),
+      backgroundColor: Colors.black,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -479,7 +479,7 @@ class _SchoolNotificationSettingsScreenState
                   style: const TextStyle(color: Colors.white),
                 ),
                 trailing: option == current
-                    ? const Icon(Icons.check, color: Color(0xFF6366F1))
+                    ? const Icon(Icons.check, color: Colors.black)
                     : null,
                 onTap: () => Navigator.pop(sheetContext, option),
               ),
@@ -549,19 +549,19 @@ class _SchoolNotificationSettingsScreenState
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
         title: Text(title, style: const TextStyle(color: Colors.white)),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(color: Colors.white60, fontSize: 12),
+          style: const TextStyle(color: Colors.white, fontSize: 12),
         ),
         trailing: Switch(
           value: value,
           onChanged: _saving ? null : onChanged,
-          activeThumbColor: const Color(0xFF6366F1),
+          activeThumbColor: Colors.black,
         ),
       ),
     );
@@ -575,7 +575,7 @@ class _SchoolNotificationSettingsScreenState
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
+          color: Colors.black,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -583,9 +583,9 @@ class _SchoolNotificationSettingsScreenState
             Expanded(
               child: Text(title, style: const TextStyle(color: Colors.white)),
             ),
-            Text(value, style: const TextStyle(color: Colors.white60)),
+            Text(value, style: const TextStyle(color: Colors.white)),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right, color: Colors.white30),
+            const Icon(Icons.chevron_right, color: Colors.white),
           ],
         ),
       ),
@@ -616,7 +616,7 @@ class _SettingsScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -638,7 +638,7 @@ class _SettingsScaffold extends StatelessWidget {
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Color(0xFF6366F1),
+                    color: Colors.black,
                   ),
                 ),
               ),

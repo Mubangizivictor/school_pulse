@@ -70,7 +70,7 @@ class _ScanResultCardState extends State<ScanResultCard> {
               height: 82,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.14),
+                color: color,
                 border: Border.all(color: color, width: 2),
               ),
               child: Icon(
@@ -79,7 +79,9 @@ class _ScanResultCardState extends State<ScanResultCard> {
                     : widget.isDuplicate
                     ? Icons.info_outline
                     : Icons.check_rounded,
-                color: color,
+                color: color.computeLuminance() > 0.5
+                    ? Colors.black
+                    : Colors.white,
                 size: 44,
               ),
             ),
@@ -101,7 +103,9 @@ class _ScanResultCardState extends State<ScanResultCard> {
                     children: [
                       CircleAvatar(
                         radius: 42,
-                        backgroundImage: showPhoto ? NetworkImage(photoUrl) : null,
+                        backgroundImage: showPhoto
+                            ? NetworkImage(photoUrl)
+                            : null,
                         onBackgroundImageError: showPhoto
                             ? (_, _) {
                                 if (mounted) {

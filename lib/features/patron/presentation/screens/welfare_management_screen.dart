@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/searchable_picker.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/patron/domain/entities/patron_entities.dart';
@@ -412,60 +413,58 @@ class _WelfareLogTab extends StatelessWidget {
           );
         }
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.l),
           itemCount: records.length,
           itemBuilder: (context, index) {
             final record = records[index];
             return AppCard(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                title: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        record.studentName,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    if (record.isPrivate)
-                      const Icon(
-                        Icons.lock_outline,
-                        size: 14,
-                        color: Colors.grey,
-                      ),
-                    const SizedBox(width: 6),
-                    _CategoryChip(category: record.category),
-                  ],
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    Text(record.note),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          DateFormat('MMM d, yyyy').format(record.date),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
+              margin: const EdgeInsets.only(bottom: AppSpacing.m),
+              padding: const EdgeInsets.all(AppSpacing.l),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          record.studentName,
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
                         ),
-                        Text(
-                          'By: ${record.recordedBy}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                            fontStyle: FontStyle.italic,
-                          ),
+                      ),
+                      if (record.isPrivate) ...[
+                        const Icon(
+                          Icons.lock_outline,
+                          size: 14,
+                          color: Colors.black,
                         ),
+                        const SizedBox(width: AppSpacing.s),
                       ],
-                    ),
-                  ],
-                ),
+                      _CategoryChip(category: record.category),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.s),
+                  Text(record.note),
+                  const SizedBox(height: AppSpacing.m),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        DateFormat('MMM d, yyyy').format(record.date),
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                      ),
+                      Text(
+                        'By: ${record.recordedBy}',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             );
           },
@@ -496,12 +495,12 @@ class _ReferralsTab extends StatelessWidget {
           );
         }
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.l),
           itemCount: state.referrals.length,
           itemBuilder: (context, index) {
             final referral = state.referrals[index];
             return AppCard(
-              margin: const EdgeInsets.only(bottom: 12),
+              margin: const EdgeInsets.only(bottom: AppSpacing.m),
               child: ListTile(
                 title: Text(
                   referral.studentName,
@@ -551,13 +550,13 @@ class _BehaviourTab extends StatelessWidget {
           );
         }
         return ListView.builder(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(AppSpacing.l),
           itemCount: state.observations.length,
           itemBuilder: (context, index) {
             final obs = state.observations[index];
             final isPositive = obs.type == 'Positive';
             return AppCard(
-              margin: const EdgeInsets.only(bottom: 12),
+              margin: const EdgeInsets.only(bottom: AppSpacing.m),
               child: ListTile(
                 leading: Icon(
                   isPositive
@@ -597,7 +596,7 @@ class _CategoryChip extends StatelessWidget {
         color = AppColors.warning(context);
         break;
       case 'Check-in':
-        color = Colors.teal;
+        color = Colors.black;
         break;
       case 'Counseling':
         color = AppColors.primary(context);
@@ -606,7 +605,7 @@ class _CategoryChip extends StatelessWidget {
         color = AppColors.success(context);
         break;
       case 'Observation':
-        color = Colors.purple;
+        color = Colors.black;
         break;
       default:
         color = AppColors.border(context);

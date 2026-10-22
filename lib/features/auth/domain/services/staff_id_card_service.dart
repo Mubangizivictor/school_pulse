@@ -44,102 +44,20 @@ class StaffIdCardService {
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
           return pw.Center(
-            child: pw.Container(
-              width: 250,
-              height: 400,
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey, width: 1),
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
-              ),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: [
-                  pw.Container(
-                    width: double.infinity,
-                    padding: const pw.EdgeInsets.symmetric(vertical: 10),
-                    decoration: const pw.BoxDecoration(
-                      color: PdfColors.blueGrey900,
-                      borderRadius: pw.BorderRadius.vertical(
-                        top: pw.Radius.circular(9),
-                      ),
-                    ),
-                    child: pw.Column(
-                      children: [
-                        pw.Text(
-                          schoolName.toUpperCase(),
-                          style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold,
-                            fontSize: 12,
-                            color: PdfColors.white,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.Text(
-                          'STAFF',
-                          style: pw.TextStyle(
-                            fontWeight: pw.FontWeight.bold,
-                            fontSize: 10,
-                            color: PdfColors.amber,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  pw.SizedBox(height: 16),
-                  if (staffPhotoBytes != null)
-                    pw.Container(
-                      width: 80,
-                      height: 80,
-                      decoration: pw.BoxDecoration(
-                        shape: pw.BoxShape.circle,
-                        image: pw.DecorationImage(
-                          image: pw.MemoryImage(staffPhotoBytes),
-                          fit: pw.BoxFit.cover,
-                        ),
-                      ),
-                    )
-                  else
-                    pw.Container(
-                      width: 80,
-                      height: 80,
-                      decoration: const pw.BoxDecoration(
-                        shape: pw.BoxShape.circle,
-                        color: PdfColors.blueGrey100,
-                      ),
-                    ),
-                  pw.SizedBox(height: 10),
-                  pw.Text(
-                    staffName.toUpperCase(),
-                    style: pw.TextStyle(
-                      fontWeight: pw.FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                  pw.SizedBox(height: 4),
-                  pw.Text(
-                    roleLabel,
-                    style: const pw.TextStyle(
-                      fontSize: 11,
-                      color: PdfColors.blueGrey700,
-                    ),
-                  ),
-                  pw.SizedBox(height: 15),
-                  _buildCardRow('Staff Code:', staffCode),
-                  pw.Spacer(),
-                  pw.Image(pw.MemoryImage(qrBytes), width: 100, height: 100),
-                  pw.SizedBox(height: 5),
-                  pw.Text(
-                    staffCode,
-                    style: const pw.TextStyle(
-                      fontSize: 8,
-                      color: PdfColors.grey700,
-                    ),
-                  ),
-                  pw.SizedBox(height: 12),
-                ],
-              ),
+            child: pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                _buildFront(
+                  schoolName: schoolName,
+                  staffName: staffName,
+                  staffCode: staffCode,
+                  roleLabel: roleLabel,
+                  staffPhotoBytes: staffPhotoBytes,
+                ),
+                pw.SizedBox(width: 16),
+                _buildBack(schoolName: schoolName, qrBytes: qrBytes),
+              ],
             ),
           );
         },
@@ -147,6 +65,145 @@ class StaffIdCardService {
     );
 
     return pdf.save();
+  }
+
+  pw.Widget _cardShell({required pw.Widget child}) {
+    return pw.Container(
+      width: 220,
+      height: 350,
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.black, width: 1),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+      ),
+      child: child,
+    );
+  }
+
+  pw.Widget _cardHeader(String title, {String? subtitle}) {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.symmetric(vertical: 10),
+      decoration: const pw.BoxDecoration(
+        color: PdfColors.black,
+        borderRadius: pw.BorderRadius.vertical(top: pw.Radius.circular(9)),
+      ),
+      child: pw.Column(
+        children: [
+          pw.Text(
+            title,
+            style: pw.TextStyle(
+              fontWeight: pw.FontWeight.bold,
+              fontSize: 12,
+              color: PdfColors.white,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+          if (subtitle != null) ...[
+            pw.SizedBox(height: 4),
+            pw.Text(
+              subtitle,
+              style: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 10,
+                color: PdfColors.black,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildFront({
+    required String schoolName,
+    required String staffName,
+    required String staffCode,
+    required String roleLabel,
+    Uint8List? staffPhotoBytes,
+  }) {
+    return _cardShell(
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          _cardHeader(schoolName.toUpperCase(), subtitle: 'STAFF'),
+          pw.SizedBox(height: 16),
+          if (staffPhotoBytes != null)
+            pw.Container(
+              width: 80,
+              height: 80,
+              decoration: pw.BoxDecoration(
+                shape: pw.BoxShape.circle,
+                image: pw.DecorationImage(
+                  image: pw.MemoryImage(staffPhotoBytes),
+                  fit: pw.BoxFit.cover,
+                ),
+              ),
+            )
+          else
+            pw.Container(
+              width: 80,
+              height: 80,
+              decoration: const pw.BoxDecoration(
+                shape: pw.BoxShape.circle,
+                color: PdfColors.black,
+              ),
+            ),
+          pw.SizedBox(height: 10),
+          pw.Text(
+            staffName.toUpperCase(),
+            style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 16),
+            textAlign: pw.TextAlign.center,
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            roleLabel,
+            style: const pw.TextStyle(fontSize: 11, color: PdfColors.black),
+          ),
+          pw.Spacer(),
+          _buildCardRow('Staff Code:', staffCode),
+          pw.SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  pw.Widget _buildBack({
+    required String schoolName,
+    required Uint8List qrBytes,
+  }) {
+    return _cardShell(
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          _cardHeader('STAFF ID CARD'),
+          pw.SizedBox(height: 18),
+          pw.Image(pw.MemoryImage(qrBytes), width: 100, height: 100),
+          pw.SizedBox(height: 14),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 12),
+            child: pw.Text(
+              'THIS CARD IS THE PROPERTY OF ${schoolName.toUpperCase()}',
+              textAlign: pw.TextAlign.center,
+              style: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold,
+                fontSize: 8,
+                color: PdfColors.black,
+              ),
+            ),
+          ),
+          pw.Spacer(),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 12),
+            child: pw.Text(
+              'If found, please return to the school office.',
+              textAlign: pw.TextAlign.center,
+              style: const pw.TextStyle(fontSize: 8, color: PdfColors.black),
+            ),
+          ),
+          pw.SizedBox(height: 12),
+        ],
+      ),
+    );
   }
 
   pw.Widget _buildCardRow(String label, String value) {
@@ -157,7 +214,7 @@ class StaffIdCardService {
         children: [
           pw.Text(
             label,
-            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.black),
           ),
           pw.Text(
             value,

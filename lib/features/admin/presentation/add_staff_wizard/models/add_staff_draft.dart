@@ -11,6 +11,18 @@ enum StaffDocumentType {
   other,
 }
 
+/// How a staff member will be able to sign in. Administrators never create,
+/// see, or transmit a password for either path.
+enum StaffSignInMethod {
+  /// A verified, time-limited Firebase Auth invitation is sent to the
+  /// staff member's work email; they set their own password to accept it.
+  invite,
+
+  /// Only the staff profile is created; there is no way to sign in until an
+  /// authorised administrator later issues an invitation.
+  noLogin,
+}
+
 extension StaffDocumentTypeDisplay on StaffDocumentType {
   String get label => switch (this) {
     StaffDocumentType.nationalId => 'National ID / Passport',
@@ -45,7 +57,8 @@ class AddStaffDraft {
   String firstName = '';
   String middleName = '';
   String lastName = '';
-  String gender = 'Male';
+  String preferredName = '';
+  String gender = 'Prefer not to say';
   File? photo;
 
   // Step 4: Contact Information
@@ -54,27 +67,54 @@ class AddStaffDraft {
   String alternatePhone = '';
   String address = '';
   String nationality = '';
+  String emergencyContactName = '';
+  String emergencyContactRelationship = '';
+  String emergencyContactPhone = '';
+  String emergencyContactAlternatePhone = '';
+  String? idempotencyKey;
 
   // Step 5: Employment Information
   String employmentType = 'Permanent';
-  // department/designation hold the Structure entity's display name (for
-  // the Review step and for the Firestore write); departmentId/designationId
-  // hold the Structure entity id the name was picked from. Both are set
-  // together by the Step 4 picker - never edited as free text.
-  String department = '';
   String? departmentId;
-  String designation = '';
   String? designationId;
   String? campusId;
   DateTime dateJoined = DateTime.now();
 
-  // Step 6: Roles
+  // Compensation choice on the Work details step. Defaults to false ("Set up
+  // later") - creating a staff profile must never require pay setup. True
+  // only means the admin (restricted to HR/Finance) opted into the secure
+  // compensation workflow; no salary/bank/tax fields are ever collected here.
+  bool compensationSetUpNow = false;
+
+  // chargeIds of a matched pay structure's optional (non-required)
+  // components the admin opted into for this staff member, e.g.
+  // responsibility allowance. Required components are always paid and are
+  // never part of this set. Populated by the HR/Finance compensation
+  // workflow, not by this wizard's Work details step.
+  Set<String> selectedPayComponentIds = {};
+
+  // Step 6: Roles & responsibilities
   Set<UserRole> selectedRoles = {};
   Map<UserRole, RoleAssignmentDraft> roleConfigs = {};
+  // Responsibility catalogue ids selected in the redesigned Step 3. Kept
+  // separate from selectedRoles: responsibilities describe what the person
+  // does day to day, while selectedRoles/roleConfigs still drive system
+  // access/permissions (set in the Account access step). A responsibility
+  // whose catalogue entry has a mappedRole keeps selectedRoles in sync so
+  // existing scope-configuration (e.g. Class Teacher) keeps working.
+  Set<String> selectedResponsibilityIds = {};
 
-  // Step 9: Login & Security
-  bool forcePasswordChange = true;
-  bool sendLoginDetailsViaEmail = true;
+  // Step 4: Account access. Administrators never create, see, or store a
+  // staff member's password - 'invite' issues a verified, time-limited
+  // Firebase Auth invitation immediately; 'noLogin' creates only the staff
+  // profile, with no Auth sign-in ability until an administrator later
+  // issues an invitation.
+  StaffSignInMethod signInMethod = StaffSignInMethod.invite;
+
+  // Only meaningful once signInMethod is invite and the account has been
+  // created; masked recipient email shown as read-only unless changed via
+  // an authorized "Change email" action. Defaults to [email].
+  String? invitationEmailOverride;
 
   // Step 10: Documents (staged only; uploaded post-creation)
   List<StagedDocument> documents = [];
@@ -92,32 +132,42 @@ class AddStaffDraft {
       email.trim().isNotEmpty && phoneNumber.trim().isNotEmpty;
 
   bool get employmentInfoComplete =>
+      employmentType.trim().isNotEmpty &&
+      (campusId?.trim().isNotEmpty ?? false) &&
       (departmentId?.trim().isNotEmpty ?? false) &&
       (designationId?.trim().isNotEmpty ?? false);
 
-  bool get rolesSelected => selectedRoles.isNotEmpty;
+  bool get rolesSelected =>
+      selectedRoles.isNotEmpty || selectedResponsibilityIds.isNotEmpty;
 
   Map<String, dynamic> toJson() => {
     'firstName': firstName,
     'middleName': middleName,
     'lastName': lastName,
+    'preferredName': preferredName,
     'gender': gender,
     'email': email,
     'phoneNumber': phoneNumber,
     'alternatePhone': alternatePhone,
     'address': address,
     'nationality': nationality,
+    'emergencyContactName': emergencyContactName,
+    'emergencyContactRelationship': emergencyContactRelationship,
+    'emergencyContactPhone': emergencyContactPhone,
+    'emergencyContactAlternatePhone': emergencyContactAlternatePhone,
+    'idempotencyKey': idempotencyKey,
     'employmentType': employmentType,
-    'department': department,
     'departmentId': departmentId,
-    'designation': designation,
     'designationId': designationId,
     'campusId': campusId,
     'dateJoined': dateJoined.toIso8601String(),
+    'compensationSetUpNow': compensationSetUpNow,
+    'selectedPayComponentIds': selectedPayComponentIds.toList(),
     'selectedRoles': selectedRoles.map((r) => r.name).toList(),
     'roleConfigs': roleConfigs.map((k, v) => MapEntry(k.name, v.toJson())),
-    'forcePasswordChange': forcePasswordChange,
-    'sendLoginDetailsViaEmail': sendLoginDetailsViaEmail,
+    'selectedResponsibilityIds': selectedResponsibilityIds.toList(),
+    'signInMethod': signInMethod.name,
+    'invitationEmailOverride': invitationEmailOverride,
   };
 
   static AddStaffDraft fromJson(Map<String, dynamic> json) {
@@ -125,24 +175,39 @@ class AddStaffDraft {
       ..firstName = json['firstName'] as String? ?? ''
       ..middleName = json['middleName'] as String? ?? ''
       ..lastName = json['lastName'] as String? ?? ''
-      ..gender = json['gender'] as String? ?? 'Male'
+      ..preferredName = json['preferredName'] as String? ?? ''
+      ..gender = json['gender'] as String? ?? 'Prefer not to say'
       ..email = json['email'] as String? ?? ''
       ..phoneNumber = json['phoneNumber'] as String? ?? ''
       ..alternatePhone = json['alternatePhone'] as String? ?? ''
       ..address = json['address'] as String? ?? ''
       ..nationality = json['nationality'] as String? ?? ''
+      ..emergencyContactName = json['emergencyContactName'] as String? ?? ''
+      ..emergencyContactRelationship =
+          json['emergencyContactRelationship'] as String? ?? ''
+      ..emergencyContactPhone = json['emergencyContactPhone'] as String? ?? ''
+      ..emergencyContactAlternatePhone =
+          json['emergencyContactAlternatePhone'] as String? ?? ''
+      ..idempotencyKey = json['idempotencyKey'] as String?
       ..employmentType = json['employmentType'] as String? ?? 'Permanent'
-      ..department = json['department'] as String? ?? ''
       ..departmentId = json['departmentId'] as String?
-      ..designation = json['designation'] as String? ?? ''
       ..designationId = json['designationId'] as String?
       ..campusId = json['campusId'] as String?
       ..dateJoined = json['dateJoined'] != null
           ? DateTime.tryParse(json['dateJoined'] as String) ?? DateTime.now()
           : DateTime.now()
-      ..forcePasswordChange = json['forcePasswordChange'] as bool? ?? true
-      ..sendLoginDetailsViaEmail =
-          json['sendLoginDetailsViaEmail'] as bool? ?? true;
+      ..compensationSetUpNow = json['compensationSetUpNow'] as bool? ?? false
+      ..signInMethod =
+          StaffSignInMethod.values
+              .where((m) => m.name == json['signInMethod'])
+              .firstOrNull ??
+          StaffSignInMethod.invite
+      ..invitationEmailOverride = json['invitationEmailOverride'] as String?
+      ..selectedPayComponentIds =
+          (json['selectedPayComponentIds'] as List<dynamic>?)
+              ?.cast<String>()
+              .toSet() ??
+          {};
 
     final roleNames =
         (json['selectedRoles'] as List<dynamic>?)?.cast<String>() ?? [];
@@ -158,6 +223,12 @@ class AddStaffDraft {
         RoleAssignmentDraft.fromJson(v as Map<String, dynamic>),
       ),
     );
+
+    draft.selectedResponsibilityIds =
+        (json['selectedResponsibilityIds'] as List<dynamic>?)
+            ?.cast<String>()
+            .toSet() ??
+        {};
 
     return draft;
   }

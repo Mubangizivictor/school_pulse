@@ -67,7 +67,7 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
                 : '/auth/force-setup';
             context.go(route, extra: state.user);
           } else {
-            context.go('/school-bootstrap');
+            context.go('/school-splash');
           }
         } else if (state is AuthMfaChallengeRequired) {
           context.go('/auth/mfa-challenge', extra: state.resolver);
@@ -89,32 +89,12 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
         return AuthPortalScaffold(
           accent: _accent,
           alignToTop: true,
+          title: 'Staff Portal',
           backgroundColor: isDark
               ? Theme.of(context).scaffoldBackgroundColor
               : AppColors.surfaceLight,
           children: [
             const SizedBox(height: AppSpacing.x3l),
-            const _StaffPortalHero(),
-            const SizedBox(height: AppSpacing.x3l),
-            RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                style: AppTypography.headlineLarge.copyWith(
-                  color: colorScheme.onSurface,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.8,
-                ),
-                children: const [
-                  TextSpan(text: 'Staff '),
-                  TextSpan(
-                    text: 'Portal',
-                    style: TextStyle(color: _accent),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
             Text(
               'Enter your credentials to continue\naccessing the staff portal.',
               textAlign: TextAlign.center,
@@ -159,8 +139,9 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
                   child: Checkbox(
                     value: _rememberMe,
                     onChanged: (v) => setState(() => _rememberMe = v ?? false),
-                    side: const BorderSide(color: _accent, width: 1.6),
-                    activeColor: _accent,
+                    side: BorderSide(color: colorScheme.onSurface, width: 1.6),
+                    activeColor: colorScheme.onSurface,
+                    checkColor: colorScheme.surface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(4),
                     ),
@@ -176,11 +157,11 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
                 ),
                 const Spacer(),
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () => context.push('/auth/forgot-password'),
                   child: Text(
                     'Forgot Password?',
                     style: AppTypography.bodyMedium.copyWith(
-                      color: _accent,
+                      color: colorScheme.onSurface,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -191,7 +172,8 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
             const SizedBox(height: AppSpacing.x3l),
             AuthCtaButton(
               label: 'Sign In',
-              gradient: const [Color(0xFFEF4A17), Color(0xFFFFB020)],
+              gradient: const [Colors.black, Colors.black],
+              filled: !isDark,
               isLoading: isLoading,
               onPressed: isLoading ? null : _handleLogin,
             ),
@@ -209,44 +191,6 @@ class _StaffCredentialsScreenState extends State<StaffCredentialsScreen> {
 /// The staff portal's clean, focused badge treatment.  It deliberately stays
 /// local to this page so the Parent and Platform Owner entry screens retain
 /// their existing presentation.
-class _StaffPortalHero extends StatelessWidget {
-  const _StaffPortalHero();
-
-  @override
-  Widget build(BuildContext context) {
-    final surface = Theme.of(context).colorScheme.surface;
-    return Center(
-      child: Container(
-        width: 96,
-        height: 96,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: surface,
-          boxShadow: [
-            BoxShadow(
-              color: _StaffCredentialsScreenState._accent.withValues(
-                alpha: .15,
-              ),
-              blurRadius: 32,
-              spreadRadius: 9,
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: .045),
-              blurRadius: 13,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.badge_outlined,
-          color: _StaffCredentialsScreenState._accent,
-          size: 44,
-        ),
-      ),
-    );
-  }
-}
-
 class _StaffPortalField extends StatelessWidget {
   final String label;
   final String hint;
@@ -269,7 +213,7 @@ class _StaffPortalField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    const accent = _StaffCredentialsScreenState._accent;
+    final accent = AppColors.textPrimary(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -286,10 +230,7 @@ class _StaffPortalField extends StatelessWidget {
           height: 56,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: accent.withValues(alpha: .8),
-              width: 1.25,
-            ),
+            border: Border.all(color: accent, width: 1.25),
           ),
           child: TextField(
             controller: controller,
@@ -315,7 +256,7 @@ class _StaffPortalField extends StatelessWidget {
               filled: true,
               hintText: hint,
               hintStyle: AppTypography.bodyLarge.copyWith(
-                color: colors.onSurfaceVariant.withValues(alpha: .65),
+                color: colors.onSurfaceVariant,
                 fontSize: 15,
               ),
               contentPadding: const EdgeInsets.symmetric(vertical: 15),
@@ -327,10 +268,13 @@ class _StaffPortalField extends StatelessWidget {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: accent.withValues(alpha: .09),
+                      color: accent,
                       borderRadius: BorderRadius.circular(9),
                     ),
-                    child: Icon(icon, color: accent, size: 23),
+                    // The glyph sits on the solid foreground badge, so it
+                    // must use the matching surface colour. Reusing `accent`
+                    // here made the icon disappear in the monochrome theme.
+                    child: Icon(icon, color: colors.surface, size: 23),
                   ),
                 ),
               ),
@@ -360,13 +304,13 @@ class _StaffTrustStrip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    const accent = _StaffCredentialsScreenState._accent;
+    final accent = AppColors.textPrimary(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(23),
-        border: Border.all(color: colors.outlineVariant.withValues(alpha: .55)),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: IntrinsicHeight(
         child: Row(
@@ -376,7 +320,7 @@ class _StaffTrustStrip extends StatelessWidget {
                 VerticalDivider(
                   width: 1,
                   thickness: 1,
-                  color: colors.outlineVariant.withValues(alpha: .45),
+                  color: colors.outlineVariant,
                 ),
               Expanded(
                 child: Column(
@@ -419,26 +363,23 @@ class _StaffPrivacyNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    const accent = _StaffCredentialsScreenState._accent;
+    final accent = AppColors.textPrimary(context);
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: colors.outlineVariant.withValues(alpha: .55)),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Row(
         children: [
           Container(
             width: 50,
             height: 50,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: accent.withValues(alpha: .11),
-            ),
-            child: const Icon(
+            decoration: BoxDecoration(shape: BoxShape.circle, color: accent),
+            child: Icon(
               Icons.lock_outline_rounded,
-              color: accent,
+              color: colors.surface,
               size: 26,
             ),
           ),

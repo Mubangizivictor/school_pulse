@@ -4,8 +4,9 @@ import '../entities/announcement_entity.dart';
 
 abstract class AnnouncementRepository {
   Future<Either<Failure, List<AnnouncementEntity>>> getAnnouncements(
-    String schoolId,
-  );
+    String schoolId, {
+    bool publishedOnly = false,
+  });
 
   Future<Either<Failure, void>> upsertAnnouncement(
     AnnouncementEntity announcement,

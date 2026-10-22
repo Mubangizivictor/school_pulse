@@ -77,7 +77,7 @@ class PulseButton extends StatelessWidget {
           borderRadius: AppRadius.medium,
           boxShadow: [
             BoxShadow(
-              color: AppColors.royalBlue.withValues(alpha: 0.3),
+              color: AppColors.royalBlue,
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -152,7 +152,7 @@ class PulseButton extends StatelessWidget {
         ).merge(baseStyle);
       case PulseButtonVariant.danger:
         return baseStyle.copyWith(
-          backgroundColor: WidgetStateProperty.all(AppColors.deepOrange),
+          backgroundColor: WidgetStateProperty.all(AppColors.black),
           foregroundColor: WidgetStateProperty.all(AppColors.pureWhite),
         );
       case PulseButtonVariant.success:

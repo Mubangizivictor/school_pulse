@@ -3,24 +3,20 @@ import 'package:provider/provider.dart';
 
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
-import 'package:school_pulse/injection_container.dart' as di;
 
 import 'add_staff_wizard_controller.dart';
-import 'steps/step_02_personal_info.dart';
-import 'steps/step_03_contact_info.dart';
-import 'steps/step_04_employment_info.dart';
-import 'steps/step_05_select_roles.dart';
-import 'steps/step_06_configure_role.dart';
-import 'steps/step_07_roles_summary.dart';
-import 'steps/step_08_access_preview.dart';
-import 'steps/step_09_login_security.dart';
-import 'steps/step_10_documents.dart';
-import 'steps/step_11_review_confirm.dart';
-import 'steps/step_12_success.dart';
+import 'steps/stage_01_profile.dart';
+import 'steps/stage_02_work.dart';
+import 'steps/stage_03_roles.dart';
+import 'steps/stage_04_access.dart';
+import 'steps/stage_05_review.dart';
 
-/// Hosts the full Add Staff Member wizard. A single route; the current step
-/// is internal state on AddStaffWizardController, not encoded in the URL.
+/// Hosts the full Add Staff Member wizard as five visual stages - Profile,
+/// Work, Roles, Access, Review - matching the black-and-white reference
+/// design. A single route; the current stage is internal state on
+/// AddStaffWizardController, not encoded in the URL. Pushed as its own
+/// route (not part of the shell's bottom-nav'd tree), so the app's bottom
+/// navigation is already hidden while this is on screen.
 class AddStaffWizardPage extends StatefulWidget {
   const AddStaffWizardPage({super.key});
 
@@ -30,8 +26,6 @@ class AddStaffWizardPage extends StatefulWidget {
 
 class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
   late final AddStaffWizardController _controller;
-  late final StructureRepository _structureRepository;
-  String? _currentAcademicYearId;
 
   @override
   void initState() {
@@ -46,14 +40,6 @@ class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
       schoolId: schoolId,
       adminUid: adminUid,
     );
-    _structureRepository = di.sl<StructureRepository>();
-
-    _structureRepository.watchAcademicYears(schoolId).listen((years) {
-      final current = years.where((y) => y.isCurrent).toList();
-      if (current.isNotEmpty && mounted) {
-        setState(() => _currentAcademicYearId = current.first.id);
-      }
-    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final restored = await _controller.restoreDraftIfPresent();
@@ -81,52 +67,63 @@ class _AddStaffWizardPageState extends State<AddStaffWizardPage> {
         canPop: false,
         onPopInvokedWithResult: (didPop, result) {
           if (didPop) return;
-          _handleBack(context);
+          _handleBack();
         },
         child: Consumer<AddStaffWizardController>(
           builder: (context, controller, _) {
-            return _buildStep(controller.step);
+            return _buildStage(controller.stage);
           },
         ),
       ),
     );
   }
 
-  void _handleBack(BuildContext context) {
-    final controller = context.read<AddStaffWizardController>();
-    if (controller.step == WizardStep.personalInfo) {
-      Navigator.of(context).maybePop();
+  void _handleBack() {
+    if (_controller.stage == WizardStage.profile) {
+      _exitWizard();
     } else {
-      controller.back();
+      _controller.back();
     }
   }
 
-  Widget _buildStep(WizardStep step) {
-    switch (step) {
-      case WizardStep.personalInfo:
-        return const Step02PersonalInfo();
-      case WizardStep.contactInfo:
-        return const Step03ContactInfo();
-      case WizardStep.employmentInfo:
-        return const Step04EmploymentInfo();
-      case WizardStep.selectRoles:
-        return const Step05SelectRoles();
-      case WizardStep.configureRole:
-        return const Step06ConfigureRole();
-      case WizardStep.rolesSummary:
-        return const Step07RolesSummary();
-      case WizardStep.accessPreview:
-        return const Step08AccessPreview();
-      case WizardStep.loginSecurity:
-        return const Step09LoginSecurity();
-      case WizardStep.documents:
-        return const Step10Documents();
-      case WizardStep.reviewConfirm:
-        return Step11ReviewConfirm(
-          currentAcademicYearId: _currentAcademicYearId,
+  void _exitWizard() {
+    if (!mounted) return;
+    // This page was entered via `context.push('/staff/admin/users/add-staff')`
+    // (see StaffListPage/UserManagementPage), which adds an imperative
+    // Navigator entry on top of AdminShell. `context.go(...)` only updates
+    // GoRouter's notion of the current location - it doesn't pop that pushed
+    // entry - so the wizard stayed on screen even though the URL had
+    // changed. Popping the pushed route (with PopScope disabled so this is
+    // the only way out at the first stage, letting a system back gesture
+    // move between stages instead) is what actually returns to the staff
+    // list/detail screen underneath.
+    Navigator.of(context).pop();
+  }
+
+  void _saveDraft(BuildContext context) {
+    final controller = context.read<AddStaffWizardController>();
+    controller.notifyDraftChanged();
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Draft saved.')));
+  }
+
+  Widget _buildStage(WizardStage stage) {
+    switch (stage) {
+      case WizardStage.profile:
+        return Stage01Profile(
+          onSaveDraft: () => _saveDraft(context),
+          onExit: _exitWizard,
         );
-      case WizardStep.success:
-        return const Step12Success();
+      case WizardStage.work:
+        return Stage02Work(onSaveDraft: () => _saveDraft(context));
+      case WizardStage.roles:
+        return Stage03Roles(onSaveDraft: () => _saveDraft(context));
+      case WizardStage.access:
+        return Stage04Access(onSaveDraft: () => _saveDraft(context));
+      case WizardStage.review:
+      case WizardStage.success:
+        return Stage05Review(onSaveDraft: () => _saveDraft(context));
     }
   }
 }

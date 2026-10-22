@@ -24,6 +24,8 @@ class HealthDashboardLoaded extends HealthState {
   final List<MedicalSupplyRequest> pendingRequests;
   final List<WelfareRecord> welfareRecords;
   final Map<String, dynamic> stats;
+  final int chronicCaseCount;
+  final int allergyCount;
 
   const HealthDashboardLoaded({
     required this.todayVisits,
@@ -32,6 +34,8 @@ class HealthDashboardLoaded extends HealthState {
     required this.pendingRequests,
     required this.stats,
     this.welfareRecords = const [],
+    this.chronicCaseCount = 0,
+    this.allergyCount = 0,
   });
 
   @override
@@ -42,6 +46,8 @@ class HealthDashboardLoaded extends HealthState {
     pendingRequests,
     stats,
     welfareRecords,
+    chronicCaseCount,
+    allergyCount,
   ];
 }
 

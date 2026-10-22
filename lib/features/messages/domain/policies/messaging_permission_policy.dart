@@ -22,7 +22,8 @@ class MessagingDecision {
       refusal = null,
       message = null;
 
-  const MessagingDecision.refused(this.refusal, this.message) : isAllowed = false;
+  const MessagingDecision.refused(this.refusal, this.message)
+    : isAllowed = false;
 }
 
 /// Configurable per-school messaging policy. Defaults are the conservative,
@@ -107,7 +108,8 @@ class MessagingPermissionPolicy {
               );
       }
       if (targetIsParent) {
-        final isOwnParent = actor.studentId != null &&
+        final isOwnParent =
+            actor.studentId != null &&
             target.studentIds.contains(actor.studentId);
         if (!policy.studentToOwnParentAllowed || !isOwnParent) {
           return const MessagingDecision.refused(

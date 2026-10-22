@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attendance — School Pulse</title>
+<meta name="description" content="Mark attendance in seconds and notify parents automatically with School Pulse — built for teachers, admins and parents in Ugandan schools.">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
+<link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+<style>
+  .attn-reg { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; min-width: 0; max-width: 100%; }
+  .attn-reg-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--color-border); }
+  .attn-reg-title { font-weight: 800; font-size: 15px; }
+  .attn-reg-nav { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-bottom: 1px solid var(--color-border); font-size: 13px; color: var(--color-ink-soft); min-width: 0; }
+  .attn-reg-nav .attn-nav-btn { color: var(--color-muted); font-size: 13px; cursor: pointer; user-select: none; flex-shrink: 0; }
+  .attn-reg-nav > span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .attn-reg-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 18px; }
+  .attn-stat { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 12px; min-width: 0; }
+  .attn-stat .k { font-size: 12px; font-weight: 600; margin-bottom: 2px; }
+  .attn-stat .v { font-size: 20px; font-weight: 800; color: var(--color-ink); }
+  .attn-stat.green .k { color: var(--color-success-text); }
+  .attn-stat.amber .k { color: var(--color-warning-text); }
+  .attn-stat.red .k { color: var(--color-error-text); }
+  .attn-reg-list { padding: 0 18px 16px; min-width: 0; }
+  .attn-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--color-border); font-size: 13.5px; min-width: 0; }
+  .attn-row:last-child { border-bottom: none; }
+  .attn-row .n { width: 18px; color: var(--color-muted); font-size: 12px; flex-shrink: 0; }
+  .attn-row .avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--color-surface); flex-shrink: 0; }
+  .attn-row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-ink); font-weight: 500; }
+  .attn-row .mark { width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .attn-row .mark svg { width: 13px; height: 13px; }
+  .attn-row .mark.present { background: var(--color-success-bg); color: var(--color-success-text); }
+  .attn-row .mark.late { background: var(--color-warning-bg); color: var(--color-warning-text); }
+  .attn-row .mark.absent { background: var(--color-error-bg); color: var(--color-error-text); font-size: 12px; font-weight: 700; }
+  .attn-reg-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 18px; border-top: 1px solid var(--color-border); font-size: 12.5px; color: var(--color-muted); flex-wrap: wrap; }
+  .attn-hero-trust { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 18px; }
+  .attn-hero-trust-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--color-muted); font-weight: 600; }
+  .attn-hero-trust-item svg { width: 15px; height: 15px; color: var(--color-primary); }
+  @media (max-width: 480px) {
+    .attn-reg-stats { gap: 8px; }
+    .attn-stat { padding: 8px 8px; }
+    .attn-stat .v { font-size: 17px; }
+    .attn-row { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <span class="eyebrow">Attendance</span>
+        <h1>Mark attendance in seconds. Notify parents instantly.</h1>
+        <p class="lead">School Pulse Attendance helps teachers take accurate class registers in seconds and keeps parents informed in real time.</p>
+        <div class="btn-row">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school →</a>
+          <a href="#how-it-works" class="btn btn-outline btn-lg">See how it works</a>
+        </div>
+        <div class="attn-hero-trust">
+          <span class="attn-hero-trust-item" id="trust-0"></span>
+          <span class="attn-hero-trust-item" id="trust-1"></span>
+          <span class="attn-hero-trust-item" id="trust-2"></span>
+        </div>
+      </div>
+      <div class="attn-reg">
+        <div class="attn-reg-head">
+          <span class="attn-reg-title">P5 East</span>
+          <span class="muted" style="font-size:14px;">⋮</span>
+        </div>
+        <div class="attn-reg-nav">
+          <span class="attn-nav-btn">‹</span>
+          <span style="flex:1; text-align:center;">📅 Wed, 3 Sep 2026</span>
+          <span class="attn-nav-btn">›</span>
+        </div>
+        <div class="attn-reg-stats">
+          <div class="attn-stat green"><div class="k">Present</div><div class="v">36</div></div>
+          <div class="attn-stat amber"><div class="k">Late</div><div class="v">2</div></div>
+          <div class="attn-stat red"><div class="k">Absent</div><div class="v">3</div></div>
+        </div>
+        <div class="attn-reg-list">
+          <div class="attn-row"><span class="n">1</span><span class="avatar"></span><span class="name">Nakato Grace</span><span class="mark present" id="ic-p-0"></span></div>
+          <div class="attn-row"><span class="n">2</span><span class="avatar"></span><span class="name">Okello Brian</span><span class="mark present" id="ic-p-1"></span></div>
+          <div class="attn-row"><span class="n">3</span><span class="avatar"></span><span class="name">Achieng Mary</span><span class="mark late" id="ic-l-0"></span></div>
+          <div class="attn-row"><span class="n">4</span><span class="avatar"></span><span class="name">Kintu Daniel</span><span class="mark present" id="ic-p-2"></span></div>
+          <div class="attn-row"><span class="n">5</span><span class="avatar"></span><span class="name">Namutebi Ruth</span><span class="mark absent">✕</span></div>
+        </div>
+        <div class="attn-reg-foot">
+          <span>Total learners: 41</span>
+          <span>Last saved: 08:15 ✓ Saved</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Benefits for every role</span>
+        <h2>One register, three sets of needs.</h2>
+      </div>
+      <div class="grid grid-3">
+        <div class="card">
+          <div class="card-icon" id="icon-teachers"></div>
+          <h3>For Teachers</h3>
+          <p style="font-size:14px; margin-bottom:10px;">Take registers in seconds, reduce admin, and focus on teaching.</p>
+          <ul class="checklist">
+            <li id="ck-t-0"></li>
+            <li id="ck-t-1"></li>
+            <li id="ck-t-2"></li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-admin"></div>
+          <h3>For Admin</h3>
+          <p style="font-size:14px; margin-bottom:10px;">Real-time insights and complete attendance oversight.</p>
+          <ul class="checklist">
+            <li id="ck-a-0"></li>
+            <li id="ck-a-1"></li>
+            <li id="ck-a-2"></li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-parents"></div>
+          <h3>For Parents</h3>
+          <p style="font-size:14px; margin-bottom:10px;">Instant alerts and clear updates for peace of mind.</p>
+          <ul class="checklist">
+            <li id="ck-pr-0"></li>
+            <li id="ck-pr-1"></li>
+            <li id="ck-pr-2"></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="how-it-works">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">How it works</span>
+        <h2>Attendance in four simple steps.</h2>
+      </div>
+      <div class="steps steps-row">
+        <div class="step">
+          <div class="card-icon" id="icon-clock"></div>
+          <div><h3>Open register</h3><p>Select your class and the date. Your learner list is ready.</p></div>
+        </div>
+        <div class="step">
+          <div class="card-icon" id="icon-check"></div>
+          <div><h3>Mark each learner</h3><p>Tap Present, Late, or Absent. It's saved in real time.</p></div>
+        </div>
+        <div class="step">
+          <div class="card-icon" id="icon-bell"></div>
+          <div><h3>Parents notified</h3><p>Absences and late arrivals are sent to parents instantly.</p></div>
+        </div>
+        <div class="step">
+          <div class="card-icon" id="icon-chart"></div>
+          <div><h3>Trends tracked</h3><p>View attendance trends and take action early.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <div class="cta-banner">
+        <h2>Better attendance. Better outcomes.</h2>
+        <p>Join schools using School Pulse to save time, improve attendance, and keep parents connected. Free to get started. No credit card required.</p>
+        <div class="btn-row" style="justify-content:center;">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/pricing-config.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script>
+  document.getElementById('icon-clock').innerHTML = window.ICONS.clock;
+  document.getElementById('icon-check').innerHTML = window.ICONS.check;
+  document.getElementById('icon-bell').innerHTML = window.ICONS.bell;
+  document.getElementById('icon-chart').innerHTML = window.ICONS.chart;
+  document.getElementById('icon-teachers').innerHTML = window.ICONS.user;
+  document.getElementById('icon-admin').innerHTML = window.ICONS.building;
+  document.getElementById('icon-parents').innerHTML = window.ICONS.parents;
+
+  ['ic-p-0','ic-p-1','ic-p-2'].forEach(function (id) {
+    document.getElementById(id).innerHTML = window.ICONS.check;
+  });
+  document.getElementById('ic-l-0').innerHTML = window.ICONS.clock;
+
+  function fillChecklist(prefix, items) {
+    items.forEach(function (text, i) {
+      var el = document.getElementById(prefix + '-' + i);
+      if (el) el.innerHTML = window.ICONS.check + '<span>' + text + '</span>';
+    });
+  }
+
+  fillChecklist('ck-t', [
+    'Quick, one-tap attendance',
+    'Smart defaults & search',
+    'Works on any device'
+  ]);
+  fillChecklist('ck-a', [
+    'Live attendance dashboard',
+    'Export & compliance ready',
+    'Multi-class & staff management'
+  ]);
+  fillChecklist('ck-pr', [
+    'Instant SMS / app alerts',
+    'Daily & weekly summaries',
+    'Always in the loop'
+  ]);
+
+  function fillTrust(id, icon, text) {
+    var el = document.getElementById(id);
+    el.innerHTML = window.ICONS[icon] + '<span>' + text + '</span>';
+  }
+  fillTrust('trust-0', 'check', 'Accurate & reliable');
+  fillTrust('trust-1', 'clock', 'Saves time daily');
+  fillTrust('trust-2', 'secure', 'Secure & private');
+</script>
+</body>
+</html>

@@ -13,10 +13,12 @@ import '../../domain/repositories/class_performance_repository.dart';
 import '../../domain/repositories/class_student_repository.dart';
 import '../../domain/repositories/class_work_repository.dart';
 import '../../domain/services/class_teacher_assignment_service.dart';
+import '../datasources/class_teacher_local_data_source.dart';
 import '../datasources/class_teacher_remote_data_source.dart';
 
 class ClassPerformanceRepositoryImpl implements ClassPerformanceRepository {
   final ClassTeacherRemoteDataSource remoteDataSource;
+  final ClassTeacherLocalDataSource localDataSource;
   final ClassStudentRepository studentRepository;
   final ClassAttendanceRepository attendanceRepository;
   final ClassWorkRepository workRepository;
@@ -25,6 +27,7 @@ class ClassPerformanceRepositoryImpl implements ClassPerformanceRepository {
 
   ClassPerformanceRepositoryImpl({
     required this.remoteDataSource,
+    required this.localDataSource,
     required this.studentRepository,
     required this.attendanceRepository,
     required this.workRepository,
@@ -62,9 +65,17 @@ class ClassPerformanceRepositoryImpl implements ClassPerformanceRepository {
     }
 
     if (!await networkInfo.isConnected) {
+      final cached = await localDataSource.getPerformance(
+        schoolId: context.schoolId,
+        classId: classId,
+        academicYearId: context.academicYearId,
+        termId: context.termId,
+        streamId: context.streamId,
+      );
+      if (cached != null) return Right(cached);
       return const Left(
         NetworkFailure(
-          'You are offline. Class performance needs a connection.',
+          'You are offline and no performance figures have been cached yet.',
         ),
       );
     }
@@ -159,19 +170,84 @@ class ClassPerformanceRepositoryImpl implements ClassPerformanceRepository {
 
       final resolved = thresholds ?? AttentionThresholds.defaults;
 
-      return Right(
-        ClassPerformanceSummary(
-          students: summaries,
-          subjects: subjectSummaries,
-          needingAttention: ClassPerformancePolicy.needingAttention(
-            summaries,
-            resolved,
-          ),
+      final summary = ClassPerformanceSummary(
+        students: summaries,
+        subjects: subjectSummaries,
+        needingAttention: ClassPerformancePolicy.needingAttention(
+          summaries,
+          resolved,
         ),
       );
+
+      await localDataSource.cachePerformance(
+        summary,
+        schoolId: context.schoolId,
+        classId: classId,
+        academicYearId: context.academicYearId,
+        termId: context.termId,
+        streamId: context.streamId,
+      );
+
+      return Right(summary);
     } catch (_) {
+      final cached = await localDataSource.getPerformance(
+        schoolId: context.schoolId,
+        classId: classId,
+        academicYearId: context.academicYearId,
+        termId: context.termId,
+        streamId: context.streamId,
+      );
+      if (cached != null) return Right(cached);
       return const Left(
         ServerFailure('Could not load class performance. Pull down to retry.'),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<StudentAssessmentResult>>>
+  getStudentAssessmentResults({
+    required ActiveResponsibilityContext context,
+    required String studentId,
+    required String subjectId,
+  }) async {
+    final guard = assignmentService.authorize(
+      context,
+      permission: Permission.classPerformanceView,
+    );
+    if (guard.isLeft()) {
+      return guard.fold(Left.new, (_) => const Left(PermissionDeniedFailure()));
+    }
+
+    if (context.termId.isEmpty) {
+      return const Left(
+        ValidationFailure(
+          'Your school has not opened a term yet, so there is nothing to '
+          'show.',
+        ),
+      );
+    }
+
+    if (!await networkInfo.isConnected) {
+      return const Left(
+        NetworkFailure(
+          'You are offline. Assessment detail is not cached on this device.',
+        ),
+      );
+    }
+
+    try {
+      final results = await remoteDataSource.getStudentAssessmentResults(
+        schoolId: context.schoolId,
+        studentId: studentId,
+        subjectId: subjectId,
+        academicYearId: context.academicYearId,
+        termId: context.termId,
+      );
+      return Right(results);
+    } catch (_) {
+      return const Left(
+        ServerFailure('Could not load assessment detail. Pull down to retry.'),
       );
     }
   }

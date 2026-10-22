@@ -132,7 +132,7 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -147,14 +147,14 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
           onChanged: _handleSearch,
           decoration: const InputDecoration(
             hintText: 'Search by title, sender, student...',
-            hintStyle: TextStyle(color: Colors.white24),
+            hintStyle: TextStyle(color: Colors.white),
             border: InputBorder.none,
           ),
         ),
         actions: [
           if (_searchController.text.isNotEmpty)
             IconButton(
-              icon: const Icon(Icons.close, color: Colors.white60),
+              icon: const Icon(Icons.close, color: Colors.white),
               onPressed: () {
                 _searchController.clear();
                 _handleSearch('');
@@ -172,9 +172,9 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off, color: Colors.white24, size: 64),
+            Icon(Icons.search_off, color: Colors.white, size: 64),
             SizedBox(height: 16),
-            Text('No results found', style: TextStyle(color: Colors.white60)),
+            Text('No results found', style: TextStyle(color: Colors.white)),
           ],
         ),
       );
@@ -202,7 +202,7 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
               const Text(
                 'Recent Searches',
                 style: TextStyle(
-                  color: Colors.white70,
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -214,8 +214,8 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
                   'Clear all',
                   style: TextStyle(
                     color: _recentSearches.isEmpty
-                        ? Colors.white24
-                        : const Color(0xFF6366F1),
+                        ? Colors.white
+                        : Colors.black,
                     fontSize: 12,
                   ),
                 ),
@@ -230,7 +230,7 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
                 ? [
                     const Text(
                       'Your recent searches will appear here',
-                      style: TextStyle(color: Colors.white30, fontSize: 12),
+                      style: TextStyle(color: Colors.white, fontSize: 12),
                     ),
                   ]
                 : _recentSearches.map(_buildSearchChip).toList(),
@@ -238,10 +238,7 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
           const SizedBox(height: 32),
           const Text(
             'Popular Searches',
-            style: TextStyle(
-              color: Colors.white70,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           _buildPopularSearch('Attendance'),
@@ -264,12 +261,12 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white12,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
+          style: const TextStyle(color: Colors.white, fontSize: 12),
         ),
       ),
     );
@@ -285,14 +282,14 @@ class _NotificationSearchScreenState extends State<NotificationSearchScreen> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            const Icon(Icons.trending_up, color: Colors.white24, size: 20),
+            const Icon(Icons.trending_up, color: Colors.white, size: 20),
             const SizedBox(width: 16),
             Text(
               label,
               style: const TextStyle(color: Colors.white, fontSize: 14),
             ),
             const Spacer(),
-            const Icon(Icons.chevron_right, color: Colors.white24, size: 20),
+            const Icon(Icons.chevron_right, color: Colors.white, size: 20),
           ],
         ),
       ),
@@ -312,16 +309,14 @@ class _SearchTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Colors.white12)),
+          border: Border(bottom: BorderSide(color: Colors.white)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _getCategoryColor(
-                  notification.category,
-                ).withValues(alpha: 0.2),
+                color: _getCategoryColor(notification.category),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -344,12 +339,12 @@ class _SearchTile extends StatelessWidget {
                   ),
                   Text(
                     notification.senderName,
-                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.white24),
+            const Icon(Icons.chevron_right, color: Colors.white),
           ],
         ),
       ),

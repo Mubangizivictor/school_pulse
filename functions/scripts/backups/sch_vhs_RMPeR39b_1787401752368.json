@@ -1,0 +1,362 @@
+{
+  "schoolId": "sch_vhs_RMPeR39b",
+  "backedUpAt": "2026-08-22T12:29:05.260Z",
+  "collections": {
+    "educational_levels": [
+      {
+        "id": "e76439f5-5205-4a8f-a233-c36185b62e1d",
+        "data": {
+          "code": "1",
+          "schoolId": "sch_vhs_RMPeR39b",
+          "name": "Primary",
+          "description": "",
+          "isActive": true,
+          "order": 1
+        }
+      }
+    ],
+    "academic_years": [
+      {
+        "id": "ee37cee6-9015-4856-af4a-3f6bdedde602",
+        "data": {
+          "endDate": {
+            "_seconds": 1798664400,
+            "_nanoseconds": 0
+          },
+          "isArchived": false,
+          "schoolId": "sch_vhs_RMPeR39b",
+          "name": "2026",
+          "description": "",
+          "startDate": {
+            "_seconds": 1767214800,
+            "_nanoseconds": 0
+          },
+          "isCurrent": true
+        }
+      }
+    ],
+    "academic_terms": [
+      {
+        "id": "98fb7da2-df62-468b-8d8d-92a008262b01",
+        "data": {
+          "periodType": "term",
+          "endDate": {
+            "_seconds": 1774990800,
+            "_nanoseconds": 0
+          },
+          "isArchived": false,
+          "schoolId": "sch_vhs_RMPeR39b",
+          "academicYearId": "ee37cee6-9015-4856-af4a-3f6bdedde602",
+          "name": "Term 1",
+          "startDate": {
+            "_seconds": 1767214800,
+            "_nanoseconds": 0
+          },
+          "order": 0,
+          "isCurrent": true
+        }
+      }
+    ],
+    "classes": [
+      {
+        "id": "953bf6d2-ce36-4287-9ee6-5c90cd91ee5c",
+        "data": {
+          "capacity": 25,
+          "code": "",
+          "description": "",
+          "isActive": true,
+          "levelId": "e76439f5-5205-4a8f-a233-c36185b62e1d",
+          "name": "P1",
+          "schoolId": "sch_vhs_RMPeR39b"
+        }
+      }
+    ],
+    "class_streams": [
+      {
+        "id": "57ce674c-65d5-4fdd-b4a3-30bf4db91b9b",
+        "data": {
+          "capacity": 20,
+          "classId": "953bf6d2-ce36-4287-9ee6-5c90cd91ee5c",
+          "code": "",
+          "isActive": true,
+          "name": "East",
+          "schoolId": "sch_vhs_RMPeR39b"
+        }
+      }
+    ],
+    "subjects": [
+      {
+        "id": "21226243-0e3c-4525-8242-f26c7fbce1aa",
+        "data": {
+          "isElective": true,
+          "code": "",
+          "color": "#1976d2",
+          "assignedClassIds": [],
+          "departmentId": "",
+          "description": "",
+          "creditUnits": 0,
+          "isActive": true,
+          "subjectType": "Core",
+          "codeLower": "",
+          "createdAt": {
+            "_seconds": 1787391145,
+            "_nanoseconds": 794000000
+          },
+          "assignedLevelIds": [],
+          "schoolId": "sch_vhs_RMPeR39b",
+          "isPractical": true,
+          "name": "English",
+          "updatedAt": {
+            "_seconds": 1787391145,
+            "_nanoseconds": 794000000
+          }
+        }
+      }
+    ],
+    "departments": [
+      {
+        "id": "b73114b6-99e5-4cb2-91e9-59359e38ef62",
+        "data": {
+          "code": "",
+          "description": "",
+          "headOfDepartmentStaffId": "",
+          "isActive": true,
+          "name": "Science",
+          "schoolId": "sch_vhs_RMPeR39b"
+        }
+      }
+    ],
+    "staff_designations": [],
+    "campuses": [],
+    "houses": [],
+    "clubs": [],
+    "facilities": [
+      {
+        "id": "63a3926b-05e1-424e-b5ba-18d7c11c1fe7",
+        "data": {
+          "capacity": 520,
+          "description": "",
+          "facilityType": "Library",
+          "isActive": true,
+          "location": "",
+          "name": "Main Library",
+          "schoolId": "sch_vhs_RMPeR39b"
+        }
+      }
+    ],
+    "hostels": [],
+    "hostel_rooms": [],
+    "transport_routes": [],
+    "transport_stops": [],
+    "transport_vehicles": [],
+    "structure_fee_categories": [],
+    "structure_assessment_types": [],
+    "structure_grading_systems": [],
+    "grade_bands": [],
+    "attendance_types": [],
+    "attendance_sessions": [],
+    "announcement_categories": [],
+    "notification_categories": [],
+    "message_templates": [],
+    "document_templates": [],
+    "custom_fields": [],
+    "structure_curriculum_assignments": [
+      {
+        "id": "4ff68429-488b-43a8-8595-ae6ddd1f47ee",
+        "data": {
+          "academicYearId": "ee37cee6-9015-4856-af4a-3f6bdedde602",
+          "classId": "953bf6d2-ce36-4287-9ee6-5c90cd91ee5c",
+          "displayOrder": 0,
+          "isActive": true,
+          "isCompulsory": true,
+          "levelId": "e76439f5-5205-4a8f-a233-c36185b62e1d",
+          "periodsPerWeek": 2,
+          "schoolId": "sch_vhs_RMPeR39b",
+          "streamId": "",
+          "subjectId": "21226243-0e3c-4525-8242-f26c7fbce1aa",
+          "updatedAt": {
+            "_seconds": 1787391566,
+            "_nanoseconds": 142000000
+          }
+        }
+      }
+    ],
+    "structure_teaching_assignments": [
+      {
+        "id": "810907f2-fcc3-4ef7-9aaf-e2c0e51b7be8",
+        "data": {
+          "academicYearId": "ee37cee6-9015-4856-af4a-3f6bdedde602",
+          "classId": "953bf6d2-ce36-4287-9ee6-5c90cd91ee5c",
+          "departmentId": "",
+          "isPrimary": false,
+          "responsibilityType": "subjectTeacher",
+          "schoolId": "sch_vhs_RMPeR39b",
+          "staffId": "RMPeR39bL6VkbBgV3Ae2PtBfGYa2",
+          "startDate": null,
+          "streamId": "",
+          "subjectId": "21226243-0e3c-4525-8242-f26c7fbce1aa",
+          "endDate": {
+            "_seconds": 1787396048,
+            "_nanoseconds": 359572000
+          },
+          "isActive": false,
+          "updatedAt": {
+            "_seconds": 1787396061,
+            "_nanoseconds": 380000000
+          }
+        }
+      }
+    ]
+  },
+  "schoolSubcollections": {
+    "timetables": [],
+    "timetable_lessons": []
+  },
+  "config": {
+    "feature_toggles": {
+      "alumni": true,
+      "boarding": true,
+      "communication": true,
+      "digitalIds": true,
+      "hostel": true,
+      "inventory": true,
+      "library": true,
+      "medical": true,
+      "parentPortal": true,
+      "payroll": true,
+      "procurement": true,
+      "qrAttendance": true,
+      "studentPortal": true,
+      "transport": true,
+      "visitors": true
+    },
+    "institution_profile": {
+      "ownershipType": "",
+      "country": "Uganda",
+      "dateFormat": "dd/MM/yyyy",
+      "displayName": "",
+      "language": "English",
+      "whatsappNumber": "",
+      "createdAt": {
+        "_seconds": 1787386850,
+        "_nanoseconds": 522000000
+      },
+      "legalEntityName": "",
+      "currency": "UGX",
+      "displayLabel": "",
+      "badgeUrl": "",
+      "address": "",
+      "institutionId": "sch_vhs_RMPeR39b",
+      "foundingYear": null,
+      "initials": "",
+      "timeZone": "Africa/Kampala",
+      "socialMedia": {},
+      "logoUrl": "",
+      "vision": "This is my vision",
+      "mission": "This is my Mission",
+      "supportEmail": "",
+      "postalAddress": "",
+      "timeFormat": "24-hour",
+      "name": "VIctor High School",
+      "motto": "",
+      "shortName": "VHS",
+      "secondaryPhone": "",
+      "website": "victorbee.com",
+      "schoolCategory": "Private",
+      "schoolType": "Primary",
+      "phone": "0793128137",
+      "registrationNumber": "54561564",
+      "gpsLat": -0.6132,
+      "gpsLng": 30.6582,
+      "email": "support@victorbee.com",
+      "city": "Nyakasharu",
+      "district": "Rubirizi",
+      "taxNumber": "2545562415",
+      "ministryRegistrationNumber": "455441-4545",
+      "version": 11,
+      "brandingVersion": 9,
+      "colors": [
+        "#009FFF",
+        "#FB0000",
+        "#F5F5F5"
+      ],
+      "updatedAt": {
+        "_seconds": 1787399711,
+        "_nanoseconds": 427000000
+      }
+    },
+    "timetable_config": null,
+    "attendance_defaults": null,
+    "communication_defaults": null
+  },
+  "schoolDoc": {
+    "id": "sch_vhs_RMPeR39b",
+    "name": "Victor High School",
+    "tenantId": "VHS",
+    "address": "Rubirizi, Western Region, Uganda, Rubirizi, Western",
+    "contactEmail": "mubangizivict@gmail.com",
+    "contactPhone": "256793128137",
+    "subscriptionPlanId": "starter",
+    "createdAt": 1787386019043,
+    "classification": "other",
+    "classificationOther": null,
+    "divisions": [],
+    "displayLabel": "VHS",
+    "enabledFeatures": [
+      "students",
+      "attendance",
+      "academics",
+      "administration",
+      "finance",
+      "messaging",
+      "transport",
+      "library",
+      "boarding",
+      "health",
+      "exams"
+    ],
+    "subscriptionExpiry": 1797754226984,
+    "metadata": {
+      "source": "public_website_application",
+      "applicationId": "RMPeR39bL6VkbBgV3Ae2PtBfGYa2",
+      "category": "Government / Public",
+      "motto": "",
+      "website": "",
+      "region": "Western",
+      "district": "Rubirizi",
+      "selectedPlanLabel": "Starter",
+      "selectedModules": [
+        "Students",
+        "Attendance",
+        "Academics",
+        "Administration",
+        "Finance",
+        "Messaging",
+        "Transport",
+        "Library",
+        "Boarding",
+        "Health"
+      ],
+      "approvedBy": "9UHI2gzXNEhw3mBoFAbBqldtex82",
+      "approvedAt": 1787386019043,
+      "hasEverActivated": true,
+      "lastPaymentApprovedBy": "9UHI2gzXNEhw3mBoFAbBqldtex82",
+      "lastPaymentApprovedAt": 1787386226984,
+      "lastPaymentId": "RMPeR39bL6VkbBgV3Ae2PtBfGYa2_7d7395ee9979402b96772377d706b654",
+      "subscriptionStatus": "active"
+    },
+    "subscription": {
+      "termLengthDays": 120,
+      "storageLimitGb": 0,
+      "maxStaff": 0,
+      "price": 350000,
+      "maxStudents": 0,
+      "planName": "Starter",
+      "planId": "starter",
+      "periodStart": 1787386226984,
+      "periodEnd": 1797754226984
+    },
+    "accessMode": "full",
+    "status": "active"
+  }
+}

@@ -1,11 +1,11 @@
 {
-    "name": "school_pulse",
-    "short_name": "school_pulse",
-    "start_url": ".",
+    "name": "School Pulse — School Management",
+    "short_name": "School Pulse",
+    "start_url": "/",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0C1116",
+    "theme_color": "#0B5FFF",
+    "description": "All-in-one school management platform for schools in Uganda: enrolment, attendance, fees, report cards, parent communication, transport, boarding and health.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

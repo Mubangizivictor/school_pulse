@@ -22,11 +22,13 @@ class ApprovalWorkflowEngine {
     required ApprovalStage stage,
     required int approvalsAtStage,
   }) {
-    if (approvalsAtStage < stage.minimumApprovals)
+    if (approvalsAtStage < stage.minimumApprovals) {
       return ApprovalStatus.partiallyApproved;
+    }
     if (stage.order <
-        policy.stages.map((s) => s.order).fold(0, (a, b) => a > b ? a : b))
+        policy.stages.map((s) => s.order).fold(0, (a, b) => a > b ? a : b)) {
       return ApprovalStatus.pending;
+    }
     return ApprovalStatus.approved;
   }
 }

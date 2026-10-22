@@ -41,10 +41,9 @@ class MessagingState extends Equatable {
   /// Sum of unread counters across every non-archived conversation - the
   /// number the Messages tab badge and app-level badge both read from, so
   /// they can never drift from what the inbox itself shows.
-  int get totalUnreadCount =>
-      (conversations ?? const [])
-          .where((c) => !c.isArchived)
-          .fold(0, (sum, c) => sum + c.unreadCount);
+  int get totalUnreadCount => (conversations ?? const [])
+      .where((c) => !c.isArchived)
+      .fold(0, (sum, c) => sum + c.unreadCount);
 
   MessagingState copyWith({
     List<ChatConversation>? conversations,
@@ -68,7 +67,9 @@ class MessagingState extends Equatable {
       activeRole: activeRole ?? this.activeRole,
       user: user ?? this.user,
       actionStatus: actionStatus ?? this.actionStatus,
-      lastDecision: clearLastDecision ? null : (lastDecision ?? this.lastDecision),
+      lastDecision: clearLastDecision
+          ? null
+          : (lastDecision ?? this.lastDecision),
       lastActionError: clearLastActionError
           ? null
           : (lastActionError ?? this.lastActionError),

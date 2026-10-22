@@ -8,10 +8,12 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/app_role_session_cubit.dart';
 import 'package:school_pulse/features/branding/domain/entities/school_branding.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_event.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
 import 'package:school_pulse/features/branding/presentation/widgets/school_badge.dart';
 
-/// The second identity moment. It is reachable only after tenant bootstrap.
+/// The one post-auth splash: resolves tenant branding and shows the
+/// school's identity before handing off to the dashboard.
 class SchoolSplashScreen extends StatefulWidget {
   const SchoolSplashScreen({super.key, required this.user});
   final UserEntity user;
@@ -32,9 +34,22 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
       vsync: this,
       duration: const Duration(milliseconds: 850),
     )..forward();
-    // The bootstrap and this recognition moment overlap: this is a maximum,
-    // not a stacked delay after branding has already been loaded.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureBranding());
+    // The branding fetch and this recognition moment overlap: this is a
+    // maximum, not a stacked delay after branding has already been loaded.
     Timer(const Duration(seconds: 2), _routeToWorkspace);
+  }
+
+  void _ensureBranding() {
+    if (widget.user.schoolId.isEmpty) return;
+    final branding = context.read<BrandingBloc>().state;
+    if (branding is BrandingLoaded &&
+        branding.branding?.schoolId == widget.user.schoolId) {
+      return;
+    }
+    context.read<BrandingBloc>().add(
+      FetchBrandingForSchool(widget.user.schoolId),
+    );
   }
 
   void _routeToWorkspace() {
@@ -73,12 +88,25 @@ class _SchoolSplashScreenState extends State<SchoolSplashScreen>
       builder: (context, state) {
         final branding = state is BrandingLoaded ? state.branding : null;
         if (branding == null || branding.schoolId != widget.user.schoolId) {
-          return const Scaffold(
+          return Scaffold(
             body: Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                  if (state is BrandingError) ...[
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: _ensureBranding,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry connection'),
+                    ),
+                  ],
+                ],
               ),
             ),
           );

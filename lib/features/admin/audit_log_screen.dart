@@ -26,8 +26,9 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
           ? (b.state as AuthAuthenticated).user
           : null,
     );
-    if (user == null)
+    if (user == null) {
       return const Scaffold(body: Center(child: SchoolPulseLoader()));
+    }
     final ref = FirebaseFirestore.instance
         .collection('institutions')
         .doc(user.schoolId)
@@ -40,14 +41,16 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
             .limit(200)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError)
+          if (snapshot.hasError) {
             return const _State(
               icon: Icons.error_outline,
               title: 'Couldn’t load audit history',
               message: 'Try again when you are online.',
             );
-          if (!snapshot.hasData)
+          }
+          if (!snapshot.hasData) {
             return const Center(child: SchoolPulseLoader());
+          }
           final rows = snapshot.data!.docs.where((row) {
             final d = row.data();
             final haystack =
@@ -67,14 +70,18 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
           };
           for (final row in rows) {
             final d = row.data();
-            if (d['moduleKey'] == 'security')
+            if (d['moduleKey'] == 'security') {
               counts['Security'] = counts['Security']! + 1;
-            if (d['eventType'] == 'Export')
+            }
+            if (d['eventType'] == 'Export') {
               counts['Exports'] = counts['Exports']! + 1;
-            if (d['moduleKey'] == 'support')
+            }
+            if (d['moduleKey'] == 'support') {
               counts['Support'] = counts['Support']! + 1;
-            if (d['status'] == 'denied')
+            }
+            if (d['status'] == 'denied') {
               counts['Denied'] = counts['Denied']! + 1;
+            }
           }
           return ListView(
             padding: const EdgeInsets.all(16),

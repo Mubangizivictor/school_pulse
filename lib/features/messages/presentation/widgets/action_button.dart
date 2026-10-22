@@ -22,15 +22,21 @@ class ActionButton extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppColors.electricBlue.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+              color: AppColors.background(context),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border(context), width: 1),
             ),
-            child: Icon(icon, color: AppColors.electricBlue),
+            child: Icon(icon, color: AppColors.textPrimary(context), size: 24),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
-            label,
-            style: const TextStyle(fontSize: 12, color: AppColors.electricBlue),
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.5,
+              color: AppColors.textPrimary(context),
+            ),
           ),
         ],
       ),

@@ -122,19 +122,74 @@ async function tokenEntriesForOwners(ownerDocs) {
   return [...entries.values()];
 }
 
-function pushData(eventId, title, body, data) {
+/**
+ * Mirrors the Dart client's OwnerNotification.fromJson category derivation
+ * (lib/features/super_admin/domain/entities/owner_notification.dart) so the
+ * push alert's redaction bucket always agrees with what the owner sees once
+ * they open the app - never a mismatch that redacts the wrong thing.
+ */
+function ownerEventCategory(data) {
+  if (data?.category) return text(data.category, 40);
+  const type = text(data?.type || data?.notificationType, 120);
+  const paymentId = text(data?.paymentId, 180);
+  const applicationId = text(data?.applicationId, 180);
+  if (paymentId) return 'billing';
+  if (applicationId) return 'schools';
+  if (type.includes('payment') || type.includes('billing')) return 'billing';
+  if (type.includes('incident') || type.includes('health')) return 'platform';
+  if (type.includes('application') || type.includes('domain') || type.includes('school') || type.includes('onboarding')) {
+    return 'schools';
+  }
+  if (type.includes('security') || type.includes('sign_in')) return 'security';
+  if (type.includes('digest')) return 'digest';
+  return 'administrative';
+}
+
+/**
+ * Generic, redacted category label shown as the push alert - the owner app
+ * shows the real title/body once opened and authenticated, but the OS
+ * lock screen / notification tray never do. Never a tenant name, amount,
+ * payment reference, credential, raw error, or stack trace.
+ */
+function redactedAlertLabel(category) {
+  switch (category) {
+    case 'billing':
+    case 'payments':
+      return { title: 'School Pulse', body: 'A payment needs your review.' };
+    case 'platform':
+    case 'platform_health':
+      return { title: 'School Pulse', body: 'A platform health alert needs your attention.' };
+    case 'schools':
+    case 'application':
+    case 'onboarding':
+      return { title: 'School Pulse', body: 'A school request needs your review.' };
+    case 'security':
+      return { title: 'School Pulse', body: 'A security alert needs your attention.' };
+    case 'digest':
+      return { title: 'School Pulse', body: 'Your owner digest is ready.' };
+    default:
+      return { title: 'School Pulse', body: 'You have a new owner notification.' };
+  }
+}
+
+/**
+ * Data-only payload: no tenant-private content, ever. Carries only
+ * identifiers the app needs to fetch the real (already-authorized) document
+ * from `super_admin_notifications` - never the title/body/school
+ * name/amount/reference that document holds. Push text must be redacted on
+ * the lock screen and never leak a tenant record, payment reference,
+ * credential, raw error or stack trace - this is the payload half of that
+ * guarantee; redactedAlertLabel() is the other half.
+ */
+function pushData(eventId, category, data) {
   const raw = {
-    ...data,
     notificationId: eventId,
     id: eventId,
-    title,
-    body,
-    category: data?.category || 'administrative',
+    category: category || 'administrative',
     type: data?.notificationType || 'custom',
     priority: data?.priority || 'high',
     persistence: data?.persistence || 'persistent',
     sourceModule: data?.sourceModule || 'super_admin',
-    sourceEntityId: data?.sourceEntityId || data?.applicationId || data?.paymentId || eventId,
     isAutomated: 'true',
     collapseKey: eventId,
   };
@@ -145,7 +200,7 @@ function pushData(eventId, title, body, data) {
   );
 }
 
-async function deliverPush(ownerDocs, eventId, title, body, data) {
+async function deliverPush(ownerDocs, eventId, data) {
   const entries = await tokenEntriesForOwners(ownerDocs);
   if (entries.length === 0) {
     return {
@@ -161,14 +216,20 @@ async function deliverPush(ownerDocs, eventId, title, body, data) {
   let failureCount = 0;
   const errors = [];
   const removals = [];
-  const payloadData = pushData(eventId, title, body, data);
+  const category = ownerEventCategory(data);
+  const payloadData = pushData(eventId, category, data);
+  const alert = redactedAlertLabel(category);
 
   for (let offset = 0; offset < entries.length; offset += 500) {
     const batch = entries.slice(offset, offset + 500);
     try {
       const response = await admin.messaging().sendEachForMulticast({
         tokens: batch.map((entry) => entry.token),
-        notification: { title, body },
+        // Redacted alert only - never the real title/body, which may carry
+        // a school name, amount, payment reference or plan name. The app
+        // fetches the real (already-authorized) document by
+        // payloadData.notificationId once opened.
+        notification: alert,
         data: payloadData,
         android: {
           priority: 'high',
@@ -182,9 +243,11 @@ async function deliverPush(ownerDocs, eventId, title, body, data) {
           headers: { 'apns-priority': '10' },
           payload: {
             aps: {
+              alert,
               sound: 'default',
               badge: 1,
               'content-available': 1,
+              'mutable-content': 0,
             },
           },
         },
@@ -334,10 +397,15 @@ async function deliverEmail(ownerDocs, payload) {
   };
 }
 
-function ownerNotificationDocument(eventId, eventType, title, body, schoolName, data) {
+function ownerNotificationDocument(eventId, eventType, title, body, schoolName, data, ownerId = '') {
   const isPayment = Boolean(data?.paymentId);
   return {
     eventId,
+    // Scopes the feed document to the canonical platform owner. There is
+    // exactly one seeded owner today, but every owner-feed write stamps
+    // this so the read/mark/delete/clear callables and the Firestore rule
+    // can enforce per-owner isolation rather than "any superAdmin".
+    ownerId: text(ownerId, 200),
     type: text(data?.type || eventType, 100),
     eventType: text(eventType, 120),
     status: 'unread',
@@ -363,6 +431,10 @@ async function createInAppAlerts(ownerDocs, eventId, payload) {
   // application event could be delivered server-side yet never appear in the
   // SaaS Owner Notifications screen.
   const ownerFeedRef = db.collection('super_admin_notifications').doc(eventId);
+  // With exactly one canonical seeded owner, every owner-feed doc is scoped
+  // to that single uid. If the platform ever supports multiple owners this
+  // fan-out already writes one doc per owner id.
+  const primaryOwnerId = ownerDocs.length > 0 ? ownerDocs[0].id : '';
   batch.set(ownerFeedRef, ownerNotificationDocument(
     eventId,
     payload.eventType,
@@ -370,6 +442,7 @@ async function createInAppAlerts(ownerDocs, eventId, payload) {
     payload.body,
     payload.schoolName,
     payload.data,
+    primaryOwnerId,
   ), { merge: true });
 
   // Also write user-scoped alerts so the shared notification centre/badge
@@ -437,7 +510,7 @@ async function notifyOwners({ eventId, eventType, title, body, schoolName = '', 
   }
 
   [push, email] = await Promise.all([
-    deliverPush(owners, eventId, title, body, data).catch((error) => ({
+    deliverPush(owners, eventId, data).catch((error) => ({
       status: 'failed',
       attempted: 0,
       successCount: 0,
@@ -484,4 +557,14 @@ module.exports = {
   notifyOwners,
   getOwnerDocs,
   isOwnerData,
+  // Exported for unit tests: the data-only FCM payload builder. Asserts
+  // owner pushes carry only stringified routing ids - never a tenant
+  // record, title/body, undefined/null field, or an oversized blob.
+  pushData,
+  // Exported for unit tests: the generic, category-only alert text shown
+  // as the actual push notification (what the lock screen renders).
+  redactedAlertLabel,
+  // Exported for unit tests: mirrors the Dart client's category derivation
+  // so the alert's redaction bucket always agrees with the app.
+  ownerEventCategory,
 };

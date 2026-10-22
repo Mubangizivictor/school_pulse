@@ -243,7 +243,7 @@ StructureSetupContext _runtimeContext({
         termId: 'term-1',
         classId: 's1',
         name: 'S1 Term 1',
-        status: TimetableStatus.active,
+        status: TimetableStatus.published,
         createdAt: DateTime(2026, 1, 1),
       ),
     ],

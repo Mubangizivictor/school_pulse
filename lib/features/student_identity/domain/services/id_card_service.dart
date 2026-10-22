@@ -41,12 +41,13 @@ class IdCardService {
     required String className,
     required String stream,
     required String uniqueSystemId,
+    String academicYear = '',
     required String qrCodeData,
     Uint8List? schoolLogoBytes,
     Uint8List? studentPhotoBytes,
   }) async {
     final pdf = pw.Document();
-    final page = await _buildCardPage(
+    final front = await _buildCardPage(
       schoolName: schoolName,
       studentName: studentName,
       admissionNumber: admissionNumber,
@@ -54,10 +55,17 @@ class IdCardService {
       className: className,
       stream: stream,
       uniqueSystemId: uniqueSystemId,
+      academicYear: academicYear,
       qrCodeData: qrCodeData,
       studentPhotoBytes: studentPhotoBytes,
     );
-    pdf.addPage(page);
+    final back = await _buildCardBackPage(
+      schoolName: schoolName,
+      qrCodeData: qrCodeData,
+    );
+    pdf
+      ..addPage(front)
+      ..addPage(back);
     return pdf.save();
   }
 
@@ -69,7 +77,7 @@ class IdCardService {
   }) async {
     final pdf = pw.Document();
     for (final entry in entries) {
-      final page = await _buildCardPage(
+      final front = await _buildCardPage(
         schoolName: schoolName,
         studentName: entry.studentName,
         admissionNumber: entry.admissionNumber,
@@ -80,7 +88,13 @@ class IdCardService {
         qrCodeData: entry.qrCodeData,
         studentPhotoBytes: entry.studentPhotoBytes,
       );
-      pdf.addPage(page);
+      final back = await _buildCardBackPage(
+        schoolName: schoolName,
+        qrCodeData: entry.qrCodeData,
+      );
+      pdf
+        ..addPage(front)
+        ..addPage(back);
     }
     return pdf.save();
   }
@@ -93,38 +107,25 @@ class IdCardService {
     required String className,
     required String stream,
     required String uniqueSystemId,
+    String academicYear = '',
     required String qrCodeData,
     Uint8List? studentPhotoBytes,
   }) async {
-    final qrValidationResult = QrValidator.validate(
-      data: qrCodeData,
-      version: QrVersions.auto,
-      errorCorrectionLevel: QrErrorCorrectLevel.L,
-    );
-
-    final qrCode = qrValidationResult.qrCode;
-    final painter = QrPainter.withQr(
-      qr: qrCode!,
-      eyeStyle: const QrEyeStyle(color: ui.Color(0xFF000000)),
-      dataModuleStyle: const QrDataModuleStyle(color: ui.Color(0xFF000000)),
-      gapless: true,
-    );
-
-    final qrImageData = await painter.toImageData(200);
-    final qrBytes = qrImageData!.buffer.asUint8List();
-
     return pw.Page(
-      pageFormat: PdfPageFormat.a4,
+      pageFormat: PdfPageFormat(
+        85.60 * PdfPageFormat.mm,
+        53.98 * PdfPageFormat.mm,
+      ),
       build: (pw.Context context) {
         return pw.Center(
           child: pw.Container(
-            width: 250,
-            height: 400,
+            width: 85.60 * PdfPageFormat.mm,
+            height: 53.98 * PdfPageFormat.mm,
             decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: PdfColors.grey, width: 1),
+              border: pw.Border.all(color: PdfColors.black, width: 1),
               borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
             ),
-            padding: const pw.EdgeInsets.all(16),
+            padding: const pw.EdgeInsets.all(12),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
@@ -136,11 +137,11 @@ class IdCardService {
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 10),
+                pw.SizedBox(height: 5),
                 if (studentPhotoBytes != null)
                   pw.Container(
-                    width: 80,
-                    height: 80,
+                    width: 48,
+                    height: 48,
                     decoration: pw.BoxDecoration(
                       shape: pw.BoxShape.circle,
                       image: pw.DecorationImage(
@@ -151,41 +152,115 @@ class IdCardService {
                   )
                 else
                   pw.Container(
-                    width: 80,
-                    height: 80,
+                    width: 48,
+                    height: 48,
                     decoration: const pw.BoxDecoration(
                       shape: pw.BoxShape.circle,
-                      color: PdfColors.grey300,
+                      color: PdfColors.black,
                     ),
                   ),
-                pw.SizedBox(height: 10),
+                pw.SizedBox(height: 5),
                 pw.Text(
                   studentName.toUpperCase(),
                   style: pw.TextStyle(
                     fontWeight: pw.FontWeight.bold,
-                    fontSize: 16,
+                    fontSize: 11,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 15),
-                _buildCardRow('Admission:', admissionNumber),
-                _buildCardRow('Student ID:', studentId),
-                _buildCardRow('Class:', '$className $stream'),
-                pw.Spacer(),
-                pw.Image(pw.MemoryImage(qrBytes), width: 100, height: 100),
                 pw.SizedBox(height: 5),
+                _buildCardRow('Class', '$className $stream'),
+                _buildCardRow('Student code', studentId),
+                _buildCardRow('Admission no.', admissionNumber),
+                if (academicYear.isNotEmpty)
+                  _buildCardRow('Academic year', academicYear),
+                pw.Spacer(),
                 pw.Text(
-                  uniqueSystemId,
+                  'This card is the property of $schoolName.',
                   style: const pw.TextStyle(
-                    fontSize: 8,
-                    color: PdfColors.grey700,
+                    fontSize: 6,
+                    color: PdfColors.black,
                   ),
+                  textAlign: pw.TextAlign.center,
                 ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Future<pw.Page> _buildCardBackPage({
+    required String schoolName,
+    required String qrCodeData,
+  }) async {
+    if (qrCodeData.isEmpty) {
+      throw StateError(
+        'A signed QR credential is required to print this card.',
+      );
+    }
+    final validation = QrValidator.validate(
+      data: qrCodeData,
+      version: QrVersions.auto,
+      errorCorrectionLevel: QrErrorCorrectLevel.M,
+    );
+    final qr = validation.qrCode;
+    if (qr == null) {
+      throw StateError('The QR credential could not be encoded.');
+    }
+    final data = await QrPainter.withQr(
+      qr: qr,
+      eyeStyle: const QrEyeStyle(color: ui.Color(0xFF000000)),
+      dataModuleStyle: const QrDataModuleStyle(color: ui.Color(0xFF000000)),
+      gapless: true,
+    ).toImageData(320);
+    if (data == null) {
+      throw StateError('The QR credential image could not be generated.');
+    }
+    return pw.Page(
+      pageFormat: PdfPageFormat(
+        85.60 * PdfPageFormat.mm,
+        53.98 * PdfPageFormat.mm,
+      ),
+      build: (context) => pw.Container(
+        padding: const pw.EdgeInsets.all(12),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.black, width: 1),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+        ),
+        child: pw.Column(
+          children: [
+            pw.Text(
+              schoolName.toUpperCase(),
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 12),
+            ),
+            pw.SizedBox(height: 7),
+            pw.Image(
+              pw.MemoryImage(data.buffer.asUint8List()),
+              width: 108,
+              height: 108,
+            ),
+            pw.SizedBox(height: 5),
+            pw.Text(
+              'Scan to verify student',
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 8),
+            ),
+            pw.SizedBox(height: 5),
+            pw.Text(
+              'Identity verified  •  Authorized access  •  Non-transferable',
+              style: const pw.TextStyle(fontSize: 6),
+              textAlign: pw.TextAlign.center,
+            ),
+            pw.Spacer(),
+            pw.Text(
+              'This card is the property of $schoolName. If found, please return it to the school.',
+              style: const pw.TextStyle(fontSize: 6, color: PdfColors.black),
+              textAlign: pw.TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -197,7 +272,7 @@ class IdCardService {
         children: [
           pw.Text(
             label,
-            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+            style: const pw.TextStyle(fontSize: 10, color: PdfColors.black),
           ),
           pw.Text(
             value,
@@ -211,4 +286,7 @@ class IdCardService {
   Future<void> printIdCard(Uint8List pdfData) async {
     await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdfData);
   }
+
+  Future<void> shareIdCard(Uint8List pdfData, String filename) =>
+      Printing.sharePdf(bytes: pdfData, filename: filename);
 }

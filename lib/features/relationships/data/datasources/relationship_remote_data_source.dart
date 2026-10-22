@@ -12,6 +12,9 @@ abstract class RelationshipRemoteDataSource {
     String schoolId,
     String userId,
   );
+  Future<List<ParentStudentRelationshipModel>> getRelationshipsForSchool(
+    String schoolId,
+  );
   Future<ParentStudentRelationshipModel> createRelationship(
     Map<String, dynamic> data,
   );
@@ -65,6 +68,18 @@ class RelationshipRemoteDataSourceImpl implements RelationshipRemoteDataSource {
     final snapshot = await _relationships
         .where('schoolId', isEqualTo: schoolId)
         .where('userId', isEqualTo: userId)
+        .get();
+    return snapshot.docs
+        .map((d) => ParentStudentRelationshipModel.fromMap(d.id, d.data()))
+        .toList();
+  }
+
+  @override
+  Future<List<ParentStudentRelationshipModel>> getRelationshipsForSchool(
+    String schoolId,
+  ) async {
+    final snapshot = await _relationships
+        .where('schoolId', isEqualTo: schoolId)
         .get();
     return snapshot.docs
         .map((d) => ParentStudentRelationshipModel.fromMap(d.id, d.data()))

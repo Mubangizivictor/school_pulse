@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 
 import 'package:school_pulse/core/error/failures.dart';
@@ -15,23 +16,29 @@ import '../../domain/policies/class_resource_policy.dart';
 import '../../domain/repositories/class_resource_repository.dart';
 import '../../domain/services/class_teacher_assignment_service.dart';
 import '../../domain/services/subject_audit_service.dart';
+import '../datasources/class_resource_local_data_source.dart';
 
 class ClassResourceRepositoryImpl implements ClassResourceRepository {
   final FirebaseFirestore firestore;
   final FirebaseStorage storage;
+  final ClassResourceLocalDataSource localDataSource;
   final ClassTeacherAssignmentService assignmentService;
   final SubjectAuditService auditService;
   final NetworkInfo networkInfo;
   final Uuid uuid;
+  final http.Client httpClient;
 
   ClassResourceRepositoryImpl({
     required this.firestore,
     required this.storage,
+    required this.localDataSource,
     required this.assignmentService,
     required this.auditService,
     required this.networkInfo,
     Uuid? uuid,
-  }) : uuid = uuid ?? const Uuid();
+    http.Client? httpClient,
+  }) : uuid = uuid ?? const Uuid(),
+       httpClient = httpClient ?? http.Client();
 
   CollectionReference<Map<String, dynamic>> _resources(String schoolId) =>
       firestore
@@ -58,9 +65,12 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(
-        NetworkFailure('You are offline. Resources need a connection.'),
+      final cached = await localDataSource.getResources(
+        schoolId: context.schoolId,
+        classId: classId,
+        academicYearId: context.academicYearId,
       );
+      return Right(cached.where((r) => r.folderId == folderId).toList());
     }
 
     try {
@@ -74,10 +84,25 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
           .map((d) => _fromDoc(d.id, context.schoolId, d.data()))
           .toList();
 
+      await localDataSource.cacheResources(
+        all,
+        schoolId: context.schoolId,
+        classId: classId,
+        academicYearId: context.academicYearId,
+      );
+
       // Folder filtering happens here rather than in the query so the root
       // (folderId == null) does not need a separate index.
       return Right(all.where((r) => r.folderId == folderId).toList());
     } catch (_) {
+      final cached = await localDataSource.getResources(
+        schoolId: context.schoolId,
+        classId: classId,
+        academicYearId: context.academicYearId,
+      );
+      if (cached.isNotEmpty) {
+        return Right(cached.where((r) => r.folderId == folderId).toList());
+      }
       return const Left(
         ServerFailure('Could not load resources. Pull down to retry.'),
       );
@@ -377,6 +402,8 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
         }
       }
 
+      await localDataSource.deleteResourceLocal(resource.id);
+
       await auditService.record(
         context: context,
         action: outcome.removesStoredFile
@@ -393,7 +420,78 @@ class ClassResourceRepositoryImpl implements ClassResourceRepository {
     }
   }
 
-  Future<void> _save(ClassResource resource) {
+  @override
+  Future<Either<Failure, void>> downloadForOffline({
+    required ActiveResponsibilityContext context,
+    required ClassResource resource,
+  }) async {
+    if (resource.isFolder) {
+      return const Left(
+        ValidationFailure('A folder cannot be downloaded, only its files.'),
+      );
+    }
+
+    final url = resource.downloadUrl;
+    if (url == null) {
+      return const Left(
+        ValidationFailure('This resource has no file to download.'),
+      );
+    }
+
+    if (!await networkInfo.isConnected) {
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Downloading needs a connection - there is nothing to save '
+          'without one.',
+        ),
+      );
+    }
+
+    try {
+      final response = await httpClient.get(Uri.parse(url));
+      if (response.statusCode != 200) {
+        return const Left(ServerFailure('Could not download this file.'));
+      }
+
+      await localDataSource.downloadForOffline(
+        resource.copyWith(availableOffline: true),
+        response.bodyBytes,
+      );
+      await _save(resource.copyWith(availableOffline: true));
+
+      return const Right(null);
+    } catch (_) {
+      return const Left(ServerFailure('Could not download this file.'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> removeDownload({
+    required ActiveResponsibilityContext context,
+    required ClassResource resource,
+  }) async {
+    await localDataSource.removeDownload(resource.id);
+
+    if (await networkInfo.isConnected) {
+      try {
+        await _save(resource.copyWith(availableOffline: false));
+      } catch (_) {
+        // The on-device copy is already gone, which is the part the teacher
+        // asked for - a metadata write that fails offline or on a flaky
+        // connection is not worth failing the whole action over.
+      }
+    }
+
+    return const Right(null);
+  }
+
+  @override
+  Future<bool> isDownloaded(String resourceId) async {
+    return await localDataSource.getLocalFilePath(resourceId) != null;
+  }
+
+  Future<void> _save(ClassResource resource) async {
+    await localDataSource.saveResourceLocal(resource);
     return _resources(resource.schoolId).doc(resource.id).set({
       'schoolId': resource.schoolId,
       'campusId': resource.campusId,

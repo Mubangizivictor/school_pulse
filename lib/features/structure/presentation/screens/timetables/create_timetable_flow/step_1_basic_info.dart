@@ -27,6 +27,11 @@ class _Step1BasicInfoState extends State<Step1BasicInfo> {
     _descriptionController = TextEditingController(
       text: widget.draft.description,
     );
+    if (widget.draft.classId.isNotEmpty && widget.draft.name.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _autofillName(context.read<StructureBloc>().state);
+      });
+    }
   }
 
   @override
@@ -53,7 +58,7 @@ class _Step1BasicInfoState extends State<Step1BasicInfo> {
     final label = [
       className,
       if (streamName != null) '($streamName)',
-      if (year != null) year,
+      ?year,
     ].join(' ');
     setState(() {
       _nameController.text = label;
@@ -71,13 +76,15 @@ class _Step1BasicInfoState extends State<Step1BasicInfo> {
     return ListView(
       padding: EdgeInsets.all(AppSpacing.xl),
       children: [
-        const Text(
-          'Basic Information',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Text(
+          'Choose where this timetable applies.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: AppSpacing.l),
         _Dropdown<String>(
-          label: 'Academic Year',
+          label: 'Academic year',
           required: true,
           value: widget.draft.academicYearId.isEmpty
               ? null
@@ -85,8 +92,10 @@ class _Step1BasicInfoState extends State<Step1BasicInfo> {
           items: state.academicYears
               .map((y) => DropdownMenuItem(value: y.id, child: Text(y.name)))
               .toList(),
-          onChanged: (v) =>
-              setState(() => widget.draft.academicYearId = v ?? ''),
+          onChanged: (v) => setState(() {
+            widget.draft.academicYearId = v ?? '';
+            widget.draft.termId = '';
+          }),
         ),
         const SizedBox(height: AppSpacing.m),
         _Dropdown<String>(
@@ -131,7 +140,7 @@ class _Step1BasicInfoState extends State<Step1BasicInfo> {
         ],
         const SizedBox(height: AppSpacing.m),
         PulseTextField(
-          label: 'Timetable Name',
+          label: 'Timetable name',
           isRequired: true,
           controller: _nameController,
           onChanged: (v) => widget.draft.name = v,
@@ -146,11 +155,13 @@ class _Step1BasicInfoState extends State<Step1BasicInfo> {
         const SizedBox(height: AppSpacing.xl),
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton(
+          child: FilledButton.icon(
             onPressed: widget.draft.isBasicInfoComplete ? widget.onNext : null,
-            child: const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text('Next'),
+            label: const Text('Continue'),
+            icon: const Icon(Icons.arrow_forward, size: 18),
+            iconAlignment: IconAlignment.end,
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 14),
             ),
           ),
         ),
@@ -177,8 +188,13 @@ class _Dropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Guard against a stale `value` that no longer appears in `items` (e.g.
+    // the class became inactive, or the term belongs to a different
+    // academic year) - DropdownButtonFormField asserts if the value isn't
+    // one of its items, which would otherwise crash this step.
+    final safeValue = items.any((item) => item.value == value) ? value : null;
     return DropdownButtonFormField<T>(
-      initialValue: value,
+      initialValue: safeValue,
       decoration: InputDecoration(label: Text(required ? '$label *' : label)),
       items: items,
       onChanged: onChanged,

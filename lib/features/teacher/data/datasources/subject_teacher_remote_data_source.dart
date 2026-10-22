@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../../domain/entities/class_subject.dart';
 import '../../domain/entities/lesson.dart';
 import '../../domain/entities/lesson_attendance.dart';
 import '../../domain/entities/staff_role_assignment.dart';
@@ -121,10 +122,37 @@ abstract class SubjectTeacherRemoteDataSource {
     String? termId,
   });
 
+  /// Creates a new assessment, open for entry immediately. `maximumMark` is
+  /// also the maximum of its single initial component - a teacher who needs
+  /// more components edits them afterwards, this call just gets them
+  /// unblocked from "no assessments yet".
+  Future<SubjectAssessment> createAssessment({
+    required String schoolId,
+    required String campusId,
+    required String subjectId,
+    required String classId,
+    String? streamId,
+    required String academicYearId,
+    required String termId,
+    required String title,
+    required String assessmentType,
+    required double maximumMark,
+    required String createdByStaffId,
+    required String roleAssignmentId,
+  });
+
   Future<List<StudentMarkEntry>> getMarks({
     required String schoolId,
     required String assessmentId,
     required String componentId,
+  });
+
+  /// Every subject the curriculum teaches in one class, for the Class
+  /// Teacher marks-entry subject picker.
+  Future<List<ClassSubject>> getClassSubjects({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
   });
 
   /// One document per student/component, so a re-save corrects rather than
@@ -589,6 +617,70 @@ class SubjectTeacherRemoteDataSourceImpl
   }
 
   @override
+  Future<SubjectAssessment> createAssessment({
+    required String schoolId,
+    required String campusId,
+    required String subjectId,
+    required String classId,
+    String? streamId,
+    required String academicYearId,
+    required String termId,
+    required String title,
+    required String assessmentType,
+    required double maximumMark,
+    required String createdByStaffId,
+    required String roleAssignmentId,
+  }) async {
+    final ref = _assessments(schoolId).doc();
+    final componentId = _assessments(schoolId).doc().id;
+    final component = {
+      'id': componentId,
+      'name': title,
+      'maximumMark': maximumMark,
+      'weight': 100.0,
+      'isRequired': true,
+      'entryStatus': AssessmentAvailability.open.name,
+    };
+    await ref.set({
+      'schoolId': schoolId,
+      'campusId': campusId,
+      'subjectId': subjectId,
+      'classId': classId,
+      'streamId': streamId,
+      'academicYearId': academicYearId,
+      'termId': termId,
+      'assessmentTypeId': assessmentType.toLowerCase().replaceAll(' ', '_'),
+      'assessmentTypeName': assessmentType,
+      'title': title,
+      'maximumMark': maximumMark,
+      'status': AssessmentAvailability.open.name,
+      'requiresApproval': true,
+      'components': [component],
+      'roleAssignmentId': roleAssignmentId,
+      'createdByStaffId': createdByStaffId,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    return _assessmentFromDoc(ref.id, schoolId, {
+      'schoolId': schoolId,
+      'campusId': campusId,
+      'subjectId': subjectId,
+      'classId': classId,
+      'streamId': streamId,
+      'academicYearId': academicYearId,
+      'termId': termId,
+      'assessmentTypeId': assessmentType.toLowerCase().replaceAll(' ', '_'),
+      'assessmentTypeName': assessmentType,
+      'title': title,
+      'maximumMark': maximumMark,
+      'status': AssessmentAvailability.open.name,
+      'requiresApproval': true,
+      'components': [component],
+    });
+  }
+
+  @override
   Future<List<StudentMarkEntry>> getMarks({
     required String schoolId,
     required String assessmentId,
@@ -610,6 +702,43 @@ class SubjectTeacherRemoteDataSourceImpl
         enteredAt: _toDate(data['enteredAt']),
       );
     }).toList();
+  }
+
+  @override
+  Future<List<ClassSubject>> getClassSubjects({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+  }) async {
+    final assignments = await firestore
+        .collection('structure_curriculum_assignments')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('classId', isEqualTo: classId)
+        .where('academicYearId', isEqualTo: academicYearId)
+        .where('isActive', isEqualTo: true)
+        .get();
+
+    final subjectIds = assignments.docs
+        .map((d) => d.data()['subjectId'] as String? ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    if (subjectIds.isEmpty) return const [];
+
+    // Firestore whereIn caps at 30 values - a class's subject list is
+    // nowhere near that, so one query covers every real curriculum.
+    final subjectsSnapshot = await firestore
+        .collection('subjects')
+        .where('schoolId', isEqualTo: schoolId)
+        .where(FieldPath.documentId, whereIn: subjectIds.toList())
+        .get();
+
+    return subjectsSnapshot.docs
+        .map(
+          (d) =>
+              ClassSubject(id: d.id, name: d.data()['name'] as String? ?? d.id),
+        )
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
   }
 
   @override
@@ -750,6 +879,7 @@ class SubjectTeacherRemoteDataSourceImpl
       assignedAt: _toDate(data['assignedAt']) ?? DateTime(1970),
       updatedBy: data['updatedBy'] as String?,
       updatedAt: _toDate(data['updatedAt']),
+      monthlyBonusAmount: (data['monthlyBonusAmount'] as num?)?.toDouble(),
     );
   }
 
@@ -786,6 +916,8 @@ class SubjectTeacherRemoteDataSourceImpl
       'assignedAt': Timestamp.fromDate(a.assignedAt),
       if (a.updatedBy != null) 'updatedBy': a.updatedBy,
       'updatedAt': Timestamp.now(),
+      if (a.monthlyBonusAmount != null)
+        'monthlyBonusAmount': a.monthlyBonusAmount,
     };
   }
 

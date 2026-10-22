@@ -5,13 +5,13 @@ import '../../domain/entities/attendance_config_entities.dart';
 import 'structure_ui_kit.dart';
 
 const List<Color> kAttendanceColorSwatches = [
-  Colors.green,
-  Colors.red,
-  Colors.orange,
-  Colors.blue,
-  Colors.purple,
-  Colors.teal,
-  Colors.grey,
+  Color(0xFF43A047),
+  Color(0xFFE53935),
+  Color(0xFFFB8C00),
+  Color(0xFF1E88E5),
+  Color(0xFF8E24AA),
+  Color(0xFF00897B),
+  Color(0xFF757575),
 ];
 
 String _colorToHex(Color c) =>
@@ -83,16 +83,16 @@ Future<void> showAttendanceTypeFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        AttendanceTypeDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          colorHex: _colorToHex(selectedColor),
-          isActive: isActive,
-        ),
+      final type = AttendanceTypeDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        colorHex: _colorToHex(selectedColor),
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(type);
     },
   );
 }
@@ -136,15 +136,15 @@ Future<void> showAttendanceSessionFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        AttendanceSessionDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          isActive: isActive,
-        ),
+      final session = AttendanceSessionDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(session);
     },
   );
 }

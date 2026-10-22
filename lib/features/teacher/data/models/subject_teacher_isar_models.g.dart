@@ -78,88 +78,93 @@ const StaffRoleAssignmentIsarSchema = CollectionSchema(
       name: r'isPrimary',
       type: IsarType.bool,
     ),
-    r'permissions': PropertySchema(
+    r'monthlyBonusAmount': PropertySchema(
       id: 12,
+      name: r'monthlyBonusAmount',
+      type: IsarType.double,
+    ),
+    r'permissions': PropertySchema(
+      id: 13,
       name: r'permissions',
       type: IsarType.stringList,
     ),
     r'roleDefinitionId': PropertySchema(
-      id: 13,
+      id: 14,
       name: r'roleDefinitionId',
       type: IsarType.string,
     ),
     r'roleType': PropertySchema(
-      id: 14,
+      id: 15,
       name: r'roleType',
       type: IsarType.string,
     ),
     r'schoolId': PropertySchema(
-      id: 15,
+      id: 16,
       name: r'schoolId',
       type: IsarType.string,
     ),
     r'scopeTermIds': PropertySchema(
-      id: 16,
+      id: 17,
       name: r'scopeTermIds',
       type: IsarType.stringList,
     ),
     r'staffId': PropertySchema(
-      id: 17,
+      id: 18,
       name: r'staffId',
       type: IsarType.string,
     ),
     r'startDate': PropertySchema(
-      id: 18,
+      id: 19,
       name: r'startDate',
       type: IsarType.dateTime,
     ),
     r'status': PropertySchema(
-      id: 19,
+      id: 20,
       name: r'status',
       type: IsarType.string,
     ),
     r'streamId': PropertySchema(
-      id: 20,
+      id: 21,
       name: r'streamId',
       type: IsarType.string,
     ),
     r'streamName': PropertySchema(
-      id: 21,
+      id: 22,
       name: r'streamName',
       type: IsarType.string,
     ),
     r'subjectId': PropertySchema(
-      id: 22,
+      id: 23,
       name: r'subjectId',
       type: IsarType.string,
     ),
     r'subjectName': PropertySchema(
-      id: 23,
+      id: 24,
       name: r'subjectName',
       type: IsarType.string,
     ),
     r'substituteForStaffId': PropertySchema(
-      id: 24,
+      id: 25,
       name: r'substituteForStaffId',
       type: IsarType.string,
     ),
     r'termId': PropertySchema(
-      id: 25,
+      id: 26,
       name: r'termId',
       type: IsarType.string,
     ),
     r'updatedAt': PropertySchema(
-      id: 26,
+      id: 27,
       name: r'updatedAt',
       type: IsarType.dateTime,
     ),
     r'updatedBy': PropertySchema(
-      id: 27,
+      id: 28,
       name: r'updatedBy',
       type: IsarType.string,
     ),
     r'userId': PropertySchema(
-      id: 28,
+      id: 29,
       name: r'userId',
       type: IsarType.string,
     )
@@ -361,23 +366,24 @@ void _staffRoleAssignmentIsarSerialize(
   writer.writeDateTime(offsets[9], object.endDate);
   writer.writeString(offsets[10], object.houseId);
   writer.writeBool(offsets[11], object.isPrimary);
-  writer.writeStringList(offsets[12], object.permissions);
-  writer.writeString(offsets[13], object.roleDefinitionId);
-  writer.writeString(offsets[14], object.roleType);
-  writer.writeString(offsets[15], object.schoolId);
-  writer.writeStringList(offsets[16], object.scopeTermIds);
-  writer.writeString(offsets[17], object.staffId);
-  writer.writeDateTime(offsets[18], object.startDate);
-  writer.writeString(offsets[19], object.status);
-  writer.writeString(offsets[20], object.streamId);
-  writer.writeString(offsets[21], object.streamName);
-  writer.writeString(offsets[22], object.subjectId);
-  writer.writeString(offsets[23], object.subjectName);
-  writer.writeString(offsets[24], object.substituteForStaffId);
-  writer.writeString(offsets[25], object.termId);
-  writer.writeDateTime(offsets[26], object.updatedAt);
-  writer.writeString(offsets[27], object.updatedBy);
-  writer.writeString(offsets[28], object.userId);
+  writer.writeDouble(offsets[12], object.monthlyBonusAmount);
+  writer.writeStringList(offsets[13], object.permissions);
+  writer.writeString(offsets[14], object.roleDefinitionId);
+  writer.writeString(offsets[15], object.roleType);
+  writer.writeString(offsets[16], object.schoolId);
+  writer.writeStringList(offsets[17], object.scopeTermIds);
+  writer.writeString(offsets[18], object.staffId);
+  writer.writeDateTime(offsets[19], object.startDate);
+  writer.writeString(offsets[20], object.status);
+  writer.writeString(offsets[21], object.streamId);
+  writer.writeString(offsets[22], object.streamName);
+  writer.writeString(offsets[23], object.subjectId);
+  writer.writeString(offsets[24], object.subjectName);
+  writer.writeString(offsets[25], object.substituteForStaffId);
+  writer.writeString(offsets[26], object.termId);
+  writer.writeDateTime(offsets[27], object.updatedAt);
+  writer.writeString(offsets[28], object.updatedBy);
+  writer.writeString(offsets[29], object.userId);
 }
 
 StaffRoleAssignmentIsar _staffRoleAssignmentIsarDeserialize(
@@ -400,23 +406,24 @@ StaffRoleAssignmentIsar _staffRoleAssignmentIsarDeserialize(
   object.houseId = reader.readStringOrNull(offsets[10]);
   object.id = id;
   object.isPrimary = reader.readBool(offsets[11]);
-  object.permissions = reader.readStringList(offsets[12]) ?? [];
-  object.roleDefinitionId = reader.readString(offsets[13]);
-  object.roleType = reader.readString(offsets[14]);
-  object.schoolId = reader.readString(offsets[15]);
-  object.scopeTermIds = reader.readStringList(offsets[16]) ?? [];
-  object.staffId = reader.readString(offsets[17]);
-  object.startDate = reader.readDateTime(offsets[18]);
-  object.status = reader.readString(offsets[19]);
-  object.streamId = reader.readStringOrNull(offsets[20]);
-  object.streamName = reader.readStringOrNull(offsets[21]);
-  object.subjectId = reader.readStringOrNull(offsets[22]);
-  object.subjectName = reader.readStringOrNull(offsets[23]);
-  object.substituteForStaffId = reader.readStringOrNull(offsets[24]);
-  object.termId = reader.readStringOrNull(offsets[25]);
-  object.updatedAt = reader.readDateTimeOrNull(offsets[26]);
-  object.updatedBy = reader.readStringOrNull(offsets[27]);
-  object.userId = reader.readString(offsets[28]);
+  object.monthlyBonusAmount = reader.readDoubleOrNull(offsets[12]);
+  object.permissions = reader.readStringList(offsets[13]) ?? [];
+  object.roleDefinitionId = reader.readString(offsets[14]);
+  object.roleType = reader.readString(offsets[15]);
+  object.schoolId = reader.readString(offsets[16]);
+  object.scopeTermIds = reader.readStringList(offsets[17]) ?? [];
+  object.staffId = reader.readString(offsets[18]);
+  object.startDate = reader.readDateTime(offsets[19]);
+  object.status = reader.readString(offsets[20]);
+  object.streamId = reader.readStringOrNull(offsets[21]);
+  object.streamName = reader.readStringOrNull(offsets[22]);
+  object.subjectId = reader.readStringOrNull(offsets[23]);
+  object.subjectName = reader.readStringOrNull(offsets[24]);
+  object.substituteForStaffId = reader.readStringOrNull(offsets[25]);
+  object.termId = reader.readStringOrNull(offsets[26]);
+  object.updatedAt = reader.readDateTimeOrNull(offsets[27]);
+  object.updatedBy = reader.readStringOrNull(offsets[28]);
+  object.userId = reader.readString(offsets[29]);
   return object;
 }
 
@@ -452,23 +459,23 @@ P _staffRoleAssignmentIsarDeserializeProp<P>(
     case 11:
       return (reader.readBool(offset)) as P;
     case 12:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readDoubleOrNull(offset)) as P;
     case 13:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 14:
       return (reader.readString(offset)) as P;
     case 15:
       return (reader.readString(offset)) as P;
     case 16:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readString(offset)) as P;
     case 17:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 18:
-      return (reader.readDateTime(offset)) as P;
-    case 19:
       return (reader.readString(offset)) as P;
+    case 19:
+      return (reader.readDateTime(offset)) as P;
     case 20:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readString(offset)) as P;
     case 21:
       return (reader.readStringOrNull(offset)) as P;
     case 22:
@@ -480,10 +487,12 @@ P _staffRoleAssignmentIsarDeserializeProp<P>(
     case 25:
       return (reader.readStringOrNull(offset)) as P;
     case 26:
-      return (reader.readDateTimeOrNull(offset)) as P;
-    case 27:
       return (reader.readStringOrNull(offset)) as P;
+    case 27:
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 28:
+      return (reader.readStringOrNull(offset)) as P;
+    case 29:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -2295,6 +2304,90 @@ extension StaffRoleAssignmentIsarQueryFilter on QueryBuilder<
       return query.addFilterCondition(FilterCondition.equalTo(
         property: r'isPrimary',
         value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar,
+      QAfterFilterCondition> monthlyBonusAmountIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'monthlyBonusAmount',
+      ));
+    });
+  }
+
+  QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar,
+      QAfterFilterCondition> monthlyBonusAmountIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'monthlyBonusAmount',
+      ));
+    });
+  }
+
+  QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar,
+      QAfterFilterCondition> monthlyBonusAmountEqualTo(
+    double? value, {
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'monthlyBonusAmount',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar,
+      QAfterFilterCondition> monthlyBonusAmountGreaterThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'monthlyBonusAmount',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar,
+      QAfterFilterCondition> monthlyBonusAmountLessThan(
+    double? value, {
+    bool include = false,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'monthlyBonusAmount',
+        value: value,
+        epsilon: epsilon,
+      ));
+    });
+  }
+
+  QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar,
+      QAfterFilterCondition> monthlyBonusAmountBetween(
+    double? lower,
+    double? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    double epsilon = Query.epsilon,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'monthlyBonusAmount',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        epsilon: epsilon,
       ));
     });
   }
@@ -4981,6 +5074,20 @@ extension StaffRoleAssignmentIsarQuerySortBy
   }
 
   QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar, QAfterSortBy>
+      sortByMonthlyBonusAmount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'monthlyBonusAmount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar, QAfterSortBy>
+      sortByMonthlyBonusAmountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'monthlyBonusAmount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar, QAfterSortBy>
       sortByRoleDefinitionId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'roleDefinitionId', Sort.asc);
@@ -5376,6 +5483,20 @@ extension StaffRoleAssignmentIsarQuerySortThenBy on QueryBuilder<
   }
 
   QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar, QAfterSortBy>
+      thenByMonthlyBonusAmount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'monthlyBonusAmount', Sort.asc);
+    });
+  }
+
+  QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar, QAfterSortBy>
+      thenByMonthlyBonusAmountDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'monthlyBonusAmount', Sort.desc);
+    });
+  }
+
+  QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar, QAfterSortBy>
       thenByRoleDefinitionId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'roleDefinitionId', Sort.asc);
@@ -5674,6 +5795,13 @@ extension StaffRoleAssignmentIsarQueryWhereDistinct on QueryBuilder<
   }
 
   QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar, QDistinct>
+      distinctByMonthlyBonusAmount() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'monthlyBonusAmount');
+    });
+  }
+
+  QueryBuilder<StaffRoleAssignmentIsar, StaffRoleAssignmentIsar, QDistinct>
       distinctByPermissions() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'permissions');
@@ -5884,6 +6012,13 @@ extension StaffRoleAssignmentIsarQueryProperty on QueryBuilder<
       isPrimaryProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'isPrimary');
+    });
+  }
+
+  QueryBuilder<StaffRoleAssignmentIsar, double?, QQueryOperations>
+      monthlyBonusAmountProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'monthlyBonusAmount');
     });
   }
 
@@ -9801,38 +9936,43 @@ const SubjectTeacherOfflineOperationIsarSchema = CollectionSchema(
       name: r'lastError',
       type: IsarType.string,
     ),
-    r'operationId': PropertySchema(
+    r'nextRetryAt': PropertySchema(
       id: 6,
+      name: r'nextRetryAt',
+      type: IsarType.dateTime,
+    ),
+    r'operationId': PropertySchema(
+      id: 7,
       name: r'operationId',
       type: IsarType.string,
     ),
     r'payloadJson': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'payloadJson',
       type: IsarType.string,
     ),
     r'retryCount': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'retryCount',
       type: IsarType.long,
     ),
     r'roleAssignmentId': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'roleAssignmentId',
       type: IsarType.string,
     ),
     r'schoolId': PropertySchema(
-      id: 10,
+      id: 11,
       name: r'schoolId',
       type: IsarType.string,
     ),
     r'status': PropertySchema(
-      id: 11,
+      id: 12,
       name: r'status',
       type: IsarType.string,
     ),
     r'userId': PropertySchema(
-      id: 12,
+      id: 13,
       name: r'userId',
       type: IsarType.string,
     )
@@ -9941,13 +10081,14 @@ void _subjectTeacherOfflineOperationIsarSerialize(
   writer.writeString(offsets[3], object.entityId);
   writer.writeString(offsets[4], object.entityType);
   writer.writeString(offsets[5], object.lastError);
-  writer.writeString(offsets[6], object.operationId);
-  writer.writeString(offsets[7], object.payloadJson);
-  writer.writeLong(offsets[8], object.retryCount);
-  writer.writeString(offsets[9], object.roleAssignmentId);
-  writer.writeString(offsets[10], object.schoolId);
-  writer.writeString(offsets[11], object.status);
-  writer.writeString(offsets[12], object.userId);
+  writer.writeDateTime(offsets[6], object.nextRetryAt);
+  writer.writeString(offsets[7], object.operationId);
+  writer.writeString(offsets[8], object.payloadJson);
+  writer.writeLong(offsets[9], object.retryCount);
+  writer.writeString(offsets[10], object.roleAssignmentId);
+  writer.writeString(offsets[11], object.schoolId);
+  writer.writeString(offsets[12], object.status);
+  writer.writeString(offsets[13], object.userId);
 }
 
 SubjectTeacherOfflineOperationIsar
@@ -9965,13 +10106,14 @@ SubjectTeacherOfflineOperationIsar
   object.entityType = reader.readString(offsets[4]);
   object.id = id;
   object.lastError = reader.readStringOrNull(offsets[5]);
-  object.operationId = reader.readString(offsets[6]);
-  object.payloadJson = reader.readString(offsets[7]);
-  object.retryCount = reader.readLong(offsets[8]);
-  object.roleAssignmentId = reader.readString(offsets[9]);
-  object.schoolId = reader.readString(offsets[10]);
-  object.status = reader.readString(offsets[11]);
-  object.userId = reader.readString(offsets[12]);
+  object.nextRetryAt = reader.readDateTimeOrNull(offsets[6]);
+  object.operationId = reader.readString(offsets[7]);
+  object.payloadJson = reader.readString(offsets[8]);
+  object.retryCount = reader.readLong(offsets[9]);
+  object.roleAssignmentId = reader.readString(offsets[10]);
+  object.schoolId = reader.readString(offsets[11]);
+  object.status = reader.readString(offsets[12]);
+  object.userId = reader.readString(offsets[13]);
   return object;
 }
 
@@ -9995,18 +10137,20 @@ P _subjectTeacherOfflineOperationIsarDeserializeProp<P>(
     case 5:
       return (reader.readStringOrNull(offset)) as P;
     case 6:
-      return (reader.readString(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 7:
       return (reader.readString(offset)) as P;
     case 8:
-      return (reader.readLong(offset)) as P;
-    case 9:
       return (reader.readString(offset)) as P;
+    case 9:
+      return (reader.readLong(offset)) as P;
     case 10:
       return (reader.readString(offset)) as P;
     case 11:
       return (reader.readString(offset)) as P;
     case 12:
+      return (reader.readString(offset)) as P;
+    case 13:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -11290,6 +11434,92 @@ extension SubjectTeacherOfflineOperationIsarQueryFilter on QueryBuilder<
   QueryBuilder<
       SubjectTeacherOfflineOperationIsar,
       SubjectTeacherOfflineOperationIsar,
+      QAfterFilterCondition> nextRetryAtIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'nextRetryAt',
+      ));
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterFilterCondition> nextRetryAtIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'nextRetryAt',
+      ));
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterFilterCondition> nextRetryAtEqualTo(DateTime? value) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'nextRetryAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterFilterCondition> nextRetryAtGreaterThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'nextRetryAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterFilterCondition> nextRetryAtLessThan(
+    DateTime? value, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'nextRetryAt',
+        value: value,
+      ));
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterFilterCondition> nextRetryAtBetween(
+    DateTime? lower,
+    DateTime? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'nextRetryAt',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+      ));
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
       QAfterFilterCondition> operationIdEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -12359,6 +12589,22 @@ extension SubjectTeacherOfflineOperationIsarQuerySortBy on QueryBuilder<
   }
 
   QueryBuilder<SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar, QAfterSortBy> sortByNextRetryAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'nextRetryAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterSortBy> sortByNextRetryAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'nextRetryAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<SubjectTeacherOfflineOperationIsar,
       SubjectTeacherOfflineOperationIsar, QAfterSortBy> sortByOperationId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operationId', Sort.asc);
@@ -12568,6 +12814,22 @@ extension SubjectTeacherOfflineOperationIsarQuerySortThenBy on QueryBuilder<
   }
 
   QueryBuilder<SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar, QAfterSortBy> thenByNextRetryAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'nextRetryAt', Sort.asc);
+    });
+  }
+
+  QueryBuilder<
+      SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar,
+      QAfterSortBy> thenByNextRetryAtDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'nextRetryAt', Sort.desc);
+    });
+  }
+
+  QueryBuilder<SubjectTeacherOfflineOperationIsar,
       SubjectTeacherOfflineOperationIsar, QAfterSortBy> thenByOperationId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'operationId', Sort.asc);
@@ -12730,6 +12992,13 @@ extension SubjectTeacherOfflineOperationIsarQueryWhereDistinct on QueryBuilder<
     });
   }
 
+  QueryBuilder<SubjectTeacherOfflineOperationIsar,
+      SubjectTeacherOfflineOperationIsar, QDistinct> distinctByNextRetryAt() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'nextRetryAt');
+    });
+  }
+
   QueryBuilder<
       SubjectTeacherOfflineOperationIsar,
       SubjectTeacherOfflineOperationIsar,
@@ -12843,6 +13112,13 @@ extension SubjectTeacherOfflineOperationIsarQueryProperty on QueryBuilder<
       lastErrorProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'lastError');
+    });
+  }
+
+  QueryBuilder<SubjectTeacherOfflineOperationIsar, DateTime?, QQueryOperations>
+      nextRetryAtProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'nextRetryAt');
     });
   }
 

@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dartz/dartz.dart';
 
 import 'package:school_pulse/core/error/failures.dart';
@@ -5,6 +8,7 @@ import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
 
 import '../../domain/entities/active_responsibility_context.dart';
+import '../../domain/entities/canonical_report_card.dart';
 import '../../domain/entities/class_report_entry.dart';
 import '../../domain/policies/class_report_policy.dart';
 import '../../domain/repositories/class_report_repository.dart';
@@ -12,6 +16,7 @@ import '../../domain/repositories/class_student_repository.dart';
 import '../../domain/services/class_teacher_assignment_service.dart';
 import '../../domain/services/subject_audit_service.dart';
 import '../datasources/class_teacher_remote_data_source.dart';
+import '../datasources/report_cards_remote_data_source.dart';
 
 class ClassReportRepositoryImpl implements ClassReportRepository {
   final ClassTeacherRemoteDataSource remoteDataSource;
@@ -19,6 +24,8 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
   final ClassTeacherAssignmentService assignmentService;
   final SubjectAuditService auditService;
   final NetworkInfo networkInfo;
+  final FirebaseFunctions functions;
+  final ReportCardsRemoteDataSource reportCardsDataSource;
 
   ClassReportRepositoryImpl({
     required this.remoteDataSource,
@@ -26,7 +33,23 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
     required this.assignmentService,
     required this.auditService,
     required this.networkInfo,
+    required this.functions,
+    required this.reportCardsDataSource,
   });
+
+  /// The Report Card Engine's Cloud Functions run in their default region
+  /// (us-central1, i.e. no explicit .region() in functions/index.js) -
+  /// unlike the europe-west1 callables used elsewhere in this app, so the
+  /// default FirebaseFunctions instance (not instanceFor(region: ...)) is
+  /// the correct one to call them through.
+  Failure _mapError(Object error) {
+    if (error is FirebaseFunctionsException) {
+      return ServerFailure(
+        error.message ?? 'Could not complete this report card action.',
+      );
+    }
+    return const ServerFailure('Could not complete this report card action.');
+  }
 
   /// What a school gets before it has configured anything. Deliberately
   /// permissive on completeness: refusing to generate a report against a
@@ -336,9 +359,12 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
     }
 
     try {
-      // Marks the entries as ready and hands off. The Report Card Engine
-      // computes grades and renders the PDF; publication remains the academic
-      // office's decision, which is why nothing here sets a published status.
+      // Marks the entries as ready, then asks the Report Card Engine to
+      // actually compute grades/totals/position and write the canonical
+      // schools/{id}/reportCards snapshot each entry now points to - this
+      // call was previously missing entirely, so "Create New Report" only
+      // ever flipped local status without ever producing a report to
+      // review or sign.
       for (final entry in entries) {
         if (entry.status == ReportEntryStatus.classTeacherCompleted) continue;
         await remoteDataSource.saveReportEntry(
@@ -352,6 +378,16 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
         );
       }
 
+      final callable = functions.httpsCallable('generateClassReportCards');
+      await callable.call(<String, dynamic>{
+        'classId': context.classId,
+        'streamId': context.streamId,
+        'academicYearId': context.academicYearId,
+        'termId': context.termId,
+        if (entries.isNotEmpty)
+          'studentIds': entries.map((e) => e.studentId).toList(),
+      });
+
       await auditService.record(
         context: context,
         action: 'report.generated',
@@ -361,8 +397,113 @@ class ClassReportRepositoryImpl implements ClassReportRepository {
       );
 
       return Right(entries.length);
+    } on FirebaseFunctionsException catch (e) {
+      return Left(_mapError(e));
     } catch (_) {
       return const Left(ServerFailure('Could not generate these reports.'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, SubmitReportCardsResult>> submitReportCardsToDean({
+    required ActiveResponsibilityContext context,
+    required List<String> reportCardIds,
+  }) async {
+    if (reportCardIds.isEmpty) {
+      return const Right(SubmitReportCardsResult());
+    }
+    if (!await networkInfo.isConnected) {
+      return const Left(
+        OfflineNotAllowedFailure(
+          'Submitting reports needs an internet connection.',
+        ),
+      );
+    }
+    try {
+      final callable = functions.httpsCallable('submitReportCardsToDean');
+      final result = await callable.call(<String, dynamic>{
+        'reportCardIds': reportCardIds,
+      });
+      final data = Map<String, dynamic>.from(result.data as Map);
+      return Right(
+        SubmitReportCardsResult(
+          submitted: List<String>.from(data['submitted'] as List? ?? const []),
+          failed: (data['failed'] as List? ?? const [])
+              .map(
+                (f) => SubmitReportCardFailure(
+                  reportCardId: (f as Map)['reportCardId'] as String,
+                  reason: f['reason'] as String? ?? 'unknown_error',
+                ),
+              )
+              .toList(),
+        ),
+      );
+    } on FirebaseFunctionsException catch (e) {
+      return Left(_mapError(e));
+    } catch (_) {
+      return const Left(
+        ServerFailure('Could not submit these reports to the Dean.'),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, CanonicalReportCard>> getReportCard({
+    required ActiveResponsibilityContext context,
+    required String reportCardId,
+  }) async {
+    try {
+      final card = await reportCardsDataSource.getReportCard(
+        schoolId: context.schoolId,
+        reportCardId: reportCardId,
+      );
+      if (card == null) {
+        return const Left(ServerFailure('This report could not be found.'));
+      }
+      return Right(card);
+    } catch (_) {
+      return const Left(ServerFailure('Could not load this report.'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<int>>> previewReportCardPdf({
+    required String reportCardId,
+  }) async {
+    try {
+      final callable = functions.httpsCallable('previewReportCardPdf');
+      final result = await callable.call(<String, dynamic>{
+        'reportCardId': reportCardId,
+      });
+      final data = Map<String, dynamic>.from(result.data as Map);
+      final base64Pdf = data['base64Pdf'] as String;
+      return Right(base64Decode(base64Pdf));
+    } on FirebaseFunctionsException catch (e) {
+      return Left(_mapError(e));
+    } catch (_) {
+      return const Left(
+        ServerFailure('Could not render this report as a PDF.'),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> getOfficialReportCardPdfUrl({
+    required String reportCardId,
+  }) async {
+    try {
+      final generate = functions.httpsCallable('generateReportCardPdf');
+      await generate.call(<String, dynamic>{'reportCardId': reportCardId});
+      final download = functions.httpsCallable('getReportCardPdfDownloadUrl');
+      final result = await download.call(<String, dynamic>{
+        'reportCardId': reportCardId,
+      });
+      final data = Map<String, dynamic>.from(result.data as Map);
+      return Right(data['url'] as String);
+    } on FirebaseFunctionsException catch (e) {
+      return Left(_mapError(e));
+    } catch (_) {
+      return const Left(ServerFailure('Could not get this report\'s PDF.'));
     }
   }
 }

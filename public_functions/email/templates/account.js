@@ -25,15 +25,15 @@ module.exports = {
     eyebrow: 'Account created',
     title: 'Your staff account is ready',
     status: 'success',
-    bodyText: `Your School Pulse staff account at ${data.schoolName} has been created.`,
-    bodyHtml: `<p>Your School Pulse staff account at <strong>${escapeHtml(data.schoolName)}</strong> has been created.</p>`,
+    bodyText: `Your School Pulse staff account at ${data.schoolName} has been created. Use the link below to set your password before you sign in.`,
+    bodyHtml: `<p>Your School Pulse staff account at <strong>${escapeHtml(data.schoolName)}</strong> has been created. Use the button below to set your password before you sign in.</p>`,
     infoRows: [
       { label: 'School', value: data.schoolName },
       { label: 'Email', value: data.email },
       { label: 'Role', value: data.roleLabel },
     ],
-    secondaryText: 'Sign in with your credentials to get started.',
-    cta: { label: 'Sign In', url: STATUS_URL },
+    secondaryText: 'This link is required to set your password — no password was sent by email. If you did not expect this account, contact your school administrator.',
+    cta: { label: 'Set Your Password', url: data.setupLink || STATUS_URL },
   }),
 
   password_reset: (data) => ({

@@ -44,11 +44,17 @@ class NotificationService {
           debugPrint('User granted permission');
         }
 
-        // Get the token for this device. iOS simulators have no APNs token,
-        // so getToken() throws there - that's expected, not a failure worth
-        // taking the whole app down over.
+        // Get the token for this device. iOS simulators have no APNs token:
+        // older ones make getToken() throw, but newer simulators (observed
+        // on the iOS 26 iPhone 16 Pro Max sim) instead leave it pending
+        // forever - which, since initialize() is awaited before runApp(),
+        // leaves the whole app stuck on the splash screen. Bound it with a
+        // timeout so a missing APNs token can never block startup.
         try {
-          String? token = await _fcm.getToken();
+          String? token = await _fcm.getToken().timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => null,
+          );
           final uid = _auth.currentUser?.uid;
           if (token != null && uid != null) {
             await _saveTokenToDatabase(uid, token);

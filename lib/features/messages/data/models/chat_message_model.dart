@@ -79,6 +79,7 @@ class ChatMessageModel {
   static Map<String, dynamic> toCreateJson({
     required String senderId,
     required String senderName,
+    String? senderAvatar,
     required String content,
     required MessageType type,
     required List<String> participantIds,
@@ -100,6 +101,7 @@ class ChatMessageModel {
     return {
       'senderId': senderId,
       'senderName': senderName,
+      'senderAvatar': ?senderAvatar,
       'content': content,
       'type': type.name,
       'participantIds': participantIds,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -53,20 +52,22 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: colors.surface,
       appBar: AppBar(
         title: Text(
-          'Chat Settings',
+          'CHAT SETTINGS',
           style: AppTypography.titleLarge.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+            color: colors.onSurface,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
           ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: colors.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -76,36 +77,40 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
               builder: (context, user) => ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 children: [
-                  _buildSectionHeader('Display'),
+                  _buildSectionHeader(context, 'Display'),
                   _buildSettingItem(
+                    context,
                     title: 'Theme',
                     subtitle: 'System default',
-                    trailing: const Icon(
+                    trailing: Icon(
                       Icons.chevron_right,
-                      color: Colors.white24,
+                      color: colors.onSurfaceVariant,
                     ),
                     onTap: () => context.showMessagingSnack(
                       'Change the app theme from Settings › Appearance',
                     ),
                   ),
                   _buildSettingItem(
+                    context,
                     title: 'Wallpaper',
-                    trailing: const Icon(
+                    trailing: Icon(
                       Icons.chevron_right,
-                      color: Colors.white24,
+                      color: colors.onSurfaceVariant,
                     ),
                     onTap: () => context.showMessagingSnack(
                       'Chat wallpapers are not available yet',
                     ),
                   ),
                   _buildSettingItem(
+                    context,
                     title: 'Font size',
                     subtitle: _fontSize,
                     onTap: _showFontSizeDialog,
                   ),
                   const SizedBox(height: 16),
-                  _buildSectionHeader('Chat Settings'),
+                  _buildSectionHeader(context, 'Chat Settings'),
                   _buildSwitchItem(
+                    context,
                     title: 'Enter is send',
                     subtitle: 'Enter key will send your message',
                     value: _enterIsSend,
@@ -116,6 +121,7 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                     ),
                   ),
                   _buildSwitchItem(
+                    context,
                     title: 'Media visibility',
                     subtitle:
                         'Show newly downloaded media in your phone\'s gallery',
@@ -127,8 +133,9 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildSectionHeader('Archived Chats'),
+                  _buildSectionHeader(context, 'Archived Chats'),
                   _buildSwitchItem(
+                    context,
                     title: 'Keep chats archived',
                     subtitle:
                         'Archived chats will remain archived when you receive a new message',
@@ -140,11 +147,12 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildSectionHeader('History'),
+                  _buildSectionHeader(context, 'History'),
                   _buildSettingItem(
-                    leading: const Icon(
+                    context,
+                    leading: Icon(
                       Icons.archive_outlined,
-                      color: Colors.white70,
+                      color: colors.onSurfaceVariant,
                     ),
                     title: 'Archive all chats',
                     onTap: () => _confirmBulkAction(
@@ -158,9 +166,10 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                     ),
                   ),
                   _buildSettingItem(
-                    leading: const Icon(
+                    context,
+                    leading: Icon(
                       Icons.clear_all_rounded,
-                      color: Colors.white70,
+                      color: colors.onSurfaceVariant,
                     ),
                     title: 'Clear all chats',
                     onTap: () => _confirmBulkAction(
@@ -174,12 +183,13 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
                     ),
                   ),
                   _buildSettingItem(
+                    context,
                     leading: const Icon(
                       Icons.delete_outline_rounded,
-                      color: Colors.redAccent,
+                      color: Colors.black,
                     ),
                     title: 'Delete all chats',
-                    titleColor: Colors.redAccent,
+                    titleColor: Colors.black,
                     onTap: () => _confirmBulkAction(
                       user,
                       title: 'Delete all chats?',
@@ -207,21 +217,45 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     required String done,
     bool destructive = false,
   }) async {
+    final colors = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(title),
-        content: Text(body),
+        backgroundColor: colors.surface,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        title: Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            color: colors.onSurface,
+          ),
+        ),
+        content: Text(
+          body.toUpperCase(),
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: colors.onSurface,
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(
+              'CANCEL',
+              style: TextStyle(
+                color: colors.onSurface,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(
-              confirmLabel,
-              style: TextStyle(color: destructive ? Colors.red : null),
+              confirmLabel.toUpperCase(),
+              style: TextStyle(
+                color: colors.onSurface,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],
@@ -239,21 +273,23 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     }
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, AppSpacing.l, 8, AppSpacing.s),
       child: Text(
         title.toUpperCase(),
         style: AppTypography.labelMedium.copyWith(
-          color: AppColors.electricBlue,
-          fontWeight: FontWeight.bold,
+          color: colors.onSurface,
+          fontWeight: FontWeight.w900,
           letterSpacing: 1.2,
         ),
       ),
     );
   }
 
-  Widget _buildSettingItem({
+  Widget _buildSettingItem(
+    BuildContext context, {
     Widget? leading,
     required String title,
     String? subtitle,
@@ -261,27 +297,30 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     Color? titleColor,
     VoidCallback? onTap,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        color: colors.surface,
+        border: Border.all(color: colors.onSurface, width: 1),
       ),
       child: ListTile(
         onTap: onTap,
         leading: leading,
         title: Text(
-          title,
+          title.toUpperCase(),
           style: AppTypography.bodyLarge.copyWith(
-            color: titleColor ?? Colors.white,
-            fontWeight: FontWeight.w600,
+            color: titleColor ?? colors.onSurface,
+            fontWeight: FontWeight.w900,
           ),
         ),
         subtitle: subtitle != null
             ? Text(
-                subtitle,
-                style: AppTypography.bodySmall.copyWith(color: Colors.white60),
+                subtitle.toUpperCase(),
+                style: AppTypography.bodySmall.copyWith(
+                  color: colors.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
               )
             : null,
         trailing: trailing,
@@ -289,59 +328,71 @@ class _ChatSettingsScreenState extends State<ChatSettingsScreen> {
     );
   }
 
-  Widget _buildSwitchItem({
+  Widget _buildSwitchItem(
+    BuildContext context, {
     required String title,
     required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        color: colors.surface,
+        border: Border.all(color: colors.onSurface, width: 1),
       ),
       child: SwitchListTile(
         title: Text(
-          title,
+          title.toUpperCase(),
           style: AppTypography.bodyLarge.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
+            color: colors.onSurface,
+            fontWeight: FontWeight.w900,
           ),
         ),
         subtitle: Text(
-          subtitle,
-          style: AppTypography.bodySmall.copyWith(color: Colors.white60),
+          subtitle.toUpperCase(),
+          style: AppTypography.bodySmall.copyWith(
+            color: colors.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
+          ),
         ),
         value: value,
         onChanged: onChanged,
-        activeThumbColor: AppColors.electricBlue,
+        activeThumbColor: colors.onSurface,
+        activeTrackColor: colors.onSurface.withValues(alpha: 0.5),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
     );
   }
 
   void _showFontSizeDialog() {
+    final colors = Theme.of(context).colorScheme;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surfaceDark,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: colors.surface,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         title: Text(
-          'Font size',
-          style: AppTypography.titleLarge.copyWith(color: Colors.white),
+          'FONT SIZE',
+          style: AppTypography.titleLarge.copyWith(
+            color: colors.onSurface,
+            fontWeight: FontWeight.w900,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: ChatPreferences.fontSizes.map((size) {
             return ListTile(
-              title: Text(size, style: const TextStyle(color: Colors.white)),
+              title: Text(
+                size.toUpperCase(),
+                style: TextStyle(
+                  color: colors.onSurface,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
               trailing: _fontSize == size
-                  ? const Icon(
-                      Icons.check_circle,
-                      color: AppColors.electricBlue,
-                    )
+                  ? Icon(Icons.check_circle, color: colors.onSurface)
                   : null,
               onTap: () async {
                 Navigator.pop(dialogContext);

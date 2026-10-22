@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/matron/domain/entities/matron_entities.dart';
@@ -70,7 +71,7 @@ class _LeaveManagementScreenState extends State<LeaveManagementScreen> {
               return aOverdue.compareTo(bOverdue);
             });
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.l),
             itemCount: sorted.length,
             itemBuilder: (context, index) => _LeaveCard(
               request: sorted[index],
@@ -117,12 +118,12 @@ class _LeaveCard extends StatelessWidget {
             'Approved' || 'Out' => semanticColors.warning,
             'Returned' => semanticColors.success,
             'Rejected' => semanticColors.error,
-            _ => Colors.grey,
+            _ => Colors.black,
           };
 
     return AppCard(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: AppSpacing.m),
+      padding: const EdgeInsets.all(AppSpacing.l),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

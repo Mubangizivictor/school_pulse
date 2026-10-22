@@ -46,7 +46,7 @@ class _StockRequestScreenState extends State<StockRequestScreen> {
                     const Icon(
                       Icons.shopping_basket_outlined,
                       size: 64,
-                      color: Colors.grey,
+                      color: Colors.black,
                     ),
                     const SizedBox(height: 16),
                     const Text('No stock requests found'),
@@ -132,13 +132,13 @@ class _StockRequestScreenState extends State<StockRequestScreen> {
     Color color;
     switch (status) {
       case StockRequestStatus.pending:
-        color = Colors.orange;
+        color = Colors.black;
         break;
       case StockRequestStatus.approved:
         color = colors.success;
         break;
       case StockRequestStatus.issued:
-        color = Colors.blue;
+        color = Colors.black;
         break;
       case StockRequestStatus.rejected:
         color = colors.error;
@@ -265,7 +265,7 @@ class _CreateStockRequestSheetState extends State<_CreateStockRequestSheet> {
                     IconButton(
                       icon: const Icon(
                         Icons.remove_circle_outline,
-                        color: Colors.red,
+                        color: Colors.black,
                       ),
                       onPressed: () =>
                           setState(() => _selectedItems.remove(item)),

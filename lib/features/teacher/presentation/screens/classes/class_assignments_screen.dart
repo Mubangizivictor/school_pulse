@@ -94,9 +94,7 @@ class ClassAssignmentsScreen extends StatelessWidget {
         vertical: AppSpacing.s,
       ),
       decoration: BoxDecoration(
-        color: isSelected
-            ? AppColors.royalBlue.withValues(alpha: 0.1)
-            : Colors.transparent,
+        color: isSelected ? AppColors.royalBlue : Colors.transparent,
         borderRadius: BorderRadius.circular(AppSpacing.m),
         border: isSelected ? Border.all(color: AppColors.royalBlue) : null,
       ),
@@ -162,9 +160,7 @@ class ClassAssignmentsScreen extends StatelessWidget {
                   vertical: 2,
                 ),
                 decoration: BoxDecoration(
-                  color: (assignment['statusColor'] as Color).withValues(
-                    alpha: 0.1,
-                  ),
+                  color: (assignment['statusColor'] as Color),
                   borderRadius: BorderRadius.circular(AppSpacing.s),
                 ),
                 child: Text(

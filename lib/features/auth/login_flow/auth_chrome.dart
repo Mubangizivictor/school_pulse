@@ -46,16 +46,8 @@ class AuthHeroScene extends StatelessWidget {
               color: colorScheme.surface,
               border: Border.all(color: accent, width: 2.5),
               boxShadow: [
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.55),
-                  blurRadius: 34,
-                  spreadRadius: 2,
-                ),
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.25),
-                  blurRadius: 70,
-                  spreadRadius: 12,
-                ),
+                BoxShadow(color: accent, blurRadius: 34, spreadRadius: 2),
+                BoxShadow(color: accent, blurRadius: 70, spreadRadius: 12),
               ],
             ),
             child: Icon(badgeIcon, size: 46, color: colorScheme.onSurface),
@@ -78,7 +70,7 @@ class _HorizonPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.4
       ..strokeCap = StrokeCap.round
-      ..color = accent.withValues(alpha: 0.45);
+      ..color = accent;
 
     // The ground curve every element sits on.
     final horizonY = h * 0.78;
@@ -99,7 +91,7 @@ class _HorizonPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.6
-        ..color = accent.withValues(alpha: 0.9),
+        ..color = accent,
     );
 
     _drawSchool(canvas, Offset(w * 0.14, horizonY + 2), h, stroke);
@@ -191,7 +183,7 @@ class _HorizonPainter extends CustomPainter {
     for (var i = 0; i < 26; i++) {
       final x = rand.nextDouble() * size.width;
       final y = horizonY * (0.15 + rand.nextDouble() * 0.85);
-      paint.color = accent.withValues(alpha: 0.10 + rand.nextDouble() * 0.35);
+      paint.color = accent;
       canvas.drawCircle(Offset(x, y), rand.nextDouble() * 1.6 + 0.5, paint);
     }
   }
@@ -233,7 +225,7 @@ class AuthTrustStrip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accent.withValues(alpha: 0.35)),
+        border: Border.all(color: accent),
       ),
       child: IntrinsicHeight(
         child: Row(
@@ -244,7 +236,7 @@ class AuthTrustStrip extends StatelessWidget {
                 Container(
                   width: 1,
                   margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                  color: accent.withValues(alpha: 0.22),
+                  color: accent,
                 ),
               Expanded(
                 child: Column(
@@ -264,9 +256,7 @@ class AuthTrustStrip extends StatelessWidget {
                       _items[i].desc,
                       textAlign: TextAlign.center,
                       style: AppTypography.labelSmall.copyWith(
-                        color: colorScheme.onSurfaceVariant.withValues(
-                          alpha: 0.8,
-                        ),
+                        color: colorScheme.onSurfaceVariant,
                         fontSize: 9,
                         height: 1.3,
                       ),
@@ -312,7 +302,7 @@ class AuthPrivacyNote extends StatelessWidget {
               Text(
                 'We value your privacy and protect your information.',
                 style: AppTypography.labelSmall.copyWith(
-                  color: colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+                  color: colorScheme.onSurfaceVariant,
                   fontSize: 11,
                 ),
               ),
@@ -330,6 +320,7 @@ class AuthCtaButton extends StatelessWidget {
   final List<Color> gradient;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final bool filled;
 
   const AuthCtaButton({
     super.key,
@@ -337,11 +328,14 @@ class AuthCtaButton extends StatelessWidget {
     required this.gradient,
     this.onPressed,
     this.isLoading = false,
+    this.filled = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null && !isLoading;
+    final background = filled ? Colors.black : Colors.white;
+    final foreground = filled ? Colors.white : Colors.black;
 
     return Opacity(
       opacity: enabled ? 1 : 0.45,
@@ -350,16 +344,12 @@ class AuthCtaButton extends StatelessWidget {
         child: Container(
           height: 58,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: gradient,
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
+            color: background,
             borderRadius: BorderRadius.circular(14),
             boxShadow: enabled
                 ? [
                     BoxShadow(
-                      color: gradient.last.withValues(alpha: 0.35),
+                      color: background,
                       blurRadius: 20,
                       offset: const Offset(0, 6),
                     ),
@@ -370,25 +360,25 @@ class AuthCtaButton extends StatelessWidget {
             alignment: Alignment.center,
             children: [
               if (isLoading)
-                const SizedBox(
+                SizedBox(
                   width: 22,
                   height: 22,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.4,
-                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                    valueColor: AlwaysStoppedAnimation(foreground),
                   ),
                 )
               else ...[
                 Text(
                   label,
                   style: AppTypography.titleMedium.copyWith(
-                    color: Colors.white,
+                    color: foreground,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const Positioned(
+                Positioned(
                   right: AppSpacing.x2l,
-                  child: Icon(Icons.arrow_forward_rounded, color: Colors.white),
+                  child: Icon(Icons.arrow_forward_rounded, color: foreground),
                 ),
               ],
             ],
@@ -405,7 +395,7 @@ class AuthField extends StatelessWidget {
   final String label;
   final String hint;
   final IconData icon;
-  final Color accent;
+  final Color foreground;
   final TextEditingController controller;
   final bool isPassword;
   final TextInputType keyboardType;
@@ -418,7 +408,7 @@ class AuthField extends StatelessWidget {
     required this.label,
     required this.hint,
     required this.icon,
-    required this.accent,
+    required this.foreground,
     required this.controller,
     this.isPassword = false,
     this.keyboardType = TextInputType.text,
@@ -429,15 +419,13 @@ class AuthField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: AppTypography.titleSmall.copyWith(
-            color: colorScheme.onSurface,
+            color: foreground,
             fontWeight: FontWeight.w700,
           ),
         ),
@@ -447,14 +435,12 @@ class AuthField extends StatelessWidget {
           obscureText: isPassword,
           keyboardType: keyboardType,
           textCapitalization: textCapitalization,
-          style: AppTypography.bodyLarge.copyWith(color: colorScheme.onSurface),
+          style: AppTypography.bodyLarge.copyWith(color: foreground),
           decoration: InputDecoration(
             hintText: hint,
             errorText: errorText,
-            hintStyle: AppTypography.bodyLarge.copyWith(
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-            ),
-            prefixIcon: Icon(icon, color: accent.withValues(alpha: 0.85)),
+            hintStyle: AppTypography.bodyLarge.copyWith(color: foreground),
+            prefixIcon: Icon(icon, color: foreground),
             suffixIcon: suffix,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.l,
@@ -462,15 +448,15 @@ class AuthField extends StatelessWidget {
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: accent.withValues(alpha: 0.55)),
+              borderSide: BorderSide(color: foreground),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: accent, width: 1.6),
+              borderSide: BorderSide(color: foreground, width: 1.6),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: accent.withValues(alpha: 0.55)),
+              borderSide: BorderSide(color: foreground),
             ),
           ),
         ),
@@ -487,6 +473,7 @@ class AuthPortalScaffold extends StatelessWidget {
   final List<Widget> children;
   final bool alignToTop;
   final Color? backgroundColor;
+  final String? title;
 
   const AuthPortalScaffold({
     super.key,
@@ -494,6 +481,7 @@ class AuthPortalScaffold extends StatelessWidget {
     required this.children,
     this.alignToTop = false,
     this.backgroundColor,
+    this.title,
   });
 
   @override
@@ -513,6 +501,15 @@ class AuthPortalScaffold extends StatelessWidget {
           onPressed: () =>
               context.canPop() ? context.pop() : context.go('/welcome'),
         ),
+        title: title == null
+            ? null
+            : Text(
+                title!,
+                style: AppTypography.titleLarge.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
       ),
       body: SafeArea(
         child: LayoutBuilder(

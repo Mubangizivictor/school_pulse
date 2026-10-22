@@ -38,6 +38,7 @@ class TimetableBloc extends Bloc<TimetableEvent, TimetableState> {
     on<TimetableCreateRequested>(_onCreateRequested);
     on<TimetableLessonSaveRequested>(_onLessonSaveRequested);
     on<TimetableLessonRemoveRequested>(_onLessonRemoveRequested);
+    on<TimetableValidateRequested>(_onValidateRequested);
     on<TimetablePublishRequested>(_onPublishRequested);
     on<TimetableArchiveRequested>(_onArchiveRequested);
   }
@@ -128,10 +129,18 @@ class TimetableBloc extends Bloc<TimetableEvent, TimetableState> {
     Emitter<TimetableState> emit,
   ) async {
     final pool = [...state.lessons, ...state.otherLessons];
-    final conflicts = conflictResolver.findConflicts(
-      candidate: event.lesson,
-      otherLessons: pool,
-    );
+    final conflicts = [
+      ...conflictResolver.findConflicts(
+        candidate: event.lesson,
+        otherLessons: pool,
+      ),
+      ...conflictResolver.checkAllocation(
+        candidate: event.lesson,
+        levelPlanSubjects: event.levelPlanSubjects,
+        classOverrides: event.classOverrides,
+        teachingAssignments: event.teachingAssignments,
+      ),
+    ];
     if (conflicts.isNotEmpty) {
       emit(state.copyWith(lastSaveConflicts: conflicts));
       return;
@@ -200,13 +209,71 @@ class TimetableBloc extends Bloc<TimetableEvent, TimetableState> {
       ),
     );
     try {
-      await repository.updateTimetable(
-        current.copyWith(
-          status: TimetableStatus.active,
-          publishedAt: DateTime.now(),
-          publishedBy: event.publishedBy,
-          updatedAt: DateTime.now(),
-          updatedBy: event.publishedBy,
+      // publishTimetable runs as a single Firestore transaction: it flips
+      // this timetable to published AND stamps whatever timetable was
+      // previously published for the same target as superseded, so the
+      // target is never left with zero or two published timetables even
+      // if the app is killed mid-operation.
+      await repository.publishTimetable(
+        timetable: current,
+        publishedBy: event.publishedBy,
+      );
+      await repository.appendAuditEntry(
+        TimetableAuditEntry(
+          id: '',
+          schoolId: current.schoolId,
+          timetableId: current.id,
+          action: 'published',
+          actorId: event.publishedBy,
+          at: DateTime.now(),
+        ),
+      );
+      emit(state.copyWith(isSaving: false));
+    } catch (e) {
+      emit(state.copyWith(isSaving: false, errorMessage: e.toString()));
+    }
+  }
+
+  Future<void> _onValidateRequested(
+    TimetableValidateRequested event,
+    Emitter<TimetableState> emit,
+  ) async {
+    final current = state.current;
+    if (current == null) return;
+
+    final scan = conflictResolver.scanAll(
+      lessons: [...state.lessons, ...state.otherLessons],
+    );
+    final ownLessonIds = state.lessons.map((l) => l.id).toSet();
+    final blocking = Map.fromEntries(
+      scan.entries.where((e) => ownLessonIds.contains(e.key)),
+    );
+    if (blocking.isNotEmpty) {
+      emit(state.copyWith(publishConflicts: blocking));
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        isSaving: true,
+        clearError: true,
+        publishConflicts: const {},
+      ),
+    );
+    try {
+      await repository.markValidated(
+        schoolId: current.schoolId,
+        timetableId: current.id,
+        validatedBy: event.validatedBy,
+      );
+      await repository.appendAuditEntry(
+        TimetableAuditEntry(
+          id: '',
+          schoolId: current.schoolId,
+          timetableId: current.id,
+          action: 'validated',
+          actorId: event.validatedBy,
+          at: DateTime.now(),
         ),
       );
       emit(state.copyWith(isSaving: false));
@@ -223,13 +290,19 @@ class TimetableBloc extends Bloc<TimetableEvent, TimetableState> {
     if (current == null) return;
     emit(state.copyWith(isSaving: true, clearError: true));
     try {
-      await repository.updateTimetable(
-        current.copyWith(
-          status: TimetableStatus.archived,
-          archivedAt: DateTime.now(),
-          archivedBy: event.archivedBy,
-          updatedAt: DateTime.now(),
-          updatedBy: event.archivedBy,
+      await repository.archiveTimetable(
+        schoolId: current.schoolId,
+        timetableId: current.id,
+        archivedBy: event.archivedBy,
+      );
+      await repository.appendAuditEntry(
+        TimetableAuditEntry(
+          id: '',
+          schoolId: current.schoolId,
+          timetableId: current.id,
+          action: 'archived',
+          actorId: event.archivedBy,
+          at: DateTime.now(),
         ),
       );
       emit(state.copyWith(isSaving: false));

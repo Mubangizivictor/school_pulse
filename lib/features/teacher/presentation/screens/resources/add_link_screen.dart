@@ -45,9 +45,7 @@ class _AddLinkScreenState extends State<AddLinkScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.primary,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -93,7 +91,7 @@ class _AddLinkScreenState extends State<AddLinkScreen> {
                         padding: const EdgeInsets.only(bottom: AppSpacing.l),
                         child: Text(
                           state.errorMessage!,
-                          style: const TextStyle(color: Colors.red),
+                          style: TextStyle(color: AppColors.danger(context)),
                         ),
                       ),
                     PrimaryButton(
@@ -106,7 +104,9 @@ class _AddLinkScreenState extends State<AddLinkScreen> {
                               if (name.isEmpty || url.isEmpty) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Title and URL are required.'),
+                                    content: Text(
+                                      'Title and URL are required.',
+                                    ),
                                   ),
                                 );
                                 return;

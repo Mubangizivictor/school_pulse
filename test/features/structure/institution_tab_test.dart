@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/design_system/theme/app_theme.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
@@ -12,12 +13,21 @@ import 'package:school_pulse/features/structure/domain/entities/institution_prof
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_event.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_state.dart';
+import 'package:school_pulse/features/structure/presentation/screens/institution_settings_screen.dart';
 import 'package:school_pulse/features/structure/presentation/widgets/institution_tab.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 class MockAuthBloc extends MockBloc<AuthEvent, AuthState> implements AuthBloc {}
 
 class MockStructureBloc extends MockBloc<StructureEvent, StructureState>
     implements StructureBloc {}
+
+class _FakeNetworkInfo implements NetworkInfo {
+  _FakeNetworkInfo({this.connected = true});
+  final bool connected;
+  @override
+  Future<bool> get isConnected async => connected;
+}
 
 void main() {
   late MockAuthBloc authBloc;
@@ -53,9 +63,15 @@ void main() {
     when(() => structureBloc.state).thenReturn(
       const StructureState(isLoading: false, institutionProfile: profile),
     );
+    if (di.sl.isRegistered<NetworkInfo>()) di.sl.unregister<NetworkInfo>();
+    di.sl.registerLazySingleton<NetworkInfo>(() => _FakeNetworkInfo());
   });
 
-  Widget buildSubject() {
+  tearDown(() {
+    if (di.sl.isRegistered<NetworkInfo>()) di.sl.unregister<NetworkInfo>();
+  });
+
+  Widget buildSubject({GlobalKey<InstitutionTabState>? tabKey}) {
     return MultiBlocProvider(
       providers: [
         BlocProvider<AuthBloc>.value(value: authBloc),
@@ -63,7 +79,7 @@ void main() {
       ],
       child: MaterialApp(
         theme: AppTheme.dark(),
-        home: const Scaffold(body: InstitutionTab()),
+        home: Scaffold(body: InstitutionTab(key: tabKey)),
       ),
     );
   }
@@ -84,10 +100,14 @@ void main() {
       expect(find.text('Registration'), findsOneWidget);
       expect(find.text('Location'), findsOneWidget);
       expect(find.text('Contact'), findsOneWidget);
-      expect(find.text('Regional Settings'), findsOneWidget);
+      // Regional Settings (time zone/currency/language/date format) is no
+      // longer editable per-school: Uganda schools share one fixed locale,
+      // so the section and its own Save button were removed - saving now
+      // happens only via the wizard's shared Save & Continue.
+      expect(find.text('Regional Settings'), findsNothing);
       expect(
         find.widgetWithText(FilledButton, 'Save Institution'),
-        findsOneWidget,
+        findsNothing,
       );
 
       expect(find.text('Riverside Academy'), findsOneWidget);
@@ -105,15 +125,21 @@ void main() {
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
-      await tester.pumpWidget(buildSubject());
+      final tabKey = GlobalKey<InstitutionTabState>();
+      await tester.pumpWidget(buildSubject(tabKey: tabKey));
 
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Institution Name'),
         'New Name',
       );
-      await tester.tap(find.widgetWithText(FilledButton, 'Save Institution'));
+      await tester.pump();
+
+      // Save is no longer triggered by a button inside the form - the
+      // wizard's shared Save & Continue calls this exposed API instead.
+      final saved = await tabKey.currentState!.saveIfDirty();
       await tester.pumpAndSettle();
 
+      expect(saved, isTrue);
       final captured = verify(
         () => structureBloc.add(
           captureAny(that: isA<UpdateInstitutionProfileRequested>()),
@@ -123,6 +149,279 @@ void main() {
       final event = captured.first as UpdateInstitutionProfileRequested;
       expect(event.schoolId, 'school-123');
       expect(event.profile.name, 'New Name');
+    },
+  );
+
+  testWidgets('blocks the save while offline and leaves the edit unsent', (
+    tester,
+  ) async {
+    if (di.sl.isRegistered<NetworkInfo>()) di.sl.unregister<NetworkInfo>();
+    di.sl.registerLazySingleton<NetworkInfo>(
+      () => _FakeNetworkInfo(connected: false),
+    );
+    addTearDown(() {
+      if (di.sl.isRegistered<NetworkInfo>()) di.sl.unregister<NetworkInfo>();
+      di.sl.registerLazySingleton<NetworkInfo>(() => _FakeNetworkInfo());
+    });
+
+    tester.view.physicalSize = const Size(430, 4000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final tabKey = GlobalKey<InstitutionTabState>();
+    await tester.pumpWidget(buildSubject(tabKey: tabKey));
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Institution Name'),
+      'Offline Edit',
+    );
+    await tester.pump();
+
+    await tabKey.currentState!.saveIfDirty();
+    await tester.pump();
+
+    verifyNever(() => structureBloc.add(any()));
+    expect(find.textContaining('offline'), findsOneWidget);
+  });
+
+  testWidgets(
+    'wizard step 1 fields render when embedded in the real wizard shell '
+    '(regression: a nested Scaffold here used to collapse the form to '
+    'zero height)',
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            BlocProvider<StructureBloc>.value(value: structureBloc),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            // Mirrors _InstitutionProfileStep in structure_screen.dart: a
+            // Scaffold whose body gives the embedded InstitutionSettingsScreen
+            // a bounded height via Expanded, not the full screen directly.
+            home: Scaffold(
+              body: Column(
+                children: [
+                  const SizedBox(height: 80, child: Text('header')),
+                  Expanded(
+                    child: InstitutionSettingsScreen(
+                      showAppBar: false,
+                      wizardMode: true,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Institution name *'), findsOneWidget);
+      final nameField = find.ancestor(
+        of: find.text('Institution name *'),
+        matching: find.byType(Column),
+      );
+      final field = find.descendant(
+        of: nameField.first,
+        matching: find.byType(TextFormField),
+      );
+      expect(field, findsOneWidget);
+      expect(tester.getSize(field).height, greaterThan(0));
+      expect(find.text('Tell us about your school.'), findsOneWidget);
+      expect(find.text('Essential information'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'wizard mode keeps the optional sections collapsed until tapped',
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            BlocProvider<StructureBloc>.value(value: structureBloc),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            home: Scaffold(body: InstitutionTab(wizardMode: true)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('More profile details (optional)'), findsOneWidget);
+      expect(
+        find.text('Branding, registration & location (optional)'),
+        findsOneWidget,
+      );
+      // Collapsed by default: fields inside the sections are not built.
+      expect(find.text('Motto (optional)'), findsNothing);
+      expect(find.text('Registration number (optional)'), findsNothing);
+
+      await tester.tap(find.text('More profile details (optional)'));
+      await tester.pumpAndSettle();
+      expect(find.text('Motto (optional)'), findsOneWidget);
+
+      await tester.tap(
+        find.text('Branding, registration & location (optional)'),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Registration number (optional)'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'saveDraft persists an incomplete Step 1 without required-field errors',
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final tabKey = GlobalKey<InstitutionTabState>();
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            BlocProvider<StructureBloc>.value(value: structureBloc),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            home: Scaffold(body: InstitutionTab(key: tabKey, wizardMode: true)),
+          ),
+        ),
+      );
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Enter institution name'),
+        '',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Enter main phone number'),
+        'not-a-phone',
+      );
+      await tester.pump();
+
+      await tabKey.currentState!.saveDraft();
+      await tester.pumpAndSettle();
+
+      final captured = verify(
+        () => structureBloc.add(
+          captureAny(that: isA<UpdateInstitutionProfileRequested>()),
+        ),
+      ).captured;
+      expect(captured, hasLength(1));
+      final event = captured.first as UpdateInstitutionProfileRequested;
+      expect(event.profile.name, '');
+    },
+  );
+
+  testWidgets(
+    'saveAndValidateForContinue still blocks on invalid required fields',
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final tabKey = GlobalKey<InstitutionTabState>();
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            BlocProvider<StructureBloc>.value(value: structureBloc),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            home: Scaffold(body: InstitutionTab(key: tabKey, wizardMode: true)),
+          ),
+        ),
+      );
+
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Enter institution name'),
+        '',
+      );
+      await tester.pump();
+
+      final canContinue = await tabKey.currentState!
+          .saveAndValidateForContinue();
+      await tester.pumpAndSettle();
+
+      expect(canContinue, isFalse);
+      verifyNever(() => structureBloc.add(any()));
+    },
+  );
+
+  testWidgets(
+    'regression: country is never defaulted to Uganda for a school that '
+    "hasn't set one yet - the field starts empty for the admin to fill in",
+    (tester) async {
+      tester.view.physicalSize = const Size(430, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      const blankCountryProfile = InstitutionProfile(
+        name: 'New School',
+        schoolType: 'Secondary',
+        schoolCategory: 'Private',
+        // country intentionally left unset, as a freshly-created school
+        // would arrive from Firestore.
+      );
+      when(() => structureBloc.state).thenReturn(
+        const StructureState(
+          isLoading: false,
+          institutionProfile: blankCountryProfile,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MultiBlocProvider(
+          providers: [
+            BlocProvider<AuthBloc>.value(value: authBloc),
+            BlocProvider<StructureBloc>.value(value: structureBloc),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.dark(),
+            home: const Scaffold(body: InstitutionTab(wizardMode: true)),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The country field lives inside the collapsed
+      // "Branding, registration & location" section.
+      await tester.tap(
+        find.text('Branding, registration & location (optional)'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Uganda'), findsNothing);
+      final countryLabelColumn = find.ancestor(
+        of: find.text('Country (optional)'),
+        matching: find.byType(Column),
+      );
+      final countryField = tester.widget<TextFormField>(
+        find.descendant(
+          of: countryLabelColumn.first,
+          matching: find.byType(TextFormField),
+        ),
+      );
+      expect(countryField.controller!.text, isEmpty);
     },
   );
 }

@@ -203,5 +203,29 @@ void main() {
         contains('overlaps'),
       );
     });
+
+    test('terms and semesters cannot be mixed within one academic year', () {
+      final term = AcademicTerm(
+        id: 'term1',
+        schoolId: 'school-a',
+        academicYearId: '2026',
+        name: 'Term 1',
+        startDate: DateTime(2026, 2, 1),
+        endDate: DateTime(2026, 5, 1),
+      );
+      final semester = AcademicTerm(
+        id: 'semester1',
+        schoolId: 'school-a',
+        academicYearId: '2026',
+        name: 'Semester 1',
+        startDate: DateTime(2026, 5, 2),
+        endDate: DateTime(2026, 9, 1),
+        periodType: AcademicPeriodType.semester,
+      );
+      expect(
+        validator.validateAcademicTerm(semester, [year], [term]),
+        contains('cannot be mixed'),
+      );
+    });
   });
 }

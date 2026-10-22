@@ -25,12 +25,17 @@ class PulseTable<T> extends StatelessWidget {
   final bool isLoading;
   final String emptyMessage;
 
+  /// Optional row-tap hook (e.g. opening a detail panel). Existing callers
+  /// that omit it keep today's non-interactive rows.
+  final void Function(T)? onRowTap;
+
   const PulseTable({
     super.key,
     required this.items,
     required this.columns,
     this.isLoading = false,
     this.emptyMessage = 'No data available',
+    this.onRowTap,
   });
 
   @override
@@ -73,10 +78,13 @@ class PulseTable<T> extends StatelessWidget {
           ),
         ),
         child: DataTable(
+          // DataTable auto-adds an unlabeled checkbox column whenever any
+          // row sets onSelectChanged (used here for onRowTap) unless this is
+          // explicitly suppressed - row selection is a tap-anywhere action
+          // for this table, not a multi-select checkbox list.
+          showCheckboxColumn: false,
           headingRowColor: WidgetStateProperty.all(
-            isDark
-                ? AppColors.deepNavy.withValues(alpha: 0.5)
-                : AppColors.bgLight,
+            isDark ? AppColors.deepNavy : AppColors.bgLight,
           ),
           columnSpacing: AppSpacing.x3l,
           horizontalMargin: AppSpacing.xl,
@@ -100,6 +108,9 @@ class PulseTable<T> extends StatelessWidget {
           rows: items
               .map(
                 (item) => DataRow(
+                  onSelectChanged: onRowTap != null
+                      ? (_) => onRowTap!(item)
+                      : null,
                   cells: columns
                       .map((col) => DataCell(col.cellBuilder(item)))
                       .toList(),

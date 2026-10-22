@@ -39,6 +39,14 @@ abstract class NfcCredentialRepository {
 
   /// Revokes [oldCredentialValue] and assigns [newCredentialValue] to the
   /// same identity in one step - the "lost/stolen/damaged card" flow.
+  ///
+  /// For a student identity (`studentId` supplied, online), this is escalated
+  /// to the server-authoritative `replaceNfcCredential` Cloud Function
+  /// transaction first, the same way [assign] escalates to
+  /// `assignNfcCredential` - the local/Firestore-direct-write path below is
+  /// now a best-effort cache mirror of the server result, not the source of
+  /// truth. See functions/student_credentials.js for why a single atomic
+  /// transaction (and its accompanying audit/history row) is required here.
   Future<Either<Failure, void>> replace({
     required String oldCredentialValue,
     required String newCredentialValue,
@@ -52,18 +60,28 @@ abstract class NfcCredentialRepository {
 
   /// Adds the card to the denylist and marks the cached mapping revoked.
   /// [reason] is freeform ('lost', 'stolen', 'expired', 'deactivated', ...).
+  ///
+  /// For a student identity (`studentId` supplied, online), this is escalated
+  /// to the server-authoritative `revokeNfcCredential` Cloud Function
+  /// transaction first - see [replace]'s doc comment.
   Future<Either<Failure, void>> revoke({
     required String credentialValue,
     required String schoolId,
     required String reason,
+    String? studentId,
   });
 
   /// Clears a revocation and restores the card to active for its existing
   /// identity mapping - for reversing an accidental/investigative
   /// deactivation. Fails if the card has no prior mapping to reactivate.
+  ///
+  /// For a student identity (`studentId` supplied, online), this is escalated
+  /// to the server-authoritative `reactivateNfcCredential` Cloud Function
+  /// transaction first - see [replace]'s doc comment.
   Future<Either<Failure, void>> reactivate({
     required String credentialValue,
     required String schoolId,
+    String? studentId,
   });
 
   /// The most recent card bound to [identityId] regardless of status

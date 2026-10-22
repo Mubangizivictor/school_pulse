@@ -61,6 +61,7 @@ class StaffRoleAssignmentIsar {
   late DateTime assignedAt;
   String? updatedBy;
   DateTime? updatedAt;
+  double? monthlyBonusAmount;
 
   /// When this row was last refreshed from the server, so a long-stale cache
   /// can be treated as suspect rather than trusted indefinitely.
@@ -98,6 +99,7 @@ class StaffRoleAssignmentIsar {
       ..assignedAt = e.assignedAt
       ..updatedBy = e.updatedBy
       ..updatedAt = e.updatedAt
+      ..monthlyBonusAmount = e.monthlyBonusAmount
       ..cachedAt = DateTime.now();
   }
 
@@ -138,6 +140,7 @@ class StaffRoleAssignmentIsar {
       assignedAt: assignedAt,
       updatedBy: updatedBy,
       updatedAt: updatedAt,
+      monthlyBonusAmount: monthlyBonusAmount,
     );
   }
 }
@@ -262,6 +265,8 @@ class SubjectTeacherOfflineOperationIsar {
   late String roleAssignmentId;
   late String deviceId;
 
+  DateTime? nextRetryAt;
+
   SubjectTeacherOfflineOperationIsar();
 
   factory SubjectTeacherOfflineOperationIsar.fromEntity(OfflineOperation e) {
@@ -278,7 +283,8 @@ class SubjectTeacherOfflineOperationIsar {
       ..schoolId = e.schoolId
       ..userId = e.userId
       ..roleAssignmentId = e.roleAssignmentId
-      ..deviceId = e.deviceId;
+      ..deviceId = e.deviceId
+      ..nextRetryAt = e.nextRetryAt;
   }
 
   OfflineOperation toEntity() {
@@ -296,6 +302,7 @@ class SubjectTeacherOfflineOperationIsar {
       userId: userId,
       roleAssignmentId: roleAssignmentId,
       deviceId: deviceId,
+      nextRetryAt: nextRetryAt,
     );
   }
 

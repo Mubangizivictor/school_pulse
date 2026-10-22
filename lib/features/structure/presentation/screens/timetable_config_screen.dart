@@ -36,7 +36,15 @@ class TimetableConfigScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: const AdminAppBar(title: 'Timetable Configuration'),
-      body: BlocBuilder<StructureBloc, StructureState>(
+      body: BlocConsumer<StructureBloc, StructureState>(
+        listenWhen: (previous, current) =>
+            previous.errorMessage != current.errorMessage &&
+            current.errorMessage != null,
+        listener: (context, state) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
+        },
         builder: (context, state) => _TimetableConfigBody(state: state),
       ),
     );
@@ -207,7 +215,7 @@ class _TimetableConfigBody extends StatelessWidget {
             icon: slot.type == 'period'
                 ? Icons.menu_book_outlined
                 : Icons.free_breakfast_outlined,
-            color: slot.type == 'period' ? Colors.blue : Colors.orange,
+            color: slot.type == 'period' ? Colors.black : Colors.black,
             title: slot.name,
             subtitle: '${slot.startTime} - ${slot.endTime} - ${slot.type}',
             onEdit: () => showTimetableSlotFormDialog(

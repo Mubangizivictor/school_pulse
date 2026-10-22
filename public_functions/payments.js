@@ -2,12 +2,18 @@ const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https')
 const admin = require('firebase-admin');
 const crypto = require('crypto');
 const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owner-auth');
+const { ROOT: PORTAL_ROOT, validSlug: validPortalSlug } = require('./portal_slug');
+const { publicDomain: portalPublicDomain } = require('./portal_domains');
+const { isAllowedOrigin } = require('./allowed_origins');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
-const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
-const APP_URL = 'https://school-pulse-3d95b.web.app';
+const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
+// The Flutter app moved under /app/ (firebase.json's SPA rewrite now only
+// covers /app/**) - a bare WEBSITE_ORIGIN link now resolves to the static
+// marketing homepage, not the app, so this must include the prefix.
+const APP_URL = `${WEBSITE_ORIGIN}/app`;
 const CORE_MODULES = ['Students', 'Attendance', 'Academics', 'Administration'];
 const MODULE_MAP = {
   Students: 'students',
@@ -65,7 +71,7 @@ function text(value, max = 200) {
 
 function cors(req, res) {
   const origin = req.get('origin');
-  if (origin === WEBSITE_ORIGIN || origin === 'http://localhost:4321') {
+  if (isAllowedOrigin(origin)) {
     res.set('Access-Control-Allow-Origin', origin);
   }
   res.set('Vary', 'Origin');
@@ -99,6 +105,98 @@ function normalizedPlanId(value) {
     if (plan.name.toLowerCase() === raw) return id;
   }
   return raw;
+}
+
+const ALLOWED_PLAN_MODULE_KEYS = [
+  'attendance',
+  'reports',
+  'finance',
+  'messaging',
+  'health',
+  'transport',
+  'library',
+  'boarding',
+];
+const PLAN_CODE_RE = /^[a-z][a-z0-9_]{1,39}$/;
+
+function normalizedModuleList(value) {
+  const list = Array.isArray(value) ? value : [];
+  const set = new Set(
+    list
+      .map((item) => text(item, 30).toLowerCase())
+      .filter((item) => ALLOWED_PLAN_MODULE_KEYS.includes(item)),
+  );
+  return [...set].slice(0, 8);
+}
+
+// Shared field parsing/validation for createSubscriptionPlan and
+// updateSubscriptionPlan - keeps the two callables' payloads in lockstep
+// instead of duplicating this block. `isArchived` is intentionally excluded:
+// only archiveSubscriptionPlan/reactivateSubscriptionPlan may flip it.
+function parseAndValidatePlanFields(data, planId) {
+  const name = text(data?.name, 60);
+  const description = text(data?.description, 220);
+  const price = Math.round(Number(data?.price));
+  const billingCycle = text(data?.billingCycle || 'termly', 20).toLowerCase();
+  const termLengthDays = Math.round(
+    Number(data?.termLengthDays === undefined ? 120 : data.termLengthDays),
+  );
+  const trialDays = Math.round(Number(data?.trialDays || 0));
+  const maxStudents = Math.round(Number(data?.maxStudents || 0));
+  const maxStaff = Math.round(Number(data?.maxStaff || 0));
+  const storageLimitGb = Number(data?.storageLimitGb || 0);
+  const smsLimitPerMonth = Math.round(Number(data?.smsLimitPerMonth || 0));
+  const includedFeatures = Array.isArray(data?.includedFeatures)
+    ? data.includedFeatures.map((item) => text(item, 80)).filter(Boolean).slice(0, 20)
+    : [];
+  const includedModules = normalizedModuleList(data?.includedModules);
+  const isPublic = data?.isPublic !== false;
+  const isActive = data?.isActive !== false;
+  const isPopular = data?.isPopular === true;
+  const displayOrder = Math.round(Number(data?.displayOrder || 0));
+
+  if (!name) throw new HttpsError('invalid-argument', 'Plan name is required.');
+  if (!['monthly', 'termly', 'yearly'].includes(billingCycle)) {
+    throw new HttpsError('invalid-argument', 'Invalid billing cycle.');
+  }
+  if (termLengthDays < 1 || termLengthDays > 730) {
+    throw new HttpsError('invalid-argument', 'Billing period length must be between 1 and 730 days.');
+  }
+  if (trialDays < 0 || trialDays > 90) {
+    throw new HttpsError('invalid-argument', 'Trial days must be between 0 and 90.');
+  }
+  if (planId !== 'enterprise' && (!Number.isFinite(price) || price <= 0)) {
+    throw new HttpsError('invalid-argument', 'Plan price must be greater than zero.');
+  }
+  if (planId === 'enterprise' && (!Number.isFinite(price) || price < 0)) {
+    throw new HttpsError('invalid-argument', 'Enterprise price cannot be negative.');
+  }
+  if (maxStudents < 0 || maxStaff < 0 || storageLimitGb < 0) {
+    throw new HttpsError('invalid-argument', 'Limits cannot be negative.');
+  }
+  if (smsLimitPerMonth < 0 || smsLimitPerMonth > 1000000) {
+    throw new HttpsError('invalid-argument', 'SMS limit is out of range.');
+  }
+
+  return {
+    name,
+    description,
+    price,
+    billingCycle,
+    termLengthDays,
+    trialDays,
+    maxStudents,
+    maxStaff,
+    storageLimitGb,
+    smsLimitPerMonth,
+    includedFeatures,
+    includedModules,
+    customPricing: planId === 'enterprise' && price === 0,
+    isPublic,
+    isActive,
+    isPopular,
+    displayOrder,
+  };
 }
 
 function schoolClassification(category) {
@@ -139,6 +237,25 @@ async function requireOwner(request) {
     }
     throw error;
   }
+}
+
+// The canonical seeded platform-owner uid, used to scope owner-feed
+// notification documents (super_admin_notifications.ownerId). Read from the
+// same single authorization boundary requirePlatformOwner uses. Returns ''
+// if the seed is somehow missing rather than throwing - a missing ownerId
+// on the doc is treated by the owner-feed callables as "belongs to the
+// seeded owner" anyway, so an unscoped write degrades safely.
+let _cachedOwnerUid;
+async function seededOwnerUid() {
+  if (_cachedOwnerUid !== undefined) return _cachedOwnerUid;
+  try {
+    const snap = await db.collection('platform_config').doc('owner_seed').get();
+    const seed = snap.exists ? snap.data() : null;
+    _cachedOwnerUid = seed?.seeded ? String(seed.ownerUid || '') : '';
+  } catch (_) {
+    _cachedOwnerUid = '';
+  }
+  return _cachedOwnerUid;
 }
 
 async function ensureBillingDefaults() {
@@ -315,6 +432,20 @@ exports.approveSchoolApplication = onCall(
     }
 
     const schoolId = deterministicSchoolId;
+    // The applicant's chosen web address, captured at submission time
+    // (index.js:submitSchoolApplication, required there since this session)
+    // and re-validated here since this callable is the trust boundary that
+    // actually reserves it. A missing/invalid slug means a legacy
+    // application submitted before slug was required - that's rejected
+    // loudly (not silently approved without a portal) so it surfaces to the
+    // owner as something needing manual handling, rather than quietly
+    // producing a school with no reachable subdomain.
+    const slug = text(school.slug, 63).toLowerCase();
+    if (!validPortalSlug(slug)) {
+      throw new HttpsError('failed-precondition', 'This application has no valid school web address on file (it may predate that requirement). Ask the applicant to resubmit with a web address before approving.');
+    }
+    const portalHost = `${slug}.${PORTAL_ROOT}`;
+    const slugReservationRef = db.doc(`portal_slug_reservations/${slug}`);
     const enabledFeatures = normalizedModules(application.selectedModules);
     const nowMs = Date.now();
     const administratorName = `${text(administrator.firstName, 100)} ${text(administrator.lastName, 100)}`.trim() || authUser.displayName || 'School Administrator';
@@ -365,76 +496,113 @@ exports.approveSchoolApplication = onCall(
       classificationOther: null,
       divisions: [],
       displayLabel: text(school.shortName, 40) || schoolName,
+      // Mirrors portal_domains.js:createSchoolPortal's school doc shape so
+      // both onboarding paths (owner-created portal vs. public application)
+      // produce a tenant portal_tenant_resolver.dart can resolve the same way.
+      // `slug` was missing here even though createSchoolPortal always sets
+      // it - portal_domains.js's publicDomain() reads school.slug directly,
+      // and Firestore rejects an explicit `undefined` value outright, which
+      // made every approval crash before this was added.
+      slug,
+      portalSubdomain: portalHost,
+      customDomains: [],
+      branding: {
+        schoolName,
+        logoUrl: null,
+        primaryColor: null,
+        secondaryColor: null,
+        address,
+        phone: text(school.phone, 30),
+        email: text(school.email, 160).toLowerCase(),
+      },
     };
 
-    const batch = db.batch();
-    batch.set(schoolRef, schoolData, { merge: false });
-    batch.set(userRef, {
-      id: applicantUid,
-      name: administratorName,
-      email: adminEmail,
-      phoneNumber: text(administrator.phone, 30),
-      role: 'schoolAdmin',
-      roles: ['schoolAdmin'],
-      schoolId,
-      schoolName,
-      studentIds: [],
-      mustChangePassword: false,
-      mfaEnabled: false,
-      isActive: true,
-      source: 'public_website_application',
-      createdBy: owner.uid,
-      createdAt: serverTime,
-    }, { merge: true });
-    batch.set(contactRef, {
-      name: administratorName,
-      role: 'schoolAdmin',
-      roles: ['schoolAdmin'],
-      schoolId,
-      isActive: true,
-      phone: text(administrator.phone, 30),
-    }, { merge: true });
-    batch.set(membershipRef, {
-      id: `${applicantUid}_${schoolId}`,
-      userId: applicantUid,
-      institutionId: schoolId,
-      schoolId,
-      role: 'schoolAdmin',
-      roles: ['schoolAdmin'],
-      status: 'active',
-      createdAt: serverTime,
-      createdBy: owner.uid,
-    }, { merge: true });
-    batch.set(applicationRef, {
-      status: 'approved',
-      schoolId,
-      paymentStatus: 'awaiting_payment',
-      appReady: false,
-      appUrl: APP_URL,
-      reviewedAt: serverTime,
-      reviewedBy: owner.uid,
-      rejectionReason: admin.firestore.FieldValue.delete(),
-      paymentRejectionReason: admin.firestore.FieldValue.delete(),
-      updatedAt: serverTime,
-    }, { merge: true });
-    batch.set(auditRef, {
-      id: auditRef.id,
-      ownerId: owner.uid,
-      action: 'APPROVE_SCHOOL_APPLICATION_AWAITING_PAYMENT',
-      schoolId,
-      affectedUserId: applicantUid,
-      timestamp: serverTime,
-      device: 'Platform Dashboard',
-      metadata: {
-        applicationId,
+    // The slug-reservation check-and-write happens inside this transaction
+    // (re-reading slugReservationRef here, not trusting any earlier read)
+    // alongside every other write this approval makes, so two concurrent
+    // approvals racing for the same slug can't both pass the availability
+    // check and silently overwrite each other's reservation/portal_domains
+    // docs - Firestore aborts and retries the loser instead.
+    await db.runTransaction(async (tx) => {
+      const slugReservationSnap = await tx.get(slugReservationRef);
+      if (slugReservationSnap.exists && slugReservationSnap.data()?.schoolId !== schoolId) {
+        throw new HttpsError('already-exists', 'That school web address is already in use. The applicant must choose another before this can be approved.');
+      }
+      tx.set(schoolRef, schoolData, { merge: false });
+      if (!slugReservationSnap.exists) {
+        tx.set(slugReservationRef, { schoolId, slug, createdAt: serverTime });
+      }
+      // Reuses portal_domains.js's own publicDomain() projection so this
+      // path produces the exact same document shape (including
+      // address/phone/email) as createSchoolPortal/syncPortalDomainProjection
+      // instead of a hand-duplicated, easy-to-drift object literal.
+      tx.set(db.doc(`portal_domains/${portalHost}`), portalPublicDomain(schoolId, schoolData, portalHost));
+      tx.set(userRef, {
+        id: applicantUid,
+        name: administratorName,
+        email: adminEmail,
+        phoneNumber: text(administrator.phone, 30),
+        role: 'schoolAdmin',
+        roles: ['schoolAdmin'],
+        schoolId,
         schoolName,
-        planId: plan.id,
-        planPrice: Number(plan.price || 0),
-        billingCycle: text(plan.billingCycle, 20),
-        enabledFeatures,
-      },
+        studentIds: [],
+        mustChangePassword: false,
+        mfaEnabled: false,
+        isActive: true,
+        source: 'public_website_application',
+        createdBy: owner.uid,
+        createdAt: serverTime,
+      }, { merge: true });
+      tx.set(contactRef, {
+        name: administratorName,
+        role: 'schoolAdmin',
+        roles: ['schoolAdmin'],
+        schoolId,
+        isActive: true,
+        phone: text(administrator.phone, 30),
+      }, { merge: true });
+      tx.set(membershipRef, {
+        id: `${applicantUid}_${schoolId}`,
+        userId: applicantUid,
+        institutionId: schoolId,
+        schoolId,
+        role: 'schoolAdmin',
+        roles: ['schoolAdmin'],
+        status: 'active',
+        createdAt: serverTime,
+        createdBy: owner.uid,
+      }, { merge: true });
+      tx.set(applicationRef, {
+        status: 'approved',
+        schoolId,
+        paymentStatus: 'awaiting_payment',
+        appReady: false,
+        appUrl: APP_URL,
+        reviewedAt: serverTime,
+        reviewedBy: owner.uid,
+        rejectionReason: admin.firestore.FieldValue.delete(),
+        paymentRejectionReason: admin.firestore.FieldValue.delete(),
+        updatedAt: serverTime,
+      }, { merge: true });
+      tx.set(auditRef, {
+        id: auditRef.id,
+        ownerId: owner.uid,
+        action: 'APPROVE_SCHOOL_APPLICATION_AWAITING_PAYMENT',
+        schoolId,
+        affectedUserId: applicantUid,
+        timestamp: serverTime,
+        device: 'Platform Dashboard',
+        metadata: {
+          applicationId,
+          schoolName,
+          planId: plan.id,
+          planPrice: Number(plan.price || 0),
+          billingCycle: text(plan.billingCycle, 20),
+          enabledFeatures,
+        },
+      });
     });
-    await batch.commit();
 
     try {
       const existingClaims = authUser.customClaims || {};
@@ -448,7 +616,7 @@ exports.approveSchoolApplication = onCall(
       console.error('School approved but custom claims update failed', error);
     }
 
-    return { ok: true, schoolId, status: 'approved', paymentStatus: 'awaiting_payment', appReady: false };
+    return { ok: true, schoolId, status: 'approved', paymentStatus: 'awaiting_payment', appReady: false, portalUrl: `https://${portalHost}` };
   },
 );
 
@@ -472,6 +640,11 @@ exports.getSchoolApplicationStatus = onRequest({ region: 'europe-west1' }, async
   let data = snap.data() || {};
   data = await migrateLegacyApprovedApplication(ref, data);
   await ref.set({ lastStatusCheckAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
+  // Lowercased to match submitSchoolApplication's own storage convention -
+  // every other slug read path in this codebase lowercases before using it,
+  // and a portalUrl built from a mixed-case slug would never resolve
+  // (portal_domains keys and DNS hostnames are lowercase-only).
+  const slug = text(data.school?.slug, 63).toLowerCase();
   res.status(200).json({
     status: text(data.status, 40),
     paymentStatus: text(data.paymentStatus, 40),
@@ -483,6 +656,8 @@ exports.getSchoolApplicationStatus = onRequest({ region: 'europe-west1' }, async
     appUrl: text(data.appUrl, 300) || APP_URL,
     paymentUrl: `${WEBSITE_ORIGIN}/payment`,
     rejectionReason: text(data.rejectionReason, 500),
+    slug,
+    portalUrl: validPortalSlug(slug) ? `https://${slug}.${PORTAL_ROOT}` : null,
   });
 });
 
@@ -634,6 +809,7 @@ exports.submitManualPayment = onRequest({ region: 'europe-west1' }, async (req, 
   const referenceKey = crypto.createHash('sha256').update(`${schoolId}|${method}|${referenceNormalized}`).digest('hex');
   const referenceRef = db.collection('manual_payment_references').doc(referenceKey);
   const notificationRef = db.collection('super_admin_notifications').doc(`payment_${paymentId}`);
+  const notificationOwnerUid = await seededOwnerUid();
   const serverTime = admin.firestore.FieldValue.serverTimestamp();
   const termLengthDays = Math.max(1, Math.round(Number(plan.termLengthDays || 120)));
 
@@ -697,6 +873,7 @@ exports.submitManualPayment = onRequest({ region: 'europe-west1' }, async (req, 
       }
       tx.set(notificationRef, {
         id: notificationRef.id,
+        ownerId: notificationOwnerUid,
         type: 'manual_payment_submitted',
         status: 'unread',
         paymentId,
@@ -740,10 +917,39 @@ function paymentForClient(doc) {
   return result;
 }
 
+// Pure helper (no Firestore call) so the filter-selection logic - which
+// where() clauses apply for a given request payload - is unit-testable
+// without mocking a live query builder. Returns the filters to apply, not
+// a built query; getManualPaymentsForOwner below applies them to `db`.
+function paymentsQueryFilters(data) {
+  const schoolId = text(data?.schoolId, 160);
+  const startDate = Number(data?.startDateMs);
+  const endDate = Number(data?.endDateMs);
+  return {
+    schoolId: schoolId || null,
+    startDateMs: Number.isFinite(startDate) ? startDate : null,
+    endDateMs: Number.isFinite(endDate) ? endDate : null,
+  };
+}
+
+// schoolId/startDate/endDate are applied as real Firestore `where` clauses,
+// not a client-side filter of an unscoped fetch - the callable itself is the
+// tenant boundary here (manual_subscription_payments has no firestore.rules
+// block of its own; it is Admin-SDK-only, so this check is the only gate).
 exports.getManualPaymentsForOwner = onCall({ region: 'europe-west1' }, async (request) => {
   await requireOwner(request);
   const status = text(request.data?.status, 40);
-  const snapshot = await db.collection('manual_subscription_payments').orderBy('submittedAt', 'desc').limit(250).get();
+  const filters = paymentsQueryFilters(request.data);
+
+  let query = db.collection('manual_subscription_payments');
+  if (filters.schoolId) query = query.where('schoolId', '==', filters.schoolId);
+  if (filters.startDateMs !== null) {
+    query = query.where('submittedAt', '>=', admin.firestore.Timestamp.fromMillis(filters.startDateMs));
+  }
+  if (filters.endDateMs !== null) {
+    query = query.where('submittedAt', '<=', admin.firestore.Timestamp.fromMillis(filters.endDateMs));
+  }
+  const snapshot = await query.orderBy('submittedAt', 'desc').limit(250).get();
   let docs = snapshot.docs;
   if (status && status !== 'all') docs = docs.filter((doc) => text(doc.data()?.status, 40) === status);
   return { payments: docs.map(paymentForClient) };
@@ -793,6 +999,34 @@ exports.approveManualPayment = onCall({ region: 'europe-west1' }, async (request
     if (!schoolSnap.exists) throw new HttpsError('failed-precondition', 'The school linked to this payment no longer exists.');
     const school = schoolSnap.data() || {};
     const metadata = school.metadata && typeof school.metadata === 'object' ? school.metadata : {};
+
+    // Phase 2A term-based billing: find the earliest non-terminal
+    // subscription_cycles doc for this school (if any) so this payment can
+    // also mark it paid. Firestore transactions require ALL reads before any
+    // writes, so this query runs here - before the first tx.set below - even
+    // though the resulting write happens later in this same transaction.
+    // Schools with no subscription_cycles docs (the flat-expiry-only flow)
+    // simply get an empty snapshot here and nothing below changes for them.
+    //
+    // Status list mirrors subscription_cycle_billing.js's own
+    // ACTIVE_CYCLE_STATUSES exactly (must include 'upcoming'): a school can
+    // pay before its next cycle is even auto-invoiced (e.g. paying early,
+    // or approval landing between invoice-lead-day windows), and 'paid' is
+    // a terminal status the billing sweep always skips outright regardless
+    // of which status it transitioned from - decideCycleAction()'s very
+    // first check is `status === 'paid' -> return, no-op` - so marking an
+    // 'upcoming' cycle 'paid' directly is safe; omitting 'upcoming' here
+    // previously left such a cycle unmatched, so the payment never marked
+    // it paid and the sweep would later invoice/suspend a term that had
+    // already been paid for.
+    const eligibleCycleSnap = await tx.get(
+      db.collection('subscription_cycles')
+        .where('schoolId', '==', schoolId)
+        .where('cycleStatus', 'in', ['upcoming', 'invoiced', 'paymentPending', 'gracePeriod', 'overdue'])
+        .orderBy('termStart', 'asc')
+        .limit(1)
+    );
+    const targetCycleRef = eligibleCycleSnap.empty ? null : eligibleCycleSnap.docs[0].ref;
     const termLengthDays = Math.max(1, Math.round(Number(payment.termLengthDays || 120)));
     const existingExpiry = Number(school.subscriptionExpiry || 0);
     const startMs = payment.paymentType === 'renewal' && existingExpiry > nowMs ? existingExpiry : nowMs;
@@ -835,6 +1069,26 @@ exports.approveManualPayment = onCall({ region: 'europe-west1' }, async (request
       subscriptionExpiry: expiryMs,
       rejectionReason: null,
     }, { merge: true });
+
+    // Phase 2A: if this school has a subscription_cycles doc awaiting
+    // payment, mark the earliest eligible one paid in the same transaction.
+    // The schoolRef.set above already unconditionally writes
+    // status:'active'/accessMode:'full' regardless of whether a cycle
+    // exists (that's the pre-existing flat-expiry semantics, layered under
+    // here rather than altered) - so a previously-suspended school (Phase 2A
+    // auto-suspend, or an owner-initiated suspend) is restored to full
+    // access by that same existing write; this block only adds the cycle
+    // doc's own paid marker on top when a cycle is actually present. No-op,
+    // no throw, when eligibleCycleSnap was empty (flat-expiry-only school).
+    if (targetCycleRef) {
+      tx.set(targetCycleRef, {
+        cycleStatus: 'paid',
+        paymentStatus: 'paid',
+        paidPaymentId: paymentId,
+        paidAt: serverTime,
+        updatedAt: serverTime,
+      }, { merge: true });
+    }
     const receiptRef = db.collection('subscription_receipts').doc(paymentId);
     tx.set(receiptRef, {
       receiptNumber: paymentId,
@@ -1008,50 +1262,21 @@ exports.updateSubscriptionPlan = onCall({ region: 'europe-west1' }, async (reque
   const planId = normalizedPlanId(request.data?.planId);
   if (!planId) throw new HttpsError('invalid-argument', 'planId is required.');
 
-  const name = text(request.data?.name, 60);
-  const description = text(request.data?.description, 220);
-  const price = Math.round(Number(request.data?.price));
-  const billingCycle = text(request.data?.billingCycle || 'termly', 20).toLowerCase();
-  const termLengthDays = Math.round(Number(request.data?.termLengthDays || 120));
-  const maxStudents = Math.round(Number(request.data?.maxStudents || 0));
-  const maxStaff = Math.round(Number(request.data?.maxStaff || 0));
-  const storageLimitGb = Number(request.data?.storageLimitGb || 0);
-  const includedFeatures = Array.isArray(request.data?.includedFeatures)
-    ? request.data.includedFeatures.map((item) => text(item, 80)).filter(Boolean).slice(0, 20)
-    : [];
-  const isPublic = request.data?.isPublic !== false;
-  const isActive = request.data?.isActive !== false;
-  const isPopular = request.data?.isPopular === true;
-  const displayOrder = Math.round(Number(request.data?.displayOrder || 0));
-
-  if (!name) throw new HttpsError('invalid-argument', 'Plan name is required.');
-  if (!['monthly', 'termly', 'yearly'].includes(billingCycle)) throw new HttpsError('invalid-argument', 'Invalid billing cycle.');
-  if (termLengthDays < 1 || termLengthDays > 730) throw new HttpsError('invalid-argument', 'Billing period length must be between 1 and 730 days.');
-  if (planId !== 'enterprise' && (!Number.isFinite(price) || price <= 0)) throw new HttpsError('invalid-argument', 'Plan price must be greater than zero.');
-  if (planId === 'enterprise' && (!Number.isFinite(price) || price < 0)) throw new HttpsError('invalid-argument', 'Enterprise price cannot be negative.');
-  if (maxStudents < 0 || maxStaff < 0 || storageLimitGb < 0) throw new HttpsError('invalid-argument', 'Limits cannot be negative.');
-
   const planRef = db.collection('subscription_plans').doc(planId);
   const snap = await planRef.get();
   if (!snap.exists) throw new HttpsError('not-found', 'Subscription plan not found.');
+
+  const fields = parseAndValidatePlanFields(request.data, planId);
+  // An archived plan can only be reactivated via reactivateSubscriptionPlan -
+  // the generic editor can't silently un-archive it by passing isActive:true.
+  const wasArchived = snap.data()?.isArchived === true;
+  if (wasArchived) fields.isActive = false;
+
   const serverTime = admin.firestore.FieldValue.serverTimestamp();
   const auditRef = db.collection('super_admin_audit_logs').doc();
   const batch = db.batch();
   batch.set(planRef, {
-    name,
-    description,
-    price,
-    billingCycle,
-    termLengthDays,
-    maxStudents,
-    maxStaff,
-    storageLimitGb,
-    includedFeatures,
-    customPricing: planId === 'enterprise' && price === 0,
-    isPublic,
-    isActive,
-    isPopular,
-    displayOrder,
+    ...fields,
     billingModel: 'manual_v1',
     updatedAt: serverTime,
     updatedBy: owner.uid,
@@ -1063,7 +1288,128 @@ exports.updateSubscriptionPlan = onCall({ region: 'europe-west1' }, async (reque
     schoolId: null,
     timestamp: serverTime,
     device: 'Platform Dashboard',
-    metadata: { planId, price, billingCycle, termLengthDays, isPublic, isActive, isPopular, displayOrder },
+    metadata: {
+      planId,
+      price: fields.price,
+      billingCycle: fields.billingCycle,
+      termLengthDays: fields.termLengthDays,
+      isPublic: fields.isPublic,
+      isActive: fields.isActive,
+      isPopular: fields.isPopular,
+      displayOrder: fields.displayOrder,
+    },
+  });
+  await batch.commit();
+  return { ok: true, planId };
+});
+
+// Creates a new catalog plan. Plan code (the Firestore doc id) is chosen by
+// the caller at creation time and is immutable afterwards - there is no
+// rename path, matching updateSubscriptionPlan which never touches the id.
+exports.createSubscriptionPlan = onCall({ region: 'europe-west1' }, async (request) => {
+  const owner = await requireOwner(request);
+  await ensureBillingDefaults();
+
+  const planId = text(request.data?.planId, 40).toLowerCase();
+  if (!PLAN_CODE_RE.test(planId)) {
+    throw new HttpsError(
+      'invalid-argument',
+      'Plan code must be lowercase letters, numbers, and underscores, 2-40 characters, starting with a letter.',
+    );
+  }
+
+  const planRef = db.collection('subscription_plans').doc(planId);
+  const existing = await planRef.get();
+  if (existing.exists) throw new HttpsError('already-exists', 'A plan with this code already exists.');
+
+  const fields = parseAndValidatePlanFields(request.data, planId);
+  const serverTime = admin.firestore.FieldValue.serverTimestamp();
+  const auditRef = db.collection('super_admin_audit_logs').doc();
+  const batch = db.batch();
+  batch.set(planRef, {
+    ...fields,
+    isArchived: false,
+    isDefault: false,
+    billingModel: 'manual_v1',
+    createdAt: serverTime,
+    createdBy: owner.uid,
+    updatedAt: serverTime,
+    updatedBy: owner.uid,
+  });
+  batch.set(auditRef, {
+    id: auditRef.id,
+    ownerId: owner.uid,
+    action: 'CREATE_SUBSCRIPTION_PLAN',
+    schoolId: null,
+    timestamp: serverTime,
+    device: 'Platform Dashboard',
+    metadata: { planId, name: fields.name, price: fields.price },
+  });
+  await batch.commit();
+  return { ok: true, planId };
+});
+
+// Archiving is a boolean flip, never a delete: existing school subscriptions
+// reference the plan by id/price snapshot independently of the catalog doc
+// (see getPlan()'s payment-time snapshot below), so nothing about an already
+// subscribed school changes. isActive=false piggybacks on the existing
+// isPublic && isActive gate in getPublicSubscriptionPlans, which is the only
+// place new-subscription eligibility is enforced today.
+exports.archiveSubscriptionPlan = onCall({ region: 'europe-west1' }, async (request) => {
+  const owner = await requireOwner(request);
+  const planId = normalizedPlanId(request.data?.planId);
+  if (!planId) throw new HttpsError('invalid-argument', 'planId is required.');
+  const planRef = db.collection('subscription_plans').doc(planId);
+  const snap = await planRef.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Subscription plan not found.');
+
+  const serverTime = admin.firestore.FieldValue.serverTimestamp();
+  const auditRef = db.collection('super_admin_audit_logs').doc();
+  const batch = db.batch();
+  batch.set(planRef, {
+    isArchived: true,
+    isActive: false,
+    updatedAt: serverTime,
+    updatedBy: owner.uid,
+  }, { merge: true });
+  batch.set(auditRef, {
+    id: auditRef.id,
+    ownerId: owner.uid,
+    action: 'ARCHIVE_SUBSCRIPTION_PLAN',
+    schoolId: null,
+    timestamp: serverTime,
+    device: 'Platform Dashboard',
+    metadata: { planId },
+  });
+  await batch.commit();
+  return { ok: true, planId };
+});
+
+exports.reactivateSubscriptionPlan = onCall({ region: 'europe-west1' }, async (request) => {
+  const owner = await requireOwner(request);
+  const planId = normalizedPlanId(request.data?.planId);
+  if (!planId) throw new HttpsError('invalid-argument', 'planId is required.');
+  const planRef = db.collection('subscription_plans').doc(planId);
+  const snap = await planRef.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'Subscription plan not found.');
+
+  const serverTime = admin.firestore.FieldValue.serverTimestamp();
+  const auditRef = db.collection('super_admin_audit_logs').doc();
+  const batch = db.batch();
+  batch.set(planRef, {
+    isArchived: false,
+    isActive: true,
+    updatedAt: serverTime,
+    updatedBy: owner.uid,
+  }, { merge: true });
+  batch.set(auditRef, {
+    id: auditRef.id,
+    ownerId: owner.uid,
+    action: 'REACTIVATE_SUBSCRIPTION_PLAN',
+    schoolId: null,
+    timestamp: serverTime,
+    device: 'Platform Dashboard',
+    metadata: { planId },
   });
   await batch.commit();
   return { ok: true, planId };
@@ -1205,4 +1551,9 @@ module.exports.__internal = {
   subscriberCanManagePayment,
   schoolAdminEmail,
   getPlan,
+  normalizedModuleList,
+  parseAndValidatePlanFields,
+  PLAN_CODE_RE,
+  ALLOWED_PLAN_MODULE_KEYS,
+  paymentsQueryFilters,
 };

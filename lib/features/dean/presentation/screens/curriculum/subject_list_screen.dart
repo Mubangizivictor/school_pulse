@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import '../../../domain/entities/curriculum.dart';
 import 'syllabus_coverage_screen.dart';
 
@@ -48,7 +49,7 @@ class SubjectListScreen extends StatelessWidget {
                           Text(
                             subject.code,
                             style: TextStyle(
-                              color: Colors.grey[600],
+                              color: AppColors.textSecondary(context),
                               fontSize: 12,
                             ),
                           ),
@@ -71,7 +72,7 @@ class SubjectListScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 LinearProgressIndicator(
                   value: subject.currentCoverage / 100,
-                  backgroundColor: Colors.grey[200],
+                  backgroundColor: AppColors.border(context),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 const SizedBox(height: 8),
@@ -109,17 +110,17 @@ class _CoverageIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     Color color;
     if (coverage >= 80) {
-      color = Colors.green;
+      color = AppColors.success(context);
     } else if (coverage >= 50) {
-      color = Colors.orange;
+      color = AppColors.warning(context);
     } else {
-      color = Colors.red;
+      color = AppColors.danger(context);
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color),
       ),

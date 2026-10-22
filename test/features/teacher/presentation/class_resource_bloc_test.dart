@@ -165,11 +165,9 @@ void main() {
               'Uploaded to your class.',
             ),
         isA<ClassResourceState>().having((s) => s.isLoading, 'isLoading', true),
-        isA<ClassResourceState>().having(
-          (s) => s.resources,
-          'resources',
-          [resource],
-        ),
+        isA<ClassResourceState>().having((s) => s.resources, 'resources', [
+          resource,
+        ]),
       ],
     );
   });

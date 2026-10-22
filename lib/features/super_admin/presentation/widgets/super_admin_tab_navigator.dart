@@ -25,10 +25,34 @@ class SuperAdminTabNavigator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Navigator(
       key: navigatorKey,
-      onGenerateRoute: (settings) =>
-          MaterialPageRoute(builder: (_) => child, settings: settings),
+      onGenerateRoute: (settings) => PageRouteBuilder(
+        settings: settings,
+        // The section root never animates - it is the IndexedStack child
+        // and is only ever "navigated to" as the initial route.
+        transitionDuration: Duration.zero,
+        reverseTransitionDuration: Duration.zero,
+        pageBuilder: (context, animation, secondaryAnimation) => child,
+      ),
     );
   }
+}
+
+/// The 180ms fade used for detail pushes onto a section's nested Navigator,
+/// matching the app-wide `fadeThroughPage` policy so an in-section push
+/// (School Details, Payment Review, ...) looks identical to a full-page
+/// route change. [name] carries the detail URL so a duplicate push can be
+/// detected and skipped.
+PageRoute<T> ownerDetailRoute<T>(Widget child, {String? name}) {
+  return PageRouteBuilder<T>(
+    settings: RouteSettings(name: name),
+    transitionDuration: const Duration(milliseconds: 180),
+    reverseTransitionDuration: const Duration(milliseconds: 180),
+    pageBuilder: (context, animation, secondaryAnimation) => child,
+    transitionsBuilder: (context, animation, _, child) => FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+      child: child,
+    ),
+  );
 }
 
 /// Pushes [detail] onto the nearest nested [Navigator] (the same target a
@@ -50,15 +74,37 @@ Future<T?> pushSuperAdminDetail<T>({
   required Widget detail,
 }) {
   final sectionUrl = '/super-admin/$sectionPath';
-  context.go('$sectionUrl/$detailPath');
-  return Navigator.of(context).push<T>(
-    MaterialPageRoute(
-      builder: (context) => PopScope(
+  final detailUrl = '$sectionUrl/$detailPath';
+
+  // Dedupe: a re-tap on a card that already opened this exact detail must
+  // not stack a second identical push.
+  final navigator = Navigator.of(context);
+  if (ModalRoute.of(context)?.settings.name == detailUrl) {
+    return Future<T?>.value(null);
+  }
+
+  // Push onto the section's nested Navigator FIRST, then sync the URL. The
+  // whole /super-admin subtree shares one GoRouter page key
+  // (_kConsoleShellPageKey), so `context.go` here only updates the address
+  // bar / history - it does not rebuild the dashboard or the nested
+  // Navigator this push targets. (Doing it the other way round, and without
+  // the shared key, was the "tap Review -> flashes back -> works on the
+  // 2nd/3rd try" bug: the go() tore down the Navigator mid-push.)
+  final result = navigator.push<T>(
+    ownerDetailRoute<T>(
+      PopScope(
         onPopInvokedWithResult: (didPop, _) {
           if (didPop && context.mounted) context.go(sectionUrl);
         },
         child: detail,
       ),
+      name: detailUrl,
     ),
   );
+
+  if (GoRouterState.of(context).uri.path != detailUrl) {
+    context.go(detailUrl);
+  }
+
+  return result;
 }

@@ -16,9 +16,11 @@ class StaffDocumentsUploader {
   final FirebaseStorage storage;
   final FirebaseFirestore firestore;
 
-  StaffDocumentsUploader({FirebaseStorage? storage, FirebaseFirestore? firestore})
-    : storage = storage ?? FirebaseStorage.instance,
-      firestore = firestore ?? FirebaseFirestore.instance;
+  StaffDocumentsUploader({
+    FirebaseStorage? storage,
+    FirebaseFirestore? firestore,
+  }) : storage = storage ?? FirebaseStorage.instance,
+       firestore = firestore ?? FirebaseFirestore.instance;
 
   /// Returns the filenames of any documents that failed to upload, so the
   /// caller can show a non-blocking warning. Successful uploads are also
@@ -67,9 +69,15 @@ class StaffDocumentsUploader {
   /// edit_profile_screen.dart, then merges the resulting URL onto
   /// users/{uid}.photoUrl. Best-effort: a failure here doesn't affect the
   /// already-created staff account.
-  Future<bool> uploadPhoto({required String uid, required File photo}) async {
+  Future<bool> uploadPhoto({
+    required String schoolId,
+    required String uid,
+    required File photo,
+  }) async {
     try {
-      final reference = storage.ref('profile_photos/$uid/profile.jpg');
+      final reference = storage.ref(
+        'schools/$schoolId/staff/$uid/profile/profile.jpg',
+      );
       await reference.putFile(
         photo,
         SettableMetadata(contentType: 'image/jpeg'),

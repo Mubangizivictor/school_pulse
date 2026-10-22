@@ -75,7 +75,7 @@ class MealCardScreen extends StatelessWidget {
                             ),
                             Text(
                               'Class: $classId',
-                              style: const TextStyle(color: Colors.white70),
+                              style: const TextStyle(color: Colors.white),
                             ),
                           ],
                         ),
@@ -106,7 +106,7 @@ class MealCardScreen extends StatelessWidget {
                       const Text(
                         'Present this QR at the meal serving point',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(color: Colors.black),
                       ),
                     ],
                   ),
@@ -115,7 +115,7 @@ class MealCardScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Colors.black,
                     borderRadius: const BorderRadius.vertical(
                       bottom: Radius.circular(12),
                     ),
@@ -126,7 +126,7 @@ class MealCardScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey,
+                      color: Colors.black,
                     ),
                   ),
                 ),

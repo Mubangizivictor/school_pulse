@@ -44,10 +44,7 @@ class StructureSetupRepositoryImpl implements StructureSetupRepository {
     // exist, while create is safely authorized from request.resource.data.
     // Only schoolId is merged so an older setupVersion is never upgraded just
     // by opening Structure; version changes happen only on explicit saves.
-    await doc.set(
-      {'schoolId': schoolId},
-      SetOptions(merge: true),
-    );
+    await doc.set({'schoolId': schoolId}, SetOptions(merge: true));
 
     yield* doc.snapshots().map((snapshot) {
       final data = snapshot.data();
@@ -61,7 +58,8 @@ class StructureSetupRepositoryImpl implements StructureSetupRepository {
         boarding: StructureUseChoiceX.fromWire(data['boarding']),
         transport: StructureUseChoiceX.fromWire(data['transport']),
         onboardingCompleted: data['onboardingCompleted'] == true,
-        setupVersion: (data['setupVersion'] as num?)?.toInt() ??
+        setupVersion:
+            (data['setupVersion'] as num?)?.toInt() ??
             StructureSetupPreferences.currentSetupVersion,
         lastStepId: data['lastStepId']?.toString() ?? '',
       );
@@ -74,22 +72,19 @@ class StructureSetupRepositoryImpl implements StructureSetupRepository {
     final doc = firestore
         .collection('structure_setup_preferences')
         .doc(schoolId);
-    await doc.set(
-      {
-        'schoolId': schoolId,
-        'departments': preferences.departments.wireName,
-        'streams': preferences.streams.wireName,
-        'rooms': preferences.rooms.wireName,
-        'houses': preferences.houses.wireName,
-        'clubs': preferences.clubs.wireName,
-        'boarding': preferences.boarding.wireName,
-        'transport': preferences.transport.wireName,
-        'onboardingCompleted': preferences.onboardingCompleted,
-        'setupVersion': preferences.setupVersion,
-        'lastStepId': preferences.lastStepId,
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
-      SetOptions(merge: true),
-    );
+    await doc.set({
+      'schoolId': schoolId,
+      'departments': preferences.departments.wireName,
+      'streams': preferences.streams.wireName,
+      'rooms': preferences.rooms.wireName,
+      'houses': preferences.houses.wireName,
+      'clubs': preferences.clubs.wireName,
+      'boarding': preferences.boarding.wireName,
+      'transport': preferences.transport.wireName,
+      'onboardingCompleted': preferences.onboardingCompleted,
+      'setupVersion': preferences.setupVersion,
+      'lastStepId': preferences.lastStepId,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 }

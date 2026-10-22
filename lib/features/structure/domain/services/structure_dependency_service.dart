@@ -49,6 +49,25 @@ class StructureDependencyService {
     return snap.count ?? 0;
   }
 
+  /// Assessments already recorded against this grading system - once this
+  /// is non-zero, the system's grade bands must never be mutated in place
+  /// (it would silently reinterpret marks already saved under the old
+  /// bands). The caller should create a new version instead - see
+  /// `GradingSystemDef.version`.
+  Future<int> countAssessmentsUsingGradingSystem(
+    String schoolId,
+    String gradingSystemId,
+  ) async {
+    final snap = await firestore
+        .collection('schools')
+        .doc(schoolId)
+        .collection('subject_assessments')
+        .where('gradingSystemId', isEqualTo: gradingSystemId)
+        .count()
+        .get();
+    return snap.count ?? 0;
+  }
+
   Future<int> countClassesInLevel(String schoolId, String levelId) async {
     final snap = await firestore
         .collection('classes')

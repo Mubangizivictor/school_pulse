@@ -2,120 +2,110 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_bloc.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_event.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_state.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 import 'package:school_pulse/features/director/domain/entities/director_dashboard_stats.dart';
-import 'package:school_pulse/features/director/presentation/widgets/director_drawer.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 
 class DirectorDashboardScreen extends StatelessWidget {
   const DirectorDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final actionBg = Theme.of(context).colorScheme.surfaceContainer;
     context.read<DirectorBloc>().add(DirectorDashboardRequested());
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      drawer: const DirectorDrawer(),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu_rounded),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-            tooltip: 'Menu',
-          ),
-        ),
-        actions: [
-          NotificationBellButton(backgroundColor: actionBg),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildGreeting(context),
-                  const SizedBox(height: 20),
-                  const SectionHeader(title: 'Institution Snapshot'),
-                  const SizedBox(height: 12),
-                  _buildOverviewGrid(context),
-                  const SizedBox(height: 24),
-                  _buildPerformanceIndex(context),
-                  const SizedBox(height: 24),
-                  _buildFinancialPulse(context),
-                  const SizedBox(height: 24),
-                  _buildAcademicPulse(context),
-                  const SizedBox(height: 24),
-                  _buildActionCenter(context),
-                  const SizedBox(height: 24),
-                  _buildOperationalQuality(context),
-                  const SizedBox(height: 40),
-                ],
+      appBar: staffDashboardAppBar(context, roleLabel: 'Director'),
+      body: Builder(
+        builder: (context) => RefreshIndicator(
+          onRefresh: () async {
+            context.read<DirectorBloc>().add(DirectorDashboardRequested());
+            await context.read<DirectorBloc>().stream.firstWhere(
+              (state) => state is! DirectorDashboardLoading,
+            );
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.l,
+                    AppSpacing.xl,
+                    AppSpacing.x3l,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHero(context),
+                      const SizedBox(height: AppSpacing.xl),
+                      _buildPerformanceIndex(context),
+                      const SizedBox(height: AppSpacing.xl),
+                      _buildFinancialPulse(context),
+                      const SizedBox(height: AppSpacing.xl),
+                      _buildAcademicPulse(context),
+                      const SizedBox(height: AppSpacing.xl),
+                      _buildActionCenter(context),
+                      const SizedBox(height: AppSpacing.xl),
+                      _buildOperationalQuality(context),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildGreeting(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, authState) {
-        final name = (authState is AuthAuthenticated)
-            ? authState.user.name
-            : 'Director';
-        final hour = DateTime.now().hour;
-        final greeting = hour < 12
-            ? 'Good morning'
-            : hour < 17
-            ? 'Good afternoon'
-            : 'Good evening';
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [scheme.primary, scheme.tertiary],
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$greeting, $name',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: scheme.onPrimary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 4),
-              BlocBuilder<DirectorBloc, DirectorState>(
-                builder: (context, state) {
-                  final subtitle = state is DirectorDashboardLoaded
-                      ? '${state.stats.activeAcademicYear} • ${state.stats.currentTerm}'
-                      : 'Loading school oversight data...';
-                  return Text(
-                    subtitle,
-                    style: TextStyle(color: scheme.onPrimary.withValues(alpha: 0.85)),
-                  );
-                },
-              ),
-            ],
-          ),
+  Widget _buildHero(BuildContext context) {
+    return BlocBuilder<DirectorBloc, DirectorState>(
+      builder: (context, state) {
+        final stats = state is DirectorDashboardLoaded ? state.stats : null;
+        final label = stats != null
+            ? '${stats.activeAcademicYear} • ${stats.currentTerm}'
+            : null;
+        return StaffHeroSummaryCard(
+          greetingNameFallback: 'Director',
+          periodLabel: label,
+          kpis: stats == null
+              ? null
+              : [
+                  StaffKpiData(
+                    title: 'Total Students',
+                    valueText: stats.totalStudents.toString(),
+                    subtitle: '+${stats.schoolGrowthPercentage}%',
+                    icon: Icons.people_alt,
+                    color: AppColors.information(context),
+                  ),
+                  StaffKpiData(
+                    title: 'Total Staff',
+                    valueText: stats.totalStaff.toString(),
+                    subtitle: 'Active',
+                    icon: Icons.badge,
+                    color: AppColors.success(context),
+                  ),
+                  StaffKpiData(
+                    title: 'Departments',
+                    valueText: stats.totalDepartments.toString(),
+                    subtitle: 'Operational',
+                    icon: Icons.account_tree,
+                    color: AppColors.warning(context),
+                  ),
+                  StaffKpiData(
+                    title: 'Pending Approvals',
+                    valueText: stats.pendingFinancialApprovals.toString(),
+                    subtitle: 'Action Required',
+                    icon: Icons.assignment_late,
+                    color: AppColors.danger(context),
+                  ),
+                ],
         );
       },
     );
@@ -132,9 +122,10 @@ class DirectorDashboardScreen extends StatelessWidget {
             SectionHeader(
               title: 'School Performance Index',
               actionLabel: 'View Details',
-              onActionPressed: () => context.push('/staff/director/performance'),
+              onActionPressed: () =>
+                  context.push('/staff/director/performance'),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.m),
             AppCard(
               child: Row(
                 children: [
@@ -148,36 +139,51 @@ class DirectorDashboardScreen extends StatelessWidget {
                         : 'Needs Attention',
                     size: 110,
                   ),
-                  const SizedBox(width: 20),
+                  const SizedBox(width: AppSpacing.l),
                   Expanded(
                     child: Column(
                       children: [
                         LabeledProgressRow(
                           label: 'Academic',
-                          percent: (stats.overallSchoolAverage / 100).clamp(0, 1),
-                          trailingText: '${stats.overallSchoolAverage.round()}%',
-                          color: Colors.blue,
+                          percent: (stats.overallSchoolAverage / 100).clamp(
+                            0,
+                            1,
+                          ),
+                          trailingText:
+                              '${stats.overallSchoolAverage.round()}%',
+                          color: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 4),
                         ),
                         LabeledProgressRow(
                           label: 'Financial',
-                          percent: (stats.collectionPercentage / 100).clamp(0, 1),
-                          trailingText: '${stats.collectionPercentage.round()}%',
-                          color: Colors.green,
+                          percent: (stats.collectionPercentage / 100).clamp(
+                            0,
+                            1,
+                          ),
+                          trailingText:
+                              '${stats.collectionPercentage.round()}%',
+                          color: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 4),
                         ),
                         LabeledProgressRow(
                           label: 'Operational',
-                          percent: (stats.staffAttendanceRate / 100).clamp(0, 1),
+                          percent: (stats.staffAttendanceRate / 100).clamp(
+                            0,
+                            1,
+                          ),
                           trailingText: '${stats.staffAttendanceRate.round()}%',
-                          color: Colors.orange,
+                          color: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 4),
                         ),
                         LabeledProgressRow(
                           label: 'Engagement',
-                          percent: (stats.parentPortalUsageRate / 100).clamp(0, 1),
-                          trailingText: '${stats.parentPortalUsageRate.round()}%',
-                          color: Colors.purple,
+                          percent: (stats.parentPortalUsageRate / 100).clamp(
+                            0,
+                            1,
+                          ),
+                          trailingText:
+                              '${stats.parentPortalUsageRate.round()}%',
+                          color: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 4),
                         ),
                       ],
@@ -192,55 +198,6 @@ class DirectorDashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOverviewGrid(BuildContext context) {
-    return BlocBuilder<DirectorBloc, DirectorState>(
-      builder: (context, state) {
-        if (state is DirectorDashboardLoaded) {
-          final stats = state.stats;
-          return GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.5,
-            children: [
-              _OverviewCard(
-                label: 'Total Students',
-                value: stats.totalStudents.toString(),
-                trend: '+${stats.schoolGrowthPercentage}%',
-                icon: Icons.people_alt,
-                color: Colors.blue,
-              ),
-              _OverviewCard(
-                label: 'Total Staff',
-                value: stats.totalStaff.toString(),
-                trend: 'Active',
-                icon: Icons.badge,
-                color: Colors.purple,
-              ),
-              _OverviewCard(
-                label: 'Departments',
-                value: stats.totalDepartments.toString(),
-                trend: 'Operational',
-                icon: Icons.account_tree,
-                color: Colors.teal,
-              ),
-              _OverviewCard(
-                label: 'Pending Approvals',
-                value: stats.pendingFinancialApprovals.toString(),
-                trend: 'Action Required',
-                icon: Icons.assignment_late,
-                color: Colors.orange,
-              ),
-            ],
-          );
-        }
-        return const SizedBox.shrink();
-      },
-    );
-  }
-
   Widget _buildFinancialPulse(BuildContext context) {
     return BlocBuilder<DirectorBloc, DirectorState>(
       builder: (context, state) {
@@ -250,7 +207,7 @@ class DirectorDashboardScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SectionHeader(title: 'Financial Health'),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.m),
               AppCard(
                 child: Column(
                   children: [
@@ -263,7 +220,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                               '${stats.collectedFees.toStringAsFixed(0)} / ${stats.expectedFees.toStringAsFixed(0)}',
                           isProgress: true,
                           percentage: stats.collectionPercentage / 100,
-                          color: Colors.green,
+                          color: Colors.black,
                         ),
                         const VerticalDivider(),
                         _FinancialMetric(
@@ -273,7 +230,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                               'Exp: ${stats.totalExpenditure.toStringAsFixed(0)}',
                           isProgress: true,
                           percentage: stats.budgetUtilization / 100,
-                          color: Colors.orange,
+                          color: Colors.black,
                         ),
                       ],
                     ),
@@ -320,7 +277,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                 onActionPressed: () =>
                     context.push('/staff/director/performance'),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.m),
               Row(
                 children: [
                   Expanded(
@@ -330,22 +287,22 @@ class DirectorDashboardScreen extends StatelessWidget {
                       trend:
                           '${stats.improvementTrend > 0 ? "+" : ""}${stats.improvementTrend}%',
                       icon: Icons.analytics,
-                      color: Colors.blue,
+                      color: Colors.black,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.m),
                   Expanded(
                     child: _PerformanceCard(
                       label: 'Pass Rate',
                       value: '${stats.passRate}%',
                       trend: 'Stable',
                       icon: Icons.verified_user,
-                      color: Colors.green,
+                      color: Colors.black,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.m),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -360,13 +317,13 @@ class DirectorDashboardScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           ...stats.topClasses.map(
-                            (c) => _ClassListTile(c: c, color: Colors.green),
+                            (c) => _ClassListTile(c: c, color: Colors.black),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.m),
                   Expanded(
                     child: AppCard(
                       child: Column(
@@ -378,7 +335,7 @@ class DirectorDashboardScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           ...stats.weakClasses.map(
-                            (c) => _ClassListTile(c: c, color: Colors.red),
+                            (c) => _ClassListTile(c: c, color: Colors.black),
                           ),
                         ],
                       ),
@@ -399,25 +356,25 @@ class DirectorDashboardScreen extends StatelessWidget {
       {
         'icon': Icons.fact_check,
         'label': 'Approval Center',
-        'color': Colors.blue,
+        'color': Colors.black,
         'route': '/staff/director/approvals',
       },
       {
         'icon': Icons.insights,
         'label': 'Strategic Reports',
-        'color': Colors.purple,
+        'color': Colors.black,
         'route': '/staff/director/reports',
       },
       {
         'icon': Icons.track_changes,
         'label': 'School Goals',
-        'color': Colors.orange,
+        'color': Colors.black,
         'route': '/staff/director/goals',
       },
       {
         'icon': Icons.groups,
         'label': 'Management Meetings',
-        'color': Colors.teal,
+        'color': Colors.black,
         'route': '/staff/director/meetings',
       },
     ];
@@ -426,49 +383,61 @@ class DirectorDashboardScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Director Command Center'),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final crossAxisCount = constraints.maxWidth > 900 ? 6 : 3;
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.1,
+        GridView.builder(
+          padding: EdgeInsets.zero,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 3,
+            mainAxisSpacing: AppSpacing.m,
+            crossAxisSpacing: AppSpacing.m,
+            childAspectRatio: 2.05,
+          ),
+          itemCount: actions.length,
+          itemBuilder: (context, index) {
+            final action = actions[index];
+            return AppCard(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s,
+                vertical: 6,
               ),
-              itemCount: actions.length,
-              itemBuilder: (context, index) {
-                final action = actions[index];
-                return AppCard(
-                  onTap: () {
-                    if (action['route'] != null) {
-                      context.push(action['route'] as String);
-                    }
-                  },
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        action['icon'] as IconData,
-                        color: action['color'] as Color,
-                        size: 28,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        action['label'] as String,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
+              showShadow: false,
+              onTap: () {
+                if (action['route'] != null) {
+                  context.push(action['route'] as String);
+                }
               },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: (action['color'] as Color),
+                      borderRadius: AppRadius.medium,
+                    ),
+                    child: Icon(
+                      action['icon'] as IconData,
+                      color: action['color'] as Color,
+                      size: 16,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s),
+                  Expanded(
+                    child: Text(
+                      action['label'] as String,
+                      textAlign: TextAlign.left,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             );
           },
         ),
@@ -485,7 +454,7 @@ class DirectorDashboardScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SectionHeader(title: 'Operational Quality Indicators'),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.m),
               AppCard(
                 child: Column(
                   children: [
@@ -493,14 +462,14 @@ class DirectorDashboardScreen extends StatelessWidget {
                       label: 'Staff Attendance',
                       value: '${stats.staffAttendanceRate}%',
                       icon: Icons.how_to_reg,
-                      color: Colors.blue,
+                      color: Colors.black,
                     ),
                     const Divider(),
                     _QualityTile(
                       label: 'Parent Engagement',
                       value: '${stats.parentPortalUsageRate}% Usage',
                       icon: Icons.family_restroom,
-                      color: Colors.purple,
+                      color: Colors.black,
                     ),
                     const Divider(),
                     _QualityTile(
@@ -508,8 +477,8 @@ class DirectorDashboardScreen extends StatelessWidget {
                       value: '${stats.activeIncidents} Active',
                       icon: Icons.security,
                       color: stats.activeIncidents > 0
-                          ? Colors.red
-                          : Colors.green,
+                          ? Colors.black
+                          : Colors.black,
                     ),
                   ],
                 ),
@@ -519,79 +488,6 @@ class DirectorDashboardScreen extends StatelessWidget {
         }
         return const SizedBox.shrink();
       },
-    );
-  }
-}
-
-class _OverviewCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final String trend;
-  final IconData icon;
-  final Color color;
-
-  const _OverviewCard({
-    required this.label,
-    required this.value,
-    required this.trend,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 20),
-              ),
-              Text(
-                trend,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).hintColor,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -632,7 +528,7 @@ class _FinancialMetric extends StatelessWidget {
             const SizedBox(height: 8),
             LinearProgressIndicator(
               value: percentage,
-              backgroundColor: color.withValues(alpha: 0.1),
+              backgroundColor: color,
               color: color,
               borderRadius: BorderRadius.circular(2),
             ),

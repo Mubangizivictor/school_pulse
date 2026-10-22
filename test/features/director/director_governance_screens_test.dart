@@ -55,7 +55,10 @@ void main() {
         _TestableGoalsScreen(repository: repo, schoolId: 'school-1'),
       );
       await tester.pump();
-      expect(find.text('No strategic goals yet. Tap + to add one.'), findsOneWidget);
+      expect(
+        find.text('No strategic goals yet. Tap + to add one.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('renders an existing goal from Firestore', (tester) async {
@@ -102,7 +105,10 @@ void main() {
         _TestableMeetingsScreen(repository: repo, schoolId: 'school-1'),
       );
       await tester.pump();
-      expect(find.text('No meetings recorded yet. Tap + to add one.'), findsOneWidget);
+      expect(
+        find.text('No meetings recorded yet. Tap + to add one.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('renders an existing meeting from Firestore', (tester) async {
@@ -146,7 +152,10 @@ void main() {
 class _TestableGoalsScreen extends StatelessWidget {
   final DirectorGovernanceRepository repository;
   final String schoolId;
-  const _TestableGoalsScreen({required this.repository, required this.schoolId});
+  const _TestableGoalsScreen({
+    required this.repository,
+    required this.schoolId,
+  });
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -155,7 +164,9 @@ class _TestableGoalsScreen extends StatelessWidget {
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const CircularProgressIndicator();
         final goals = snapshot.data!;
-        if (goals.isEmpty) return const Text('No strategic goals yet. Tap + to add one.');
+        if (goals.isEmpty) {
+          return const Text('No strategic goals yet. Tap + to add one.');
+        }
         return ListView(
           children: goals
               .map(
@@ -173,7 +184,10 @@ class _TestableGoalsScreen extends StatelessWidget {
 class _TestableMeetingsScreen extends StatelessWidget {
   final DirectorGovernanceRepository repository;
   final String schoolId;
-  const _TestableMeetingsScreen({required this.repository, required this.schoolId});
+  const _TestableMeetingsScreen({
+    required this.repository,
+    required this.schoolId,
+  });
 
   @override
   Widget build(BuildContext context) => Scaffold(

@@ -82,6 +82,51 @@ class AdminAttendanceRepositoryImpl implements AdminAttendanceRepository {
     }
   }
 
+  @override
+  Future<Either<Failure, AttendanceCounts>> getTodayAttendanceCounts(
+    String schoolId,
+  ) async {
+    try {
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final snapshot = await firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('class_attendance_sessions')
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('date', isLessThan: Timestamp.fromDate(endOfDay))
+          .where('status', isEqualTo: 'submitted')
+          .get();
+
+      int present = 0;
+      int late = 0;
+      int absent = 0;
+      int excused = 0;
+
+      for (final doc in snapshot.docs) {
+        final counts = doc.data()['counts'] as Map<String, dynamic>?;
+        if (counts == null) continue;
+        present += (counts['present'] as num?)?.toInt() ?? 0;
+        late += (counts['late'] as num?)?.toInt() ?? 0;
+        absent += (counts['absent'] as num?)?.toInt() ?? 0;
+        excused += (counts['excused'] as num?)?.toInt() ?? 0;
+      }
+
+      return Right(
+        AttendanceCounts(
+          present: present,
+          late: late,
+          absent: absent,
+          excused: excused,
+        ),
+      );
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
   List<DateTime> _lastSchoolDays(DateTime from, {required int count}) {
     return List.generate(7, (i) => from.subtract(Duration(days: i)))
         .where(
@@ -100,9 +145,9 @@ class AdminAttendanceRepositoryImpl implements AdminAttendanceRepository {
   /// Firestore reads for one dashboard stat.
   List<DateTime> _schoolDaysInRange(
     DateTime start,
-    DateTime end,
-    {required int cap}
-  ) {
+    DateTime end, {
+    required int cap,
+  }) {
     final schoolDays = <DateTime>[];
     var cursor = DateTime(start.year, start.month, start.day);
     final last = DateTime(end.year, end.month, end.day);

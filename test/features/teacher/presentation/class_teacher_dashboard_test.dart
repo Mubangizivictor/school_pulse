@@ -11,6 +11,9 @@ import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_event.dart';
+import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
 import 'package:school_pulse/features/teacher/dashboard_screen.dart';
 import 'package:school_pulse/features/teacher/domain/entities/active_responsibility_context.dart';
 import 'package:school_pulse/features/teacher/domain/entities/class_dashboard_summary.dart';
@@ -31,6 +34,12 @@ class _MockContextBloc
 class _MockDashboardBloc
     extends MockBloc<ClassTeacherDashboardEvent, ClassTeacherDashboardState>
     implements ClassTeacherDashboardBloc {}
+
+/// The shared staff dashboard header watches BrandingBloc for the school
+/// badge; without it the header cannot lay out and the whole dashboard
+/// overflows.
+class _MockBrandingBloc extends MockBloc<BrandingEvent, BrandingState>
+    implements BrandingBloc {}
 
 const _user = UserEntity(
   id: 'user1',
@@ -93,11 +102,14 @@ void main() {
   late _MockAuthBloc authBloc;
   late _MockContextBloc contextBloc;
   late _MockDashboardBloc dashboardBloc;
+  late _MockBrandingBloc brandingBloc;
 
   setUp(() {
     authBloc = _MockAuthBloc();
     contextBloc = _MockContextBloc();
     dashboardBloc = _MockDashboardBloc();
+    brandingBloc = _MockBrandingBloc();
+    when(() => brandingBloc.state).thenReturn(const BrandingLoaded(null));
     when(() => authBloc.state).thenReturn(const AuthAuthenticated(_user));
   });
 
@@ -125,6 +137,7 @@ void main() {
             BlocProvider<AuthBloc>.value(value: authBloc),
             BlocProvider<ClassTeacherContextBloc>.value(value: contextBloc),
             BlocProvider<ClassTeacherDashboardBloc>.value(value: dashboardBloc),
+            BlocProvider<BrandingBloc>.value(value: brandingBloc),
           ],
           child: MaterialApp.router(
             theme: AppTheme.light(),
@@ -158,7 +171,12 @@ void main() {
         ),
       );
 
-      expect(find.text('P5 East • Kabale Campus'), findsOneWidget);
+      // 43ceddc5 header: a first-name greeting, then the responsibility
+      // switcher naming the class and stream, then term + date.
+      expect(find.textContaining(', Grace'), findsOneWidget);
+      expect(find.textContaining('Nakato'), findsNothing);
+      expect(find.text('Class Teacher • P5 • East'), findsOneWidget);
+      expect(find.textContaining('Term 2 • '), findsOneWidget);
       // The hardcoded stand-in the panel used to ship with must be gone.
       expect(find.textContaining('Grade 10A'), findsNothing);
       expect(find.textContaining('North Campus'), findsNothing);
@@ -185,9 +203,12 @@ void main() {
         ),
       );
 
+      // Total / Present / Absent / Late counts; no percentage tile.
       expect(find.text('32'), findsOneWidget);
       expect(find.text('30'), findsOneWidget);
-      expect(find.text('93.8%'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+      expect(find.text('Taken'), findsOneWidget);
+      expect(find.text('View register'), findsOneWidget);
     });
 
     testWidgets('says the register is not taken rather than showing 0%', (
@@ -203,7 +224,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Not taken'), findsNWidgets(2));
+      expect(find.text('Not taken'), findsOneWidget);
+      // Present/Absent/Late show a dash, not 0.
+      expect(find.text('—'), findsNWidgets(3));
+      expect(find.text('0'), findsNothing);
       expect(find.text('0.0%'), findsNothing);
     });
   });
@@ -241,9 +265,7 @@ void main() {
       expect(find.text('English Literature'), findsNothing);
     });
 
-    testWidgets('explains an empty timetable instead of showing a blank card', (
-      tester,
-    ) async {
+    testWidgets('hides an empty timetable section completely', (tester) async {
       await pump(
         tester,
         contextState: ClassTeacherContextState(active: _activeContext),
@@ -252,9 +274,11 @@ void main() {
         ),
       );
 
+      expect(find.text("Today's Schedule"), findsNothing);
+      expect(find.text('View All'), findsNothing);
       expect(
         find.text('No lessons scheduled for your class today.'),
-        findsOneWidget,
+        findsNothing,
       );
     });
   });
@@ -284,7 +308,7 @@ void main() {
       expect(find.text('Register submitted for P5 East.'), findsOneWidget);
     });
 
-    testWidgets('explains an empty feed', (tester) async {
+    testWidgets('hides an empty activity section completely', (tester) async {
       await pump(
         tester,
         contextState: ClassTeacherContextState(active: _activeContext),
@@ -293,15 +317,17 @@ void main() {
         ),
       );
 
+      expect(find.text('Recent Activities'), findsNothing);
+      expect(find.text('View All'), findsNothing);
       expect(
         find.text('Nothing has happened in your class yet.'),
-        findsOneWidget,
+        findsNothing,
       );
     });
   });
 
   group('quick actions', () {
-    testWidgets('keeps exactly the three approved actions', (tester) async {
+    testWidgets('shows the 43ceddc5 action set', (tester) async {
       await pump(
         tester,
         contextState: ClassTeacherContextState(active: _activeContext),
@@ -310,9 +336,13 @@ void main() {
         ),
       );
 
-      expect(find.text('Roll Call'), findsOneWidget);
-      expect(find.text('Submit Marks'), findsOneWidget);
-      expect(find.text('Resources'), findsOneWidget);
+      // 'Take attendance' is both a quick action and the attendance card's
+      // CTA while the register is not taken.
+      expect(find.text('Take attendance'), findsNWidgets(2));
+      expect(find.text('Add class note'), findsOneWidget);
+      expect(find.text('Message parents'), findsOneWidget);
+      expect(find.text('Roll Call'), findsNothing);
+      expect(find.text('Submit Marks'), findsNothing);
     });
   });
 

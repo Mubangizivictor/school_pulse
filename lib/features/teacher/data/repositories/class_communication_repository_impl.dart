@@ -7,15 +7,20 @@ import 'package:school_pulse/core/permissions/permission.dart';
 
 import '../../domain/entities/active_responsibility_context.dart';
 import '../../domain/entities/class_announcement.dart';
+import '../../domain/entities/offline_operation.dart';
 import '../../domain/policies/class_communication_policy.dart';
 import '../../domain/repositories/class_communication_repository.dart';
 import '../../domain/repositories/class_student_repository.dart';
 import '../../domain/services/class_teacher_assignment_service.dart';
 import '../../domain/services/subject_audit_service.dart';
+import '../datasources/class_teacher_local_data_source.dart';
 import '../datasources/class_teacher_remote_data_source.dart';
+import '../datasources/subject_teacher_local_data_source.dart';
 
 class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
   final ClassTeacherRemoteDataSource remoteDataSource;
+  final ClassTeacherLocalDataSource localDataSource;
+  final SubjectTeacherLocalDataSource queueDataSource;
   final ClassStudentRepository studentRepository;
   final ClassTeacherAssignmentService assignmentService;
   final SubjectAuditService auditService;
@@ -24,6 +29,8 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
 
   ClassCommunicationRepositoryImpl({
     required this.remoteDataSource,
+    required this.localDataSource,
+    required this.queueDataSource,
     required this.studentRepository,
     required this.assignmentService,
     required this.auditService,
@@ -49,9 +56,11 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
     }
 
     if (!await networkInfo.isConnected) {
-      return const Left(
-        NetworkFailure('You are offline. Announcements need a connection.'),
+      final cached = await localDataSource.getAnnouncements(
+        schoolId: context.schoolId,
+        classId: classId,
       );
+      return Right(cached);
     }
 
     try {
@@ -61,8 +70,18 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
         academicYearId: context.academicYearId,
         streamId: context.streamId,
       );
+      await localDataSource.cacheAnnouncements(
+        announcements,
+        schoolId: context.schoolId,
+        classId: classId,
+      );
       return Right(announcements);
     } catch (_) {
+      final cached = await localDataSource.getAnnouncements(
+        schoolId: context.schoolId,
+        classId: classId,
+      );
+      if (cached.isNotEmpty) return Right(cached);
       return const Left(
         ServerFailure('Could not load announcements. Pull down to retry.'),
       );
@@ -95,14 +114,6 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
       return Left(ValidationFailure(decision.message ?? 'Could not save.'));
     }
 
-    if (!await networkInfo.isConnected) {
-      return const Left(
-        OfflineNotAllowedFailure(
-          'Saving an announcement needs an internet connection.',
-        ),
-      );
-    }
-
     final prepared = isNew
         ? _withIdentity(context, announcement, uuid.v4())
         : announcement.copyWith(
@@ -110,6 +121,17 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
             updatedAt: DateTime.now(),
             roleAssignmentId: context.roleAssignmentId,
           );
+
+    await localDataSource.saveAnnouncementLocal(prepared);
+
+    if (!await networkInfo.isConnected) {
+      await _queue(
+        context,
+        prepared.id,
+        OfflineOperationType.classAnnouncementSave,
+      );
+      return Right(prepared);
+    }
 
     try {
       await remoteDataSource.saveAnnouncement(prepared);
@@ -122,7 +144,12 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
       );
       return Right(prepared);
     } catch (_) {
-      return const Left(ServerFailure('Could not save this announcement.'));
+      await _queue(
+        context,
+        prepared.id,
+        OfflineOperationType.classAnnouncementSave,
+      );
+      return Right(prepared);
     }
   }
 
@@ -132,27 +159,28 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
     required ClassAnnouncement announcement,
   }) async {
     // Re-verified: publishing reaches every guardian in the class, and a
-    // notification cannot be recalled once it has gone out.
-    final fresh = await assignmentService.authorizeFresh(
-      permission: Permission.classAnnouncementPublish,
-      classId: announcement.classId,
-      academicYearId: announcement.academicYearId,
-    );
-    if (fresh.isLeft()) {
-      return fresh.fold(Left.new, (_) => const Left(PermissionDeniedFailure()));
-    }
-
-    if (!await networkInfo.isConnected) {
-      return const Left(
-        OfflineNotAllowedFailure(
-          'Sending an announcement needs an internet connection.',
-        ),
+    // notification cannot be recalled once it has gone out. Only possible
+    // online - offline this falls back to the context's own scope.
+    final isOnline = await networkInfo.isConnected;
+    if (isOnline) {
+      final fresh = await assignmentService.authorizeFresh(
+        permission: Permission.classAnnouncementPublish,
+        classId: announcement.classId,
+        academicYearId: announcement.academicYearId,
       );
+      if (fresh.isLeft()) {
+        return fresh.fold(
+          Left.new,
+          (_) => const Left(PermissionDeniedFailure()),
+        );
+      }
+    } else if (!context.can(Permission.classAnnouncementPublish)) {
+      return const Left(PermissionDeniedFailure());
     }
 
-    // Resolved from the live roster, not from anything stored on the draft:
-    // a student who transferred out between drafting and sending must not
-    // receive it, and one admitted since should.
+    // Resolved from the live roster when online. Offline, the roster's own
+    // cache-first read still returns the best-known list, so recipient
+    // counting degrades to "as of the last sync" rather than failing.
     final roster = await studentRepository.getClassStudents(context: context);
     final recipients = ClassCommunicationPolicy.recipientsFor(
       announcement: announcement,
@@ -181,6 +209,17 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
       roleAssignmentId: context.roleAssignmentId,
     );
 
+    await localDataSource.saveAnnouncementLocal(published);
+
+    if (!isOnline) {
+      await _queue(
+        context,
+        published.id,
+        OfflineOperationType.classAnnouncementPublish,
+      );
+      return Right(published);
+    }
+
     try {
       await remoteDataSource.saveAnnouncement(published);
       await auditService.record(
@@ -197,7 +236,12 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
       );
       return Right(published);
     } catch (_) {
-      return const Left(ServerFailure('Could not send this announcement.'));
+      await _queue(
+        context,
+        published.id,
+        OfflineOperationType.classAnnouncementPublish,
+      );
+      return Right(published);
     }
   }
 
@@ -224,6 +268,17 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
       updatedAt: DateTime.now(),
     );
 
+    await localDataSource.saveAnnouncementLocal(archived);
+
+    if (!await networkInfo.isConnected) {
+      await _queue(
+        context,
+        archived.id,
+        OfflineOperationType.classAnnouncementArchive,
+      );
+      return Right(archived);
+    }
+
     try {
       await remoteDataSource.saveAnnouncement(archived);
       await auditService.record(
@@ -236,7 +291,12 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
       );
       return Right(archived);
     } catch (_) {
-      return const Left(ServerFailure('Could not archive this announcement.'));
+      await _queue(
+        context,
+        archived.id,
+        OfflineOperationType.classAnnouncementArchive,
+      );
+      return Right(archived);
     }
   }
 
@@ -292,5 +352,24 @@ class ClassCommunicationRepositoryImpl implements ClassCommunicationRepository {
       createdAt: DateTime.now(),
       roleAssignmentId: context.roleAssignmentId,
     );
+  }
+
+  Future<void> _queue(
+    ActiveResponsibilityContext context,
+    String entityId,
+    String type,
+  ) async {
+    final operation = OfflineOperation(
+      operationId: uuid.v4(),
+      entityType: type,
+      entityId: entityId,
+      action: type,
+      createdAt: DateTime.now(),
+      schoolId: context.schoolId,
+      userId: context.userId,
+      roleAssignmentId: context.roleAssignmentId,
+    );
+
+    await queueDataSource.enqueueOperation(operation);
   }
 }

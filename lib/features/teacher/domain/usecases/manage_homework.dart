@@ -29,6 +29,8 @@ class UpdateHomework {
 class DeleteHomework {
   final TeacherRepository repository;
   DeleteHomework(this.repository);
-  Future<Either<Failure, void>> call(String homeworkId) async =>
-      await repository.deleteHomework(homeworkId);
+  Future<Either<Failure, void>> call(
+    String homeworkId, {
+    required String schoolId,
+  }) async => await repository.deleteHomework(homeworkId, schoolId: schoolId);
 }

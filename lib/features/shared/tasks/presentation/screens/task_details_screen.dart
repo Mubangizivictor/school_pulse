@@ -43,7 +43,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 padding: EdgeInsets.only(bottom: 8.0),
                 child: StatusBadge(
                   label: 'High Priority',
-                  color: Colors.green,
+                  color: Colors.black,
                   icon: Icons.verified_user,
                 ),
               ),
@@ -52,7 +52,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 padding: EdgeInsets.only(bottom: 8.0),
                 child: StatusBadge(
                   label: 'Completed',
-                  color: Colors.green,
+                  color: Colors.black,
                   icon: Icons.check_circle,
                 ),
               )
@@ -128,11 +128,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             if (isInProgress) ...[
               const SizedBox(height: 24),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Progress',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  const Expanded(
+                    child: Text(
+                      'Progress',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   Text(
                     '${checklist.where((e) => e.isCompleted).length}/${checklist.length} completed',
@@ -145,9 +146,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     ? 0
                     : checklist.where((e) => e.isCompleted).length /
                           checklist.length,
-                backgroundColor: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.1),
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 color: Theme.of(context).colorScheme.primary,
                 minHeight: 8,
                 borderRadius: BorderRadius.circular(4),
@@ -156,11 +155,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
             const SizedBox(height: 24),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Checklist',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                const Expanded(
+                  child: Text(
+                    'Checklist',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 if (!isCompleted)
                   Text(
@@ -251,24 +251,27 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       ),
       bottomNavigationBar: isCompleted
           ? null
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SecondaryButton(
-                      label: isInProgress ? 'Pause Task' : 'Work In Progress',
-                      onPressed: () {},
+          : SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SecondaryButton(
+                        label: isInProgress ? 'Pause Task' : 'Work In Progress',
+                        onPressed: () {},
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: PrimaryButton(
-                      label: isInProgress ? 'Continue' : 'Mark Completed',
-                      onPressed: () {},
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: PrimaryButton(
+                        label: isInProgress ? 'Continue' : 'Mark Completed',
+                        onPressed: () {},
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
     );
@@ -281,14 +284,23 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         children: [
           Icon(icon, size: 18, color: Theme.of(context).colorScheme.outline),
           const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
-          const Spacer(),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
         ],
       ),
     );
@@ -300,7 +312,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
-          const Icon(Icons.insert_drive_file_outlined, color: Colors.orange),
+          const Icon(Icons.insert_drive_file_outlined, color: Colors.black),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

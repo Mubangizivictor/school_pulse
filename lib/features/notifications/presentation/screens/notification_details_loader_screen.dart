@@ -10,6 +10,7 @@ import 'package:school_pulse/features/notifications/domain/entities/notification
 import 'package:school_pulse/features/notifications/domain/failures/notification_failure.dart';
 import 'package:school_pulse/features/notifications/domain/repositories/notification_repository.dart';
 import 'package:school_pulse/features/notifications/presentation/screens/notification_details_screen.dart';
+import 'package:school_pulse/features/notifications/routing/notification_shell_route.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 /// Loads a notification by id, then hands off to [NotificationDetailsScreen].
@@ -62,22 +63,32 @@ class _NotificationDetailsLoaderScreenState
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final basePath = authState is AuthAuthenticated
+        ? notificationShellBasePath(authState.user.role)
+        : '/staff/notifications';
+
     return FutureBuilder<Either<NotificationFailure, NotificationItem>>(
       future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const _LoaderScaffold(child: SchoolPulseLoader());
+          return _LoaderScaffold(
+            basePath: basePath,
+            child: const SchoolPulseLoader(),
+          );
         }
 
         final result = snapshot.data;
         if (result == null) {
-          return const _FallbackScreen(
+          return _FallbackScreen(
+            basePath: basePath,
             message: 'This notification could not be opened.',
           );
         }
 
         return result.fold(
-          (failure) => _FallbackScreen(message: failure.userMessage),
+          (failure) =>
+              _FallbackScreen(basePath: basePath, message: failure.userMessage),
           (notification) =>
               NotificationDetailsScreen(notification: notification),
         );
@@ -88,19 +99,20 @@ class _NotificationDetailsLoaderScreenState
 
 class _LoaderScaffold extends StatelessWidget {
   final Widget child;
+  final String basePath;
 
-  const _LoaderScaffold({required this.child});
+  const _LoaderScaffold({required this.child, required this.basePath});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => _popOrHome(context),
+          onPressed: () => _popOrHome(context, basePath),
         ),
         title: const Text(
           'Notification',
@@ -119,12 +131,14 @@ class _LoaderScaffold extends StatelessWidget {
 /// crafted id cannot be used to probe whether a notification exists elsewhere.
 class _FallbackScreen extends StatelessWidget {
   final String message;
+  final String basePath;
 
-  const _FallbackScreen({required this.message});
+  const _FallbackScreen({required this.message, required this.basePath});
 
   @override
   Widget build(BuildContext context) {
     return _LoaderScaffold(
+      basePath: basePath,
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
@@ -132,20 +146,20 @@ class _FallbackScreen extends StatelessWidget {
           children: [
             const Icon(
               Icons.notifications_off_outlined,
-              color: Colors.white24,
+              color: Colors.white,
               size: 64,
             ),
             const SizedBox(height: 16),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 15),
+              style: const TextStyle(color: Colors.white, fontSize: 15),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => _popOrHome(context),
+              onPressed: () => _popOrHome(context, basePath),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6366F1),
+                backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Back to notifications'),
@@ -159,10 +173,12 @@ class _FallbackScreen extends StatelessWidget {
 
 /// Cold-launching from a push leaves nothing to pop back to, so fall through
 /// to the notification centre instead of stranding the user on a dead end.
-void _popOrHome(BuildContext context) {
+/// [basePath] keeps that fallback inside the same shell the user is actually
+/// in - this screen is mounted under `/staff`, `/parent` and `/student`.
+void _popOrHome(BuildContext context, String basePath) {
   if (context.canPop()) {
     context.pop();
   } else {
-    context.go('/staff/notifications');
+    context.go(basePath);
   }
 }

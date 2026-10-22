@@ -29,6 +29,16 @@ class UpdateStudentHealthProfile {
   }
 }
 
+class GetAllHealthProfiles {
+  final HealthRepository repository;
+  GetAllHealthProfiles(this.repository);
+  Future<Either<Failure, List<StudentHealthProfile>>> call(
+    String schoolId,
+  ) async {
+    return await repository.getAllHealthProfiles(schoolId);
+  }
+}
+
 class GetClinicVisits {
   final HealthRepository repository;
   GetClinicVisits(this.repository);
@@ -92,6 +102,24 @@ class UpdateInventoryItem {
   UpdateInventoryItem(this.repository);
   Future<Either<Failure, void>> call(MedicalInventoryItem item) async {
     return await repository.updateInventoryItem(item);
+  }
+}
+
+class DispenseMedicalItem {
+  final HealthRepository repository;
+  DispenseMedicalItem(this.repository);
+  Future<Either<Failure, void>> call({
+    required String itemId,
+    required String visitId,
+    required String studentId,
+    required int quantity,
+  }) {
+    return repository.dispenseMedicalItem(
+      itemId: itemId,
+      visitId: visitId,
+      studentId: studentId,
+      quantity: quantity,
+    );
   }
 }
 

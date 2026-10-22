@@ -110,7 +110,10 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
   ) async {
     final currentState = state;
     emit(TeacherLoading());
-    final result = await deleteHomework(event.homeworkId);
+    final result = await deleteHomework(
+      event.homeworkId,
+      schoolId: event.schoolId,
+    );
     result.fold((failure) => emit(TeacherError(failure.message)), (_) {
       emit(const TeacherOperationSuccess('Homework deleted successfully'));
       if (currentState is TeacherHomeworkLoaded) {
@@ -127,8 +130,14 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     Emitter<TeacherState> emit,
   ) async {
     emit(TeacherLoading());
-    final studentsResult = await getStudentsByClass(event.className);
+    final studentsResult = await getStudentsByClass(
+      GetStudentsByClassParams(
+        schoolId: event.schoolId,
+        className: event.className,
+      ),
+    );
     final commentsResult = await getReportComments(
+      schoolId: event.schoolId,
       className: event.className,
       term: event.term,
       year: event.year,
@@ -163,8 +172,14 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     Emitter<TeacherState> emit,
   ) async {
     emit(TeacherLoading());
-    final studentsResult = await getStudentsByClass(event.className);
+    final studentsResult = await getStudentsByClass(
+      GetStudentsByClassParams(
+        schoolId: event.schoolId,
+        className: event.className,
+      ),
+    );
     final ratingsResult = await getCompetencyRatings(
+      schoolId: event.schoolId,
       className: event.className,
       term: event.term,
       year: event.year,
@@ -217,6 +232,7 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
       emit(TeacherMarksSubmitSuccess(event.marks.length));
       add(
         TeacherMarksEntryRequested(
+          schoolId: event.schoolId,
           className: event.className,
           subject: event.subject,
           assessment: event.assessment,
@@ -260,7 +276,7 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
 
     result.fold((failure) => emit(TeacherError(failure.message)), (_) {
       emit(TeacherInitial());
-      add(TeacherAttendanceRequested(event.className));
+      add(TeacherAttendanceRequested(event.schoolId, event.className));
     });
   }
 
@@ -304,7 +320,12 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     Emitter<TeacherState> emit,
   ) async {
     emit(TeacherLoading());
-    final result = await getStudentsByClass(event.className);
+    final result = await getStudentsByClass(
+      GetStudentsByClassParams(
+        schoolId: event.schoolId,
+        className: event.className,
+      ),
+    );
 
     result.fold(
       (failure) => emit(TeacherError(failure.message)),
@@ -322,7 +343,12 @@ class TeacherBloc extends Bloc<TeacherEvent, TeacherState> {
     Emitter<TeacherState> emit,
   ) async {
     emit(TeacherLoading());
-    final result = await getStudentsByClass(event.className);
+    final result = await getStudentsByClass(
+      GetStudentsByClassParams(
+        schoolId: event.schoolId,
+        className: event.className,
+      ),
+    );
 
     result.fold(
       (failure) => emit(TeacherError(failure.message)),

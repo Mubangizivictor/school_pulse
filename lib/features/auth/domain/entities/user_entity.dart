@@ -18,9 +18,17 @@ class UserEntity extends Equatable {
   final String schoolId;
   final String? schoolName;
   final bool isActive;
+  final DateTime? lastActiveAt;
   final String? deactivationReason;
   final bool mustChangePassword;
   final bool mfaEnabled;
+
+  // Invitation state mirrored onto the user doc by createStaffInvitation /
+  // cancelStaffInvitation (functions/index.js). Values are "sent" or
+  // "cancelled"; null means no invitation was ever issued (account was
+  // created directly, e.g. via the Add Staff wizard's immediate-create path).
+  final String? invitationStatus;
+  final String? invitationId;
 
   // Staff profile fields, all optional so parent/student UserEntity
   // construction is unaffected. IDs reference the Structure module
@@ -51,9 +59,12 @@ class UserEntity extends Equatable {
     this.assignedClass,
     this.subjects,
     this.isActive = true,
+    this.lastActiveAt,
     this.deactivationReason,
     this.mustChangePassword = false,
     this.mfaEnabled = false,
+    this.invitationStatus,
+    this.invitationId,
     this.departmentId,
     this.designationId,
     this.campusId,
@@ -80,9 +91,12 @@ class UserEntity extends Equatable {
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     bool? isActive,
+    DateTime? lastActiveAt,
     String? deactivationReason,
     bool? mustChangePassword,
     bool? mfaEnabled,
+    String? invitationStatus,
+    String? invitationId,
     String? departmentId,
     String? designationId,
     String? campusId,
@@ -109,9 +123,12 @@ class UserEntity extends Equatable {
       assignedClass: assignedClass ?? this.assignedClass,
       subjects: subjects ?? this.subjects,
       isActive: isActive ?? this.isActive,
+      lastActiveAt: lastActiveAt ?? this.lastActiveAt,
       deactivationReason: deactivationReason ?? this.deactivationReason,
       mustChangePassword: mustChangePassword ?? this.mustChangePassword,
       mfaEnabled: mfaEnabled ?? this.mfaEnabled,
+      invitationStatus: invitationStatus ?? this.invitationStatus,
+      invitationId: invitationId ?? this.invitationId,
       departmentId: departmentId ?? this.departmentId,
       designationId: designationId ?? this.designationId,
       campusId: campusId ?? this.campusId,
@@ -142,8 +159,11 @@ class UserEntity extends Equatable {
     subjects,
     mustChangePassword,
     isActive,
+    lastActiveAt,
     deactivationReason,
     mfaEnabled,
+    invitationStatus,
+    invitationId,
     departmentId,
     designationId,
     campusId,

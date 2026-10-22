@@ -58,18 +58,16 @@ class OnboardingStepScaffold extends StatelessWidget {
                       : null,
                   decoration: isDesktop
                       ? BoxDecoration(
-                          color: isDark
-                              ? AppColors.surfaceDark.withValues(alpha: 0.5)
-                              : Colors.white,
+                          color: isDark ? AppColors.surfaceDark : Colors.white,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
                             color: isDark
-                                ? AppColors.white.withValues(alpha: 0.1)
+                                ? AppColors.white
                                 : AppColors.borderLight,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
+                              color: Colors.black,
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),

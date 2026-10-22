@@ -79,7 +79,7 @@ class _StudentHealthProfileScreenState
                   _InfoTile(
                     label: 'Blood Group',
                     value: '${profile.bloodGroup}${profile.rhesusFactor ?? ""}',
-                    color: Colors.red.shade700,
+                    color: Colors.black,
                   ),
                   AllergyList(
                     allergies: profile.allergies
@@ -184,9 +184,7 @@ class _StudentHealthProfileScreenState
   Widget _buildHeader(StudentHealthProfile profile) {
     return AppCard(
       padding: const EdgeInsets.all(20),
-      color: Theme.of(
-        context,
-      ).colorScheme.primaryContainer.withValues(alpha: 0.3),
+      color: Theme.of(context).colorScheme.primaryContainer,
       child: Column(
         children: [
           AvatarInitials(name: _student?.name ?? 'Student', size: 64),
@@ -340,7 +338,7 @@ class _StudentHealthProfileScreenState
               title: 'Emergency Incident',
               subtitle: e.incidentDetails,
               date: e.dateTime,
-              color: Colors.red,
+              color: Colors.black,
               icon: Icons.emergency,
             ),
           ),
@@ -351,7 +349,7 @@ class _StudentHealthProfileScreenState
                   title: 'Clinic Visit: ${v.reason}',
                   subtitle: 'Outcome: ${v.outcome.name}',
                   date: v.dateTime,
-                  color: Colors.blue,
+                  color: Colors.black,
                   icon: Icons.medical_services,
                 ),
               ),
@@ -380,15 +378,15 @@ class _InfoTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppCard(
       margin: const EdgeInsets.only(bottom: 8),
-      color: isWarning ? Colors.orange.shade50 : null,
-      borderColor: isWarning ? Colors.orange.shade200 : null,
+      color: isWarning ? Colors.black : null,
+      borderColor: isWarning ? Colors.black : null,
       child: ListTile(
         title: Text(label, style: Theme.of(context).textTheme.labelSmall),
         subtitle: Text(
           value,
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            color: color ?? (isWarning ? Colors.orange.shade900 : null),
+            color: color ?? (isWarning ? Colors.black : null),
           ),
         ),
         trailing: isPhone
@@ -436,7 +434,7 @@ class _HistoryTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.1),
+          backgroundColor: color,
           child: Icon(icon, color: color, size: 20),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),

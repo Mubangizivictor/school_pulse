@@ -35,9 +35,7 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
+    final primaryColor = AppColors.textPrimary(context);
 
     return BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
       builder: (context, contextState) {
@@ -50,7 +48,7 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
               ].where((e) => e != null && e.isNotEmpty).join(' ');
 
         return Scaffold(
-          backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+          backgroundColor: AppColors.background(context),
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -185,7 +183,7 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         border: Border(
           bottom: BorderSide(
             color: isDark ? AppColors.borderDark : AppColors.borderLight,
@@ -265,10 +263,7 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(AppSpacing.s),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(
               isPositive ? Icons.add_circle : Icons.remove_circle,
               color: color,
@@ -285,9 +280,7 @@ class _ClassBehaviourScreenState extends State<ClassBehaviourScreen> {
                       ? record.studentId
                       : record.studentName,
                   style: AppTypography.titleMedium.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
+                    color: AppColors.textPrimary(context),
                     fontWeight: FontWeight.bold,
                   ),
                 ),

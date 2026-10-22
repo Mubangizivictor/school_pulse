@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../domain/entities/school.dart';
 
 class SchoolModel extends School {
@@ -19,6 +21,11 @@ class SchoolModel extends School {
     super.divisions,
     super.displayLabel,
     super.accessMode,
+    super.slug,
+    super.portalSubdomain,
+    super.customDomains,
+    super.branding,
+    super.domainStatus,
   });
 
   factory SchoolModel.fromJson(Map<String, dynamic> json) {
@@ -34,12 +41,8 @@ class SchoolModel extends School {
         orElse: () => SchoolStatus.trial,
       ),
       subscriptionPlanId: json['subscriptionPlanId'] ?? '',
-      createdAt: json['createdAt'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(json['createdAt'])
-          : DateTime.now(),
-      subscriptionExpiry: json['subscriptionExpiry'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(json['subscriptionExpiry'])
-          : DateTime.now(),
+      createdAt: _dateOrNow(json['createdAt']),
+      subscriptionExpiry: _dateOrNow(json['subscriptionExpiry']),
       enabledFeatures: List<String>.from(json['enabledFeatures'] ?? []),
       metadata: Map<String, dynamic>.from(json['metadata'] ?? {}),
       classification: InstitutionClassification.values.firstWhere(
@@ -52,7 +55,20 @@ class SchoolModel extends School {
           .toList(),
       displayLabel: json['displayLabel'] as String?,
       accessMode: json['accessMode'] as String?,
+      slug: json['slug'] as String? ?? '',
+      portalSubdomain: json['portalSubdomain'] as String? ?? '',
+      customDomains: List<String>.from(json['customDomains'] ?? const []),
+      branding: Map<String, dynamic>.from(json['branding'] ?? const {}),
+      domainStatus: json['domainStatus'] as String? ?? 'pending',
     );
+  }
+
+  static DateTime _dateOrNow(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is int) return DateTime.fromMillisecondsSinceEpoch(value);
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+    return DateTime.now();
   }
 
   static InstitutionDivision _divisionFromJson(Map<String, dynamic> json) {
@@ -97,6 +113,11 @@ class SchoolModel extends School {
       'divisions': divisions.map(_divisionToJson).toList(),
       'displayLabel': displayLabel,
       if (accessMode != null) 'accessMode': accessMode,
+      'slug': slug,
+      'portalSubdomain': portalSubdomain,
+      'customDomains': customDomains,
+      'branding': branding,
+      'domainStatus': domainStatus,
     };
   }
 }

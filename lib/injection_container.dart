@@ -5,11 +5,19 @@ import 'package:school_pulse/features/relationships/domain/repositories/relation
 import 'package:school_pulse/features/relationships/domain/usecases/create_relationship.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/get_people_policy.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/get_relationships_for_parent.dart';
+import 'package:school_pulse/features/relationships/domain/usecases/get_relationships_for_school.dart';
+import 'package:school_pulse/features/admin/parent_access_workspace/data/datasources/parent_access_remote_data_source.dart';
+import 'package:school_pulse/features/admin/parent_access_workspace/data/repositories/parent_access_repository_impl.dart';
+import 'package:school_pulse/features/admin/parent_access_workspace/domain/repositories/parent_access_repository.dart';
+import 'package:school_pulse/features/admin/parent_access_workspace/presentation/cubit/parent_detail_cubit.dart';
+import 'package:school_pulse/features/admin/parent_access_workspace/presentation/cubit/parents_access_cubit.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/get_relationships_for_student.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/reallocate_relationship.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/record_enrolment_change.dart';
 import 'package:school_pulse/features/relationships/domain/usecases/update_people_policy.dart';
 import 'package:school_pulse/features/parent_access/domain/services/parent_module_resolver.dart';
+import 'package:school_pulse/features/parent/data/parent_report_card_remote_data_source.dart';
+import 'package:school_pulse/features/parent/presentation/bloc/report_card/parent_report_card_bloc.dart';
 import 'package:school_pulse/features/admin/data/repositories/role_permission_override_repository_impl.dart';
 import 'package:school_pulse/features/admin/domain/usecases/get_role_permission_overrides.dart';
 import 'package:school_pulse/features/admin/domain/usecases/save_role_permission_override.dart';
@@ -30,6 +38,13 @@ import 'package:school_pulse/features/appointments/presentation/bloc/appointment
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:isar/isar.dart';
 import 'package:school_pulse/core/platform/isar_bootstrap.dart';
+import 'package:school_pulse/features/parent_offline/data/datasources/parent_cache_data_source.dart';
+import 'package:school_pulse/features/parent_offline/data/datasources/parent_cache_data_source_factory.dart';
+import 'package:school_pulse/features/parent_offline/data/datasources/parent_queue_data_source.dart';
+import 'package:school_pulse/features/parent_offline/data/datasources/parent_queue_data_source_factory.dart';
+import 'package:school_pulse/features/parent_offline/data/datasources/parent_local_pin_store.dart';
+import 'package:school_pulse/features/parent_offline/domain/parent_offline_cache_service.dart';
+import 'package:school_pulse/features/parent_offline/domain/parent_offline_queue_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:school_pulse/core/access/effective_access_resolver.dart';
 import 'package:school_pulse/core/utils/device_id_service.dart';
@@ -78,12 +93,16 @@ import 'package:school_pulse/features/messages/data/repositories/messages_reposi
 import 'package:school_pulse/features/messages/presentation/bloc/messaging_bloc.dart';
 import 'package:school_pulse/features/messages/presentation/bloc/conversation_bloc.dart';
 import 'package:school_pulse/features/messages/domain/services/message_outbox_service.dart';
-import 'package:school_pulse/features/messages/data/services/message_outbox_service_impl.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
-import 'package:school_pulse/features/teacher/domain/usecases/generate_reports.dart';
+import 'package:school_pulse/features/messages/data/services/message_outbox_service_factory.dart';
 import 'package:school_pulse/features/finance/domain/services/finance_service.dart';
 import 'package:school_pulse/features/student/domain/services/admission_service.dart';
+import 'package:school_pulse/features/student/domain/services/enrollment_audit_service.dart';
 import 'package:school_pulse/features/student/domain/services/document_service.dart';
+import 'package:school_pulse/features/student/domain/enrollment_setup/repositories/enrollment_setup_repository.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft_local_data_source.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/datasources/enrollment_setup_draft_local_data_source_factory.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/repositories/enrollment_setup_repository_impl.dart';
+import 'package:school_pulse/features/student/presentation/enrollment_setup/bloc/enrollment_setup_wizard_bloc.dart';
 import 'package:school_pulse/features/student/domain/services/parent_linking_service.dart';
 import 'package:school_pulse/features/student/domain/services/promotion_service.dart';
 import 'package:school_pulse/features/student/domain/services/student_service.dart';
@@ -93,13 +112,10 @@ import 'package:school_pulse/features/admin/domain/repositories/admin_attendance
 import 'package:school_pulse/features/admin/data/repositories/admin_attendance_repository_impl.dart';
 
 // Super Admin
-import 'package:school_pulse/features/super_admin/domain/repositories/super_admin_repository.dart';
+import 'package:school_pulse/features/super_admin/super_admin_injection.dart';
 import 'package:school_pulse/features/subscription_payment/data/repositories/subscription_payment_repository_impl.dart';
 import 'package:school_pulse/features/subscription_payment/domain/repositories/subscription_payment_repository.dart';
 import 'package:school_pulse/features/subscription_payment/presentation/bloc/subscription_payment_cubit.dart';
-import 'package:school_pulse/features/super_admin/data/repositories/super_admin_repository_impl.dart';
-import 'package:school_pulse/features/super_admin/data/datasources/super_admin_remote_datasource.dart';
-import 'package:school_pulse/features/super_admin/presentation/bloc/super_admin_bloc.dart';
 
 // Admin / System Config
 import 'package:school_pulse/features/admin/data/repositories/system_config_repository.dart';
@@ -116,6 +132,14 @@ import 'package:school_pulse/features/exams/domain/repositories/exams_repository
 import 'package:school_pulse/features/exams/data/repositories/exams_repository_impl.dart';
 import 'package:school_pulse/features/exams/data/datasources/exams_remote_data_source.dart';
 import 'package:school_pulse/features/exams/presentation/bloc/exams_bloc.dart';
+import 'package:school_pulse/features/exam_factory/domain/repositories/exam_factory_repository.dart';
+import 'package:school_pulse/features/exam_factory/data/repositories/exam_factory_repository_impl.dart';
+import 'package:school_pulse/features/exam_factory/data/datasources/exam_factory_queue_data_source.dart';
+import 'package:school_pulse/features/exam_factory/data/datasources/exam_factory_queue_data_source_factory.dart';
+import 'package:school_pulse/features/exam_factory/domain/services/exam_factory_offline_queue_service.dart';
+import 'package:school_pulse/features/admin/data/datasources/staff_attendance_queue_data_source.dart';
+import 'package:school_pulse/features/admin/data/datasources/staff_attendance_queue_data_source_factory.dart';
+import 'package:school_pulse/features/admin/domain/services/staff_attendance_offline_queue_service.dart';
 
 // Academic
 import 'package:school_pulse/features/academic/domain/repositories/academic_repository.dart';
@@ -165,6 +189,7 @@ import 'package:school_pulse/features/auth/data/repositories/staff_identity_repo
 import 'package:school_pulse/features/auth/domain/services/staff_nfc_credential_service.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/staff_identity_bloc.dart';
 import 'package:school_pulse/features/student_identity/domain/services/id_card_service.dart';
+import 'package:school_pulse/features/student_identity/domain/services/primary_guardian_lookup_service.dart';
 import 'package:school_pulse/features/auth/domain/services/staff_id_card_service.dart';
 import 'package:school_pulse/features/student_identity/domain/services/id_generator_service.dart';
 import 'package:school_pulse/features/student_identity/domain/services/nfc_credential_service.dart';
@@ -220,8 +245,12 @@ import 'package:school_pulse/features/catering/data/datasources/catering_local_d
 import 'package:school_pulse/features/dean/domain/repositories/dean_repository.dart';
 import 'package:school_pulse/features/dean/data/repositories/dean_repository_impl.dart';
 import 'package:school_pulse/features/dean/data/datasources/dean_remote_data_source.dart';
+import 'package:school_pulse/features/dean/data/datasources/dean_report_queue_remote_data_source.dart';
 import 'package:school_pulse/features/dean/domain/usecases/get_dean_stats.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
+import 'package:school_pulse/features/dean/presentation/bloc/report_queue/dean_report_queue_bloc.dart';
+import 'package:school_pulse/features/headteacher/data/datasources/headteacher_report_queue_remote_data_source.dart';
+import 'package:school_pulse/features/headteacher/presentation/bloc/headteacher_report_queue_bloc.dart';
 
 // Director
 import 'package:school_pulse/features/director/presentation/bloc/director_bloc.dart';
@@ -240,8 +269,28 @@ import 'package:school_pulse/features/discipline/presentation/bloc/discipline_bl
 // Finance
 import 'package:school_pulse/features/finance/domain/repositories/finance_repository.dart';
 import 'package:school_pulse/features/finance/domain/services/bursar_student_projection_service.dart';
+import 'package:school_pulse/features/finance/domain/services/finance_reports_service.dart';
 import 'package:school_pulse/features/finance/data/repositories/finance_repository_impl.dart';
+import 'package:school_pulse/features/finance/data/datasources/bursar_report_release_remote_data_source.dart';
+import 'package:school_pulse/features/finance/presentation/bloc/report_release/bursar_report_release_bloc.dart';
+import 'package:school_pulse/features/finance/data/datasources/clearance_policy_remote_data_source.dart';
+import 'package:school_pulse/features/finance/presentation/bloc/clearance_policy/clearance_policy_bloc.dart';
 import 'package:school_pulse/features/finance/data/datasources/finance_remote_data_source.dart';
+import 'package:school_pulse/features/finance/data/datasources/finance_governance_remote_data_source.dart';
+import 'package:school_pulse/features/finance/data/datasources/finance_operations_remote_data_source.dart';
+import 'package:school_pulse/features/finance/data/datasources/entitlements_remote_data_source.dart';
+import 'package:school_pulse/features/finance/data/datasources/finance_offline_queue.dart';
+import 'package:school_pulse/features/finance/domain/repositories/fee_billing_repository.dart';
+import 'package:school_pulse/features/finance/data/repositories/fee_billing_repository_impl.dart';
+import 'package:school_pulse/features/finance/domain/repositories/fee_catalogue_repository.dart';
+import 'package:school_pulse/features/finance/data/repositories/fee_catalogue_repository_impl.dart';
+import 'package:school_pulse/features/hr/domain/repositories/salary_structure_repository.dart';
+import 'package:school_pulse/features/hr/data/repositories/salary_structure_repository_impl.dart';
+import 'package:school_pulse/features/hr/domain/repositories/pay_component_catalogue_repository.dart';
+import 'package:school_pulse/features/hr/data/repositories/pay_component_catalogue_repository_impl.dart';
+import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
+import 'package:school_pulse/features/finance/data/repositories/student_billing_repository_impl.dart';
+import 'package:school_pulse/features/finance/data/repositories/bursar_ops_read_repository.dart';
 import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
 
 // Games
@@ -253,6 +302,8 @@ import 'package:school_pulse/features/games/presentation/bloc/games_bloc.dart';
 // Health
 import 'package:school_pulse/features/health/domain/repositories/health_repository.dart';
 import 'package:school_pulse/features/health/data/repositories/health_repository_impl.dart';
+import 'package:school_pulse/features/health/data/datasources/health_local_data_source.dart';
+import 'package:school_pulse/features/health/data/datasources/health_local_data_source_factory.dart';
 import 'package:school_pulse/features/health/data/datasources/health_remote_data_source.dart';
 import 'package:school_pulse/features/health/domain/usecases/health_usecases.dart';
 import 'package:school_pulse/features/health/domain/services/nurse_student_projection_service.dart';
@@ -298,6 +349,8 @@ import 'package:school_pulse/features/patron/domain/repositories/patron_reposito
 import 'package:school_pulse/features/patron/data/repositories/patron_repository_impl.dart';
 import 'package:school_pulse/features/patron/data/sources/patron_remote_data_source.dart';
 import 'package:school_pulse/features/patron/presentation/bloc/patron_bloc.dart';
+import 'package:school_pulse/features/shared/boarding/data/datasources/boarding_attendance_local_data_source.dart';
+import 'package:school_pulse/features/shared/boarding/data/datasources/boarding_attendance_local_data_source_factory.dart';
 
 // Notifications
 import 'package:school_pulse/features/notifications/domain/repositories/notifications_repository.dart';
@@ -333,6 +386,11 @@ import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_l
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_remote_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_remote_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/report_cards_remote_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/class_resource_local_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/class_resource_local_data_source_factory.dart';
+import 'package:school_pulse/features/teacher/data/datasources/subject_resource_local_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/subject_resource_local_data_source_factory.dart';
 import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source_factory.dart';
 import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source_factory.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_attendance_repository_impl.dart';
@@ -340,7 +398,7 @@ import 'package:school_pulse/features/teacher/data/repositories/class_communicat
 import 'package:school_pulse/features/teacher/data/repositories/class_performance_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_report_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_resource_repository_impl.dart';
-import 'package:school_pulse/features/teacher/data/repositories/class_task_repository_impl.dart';
+import 'package:school_pulse/features/teacher/data/repositories/subject_resource_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_work_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_dashboard_repository_impl.dart';
 import 'package:school_pulse/features/teacher/data/repositories/class_student_repository_impl.dart';
@@ -362,7 +420,7 @@ import 'package:school_pulse/features/teacher/domain/repositories/class_communic
 import 'package:school_pulse/features/teacher/domain/repositories/class_performance_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_report_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_resource_repository.dart';
-import 'package:school_pulse/features/teacher/domain/repositories/class_task_repository.dart';
+import 'package:school_pulse/features/teacher/domain/repositories/subject_resource_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_work_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_dashboard_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/class_student_repository.dart';
@@ -374,16 +432,22 @@ import 'package:school_pulse/features/teacher/domain/repositories/subject_studen
 import 'package:school_pulse/features/teacher/domain/services/academic_calendar_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/active_responsibility_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/class_teacher_assignment_service.dart';
+import 'package:school_pulse/features/teacher/domain/services/student_guardian_contact_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/subject_audit_service.dart';
 import 'package:school_pulse/features/teacher/domain/services/subject_sync_service.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_dashboard/class_teacher_dashboard_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_timetable/class_timetable_bloc.dart';
+import 'package:school_pulse/features/parent/presentation/bloc/parent_timetable_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/teacher_timetable/teacher_timetable_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_history_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_students/class_students_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_students/subject_students_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_announcements/class_announcements_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/class_performance_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/student_assessment_results_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_reports/class_reports_bloc.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/class_tasks/class_tasks_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/report_card_preview/report_card_preview_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_work/class_work_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_resources/class_resource_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
@@ -414,6 +478,7 @@ import 'package:school_pulse/features/student/domain/usecases/manage_parent_acce
 
 // Admin - Staff Accounts (part of Auth feature)
 import 'package:school_pulse/features/auth/domain/usecases/create_staff_account.dart';
+import 'package:school_pulse/features/auth/domain/usecases/create_staff_invitation.dart';
 import 'package:school_pulse/features/auth/domain/usecases/admin_reset_staff_password.dart';
 import 'package:school_pulse/features/auth/domain/usecases/delete_staff_member.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
@@ -427,11 +492,14 @@ import 'package:school_pulse/features/admin/data/repositories/subscription_repos
 
 // Structure module
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_setup_repository.dart';
 import 'package:school_pulse/features/structure/domain/services/structure_dependency_service.dart';
 import 'package:school_pulse/features/structure/data/repositories/structure_repository_impl.dart';
+import 'package:school_pulse/features/structure/data/repositories/structure_setup_repository_impl.dart';
 import 'package:school_pulse/features/structure/data/datasources/structure_remote_data_source.dart';
 import 'package:school_pulse/features/structure/data/datasources/structure_local_data_source.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/structure_bloc.dart';
+import 'package:school_pulse/features/structure/presentation/bloc/structure_setup_cubit.dart';
 import 'package:school_pulse/features/structure/presentation/bloc/role_assignment_cubit.dart';
 import 'package:school_pulse/features/structure/data/datasources/structure_local_data_source_factory.dart';
 import 'package:school_pulse/features/structure/domain/services/structure_configuration_service.dart';
@@ -471,6 +539,7 @@ import 'package:school_pulse/app/router.dart' as app_router;
 import 'package:school_pulse/features/notifications/notification_coordinator.dart';
 import 'package:school_pulse/features/notifications/push/handlers/notification_push_handler.dart';
 import 'package:school_pulse/features/notifications/routing/deep_link_router/notification_deep_link_router.dart';
+import 'package:school_pulse/features/notifications/routing/notification_shell_route.dart';
 import 'package:school_pulse/features/notifications/data/notification_image_cache.dart';
 import 'package:school_pulse/features/notifications/domain/services/notification_sender.dart';
 import 'package:school_pulse/features/notifications/local/notification_presenter.dart';
@@ -507,16 +576,10 @@ Future<void> init() async {
   // Features - Assessment
   sl.registerFactory(() => AssessmentBloc(repository: sl()));
 
-  // Features - Auth
-  sl.registerFactory(() => SuperAdminBloc(repository: sl(), auth: sl()));
-
-  sl.registerLazySingleton<SuperAdminRepository>(
-    () => SuperAdminRepositoryImpl(remoteDataSource: sl()),
-  );
-
-  sl.registerLazySingleton<SuperAdminRemoteDataSource>(
-    () => SuperAdminRemoteDataSourceImpl(firestore: sl(), auth: sl()),
-  );
+  // Features - Super Admin (SaaS owner console).
+  // Bloc + repository + datasource graph lives in the module:
+  // features/super_admin/super_admin_injection.dart
+  registerSuperAdmin(sl);
 
   sl.registerLazySingleton<AssessmentRepository>(
     () => AssessmentRepositoryImpl(remoteDataSource: sl(), networkInfo: sl()),
@@ -524,6 +587,22 @@ Future<void> init() async {
 
   sl.registerLazySingleton<AssessmentRemoteDataSource>(
     () => AssessmentRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  // Exam Factory: confidential writes go through Cloud Functions; the
+  // repository is still injectable so presentation never talks to Firebase.
+  sl.registerLazySingleton<ExamFactoryRepository>(
+    () => ExamFactoryRepositoryImpl(firestore: sl(), functions: sl()),
+  );
+
+  // Offline queue for the spec's safe-to-queue Exam Factory actions only
+  // (question drafts, moderation comments, mark entry, attendance,
+  // incidents) - mirrors ParentOfflineQueueService's registration.
+  sl.registerLazySingleton<ExamFactoryQueueDataSource>(
+    () => createExamFactoryQueueDataSource(isar: kIsWeb ? null : sl<Isar>()),
+  );
+  sl.registerLazySingleton(
+    () => ExamFactoryOfflineQueueService(dataSource: sl()),
   );
 
   // AssessmentLocalDataSource: confirmed unused anywhere in the codebase
@@ -717,8 +796,51 @@ Future<void> init() async {
 
   sl.registerLazySingleton(() => ParentLinkingService(sl(), sl()));
 
+  // Best-effort audit trail for admission/enrollment events - see
+  // functions/enrollment_audit.js. Registered before AdmissionBloc/
+  // EnrollmentSetupWizardBloc so both can take it as an optional dep.
+  sl.registerLazySingleton(() => EnrollmentAuditService(sl()));
+
   sl.registerFactory(
-    () => AdmissionBloc(admissionService: sl(), permissionEvaluator: sl()),
+    () => AdmissionBloc(
+      admissionService: sl(),
+      permissionEvaluator: sl(),
+      auditService: sl(),
+      notificationSender: sl(),
+    ),
+  );
+
+  // Enrollment Setup Wizard (post-approval placement/finance/boarding/
+  // clubs/parent-link/identity confirmation). Its own repository owns the
+  // new scholarship_awards/dormitory_assignments/student_club_memberships
+  // collections; all other dependencies are existing repos/services
+  // registered above.
+  sl.registerLazySingleton<EnrollmentSetupRepository>(
+    () => EnrollmentSetupRepositoryImpl(firestore: sl()),
+  );
+  // Local (Isar) resume-draft cache for the wizard - null on web, matching
+  // every other Isar-backed local cache's degradation pattern there.
+  sl.registerLazySingleton<EnrollmentSetupDraftLocalDataSource>(
+    () => createEnrollmentSetupDraftLocalDataSource(
+      isar: kIsWeb ? null : sl<Isar>(),
+    ),
+  );
+  sl.registerFactory(
+    () => EnrollmentSetupWizardBloc(
+      studentRepository: sl(),
+      admissionService: sl(),
+      enrollmentSetupRepository: sl(),
+      parentLinkingService: sl(),
+      createRelationship: sl(),
+      identityRepository: sl(),
+      nfcCredentialRepository: sl(),
+      permissionEvaluator: sl(),
+      draftLocalDataSource: sl(),
+      auditService: sl(),
+      notificationSender: sl(),
+      financeRepository: sl(),
+      feeBillingRepository: sl(),
+    ),
   );
 
   // Features - Student Identity (QR / ID card resolution, used by the
@@ -730,6 +852,12 @@ Future<void> init() async {
   // "type IdCardService is not registered" the moment anyone pressed it.
   sl.registerLazySingleton(() => IdCardService());
   sl.registerLazySingleton(() => StaffIdCardService());
+  sl.registerLazySingleton(
+    () => PrimaryGuardianLookupService(
+      relationshipRepository: sl(),
+      studentRepository: sl(),
+    ),
+  );
 
   sl.registerLazySingleton<StudentIdentityRepository>(
     () => StudentIdentityRepositoryImpl(
@@ -747,7 +875,11 @@ Future<void> init() async {
   // via context.read<StudentIdentityBloc>() - that screen would have
   // thrown a ProviderNotFoundException the moment anyone navigated to it.
   sl.registerFactory(
-    () => StudentIdentityBloc(repository: sl(), nfcCredentialService: sl()),
+    () => StudentIdentityBloc(
+      repository: sl(),
+      nfcCredentialService: sl(),
+      auditService: sl(),
+    ),
   );
 
   // Staff Identity (ID card + NFC) - mirrors the student registrations
@@ -788,6 +920,9 @@ Future<void> init() async {
       exitSupportMode: sl(),
       brandingBloc: sl(),
       verificationLocalDataSource: sl(),
+      classTeacherLocalDataSource: sl(),
+      subjectTeacherLocalDataSource: sl(),
+      activeResponsibilityService: sl(),
     ),
   );
 
@@ -977,7 +1112,23 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<DeanRemoteDataSource>(
-    () => DeanRemoteDataSourceImpl(),
+    () => DeanRemoteDataSourceImpl(
+      firestore: sl(),
+      structureConfigurationService: sl(),
+    ),
+  );
+
+  sl.registerFactory(() => DeanReportQueueBloc(dataSource: sl()));
+  sl.registerLazySingleton(
+    () => DeanReportQueueRemoteDataSource(firestore: sl(), functions: sl()),
+  );
+
+  sl.registerFactory(() => HeadteacherReportQueueBloc(dataSource: sl()));
+  sl.registerLazySingleton(
+    () => HeadteacherReportQueueRemoteDataSource(
+      firestore: sl(),
+      functions: sl(),
+    ),
   );
 
   // Director
@@ -1021,7 +1172,31 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton<FinanceRepository>(
-    () => FinanceRepositoryImpl(remoteDataSource: sl()),
+    () => FinanceRepositoryImpl(remoteDataSource: sl(), governance: sl()),
+  );
+
+  // Callable-only finance governance writes (audit area 2):
+  // functions/finance_governance.js. Default region, same as the working
+  // student-billing callables.
+  sl.registerLazySingleton(
+    () => FinanceGovernanceRemoteDataSource(functions: sl()),
+  );
+
+  // Callable-only Suppliers + Petty Cash workflows (audit area 3):
+  // functions/finance_operations.js.
+  sl.registerLazySingleton(
+    () => FinanceOperationsRemoteDataSource(functions: sl()),
+  );
+
+  sl.registerFactory(() => BursarReportReleaseBloc(dataSource: sl()));
+  sl.registerLazySingleton(
+    () => BursarReportReleaseRemoteDataSource(firestore: sl(), functions: sl()),
+  );
+  sl.registerLazySingleton(
+    () => ClearancePolicyRemoteDataSource(functions: sl()),
+  );
+  sl.registerFactory(
+    () => ClearancePolicyBloc(dataSource: sl(), feeCatalogueRepository: sl()),
   );
 
   sl.registerLazySingleton(
@@ -1043,6 +1218,63 @@ Future<void> init() async {
     () => FinanceRemoteDataSourceImpl(firestore: sl()),
   );
 
+  // Fee-plan/billing backend (functions/student_fee_billing.js) - immutable
+  // published plans + idempotent bill issuance. See enrollment_setup_wizard
+  // (Finance step) and the Fee Plan Builder for callers.
+  sl.registerLazySingleton<FeeBillingRepository>(
+    () => FeeBillingRepositoryImpl(firestore: sl(), functions: sl()),
+  );
+
+  // Fee catalogue - reusable named charges, not money-authoritative, so
+  // plain tenant-scoped Firestore read/write (no callable needed).
+  sl.registerLazySingleton<FeeCatalogueRepository>(
+    () => FeeCatalogueRepositoryImpl(firestore: sl()),
+  );
+
+  // Salary-structure backend (functions/staff_payroll_structure.js) -
+  // immutable published pay structures keyed by designation. See the Add
+  // Staff wizard's Pay Structure step and the Salary Structure Builder.
+  sl.registerLazySingleton<SalaryStructureRepository>(
+    () => SalaryStructureRepositoryImpl(firestore: sl(), functions: sl()),
+  );
+
+  // Pay component catalogue - reusable named pay components, not
+  // money-authoritative, so plain tenant-scoped Firestore read/write.
+  sl.registerLazySingleton<PayComponentCatalogueRepository>(
+    () => PayComponentCatalogueRepositoryImpl(firestore: sl()),
+  );
+
+  // Student billing (Phase 2): bills/adjustments/payments/reversals.
+  // Read-only from the client except via callable - see
+  // applyBillAdjustment/recordStudentPayment/reverseStudentPayment.
+  sl.registerLazySingleton<StudentBillingRepository>(
+    () => StudentBillingRepositoryImpl(firestore: sl(), functions: sl()),
+  );
+
+  // Bursar Phase 2/3 read models (Cash & Bank, Petty Cash, Suppliers,
+  // Payment Vouchers, Payroll, Audit trail). Read-only views; writes are
+  // server-side only per firestore.rules.
+  sl.registerLazySingleton<BursarOpsReadRepository>(
+    () => BursarOpsReadRepository(firestore: sl()),
+  );
+
+  // Finance reports engine (audit area 5) — 8 real reports from
+  // authoritative finance data, CSV for all + PDF for cashbook/arrears.
+  sl.registerLazySingleton(() => FinanceReportsService(firestore: sl()));
+
+  // Financial Entitlements dashboard data source (areas 1+2): reads
+  // student_financials + policy, writes via the deployed callables.
+  sl.registerLazySingleton(
+    () => EntitlementsRemoteDataSource(firestore: sl(), functions: sl()),
+  );
+
+  // Finance offline queue (audit area 6) — petty-cash disbursements only;
+  // idempotency-keyed, replay-on-reconnect. Nothing security-sensitive is
+  // ever queued.
+  sl.registerLazySingleton(
+    () => FinanceOfflineQueue(prefs: sl(), network: sl(), ops: sl()),
+  );
+
   // Features - Games
   sl.registerFactory(() => GamesBloc(repository: sl()));
 
@@ -1059,12 +1291,14 @@ Future<void> init() async {
     () => HealthBloc(
       getStudentHealthProfile: sl(),
       updateStudentHealthProfile: sl(),
+      getAllHealthProfiles: sl(),
       getClinicVisits: sl(),
       recordClinicVisit: sl(),
       getEmergencyIncidents: sl(),
       recordEmergencyIncident: sl(),
       getMedicalInventory: sl(),
       updateInventoryItem: sl(),
+      dispenseMedicalItem: sl(),
       getMedicalSupplyRequests: sl(),
       createSupplyRequest: sl(),
       getHealthAnalytics: sl(),
@@ -1074,23 +1308,33 @@ Future<void> init() async {
 
   sl.registerLazySingleton(() => GetStudentHealthProfile(sl()));
   sl.registerLazySingleton(() => UpdateStudentHealthProfile(sl()));
+  sl.registerLazySingleton(() => GetAllHealthProfiles(sl()));
   sl.registerLazySingleton(() => GetClinicVisits(sl()));
   sl.registerLazySingleton(() => RecordClinicVisit(sl()));
   sl.registerLazySingleton(() => GetEmergencyIncidents(sl()));
   sl.registerLazySingleton(() => RecordEmergencyIncident(sl()));
   sl.registerLazySingleton(() => GetMedicalInventory(sl()));
   sl.registerLazySingleton(() => UpdateInventoryItem(sl()));
+  sl.registerLazySingleton(() => DispenseMedicalItem(sl()));
   sl.registerLazySingleton(() => GetMedicalSupplyRequests(sl()));
   sl.registerLazySingleton(() => CreateSupplyRequest(sl()));
   sl.registerLazySingleton(() => UpdateSupplyRequestStatus(sl()));
   sl.registerLazySingleton(() => GetHealthAnalytics(sl()));
 
   sl.registerLazySingleton<HealthRepository>(
-    () => HealthRepositoryImpl(remoteDataSource: sl()),
+    () => HealthRepositoryImpl(
+      remoteDataSource: sl(),
+      localDataSource: sl(),
+      networkInfo: sl(),
+    ),
   );
 
   sl.registerLazySingleton<HealthRemoteDataSource>(
     () => HealthRemoteDataSourceImpl(firestore: sl()),
+  );
+
+  sl.registerLazySingleton<HealthLocalDataSource>(
+    () => createHealthLocalDataSource(isar: kIsWeb ? null : sl<Isar>()),
   );
 
   sl.registerLazySingleton(
@@ -1189,11 +1433,23 @@ Future<void> init() async {
     ),
   );
 
+  // Shared by Matron and Patron - one offline cache for boarding roll call,
+  // since both write the same `boarding_attendance` collection shape.
+  sl.registerLazySingleton<BoardingAttendanceLocalDataSource>(
+    () => createBoardingAttendanceLocalDataSource(
+      isar: kIsWeb ? null : sl<Isar>(),
+    ),
+  );
+
   // Features - Matron
   sl.registerFactory(() => MatronBloc(repository: sl()));
 
   sl.registerLazySingleton<MatronRepository>(
-    () => MatronRepositoryImpl(remoteDataSource: sl()),
+    () => MatronRepositoryImpl(
+      remoteDataSource: sl(),
+      localAttendanceDataSource: sl(),
+      networkInfo: sl(),
+    ),
   );
 
   sl.registerLazySingleton<MatronRemoteDataSource>(
@@ -1204,7 +1460,11 @@ Future<void> init() async {
   sl.registerFactory(() => PatronBloc(repository: sl()));
 
   sl.registerLazySingleton<PatronRepository>(
-    () => PatronRepositoryImpl(remoteDataSource: sl()),
+    () => PatronRepositoryImpl(
+      remoteDataSource: sl(),
+      localAttendanceDataSource: sl(),
+      networkInfo: sl(),
+    ),
   );
 
   sl.registerLazySingleton<PatronRemoteDataSource>(
@@ -1224,7 +1484,10 @@ Future<void> init() async {
   // queue", which is what web already did before this feature existed.
   if (!kIsWeb) {
     sl.registerLazySingleton<MessageOutboxService>(
-      () => MessageOutboxServiceImpl(isar: sl(), repository: sl()),
+      () => createMessageOutboxService(
+        isar: sl<Isar>(),
+        repository: sl<MessagesRepository>(),
+      ),
     );
   }
   sl.registerFactory<ConversationBloc>(
@@ -1311,7 +1574,11 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(
-    () => NotificationBadgeService(repository: sl(), plugin: sl()),
+    () => NotificationBadgeService(
+      repository: sl(),
+      plugin: sl(),
+      messagingBloc: sl(),
+    ),
   );
 
   // Delivery testing tool (real push to the caller's own devices only).
@@ -1340,17 +1607,22 @@ Future<void> init() async {
         // Navigation goes through the deep-link router, which re-checks
         // authentication, tenancy and permission before producing a route -
         // a push payload is never navigated to verbatim.
+        final user = sl<NotificationCoordinator>().user;
         final resolution = await const NotificationDeepLinkRouter().resolve(
           notification: notification,
-          user: sl<NotificationCoordinator>().user,
+          user: user,
         );
         final destination = resolution.destination;
         if (destination != null) {
           app_router.router.push(destination.route, extra: destination.extra);
         } else {
           // Refused: fall back to the notification centre rather than silently
-          // doing nothing on a tap.
-          app_router.router.push('/staff/notifications');
+          // doing nothing on a tap. Stays inside the signed-in user's own
+          // shell rather than always landing in staff.
+          final basePath = user != null
+              ? notificationShellBasePath(user.role)
+              : '/staff/notifications';
+          app_router.router.push(basePath);
         }
       },
     ),
@@ -1409,8 +1681,6 @@ Future<void> init() async {
   sl.registerLazySingleton(() => SaveReportComment(sl()));
   sl.registerLazySingleton(() => GetCompetencyRatings(sl()));
   sl.registerLazySingleton(() => SaveCompetencyRating(sl()));
-  sl.registerLazySingleton(() => GenerateReports(sl()));
-
   sl.registerLazySingleton<TeacherRepository>(
     () => TeacherRepositoryImpl(remoteDataSource: sl()),
   );
@@ -1418,8 +1688,6 @@ Future<void> init() async {
   sl.registerLazySingleton<TeacherRemoteDataSource>(
     () => TeacherRemoteDataSourceImpl(firestore: sl()),
   );
-
-  sl.registerFactory(() => ReportWizardBloc(generateReports: sl()));
 
   // Features - Subject Teacher panel
   //
@@ -1461,6 +1729,36 @@ Future<void> init() async {
     () => ClassTeacherDashboardBloc(dashboardRepository: sl()),
   );
 
+  // Factory, not a singleton: this bloc holds live stream subscriptions tied
+  // to one BlocProvider's lifetime - reusing one instance across screen
+  // visits would leak the previous visit's listeners.
+  sl.registerFactory(
+    () => ClassTimetableBloc(
+      timetableRepository: sl(),
+      structureRepository: sl(),
+    ),
+  );
+
+  // Factory, not a singleton: parent-facing counterpart of
+  // ClassTimetableBloc, also holds live stream subscriptions tied to one
+  // BlocProvider's lifetime (Home tab and Learn tab's Timetable sub-tab
+  // each provide their own instance).
+  sl.registerFactory(
+    () => ParentTimetableBloc(
+      timetableRepository: sl(),
+      structureRepository: sl(),
+    ),
+  );
+
+  // Factory for the same reason: live stream subscriptions tied to one
+  // screen visit.
+  sl.registerFactory(
+    () => TeacherTimetableBloc(
+      timetableRepository: sl(),
+      structureRepository: sl(),
+    ),
+  );
+
   sl.registerLazySingleton(
     () =>
         ClassStudentsBloc(studentRepository: sl(), attendanceRepository: sl()),
@@ -1484,6 +1782,8 @@ Future<void> init() async {
   sl.registerLazySingleton<ClassWorkRepository>(
     () => ClassWorkRepositoryImpl(
       remoteDataSource: sl(),
+      localDataSource: sl(),
+      queueDataSource: sl(),
       assignmentService: sl(),
       auditService: sl(),
       networkInfo: sl(),
@@ -1497,6 +1797,8 @@ Future<void> init() async {
   sl.registerLazySingleton<ClassCommunicationRepository>(
     () => ClassCommunicationRepositoryImpl(
       remoteDataSource: sl(),
+      localDataSource: sl(),
+      queueDataSource: sl(),
       studentRepository: sl(),
       assignmentService: sl(),
       auditService: sl(),
@@ -1508,9 +1810,16 @@ Future<void> init() async {
     () => ClassPerformanceBloc(performanceRepository: sl()),
   );
 
+  // Factory: each Assessments-tile drill-down opens its own screen instance
+  // and should not share loading state with any other one open elsewhere.
+  sl.registerFactory(
+    () => StudentAssessmentResultsBloc(performanceRepository: sl()),
+  );
+
   sl.registerLazySingleton<ClassPerformanceRepository>(
     () => ClassPerformanceRepositoryImpl(
       remoteDataSource: sl(),
+      localDataSource: sl(),
       studentRepository: sl(),
       attendanceRepository: sl(),
       workRepository: sl(),
@@ -1520,6 +1829,7 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(() => ClassReportsBloc(reportRepository: sl()));
+  sl.registerFactory(() => ReportCardPreviewBloc(reportRepository: sl()));
 
   sl.registerLazySingleton<ClassReportRepository>(
     () => ClassReportRepositoryImpl(
@@ -1528,23 +1838,24 @@ Future<void> init() async {
       assignmentService: sl(),
       auditService: sl(),
       networkInfo: sl(),
+      functions: sl(),
+      reportCardsDataSource: sl(),
     ),
   );
 
-  sl.registerLazySingleton(() => ClassTasksBloc(taskRepository: sl()));
+  sl.registerLazySingleton(
+    () => ReportCardsRemoteDataSource(firestore: sl(), functions: sl()),
+  );
 
-  sl.registerLazySingleton<ClassTaskRepository>(
-    () => ClassTaskRepositoryImpl(
-      remoteDataSource: sl(),
-      auditService: sl(),
-      networkInfo: sl(),
-    ),
+  sl.registerLazySingleton<ClassResourceLocalDataSource>(
+    () => createClassResourceLocalDataSource(isar: kIsWeb ? null : sl<Isar>()),
   );
 
   sl.registerLazySingleton<ClassResourceRepository>(
     () => ClassResourceRepositoryImpl(
       firestore: sl(),
       storage: sl(),
+      localDataSource: sl(),
       assignmentService: sl(),
       auditService: sl(),
       networkInfo: sl(),
@@ -1552,6 +1863,21 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(() => ClassResourceBloc(repository: sl()));
+
+  sl.registerLazySingleton<SubjectResourceLocalDataSource>(
+    () =>
+        createSubjectResourceLocalDataSource(isar: kIsWeb ? null : sl<Isar>()),
+  );
+
+  sl.registerLazySingleton<SubjectResourceRepository>(
+    () => SubjectResourceRepositoryImpl(
+      firestore: sl(),
+      storage: sl(),
+      localDataSource: sl(),
+      auditService: sl(),
+      networkInfo: sl(),
+    ),
+  );
 
   sl.registerLazySingleton<ClassAttendanceRepository>(
     () => ClassAttendanceRepositoryImpl(
@@ -1616,7 +1942,11 @@ Future<void> init() async {
   );
 
   sl.registerLazySingleton(
-    () => MarksBloc(marksRepository: sl(), studentRepository: sl()),
+    () => MarksBloc(
+      marksRepository: sl(),
+      studentRepository: sl(),
+      classStudentRepository: sl(),
+    ),
   );
 
   sl.registerLazySingleton<LessonRepository>(
@@ -1672,6 +2002,8 @@ Future<void> init() async {
       networkInfo: sl(),
     ),
   );
+
+  sl.registerLazySingleton(() => SubjectStudentsBloc(studentRepository: sl()));
 
   // Everywhere else constructs this directly; the audit service takes it as a
   // dependency so tests can supply a fixed device id.
@@ -1740,9 +2072,7 @@ Future<void> init() async {
     () => TransportCoordinatorRepositoryImpl(remoteDataSource: sl()),
   );
 
-  sl.registerFactory(
-    () => TransportCoordinatorBloc(repository: sl()),
-  );
+  sl.registerFactory(() => TransportCoordinatorBloc(repository: sl()));
 
   // Features - Lesson Plans
   sl.registerLazySingleton(() => AddLessonPlan(sl()));
@@ -1780,6 +2110,8 @@ Future<void> init() async {
   // Admin - Staff Accounts (AuthRepository already registered above)
   sl.registerLazySingleton(() => GetStaffMembers(sl()));
   sl.registerLazySingleton(() => CreateStaffAccount(sl()));
+  sl.registerLazySingleton(() => CreateStaffInvitation(sl()));
+  sl.registerLazySingleton(() => CancelStaffInvitation(sl()));
   sl.registerLazySingleton(() => ToggleStaffStatus(sl()));
   sl.registerLazySingleton(() => DeleteStaffMember(sl()));
   sl.registerLazySingleton(() => AdminResetStaffPassword(sl()));
@@ -1794,7 +2126,21 @@ Future<void> init() async {
   sl.registerLazySingleton(() => SaveRolePermissionOverride(sl()));
 
   // Admin - Staff Attendance / Subscription
-  sl.registerLazySingleton(() => StaffAttendanceRepository());
+  sl.registerLazySingleton<StaffAttendanceRepository>(
+    () => StaffAttendanceRepositoryImpl(),
+  );
+
+  // Offline queue for the two safe-to-queue staff attendance actions
+  // (same-day clock-in, correction) - mirrors ExamFactoryOfflineQueueService's
+  // registration.
+  sl.registerLazySingleton<StaffAttendanceQueueDataSource>(
+    () =>
+        createStaffAttendanceQueueDataSource(isar: kIsWeb ? null : sl<Isar>()),
+  );
+  sl.registerLazySingleton(
+    () => StaffAttendanceOfflineQueueService(dataSource: sl()),
+  );
+
   sl.registerLazySingleton(() => SubscriptionRepository());
 
   // Subscription Payment - MTN Mobile Money
@@ -1817,10 +2163,32 @@ Future<void> init() async {
   sl.registerLazySingleton(() => CreateRelationship(sl()));
   sl.registerLazySingleton(() => ReallocateRelationship(sl()));
   sl.registerLazySingleton(() => GetRelationshipsForStudent(sl()));
+  sl.registerLazySingleton(
+    () => StudentGuardianContactService(
+      assignmentService: sl(),
+      relationshipRepository: sl(),
+      studentRepository: sl(),
+    ),
+  );
   sl.registerLazySingleton(() => GetRelationshipsForParent(sl()));
+  sl.registerLazySingleton(() => GetRelationshipsForSchool(sl()));
   sl.registerLazySingleton(() => GetPeoplePolicy(sl()));
   sl.registerLazySingleton(() => UpdatePeoplePolicy(sl()));
   sl.registerLazySingleton(() => RecordEnrolmentChange(sl()));
+
+  // Features - Parent Access Workspace (Parents/Access Codes admin console
+  // - wraps createParentAccessCode/reallocateParentLink/
+  // revokeParentAccessCode/listParentAccessInvites).
+  sl.registerLazySingleton<ParentAccessRemoteDataSource>(
+    () => ParentAccessRemoteDataSourceImpl(),
+  );
+  sl.registerLazySingleton<ParentAccessRepository>(
+    () => ParentAccessRepositoryImpl(remoteDataSource: sl()),
+  );
+  sl.registerFactory(() => ParentsAccessCubit(repository: sl()));
+  sl.registerFactoryParam<ParentDetailCubit, String, void>(
+    (inviteId, _) => ParentDetailCubit(repository: sl(), inviteId: inviteId),
+  );
 
   // Features - Parent Access (module visibility resolver, consumes
   // relationship access flags + structure feature toggles + people policy).
@@ -1828,6 +2196,15 @@ Future<void> init() async {
   // it needs the signed-in parent's userId and the app-wide
   // SelectedStudentBloc instance, neither of which sl() can supply.
   sl.registerLazySingleton(() => const ParentModuleResolver());
+
+  sl.registerFactory(() => ParentReportCardBloc(dataSource: sl()));
+  sl.registerLazySingleton(
+    () => ParentReportCardRemoteDataSource(
+      firestore: sl(),
+      functions: sl(),
+      offlineCache: sl<ParentOfflineCacheService>(),
+    ),
+  );
 
   // Features - Structure
   sl.registerFactory(() => StructureBloc(repository: sl()));
@@ -1847,6 +2224,12 @@ Future<void> init() async {
     () =>
         StructureRepositoryImpl(remoteDataSource: sl(), localDataSource: sl()),
   );
+
+  sl.registerLazySingleton<StructureSetupRepository>(
+    () => StructureSetupRepositoryImpl(firestore: sl(), auth: sl()),
+  );
+
+  sl.registerFactory(() => StructureSetupCubit(repository: sl()));
 
   sl.registerLazySingleton<StructureRemoteDataSource>(
     () => StructureRemoteDataSourceImpl(firestore: sl()),
@@ -2043,6 +2426,9 @@ Future<void> init() async {
 
   sl.registerLazySingleton(() => FirebaseAuth.instance);
   sl.registerLazySingleton(() => FirebaseFirestore.instance);
+  // Super Admin (owner console) datasources - kept here, not in
+  // registerSuperAdmin(), because they must register immediately after the
+  // FirebaseFirestore singleton above (registration order matters).
   sl.registerLazySingleton<SecuritySettingsRemoteDataSource>(
     () => SecuritySettingsRemoteDataSourceImpl(firestore: sl()),
   );
@@ -2073,4 +2459,22 @@ Future<void> init() async {
   sl.registerFactory(
     () => InstitutionContextCubit(repository: sl(), preferences: sl()),
   );
+
+  //! Parent Portal offline (mobile-only cache/queue; no-op on web - see
+  //! ParentCacheDataSourceWeb / ParentQueueDataSourceWeb docs)
+  sl.registerLazySingleton<ParentCacheDataSource>(
+    () => createParentCacheDataSource(isar: kIsWeb ? null : sl<Isar>()),
+  );
+  sl.registerLazySingleton<ParentQueueDataSource>(
+    () => createParentQueueDataSource(isar: kIsWeb ? null : sl<Isar>()),
+  );
+  sl.registerLazySingleton(() => ParentLocalPinStore());
+  sl.registerLazySingleton(
+    () => ParentOfflineCacheService(
+      cache: sl(),
+      pinStore: sl(),
+      networkInfo: sl(),
+    ),
+  );
+  sl.registerLazySingleton(() => ParentOfflineQueueService(dataSource: sl()));
 }

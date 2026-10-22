@@ -36,26 +36,16 @@ class HrRemoteDataSourceImpl implements HrRemoteDataSource {
         paye: (data['paye'] ?? 0).toDouble(),
         netPay: (data['netPay'] ?? 0).toDouble(),
         createdAt: (data['createdAt'] as Timestamp).toDate(),
+        fundingSource: PayrollFundingSource.fromId(data['fundingSource']),
       );
     }).toList();
   }
 
   @override
   Future<void> generatePayroll(PayrollRecord record) async {
-    await firestore.collection('payroll').doc(record.id).set({
-      'schoolId': record.schoolId,
-      'staffId': record.staffId,
-      'staffName': record.staffName,
-      'month': record.month,
-      'baseSalary': record.baseSalary,
-      'allowances': record.allowances,
-      'bonuses': record.bonuses,
-      'deductions': record.deductions,
-      'nssfEmployee': record.nssfEmployee,
-      'nssfEmployer': record.nssfEmployer,
-      'paye': record.paye,
-      'netPay': record.netPay,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    throw UnsupportedError(
+      'Client payroll generation was retired. Use the server-authorised '
+      'Payroll & Compliance workflow.',
+    );
   }
 }

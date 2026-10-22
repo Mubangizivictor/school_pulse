@@ -28,10 +28,7 @@ enum ReportEntryStatus {
   /// The states a class teacher may still write in. Past this the report
   /// belongs to the academic office, and the teacher's copy is read-only.
   bool get isTeacherEditable =>
-      this == draft ||
-      this == inProgress ||
-      this == returnedForCorrection ||
-      this == classTeacherCompleted;
+      this == draft || this == inProgress || this == returnedForCorrection;
 
   bool get isApprovedUpstream =>
       this == academicOfficeApproved ||
@@ -41,6 +38,20 @@ enum ReportEntryStatus {
 }
 
 extension ReportEntryStatusDisplay on ReportEntryStatus {
+  /// Stable persisted value used by Firestore and its security rules.
+  /// Dart enum names are camelCase while the database contract is snake_case.
+  String get storageId => switch (this) {
+    ReportEntryStatus.draft => 'draft',
+    ReportEntryStatus.inProgress => 'in_progress',
+    ReportEntryStatus.submittedForReview => 'submitted_for_review',
+    ReportEntryStatus.returnedForCorrection => 'returned_for_correction',
+    ReportEntryStatus.classTeacherCompleted => 'class_teacher_completed',
+    ReportEntryStatus.academicOfficeApproved => 'academic_office_approved',
+    ReportEntryStatus.leadershipApproved => 'leadership_approved',
+    ReportEntryStatus.published => 'published',
+    ReportEntryStatus.archived => 'archived',
+  };
+
   String get label => switch (this) {
     ReportEntryStatus.draft => 'Draft',
     ReportEntryStatus.inProgress => 'In progress',
@@ -181,6 +192,12 @@ class ClassReportEntry extends Equatable {
   final DateTime? submittedAt;
   final String roleAssignmentId;
 
+  /// The canonical schools/{schoolId}/reportCards document the Report Card
+  /// Engine wrote for this student/term, once generated. Null until the
+  /// class teacher's "Compile"/"Create New Report" action has actually run
+  /// for this entry.
+  final String? reportCardId;
+
   const ClassReportEntry({
     required this.id,
     required this.schoolId,
@@ -203,6 +220,7 @@ class ClassReportEntry extends Equatable {
     this.updatedAt,
     this.submittedAt,
     this.roleAssignmentId = '',
+    this.reportCardId,
   });
 
   bool get isEditable => status.isTeacherEditable;
@@ -237,6 +255,7 @@ class ClassReportEntry extends Equatable {
     DateTime? updatedAt,
     DateTime? submittedAt,
     String? roleAssignmentId,
+    String? reportCardId,
   }) {
     return ClassReportEntry(
       id: id,
@@ -260,6 +279,7 @@ class ClassReportEntry extends Equatable {
       updatedAt: updatedAt ?? this.updatedAt,
       submittedAt: submittedAt ?? this.submittedAt,
       roleAssignmentId: roleAssignmentId ?? this.roleAssignmentId,
+      reportCardId: reportCardId ?? this.reportCardId,
     );
   }
 
@@ -286,6 +306,7 @@ class ClassReportEntry extends Equatable {
     updatedAt,
     submittedAt,
     roleAssignmentId,
+    reportCardId,
   ];
 }
 

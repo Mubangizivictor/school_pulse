@@ -91,7 +91,7 @@ class _ClassesStreamsScreenState extends State<ClassesStreamsScreen> {
                   children: [
                     Text(
                       'Manage classes and their streams.',
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 13, color: Colors.black),
                     ),
                     const SizedBox(height: 12),
                     AcademicsSegmentedTabs(
@@ -176,7 +176,7 @@ void _showFilterSheet(BuildContext context, bool isClassesTab) {
             const Text(
               'Sorting follows configured Level/Class order by default. '
               'Active/Level filters are coming soon.',
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(color: Colors.black),
             ),
           ],
         ),
@@ -242,7 +242,7 @@ class _ClassesTab extends StatelessWidget {
                 AcademicsStatTile(
                   label: 'Active Classes',
                   value: '$activeCount',
-                  valueColor: Colors.green.shade700,
+                  valueColor: Colors.black,
                 ),
                 AcademicsStatTile(
                   label: 'Total Students',
@@ -251,7 +251,7 @@ class _ClassesTab extends StatelessWidget {
                 AcademicsStatTile(
                   label: 'Avg. Class Size',
                   value: state.classes.isEmpty ? '—' : '$avgSize',
-                  valueColor: Colors.orange.shade800,
+                  valueColor: Colors.black,
                 ),
               ],
             );
@@ -319,12 +319,12 @@ class _ClassCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.indigo.withValues(alpha: 0.12),
+              color: Colors.black.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.school_outlined,
-              color: Colors.indigo,
+              color: Colors.black,
               size: 20,
             ),
           ),
@@ -346,7 +346,7 @@ class _ClassCard extends StatelessWidget {
                           decoration: schoolClass.isActive
                               ? null
                               : TextDecoration.lineThrough,
-                          color: schoolClass.isActive ? null : Colors.grey,
+                          color: schoolClass.isActive ? null : Colors.black,
                         ),
                       ),
                     ),
@@ -354,7 +354,7 @@ class _ClassCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       const AcademicsStatusChip(
                         label: 'Inactive',
-                        color: Colors.grey,
+                        color: Colors.black,
                       ),
                     ],
                   ],
@@ -373,7 +373,10 @@ class _ClassCard extends StatelessWidget {
                       '${(schoolClass.capacity - allocatedCapacity).clamp(0, schoolClass.capacity)} seats unallocated',
                   ].join(' • '),
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -397,14 +400,13 @@ class _SetupLevelsFirstHint extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
       children: [
         AppCard(
-          onTap: () =>
-              context.push('/staff/admin/structure/academics/levels'),
+          onTap: () => context.push('/staff/admin/structure/academics/levels'),
           showShadow: false,
-          color: Colors.orange.withValues(alpha: 0.08),
-          borderColor: Colors.orange.withValues(alpha: 0.35),
+          color: Colors.black,
+          borderColor: Colors.black,
           child: Row(
             children: [
-              const Icon(Icons.description_outlined, color: Colors.orange),
+              const Icon(Icons.description_outlined, color: Colors.black),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -484,7 +486,7 @@ class _StreamsTab extends StatelessWidget {
             AcademicsStatTile(
               label: 'Active Streams',
               value: '$activeCount',
-              valueColor: Colors.green.shade700,
+              valueColor: Colors.black,
             ),
             AcademicsStatTile(
               label: 'Total Classes',
@@ -495,7 +497,7 @@ class _StreamsTab extends StatelessWidget {
               value: state.streams.isEmpty
                   ? '—'
                   : '${(state.streams.fold<int>(0, (sum, s) => sum + s.capacity) / state.streams.length).round()}',
-              valueColor: Colors.orange.shade800,
+              valueColor: Colors.black,
             ),
           ],
         ),
@@ -523,7 +525,10 @@ class _StreamsTab extends StatelessWidget {
               _StreamCard(
                 stream: stream,
                 parentClassName:
-                    state.classes.where((c) => c.id == classId).firstOrNull?.name ??
+                    state.classes
+                        .where((c) => c.id == classId)
+                        .firstOrNull
+                        ?.name ??
                     '',
                 onTap: () => _openStreamForm(
                   context,
@@ -564,12 +569,12 @@ class _StreamCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.teal.withValues(alpha: 0.12),
+              color: Colors.black.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
               Icons.groups_2_outlined,
-              color: Colors.teal,
+              color: Colors.black,
               size: 20,
             ),
           ),
@@ -591,7 +596,7 @@ class _StreamCard extends StatelessWidget {
                           decoration: stream.isActive
                               ? null
                               : TextDecoration.lineThrough,
-                          color: stream.isActive ? null : Colors.grey,
+                          color: stream.isActive ? null : Colors.black,
                         ),
                       ),
                     ),
@@ -599,7 +604,7 @@ class _StreamCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       const AcademicsStatusChip(
                         label: 'Inactive',
-                        color: Colors.grey,
+                        color: Colors.black,
                       ),
                     ],
                   ],
@@ -611,7 +616,10 @@ class _StreamCard extends StatelessWidget {
                     if (stream.capacity > 0) 'Capacity ${stream.capacity}',
                   ].join(' • '),
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -638,13 +646,16 @@ class _CreateClassFirstHint extends StatelessWidget {
           children: [
             Text(
               'Create a class first',
-              style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               'Streams belong to a class - add a class before adding streams.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Colors.black),
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
@@ -896,10 +907,10 @@ class _ClassFormScreenState extends State<_ClassFormScreen> {
                 const SizedBox(height: 20),
                 TextButton.icon(
                   onPressed: _isSaving ? null : _confirmDelete,
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  icon: const Icon(Icons.delete_outline, color: Colors.black),
                   label: const Text(
                     'Delete Class',
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(color: Colors.black),
                   ),
                 ),
               ],
@@ -1123,10 +1134,10 @@ class _StreamFormScreenState extends State<_StreamFormScreen> {
                 const SizedBox(height: 20),
                 TextButton.icon(
                   onPressed: _isSaving ? null : _confirmDelete,
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  icon: const Icon(Icons.delete_outline, color: Colors.black),
                   label: const Text(
                     'Delete Stream',
-                    style: TextStyle(color: Colors.red),
+                    style: TextStyle(color: Colors.black),
                   ),
                 ),
               ],
@@ -1221,10 +1232,7 @@ class _AcademicsFieldHint extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 5),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 11.5, color: Colors.grey[600]),
-      ),
+      child: Text(text, style: TextStyle(fontSize: 11.5, color: Colors.black)),
     );
   }
 }

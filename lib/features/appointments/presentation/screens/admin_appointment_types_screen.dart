@@ -113,7 +113,10 @@ class _AdminAppointmentTypesView extends StatelessWidget {
                         ),
                       ),
                       if (!type.active)
-                        const StatusBadge(label: 'Inactive', color: Colors.grey)
+                        const StatusBadge(
+                          label: 'Inactive',
+                          color: Colors.black,
+                        )
                       else
                         StatusBadge(
                           label: type.category.name,

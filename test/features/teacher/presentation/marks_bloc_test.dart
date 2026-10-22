@@ -6,6 +6,7 @@ import 'package:school_pulse/features/teacher/domain/entities/active_responsibil
 import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
 import 'package:school_pulse/features/teacher/domain/entities/subject_assessment.dart';
 import 'package:school_pulse/features/teacher/domain/policies/marks_entry_policy.dart';
+import 'package:school_pulse/features/teacher/domain/repositories/class_student_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/marks_repository.dart';
 import 'package:school_pulse/features/teacher/domain/repositories/subject_student_repository.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
@@ -13,6 +14,9 @@ import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc
 class _MockMarksRepository extends Mock implements MarksRepository {}
 
 class _MockStudentRepository extends Mock implements SubjectStudentRepository {}
+
+class _MockClassStudentRepository extends Mock
+    implements ClassStudentRepository {}
 
 class _FakeContext extends Fake implements ActiveResponsibilityContext {}
 
@@ -23,6 +27,7 @@ class _FakeComponent extends Fake implements AssessmentComponent {}
 void main() {
   late _MockMarksRepository marksRepository;
   late _MockStudentRepository studentRepository;
+  late _MockClassStudentRepository classStudentRepository;
 
   final assignment = StaffRoleAssignment(
     id: 'a1',
@@ -73,9 +78,11 @@ void main() {
   setUp(() {
     marksRepository = _MockMarksRepository();
     studentRepository = _MockStudentRepository();
+    classStudentRepository = _MockClassStudentRepository();
     when(
       () => marksRepository.getAssessments(
         context: any(named: 'context'),
+        subjectId: any(named: 'subjectId'),
         forceRefresh: any(named: 'forceRefresh'),
       ),
     ).thenAnswer((_) async => const Right([assessment]));
@@ -90,6 +97,7 @@ void main() {
   MarksBloc build() => MarksBloc(
     marksRepository: marksRepository,
     studentRepository: studentRepository,
+    classStudentRepository: classStudentRepository,
   );
 
   group('MarksRequested', () {
@@ -99,9 +107,11 @@ void main() {
       act: (bloc) => bloc.add(MarksRequested(context)),
       expect: () => [
         isA<MarksState>().having((s) => s.isLoading, 'isLoading', true),
-        isA<MarksState>()
-            .having((s) => s.isLoading, 'isLoading', false)
-            .having((s) => s.assessments, 'assessments', [assessment]),
+        isA<MarksState>().having((s) => s.isLoading, 'isLoading', false).having(
+          (s) => s.assessments,
+          'assessments',
+          [assessment],
+        ),
       ],
     );
   });
@@ -130,11 +140,7 @@ void main() {
         isA<MarksState>().having((s) => s.isLoading, 'isLoading', true),
         isA<MarksState>()
             .having((s) => s.isLoading, 'isLoading', false)
-            .having(
-              (s) => s.selectedComponent,
-              'selectedComponent',
-              component,
-            ),
+            .having((s) => s.selectedComponent, 'selectedComponent', component),
       ],
     );
   });
@@ -148,9 +154,8 @@ void main() {
         selectedAssessment: assessment,
         selectedComponent: component,
       ),
-      act: (bloc) => bloc.add(
-        const MarksEntryChanged(studentId: 's1', score: 78),
-      ),
+      act: (bloc) =>
+          bloc.add(const MarksEntryChanged(studentId: 's1', score: 78)),
       expect: () => [
         isA<MarksState>().having(
           (s) => s.entries['s1']?.score,

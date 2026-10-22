@@ -83,8 +83,11 @@ class StudentMoreScreen extends StatelessWidget {
           ]),
           _buildSection(context, 'Account', [
             ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Logout', style: TextStyle(color: Colors.red)),
+              leading: const Icon(Icons.logout, color: Colors.black),
+              title: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.black),
+              ),
               onTap: () => _handleLogout(context),
             ),
           ]),
@@ -149,7 +152,7 @@ class StudentMoreScreen extends StatelessWidget {
               Navigator.pop(context);
               context.go('/welcome');
             },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),

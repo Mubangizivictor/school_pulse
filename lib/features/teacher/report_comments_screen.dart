@@ -36,8 +36,11 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
 
   void _fetchComments() {
     if (_selectedClass != null) {
+      final authState = context.read<AuthBloc>().state;
+      if (authState is! AuthAuthenticated) return;
       context.read<TeacherBloc>().add(
         TeacherReportCommentsRequested(
+          schoolId: authState.user.schoolId,
           className: _selectedClass!,
           term: _currentTerm,
           year: _currentYear,
@@ -83,15 +86,20 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
                   return ListView.separated(
                     padding: const EdgeInsets.all(16),
                     itemCount: state.students.length,
-                    separatorBuilder: (context, index) => Divider(
-                      color: AppColors.border(context).withValues(alpha: 0.5),
-                    ),
+                    separatorBuilder: (context, index) =>
+                        Divider(color: AppColors.border(context)),
                     itemBuilder: (context, index) {
                       final student = state.students[index];
+                      final commentAuthState = context.read<AuthBloc>().state;
+                      final commentSchoolId =
+                          commentAuthState is AuthAuthenticated
+                          ? commentAuthState.user.schoolId
+                          : '';
                       final comment = state.comments.firstWhere(
                         (c) => c.studentId == student.id,
                         orElse: () => ReportComment(
                           id: '',
+                          schoolId: commentSchoolId,
                           studentId: student.id,
                           className: _selectedClass ?? '',
                           term: _currentTerm,
@@ -161,6 +169,7 @@ class _ReportCommentsScreenState extends State<ReportCommentsScreen> {
         TeacherReportCommentSaved(
           ReportComment(
             id: '', // Backend handles ID
+            schoolId: authState.user.schoolId,
             studentId: studentId,
             className: _selectedClass ?? '',
             term: _currentTerm,

@@ -405,7 +405,7 @@ class _Stat extends StatelessWidget {
           height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: color.withValues(alpha: .12),
+            color: color.withValues(alpha: 0.12),
           ),
           child: Icon(icon, color: color),
         ),
@@ -452,110 +452,82 @@ class _LevelCard extends StatelessWidget {
           borderRadius: AppRadius.large,
           onTap: onTap,
           child: Container(
-            height: 98,
+            constraints: const BoxConstraints(minHeight: 98),
             decoration: BoxDecoration(
               border: Border.all(color: scheme.outlineVariant),
               borderRadius: AppRadius.large,
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: double.infinity,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: const BorderRadius.horizontal(
-                      left: Radius.circular(AppRadius.l),
+            // IntrinsicHeight + stretch lets the colour strip fill the
+            // card's height; height: double.infinity inside an unbounded
+            // Row crashed layout.
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    width: 4,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: const BorderRadius.horizontal(
+                        left: Radius.circular(AppRadius.l),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: AppSpacing.xl),
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: color.withValues(alpha: .12),
-                  foregroundColor: color,
-                  child: Text(
-                    _initials(level),
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.l + AppSpacing.s),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        level.name,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                  const SizedBox(width: AppSpacing.xl),
+                  Center(
+                    child: CircleAvatar(
+                      radius: 28,
+                      backgroundColor: color.withValues(alpha: 0.14),
+                      foregroundColor: color,
+                      child: Text(
+                        _initials(level),
+                        style: const TextStyle(
+                          fontSize: 17,
                           fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          color: level.isActive
-                              ? scheme.onSurface
-                              : scheme.onSurfaceVariant,
                         ),
                       ),
-                      const SizedBox(height: 7),
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'Code: ',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    level.code,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      color: scheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.l + AppSpacing.s),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          level.name,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            color: level.isActive
+                                ? scheme.onSurface
+                                : scheme.onSurfaceVariant,
                           ),
-                          Text(
-                            '  •  Classes: $classCount',
+                        ),
+                        const SizedBox(height: 7),
+                        FutureBuilder<int>(
+                          future: studentsFuture,
+                          builder: (context, snapshot) => Text(
+                            'Code: ${level.code}  •  Classes: $classCount'
+                            '${snapshot.hasData ? '  •  Students: ${snapshot.data}' : ''}',
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2,
                             style: TextStyle(
                               fontSize: 12.5,
                               color: scheme.onSurfaceVariant,
                             ),
                           ),
-                          FutureBuilder<int>(
-                            future: studentsFuture,
-                            builder: (context, snapshot) => Text(
-                              snapshot.hasData
-                                  ? '  •  Students: ${snapshot.data}'
-                                  : '',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                _Badge(level.isActive),
-                const SizedBox(width: AppSpacing.m),
-                Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
-                const SizedBox(width: AppSpacing.m),
-              ],
+                  Center(child: _Badge(level.isActive)),
+                  const SizedBox(width: AppSpacing.m),
+                  Icon(Icons.chevron_right, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: AppSpacing.m),
+                ],
+              ),
             ),
           ),
         ),
@@ -578,7 +550,7 @@ class _Badge extends StatelessWidget {
         vertical: AppSpacing.s + 2,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: .12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: AppRadius.full,
       ),
       child: Text(

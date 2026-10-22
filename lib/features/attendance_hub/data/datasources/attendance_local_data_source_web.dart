@@ -24,6 +24,27 @@ class AttendanceLocalDataSourceWeb implements AttendanceLocalDataSource {
   Future<void> markSynced(String recordId) async {}
 
   @override
+  Future<void> markSyncing(String recordId) async {}
+
+  @override
+  Future<void> markRetryableFailure(
+    String recordId, {
+    required String error,
+  }) async {}
+
+  @override
+  Future<void> markPermanentlyBlocked(
+    String recordId, {
+    required String reason,
+  }) async {}
+
+  @override
+  Future<int> evictStale({required Duration retention}) async => 0;
+
+  @override
+  Future<void> clearAll() async {}
+
+  @override
   Stream<List<AttendanceRecord>> watchRecords({
     required String schoolId,
     required String scopeId,

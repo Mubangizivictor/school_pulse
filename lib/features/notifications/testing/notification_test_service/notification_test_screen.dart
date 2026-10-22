@@ -83,7 +83,7 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
     final user = _user;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -106,7 +106,7 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
             const _Card(
               child: Text(
                 'Sign in to run delivery tests.',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: Colors.white),
               ),
             )
           else ...[
@@ -131,7 +131,7 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
                     ),
                     subtitle: const Text(
                       'Tests big-picture style and Data Saver behaviour',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                      style: TextStyle(color: Colors.white, fontSize: 12),
                     ),
                   ),
                   SwitchListTile(
@@ -145,7 +145,7 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
                     ),
                     subtitle: const Text(
                       'Verifies quiet hours and category mutes actually suppress',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                      style: TextStyle(color: Colors.white, fontSize: 12),
                     ),
                   ),
                 ],
@@ -163,7 +163,7 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
                     'Renders through the same presenter push uses. Proves '
                     'channels, images, sound and redaction work on this device '
                     '- but does NOT prove FCM delivery.',
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                    style: TextStyle(color: Colors.white, fontSize: 12),
                   ),
                   const SizedBox(height: 12),
                   _TestButton(
@@ -207,7 +207,7 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
                     'Sends through FCM to your own registered devices only. '
                     'Run this three times: app open, app backgrounded, and app '
                     'fully closed.',
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                    style: TextStyle(color: Colors.white, fontSize: 12),
                   ),
                   const SizedBox(height: 12),
                   _TestButton(
@@ -273,9 +273,7 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
                   Icon(
                     entry.success ? Icons.check_circle : Icons.error,
                     size: 16,
-                    color: entry.success
-                        ? const Color(0xFF10B981)
-                        : const Color(0xFFE11D48),
+                    color: entry.success ? Colors.black : Colors.black,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -293,7 +291,7 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
                         Text(
                           entry.detail,
                           style: const TextStyle(
-                            color: Colors.white60,
+                            color: Colors.white,
                             fontSize: 12,
                           ),
                         ),
@@ -324,7 +322,7 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
 
     return DropdownButtonFormField<NotificationCategory>(
       initialValue: _category,
-      dropdownColor: const Color(0xFF1E293B),
+      dropdownColor: Colors.black,
       style: const TextStyle(color: Colors.white),
       decoration: _fieldDecoration('Category'),
       items: options
@@ -339,7 +337,7 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
   Widget _priorityDropdown() {
     return DropdownButtonFormField<NotificationPriority>(
       initialValue: _priority,
-      dropdownColor: const Color(0xFF1E293B),
+      dropdownColor: Colors.black,
       style: const TextStyle(color: Colors.white),
       decoration: _fieldDecoration('Priority'),
       items: NotificationPriority.values
@@ -354,16 +352,16 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
   InputDecoration _fieldDecoration(String label) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: Colors.white60),
+      labelStyle: const TextStyle(color: Colors.white),
       filled: true,
-      fillColor: const Color(0xFF0F172A),
+      fillColor: Colors.black,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Colors.white24),
+        borderSide: const BorderSide(color: Colors.white),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Colors.white24),
+        borderSide: const BorderSide(color: Colors.white),
       ),
     );
   }
@@ -390,13 +388,13 @@ class _TestModeBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFF59E0B)),
+        border: Border.all(color: Colors.black),
       ),
       child: Row(
         children: [
-          const Icon(Icons.science, color: Color(0xFFF59E0B)),
+          const Icon(Icons.science, color: Colors.black),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -405,7 +403,7 @@ class _TestModeBanner extends StatelessWidget {
                 const Text(
                   'Test mode',
                   style: TextStyle(
-                    color: Color(0xFFF59E0B),
+                    color: Colors.black,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -413,7 +411,7 @@ class _TestModeBanner extends StatelessWidget {
                   kReleaseMode
                       ? 'Notifications sent from here reach only your own devices.'
                       : 'Debug build. Notifications reach only your own devices.',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ],
             ),
@@ -435,7 +433,7 @@ class _Card extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
       ),
       child: child,
@@ -485,12 +483,10 @@ class _TestButton extends StatelessWidget {
         icon: Icon(icon, size: 18),
         label: Text(label),
         style: ElevatedButton.styleFrom(
-          backgroundColor: primary
-              ? const Color(0xFF6366F1)
-              : const Color(0xFF334155),
+          backgroundColor: primary ? Colors.black : Colors.black,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: const Color(0xFF334155),
-          disabledForegroundColor: Colors.white38,
+          disabledBackgroundColor: Colors.black,
+          disabledForegroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 12),
           alignment: Alignment.centerLeft,
         ),

@@ -13,10 +13,16 @@ class DirectorGovernanceRepository {
   final FirebaseFirestore _firestore;
 
   CollectionReference<Map<String, dynamic>> _goals(String schoolId) =>
-      _firestore.collection('schools').doc(schoolId).collection('strategic_goals');
+      _firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('strategic_goals');
 
   CollectionReference<Map<String, dynamic>> _meetings(String schoolId) =>
-      _firestore.collection('schools').doc(schoolId).collection('leadership_meetings');
+      _firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('leadership_meetings');
 
   Stream<List<StrategicGoal>> watchGoals(String schoolId) => _goals(schoolId)
       .orderBy('deadline')
@@ -40,22 +46,27 @@ class DirectorGovernanceRepository {
     String goalId, {
     required double currentValue,
     required GoalStatus status,
-  }) => _goals(schoolId).doc(goalId).update({
-    'currentValue': currentValue,
-    'status': status.wire,
-  });
+  }) => _goals(
+    schoolId,
+  ).doc(goalId).update({'currentValue': currentValue, 'status': status.wire});
 
   Future<void> deleteGoal(String schoolId, String goalId) =>
       _goals(schoolId).doc(goalId).delete();
 
-  Stream<List<LeadershipMeeting>> watchMeetings(String schoolId) => _meetings(schoolId)
-      .orderBy('scheduledAt', descending: true)
-      .snapshots()
-      .map(
-        (s) => s.docs
-            .map((d) => LeadershipMeeting.fromMap({...d.data(), 'meetingId': d.id}))
-            .toList(),
-      );
+  Stream<List<LeadershipMeeting>> watchMeetings(String schoolId) =>
+      _meetings(schoolId)
+          .orderBy('scheduledAt', descending: true)
+          .snapshots()
+          .map(
+            (s) => s.docs
+                .map(
+                  (d) => LeadershipMeeting.fromMap({
+                    ...d.data(),
+                    'meetingId': d.id,
+                  }),
+                )
+                .toList(),
+          );
 
   Future<String> saveMeeting(String schoolId, LeadershipMeeting meeting) async {
     final ref = meeting.meetingId.isEmpty
@@ -74,9 +85,9 @@ class DirectorGovernanceRepository {
     updated[actionIndex] = updated[actionIndex].copyWith(
       completed: !updated[actionIndex].completed,
     );
-    await _meetings(
-      schoolId,
-    ).doc(meeting.meetingId).update({'actions': updated.map((a) => a.toMap()).toList()});
+    await _meetings(schoolId).doc(meeting.meetingId).update({
+      'actions': updated.map((a) => a.toMap()).toList(),
+    });
   }
 
   Future<void> deleteMeeting(String schoolId, String meetingId) =>

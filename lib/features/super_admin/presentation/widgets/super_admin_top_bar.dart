@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import 'package:school_pulse/core/theme_provider.dart';
@@ -11,7 +12,6 @@ import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/super_admin/data/services/owner_notification_service.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/owner_notification.dart';
 
-import '../pages/super_admin_notifications_screen.dart';
 import '../pages/super_admin_profile_screen.dart';
 import 'super_admin_logout_button.dart';
 
@@ -176,11 +176,9 @@ class _NotificationBellButton extends StatelessWidget {
             ),
             child: InkWell(
               borderRadius: AppRadius.medium,
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const SuperAdminNotificationsScreen(),
-                ),
-              ),
+              // Real owner route (not a bare push) so the persistent
+              // navigation stays visible - Overview stays highlighted.
+              onTap: () => context.go('/super-admin/notifications'),
               child: SizedBox(
                 width: 40,
                 height: 40,

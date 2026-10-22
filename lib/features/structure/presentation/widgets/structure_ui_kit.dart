@@ -22,6 +22,7 @@ class StructureHubTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return AppCard(
       onTap: onTap,
       padding: EdgeInsets.zero,
@@ -34,10 +35,10 @@ class StructureHubTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                border: Border.all(color: scheme.outlineVariant),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(icon, color: scheme.onSurface, size: 24),
             ),
             const SizedBox(height: 8),
             Text(
@@ -85,6 +86,7 @@ class StructureListRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -94,10 +96,10 @@ class StructureListRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              border: Border.all(color: scheme.outlineVariant),
               borderRadius: BorderRadius.circular(11),
             ),
-            child: Icon(icon, color: color, size: 18),
+            child: Icon(icon, color: scheme.onSurface, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -117,7 +119,7 @@ class StructureListRow extends StatelessWidget {
                           decoration: isActive
                               ? null
                               : TextDecoration.lineThrough,
-                          color: isActive ? null : Colors.grey,
+                          color: isActive ? scheme.onSurface : scheme.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -130,7 +132,7 @@ class StructureListRow extends StatelessWidget {
                     child: Text(
                       subtitle!,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 12.5, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
                     ),
                   ),
               ],
@@ -138,12 +140,16 @@ class StructureListRow extends StatelessWidget {
           ),
           IconButton(
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.edit_outlined, size: 20),
+            icon: Icon(Icons.edit_outlined, size: 20, color: scheme.onSurface),
             onPressed: onEdit,
           ),
           IconButton(
             visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+            icon: Icon(
+              Icons.delete_outline,
+              size: 20,
+              color: scheme.onSurface,
+            ),
             onPressed: onDelete,
           ),
         ],
@@ -165,18 +171,18 @@ class StructureStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isActive ? Colors.green : Colors.grey;
+    final scheme = Theme.of(context).colorScheme;
+    final foreground = isActive ? scheme.onSurface : scheme.onSurfaceVariant;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: foreground),
       ),
       child: Text(
         label.toUpperCase(),
         style: TextStyle(
-          color: color,
+          color: foreground,
           fontSize: 9,
           fontWeight: FontWeight.w900,
           letterSpacing: 0.5,
@@ -201,7 +207,7 @@ class StructureSearchBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outline.withValues(alpha: 0.22)),
+        border: Border.all(color: colors.outline),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
@@ -334,7 +340,7 @@ class StructureSectionPicker extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: colors.outline.withValues(alpha: .24)),
+              border: Border.all(color: colors.outline),
               color: Theme.of(context).cardColor,
             ),
             child: Row(
@@ -375,15 +381,20 @@ class StructureSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: SectionHeader(
         title: title,
-        trailing: FilledButton.tonalIcon(
+        trailing: OutlinedButton.icon(
           onPressed: onAction,
           icon: const Icon(Icons.add, size: 18),
           label: Text(actionLabel),
-          style: FilledButton.styleFrom(visualDensity: VisualDensity.compact),
+          style: OutlinedButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            foregroundColor: scheme.primary,
+            side: BorderSide(color: scheme.primary),
+          ),
         ),
       ),
     );
@@ -430,7 +441,7 @@ Future<void> showStructureFormSheet(
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey.withValues(alpha: 0.4),
+                        color: Theme.of(context).colorScheme.outlineVariant,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -461,7 +472,7 @@ Future<void> showStructureFormSheet(
                       decoration: BoxDecoration(
                         border: Border(
                           top: BorderSide(
-                            color: Colors.grey.withValues(alpha: 0.15),
+                            color: Theme.of(context).colorScheme.outlineVariant,
                           ),
                         ),
                       ),
@@ -552,7 +563,7 @@ class StructureRecordCard extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colors.outline.withValues(alpha: .18)),
+              border: Border.all(color: colors.outline),
             ),
             child: Row(
               children: [
@@ -560,7 +571,7 @@ class StructureRecordCard extends StatelessWidget {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: .10),
+                    color: color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(9),
                   ),
                   child: Icon(icon, color: color, size: 19),
@@ -678,7 +689,7 @@ class StructureStaffPickerField extends StatelessWidget {
             height: 46,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              border: Border.all(color: colors.outline.withValues(alpha: .35)),
+              border: Border.all(color: colors.outline),
               borderRadius: BorderRadius.circular(7),
             ),
             child: Row(

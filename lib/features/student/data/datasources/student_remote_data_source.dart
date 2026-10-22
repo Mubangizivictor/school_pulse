@@ -17,8 +17,28 @@ final _accessCodeRandom = Random.secure();
 /// previous scheme of a fixed prefix + trailing epoch-millis digits, which
 /// was sequential and predictable) and free of characters that are easily
 /// confused when read aloud or hand-copied.
-String _generateAccessCode({required String prefix, int length = 8}) {
-  final suffix = String.fromCharCodes(
+// Mirrors schoolPrefixFrom() in functions/index.js (staff/student code
+// generation) - schools only ever carry a top-level `name` field, never a
+// `schoolCode` field (that key only exists in the derived, display-only
+// schools/{id}/config/institution_profile doc), so reading it straight off
+// the school doc always returned null and silently fell back to bare 'P'.
+String _schoolPrefixFromName(String? schoolName) {
+  final trimmed = schoolName?.trim();
+  if (trimmed == null || trimmed.isEmpty) return '';
+  return trimmed
+      .split(RegExp(r'\s+'))
+      .map((w) => w[0])
+      .take(3)
+      .join()
+      .toUpperCase();
+}
+
+String _generateAccessCode({
+  required String prefix,
+  int length = 8,
+  String suffix = '',
+}) {
+  final random = String.fromCharCodes(
     List.generate(
       length,
       (_) => _accessCodeAlphabet.codeUnitAt(
@@ -26,7 +46,7 @@ String _generateAccessCode({required String prefix, int length = 8}) {
       ),
     ),
   );
-  return '$prefix$suffix';
+  return '$prefix$random$suffix';
 }
 
 /// Thrown when createStudentWithCapacityCheck rejects a create because the
@@ -414,7 +434,12 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
 
   @override
   Future<ParentAccessCodeModel?> resolveAccessCode(String code) async {
-    final normalizedCode = code.trim().toUpperCase();
+    // Parents type this on a phone keypad, often unaware of case or that
+    // dashes matter - strip everything but letters/digits so "vhs-abc123p",
+    // "VHSABC123P", and "VHS ABC 123 P" all resolve to the same code.
+    final normalizedCode = code
+        .toUpperCase()
+        .replaceAll(RegExp(r'[^A-Z0-9]'), '');
     final doc = await firestore
         .collection('parent_access_codes')
         .doc(normalizedCode)
@@ -446,7 +471,11 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     required String phoneNumber,
     String? parentName,
   }) async {
-    final parentCode = _generateAccessCode(prefix: 'P');
+    final schoolDoc = await firestore.collection('schools').doc(schoolId).get();
+    final schoolPrefix = _schoolPrefixFromName(
+      schoolDoc.data()?['name'] as String?,
+    );
+    final parentCode = _generateAccessCode(prefix: schoolPrefix, suffix: 'P');
     // The code is also the document ID so pre-login users can perform the
     // rule-safe direct get without permission to enumerate access codes.
     final docRef = firestore.collection('parent_access_codes').doc(parentCode);
@@ -476,7 +505,16 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
     }
     final oldData = oldSnapshot.data()!;
 
-    final newCode = _generateAccessCode(prefix: 'P');
+    final schoolId = oldData['schoolId'] as String?;
+    String prefix = '';
+    if (schoolId != null) {
+      final schoolDoc = await firestore
+          .collection('schools')
+          .doc(schoolId)
+          .get();
+      prefix = _schoolPrefixFromName(schoolDoc.data()?['name'] as String?);
+    }
+    final newCode = _generateAccessCode(prefix: prefix, suffix: 'P');
     final newRef = firestore.collection('parent_access_codes').doc(newCode);
 
     final batch = firestore.batch();
@@ -590,9 +628,7 @@ class StudentRemoteDataSourceImpl implements StudentRemoteDataSource {
   }
 
   @override
-  Future<StudentAccessCodeModel?> getStudentAccessCode(
-    String studentId,
-  ) async {
+  Future<StudentAccessCodeModel?> getStudentAccessCode(String studentId) async {
     final snapshot = await firestore
         .collection('student_access_codes')
         .where('studentId', isEqualTo: studentId)

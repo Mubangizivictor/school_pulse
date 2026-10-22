@@ -341,7 +341,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.3),
+                          color: Colors.black,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Center(child: SchoolPulseLoader()),
@@ -464,7 +464,7 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
         content: SingleChildScrollView(
           child: ColorPicker(
             pickerColor:
-                (isPrimary ? _primaryColor : _secondaryColor) ?? Colors.blue,
+                (isPrimary ? _primaryColor : _secondaryColor) ?? Colors.black,
             onColorChanged: (color) {
               setState(() {
                 if (isPrimary) {
@@ -693,6 +693,14 @@ class _SystemConfigScreenState extends State<SystemConfigScreen> {
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => context.push('/staff/admin/subscription'),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.link_outlined),
+            title: const Text('School Subdomain'),
+            subtitle: const Text("Manage your school's web address"),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.push('/staff/admin/school-subdomain'),
           ),
         ],
       ),

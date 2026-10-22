@@ -26,20 +26,21 @@ class MarksHistoryScreen extends StatelessWidget {
       ),
       body: BlocBuilder<MarksBloc, MarksState>(
         builder: (context, state) {
-          final past = state.assessments
-              .where(
-                (a) =>
-                    a.status == AssessmentAvailability.submitted ||
-                    a.status == AssessmentAvailability.approved ||
-                    a.status == AssessmentAvailability.published ||
-                    a.status == AssessmentAvailability.locked,
-              )
-              .toList()
-            ..sort((a, b) {
-              final ad = a.assessmentDate ?? DateTime(1970);
-              final bd = b.assessmentDate ?? DateTime(1970);
-              return bd.compareTo(ad);
-            });
+          final past =
+              state.assessments
+                  .where(
+                    (a) =>
+                        a.status == AssessmentAvailability.submitted ||
+                        a.status == AssessmentAvailability.approved ||
+                        a.status == AssessmentAvailability.published ||
+                        a.status == AssessmentAvailability.locked,
+                  )
+                  .toList()
+                ..sort((a, b) {
+                  final ad = a.assessmentDate ?? DateTime(1970);
+                  final bd = b.assessmentDate ?? DateTime(1970);
+                  return bd.compareTo(ad);
+                });
 
           if (past.isEmpty) {
             return Center(
@@ -61,9 +62,7 @@ class MarksHistoryScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surfaceElevated(context),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.border(context).withValues(alpha: 0.5),
-                  ),
+                  border: Border.all(color: AppColors.border(context)),
                 ),
                 child: InkWell(
                   onTap: () {
@@ -77,9 +76,7 @@ class MarksHistoryScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.primary(
-                            context,
-                          ).withValues(alpha: 0.1),
+                          color: AppColors.primary(context),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
@@ -145,8 +142,18 @@ class MarksHistoryScreen extends StatelessWidget {
 
   static String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }

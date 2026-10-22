@@ -150,7 +150,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String schoolId,
     required List<UserRole> roles,
-    required String password,
+    String? signInMethod,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     String? academicYearId,
@@ -159,14 +159,18 @@ class AuthRepositoryImpl implements AuthRepository {
     String? campusId,
     String? employmentType,
     DateTime? dateJoined,
+    String? idempotencyKey,
+    bool sendLoginDetailsViaEmail = false,
+    Map<String, dynamic>? staffData,
+    Map<String, dynamic>? roleConfigs,
   }) async {
     try {
-      final temporaryPassword = await remoteDataSource.createStaffAccount(
+      final staffCode = await remoteDataSource.createStaffAccount(
         name: name,
         email: email,
         schoolId: schoolId,
         roles: roles,
-        password: password,
+        signInMethod: signInMethod,
         assignedClass: assignedClass,
         subjects: subjects,
         academicYearId: academicYearId,
@@ -175,8 +179,36 @@ class AuthRepositoryImpl implements AuthRepository {
         campusId: campusId,
         employmentType: employmentType,
         dateJoined: dateJoined,
+        idempotencyKey: idempotencyKey,
+        sendLoginDetailsViaEmail: sendLoginDetailsViaEmail,
+        staffData: staffData,
+        roleConfigs: roleConfigs,
       );
-      return Right(temporaryPassword);
+      return Right(staffCode);
+    } on AuthFailure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> createStaffInvitation(String uid) async {
+    try {
+      await remoteDataSource.createStaffInvitation(uid);
+      return const Right(null);
+    } on AuthFailure catch (e) {
+      return Left(e);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> cancelStaffInvitation(String uid) async {
+    try {
+      await remoteDataSource.cancelStaffInvitation(uid);
+      return const Right(null);
     } on AuthFailure catch (e) {
       return Left(e);
     } catch (e) {

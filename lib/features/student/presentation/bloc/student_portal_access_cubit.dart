@@ -61,9 +61,8 @@ class StudentPortalAccessCubit extends Cubit<StudentPortalAccessState> {
         if (isClosed) return;
         refreshed.fold(
           (failure) => emit(StudentPortalAccessError(failure.message)),
-          (accessCode) => emit(
-            StudentPortalAccessActionSuccess('PIN reset', accessCode),
-          ),
+          (accessCode) =>
+              emit(StudentPortalAccessActionSuccess('PIN reset', accessCode)),
         );
       },
     );

@@ -68,7 +68,7 @@ class _TaskDormitoryAssignmentScreenState
                   child: AppCard(
                     padding: const EdgeInsets.all(16),
                     color: isSelected
-                        ? AppColors.royalBlue.withValues(alpha: 0.1)
+                        ? AppColors.royalBlue
                         : (isDark ? AppColors.surfaceDark : Colors.white),
                     borderColor: isSelected
                         ? AppColors.royalBlue
@@ -82,18 +82,14 @@ class _TaskDormitoryAssignmentScreenState
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color:
-                                (dorm['type'] == 'Boys'
-                                        ? AppColors.electricBlue
-                                        : Colors.pinkAccent)
-                                    .withValues(alpha: 0.1),
+                            color: AppColors.primary(
+                              context,
+                            ).withValues(alpha: 0.12),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.home_work_outlined,
-                            color: dorm['type'] == 'Boys'
-                                ? AppColors.electricBlue
-                                : Colors.pinkAccent,
+                            color: AppColors.primary(context),
                             size: 20,
                           ),
                         ),

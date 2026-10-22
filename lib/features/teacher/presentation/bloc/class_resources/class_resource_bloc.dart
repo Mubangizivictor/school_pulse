@@ -93,6 +93,24 @@ class ClassResourceRemoved extends ClassResourceEvent {
   List<Object?> get props => [resource];
 }
 
+class ClassResourceDownloadRequested extends ClassResourceEvent {
+  final ClassResource resource;
+
+  const ClassResourceDownloadRequested(this.resource);
+
+  @override
+  List<Object?> get props => [resource];
+}
+
+class ClassResourceDownloadRemoved extends ClassResourceEvent {
+  final ClassResource resource;
+
+  const ClassResourceDownloadRemoved(this.resource);
+
+  @override
+  List<Object?> get props => [resource];
+}
+
 class ClassResourceFeedbackCleared extends ClassResourceEvent {
   const ClassResourceFeedbackCleared();
 }
@@ -124,8 +142,7 @@ class ClassResourceState extends Equatable {
   List<ClassResource> get folders =>
       resources.where((r) => r.isFolder).toList();
 
-  List<ClassResource> get files =>
-      resources.where((r) => !r.isFolder).toList();
+  List<ClassResource> get files => resources.where((r) => !r.isFolder).toList();
 
   List<ClassResource> get recentFirst =>
       [...resources]..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
@@ -181,6 +198,8 @@ class ClassResourceBloc extends Bloc<ClassResourceEvent, ClassResourceState> {
     on<ClassResourceFolderCreated>(_onFolderCreated);
     on<ClassResourceShared>(_onShared);
     on<ClassResourceRemoved>(_onRemoved);
+    on<ClassResourceDownloadRequested>(_onDownloadRequested);
+    on<ClassResourceDownloadRemoved>(_onDownloadRemoved);
     on<ClassResourceFeedbackCleared>(_onFeedbackCleared);
   }
 
@@ -365,6 +384,46 @@ class ClassResourceBloc extends Bloc<ClassResourceEvent, ClassResourceState> {
         ),
       ),
     );
+    add(ClassResourcesRequested(context, folderId: state.folderId));
+  }
+
+  Future<void> _onDownloadRequested(
+    ClassResourceDownloadRequested event,
+    Emitter<ClassResourceState> emit,
+  ) async {
+    final context = state.context;
+    if (context == null) return;
+
+    emit(state.copyWith(isSaving: true, clearError: true, clearSuccess: true));
+
+    final result = await repository.downloadForOffline(
+      context: context,
+      resource: event.resource,
+    );
+
+    result.fold(
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (_) => emit(
+        state.copyWith(
+          isSaving: false,
+          successMessage: 'Available offline.',
+          clearError: true,
+        ),
+      ),
+    );
+    add(ClassResourcesRequested(context, folderId: state.folderId));
+  }
+
+  Future<void> _onDownloadRemoved(
+    ClassResourceDownloadRemoved event,
+    Emitter<ClassResourceState> emit,
+  ) async {
+    final context = state.context;
+    if (context == null) return;
+
+    await repository.removeDownload(context: context, resource: event.resource);
     add(ClassResourcesRequested(context, folderId: state.folderId));
   }
 

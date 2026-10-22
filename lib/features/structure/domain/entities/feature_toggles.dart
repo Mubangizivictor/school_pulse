@@ -40,6 +40,28 @@ class FeatureToggles extends Equatable {
     this.studentPortal = true,
   });
 
+  /// Every module off - used to render an unconfigured school's Feature
+  /// Choices setup screen without relying on this class's `true` defaults,
+  /// which exist only for backward compatibility with older navigation code
+  /// reading an empty document, not as a claim that these are genuinely
+  /// enabled.
+  const FeatureToggles.allOff()
+    : transport = false,
+      hostel = false,
+      library = false,
+      medical = false,
+      visitors = false,
+      inventory = false,
+      payroll = false,
+      procurement = false,
+      alumni = false,
+      communication = false,
+      boarding = false,
+      qrAttendance = false,
+      digitalIds = false,
+      parentPortal = false,
+      studentPortal = false;
+
   FeatureToggles copyWith({
     bool? transport,
     bool? hostel,

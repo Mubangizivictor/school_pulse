@@ -22,26 +22,82 @@ void main() {
     expect(preferences.departments, StructureUseChoice.undecided);
   });
 
-  test('opening Structure does not overwrite an existing setup version', () async {
+  test(
+    'opening Structure does not overwrite an existing setup version',
+    () async {
+      final firestore = FakeFirebaseFirestore();
+      await firestore
+          .collection('structure_setup_preferences')
+          .doc('school-a')
+          .set({
+            'schoolId': 'school-a',
+            'setupVersion': 1,
+            'departments': 'enabled',
+          });
+      final repository = StructureSetupRepositoryImpl(
+        firestore: firestore,
+        schoolIdOverride: 'school-a',
+      );
+
+      final preferences = await repository.watchPreferences().first;
+      final document = await firestore
+          .collection('structure_setup_preferences')
+          .doc('school-a')
+          .get();
+
+      expect(document.data()?['setupVersion'], 1);
+      expect(preferences.setupVersion, 1);
+      expect(preferences.departments, StructureUseChoice.enabled);
+    },
+  );
+
+  test('"Skip for now" on departments is saved as an explicit disabled choice', () async {
     final firestore = FakeFirebaseFirestore();
-    await firestore.collection('structure_setup_preferences').doc('school-a').set({
-      'schoolId': 'school-a',
-      'setupVersion': 1,
-      'departments': 'enabled',
-    });
     final repository = StructureSetupRepositoryImpl(
       firestore: firestore,
       schoolIdOverride: 'school-a',
     );
 
+    await repository.savePreferences(
+      const StructureSetupPreferences(departments: StructureUseChoice.disabled),
+    );
     final preferences = await repository.watchPreferences().first;
-    final document = await firestore
-        .collection('structure_setup_preferences')
-        .doc('school-a')
-        .get();
 
-    expect(document.data()?['setupVersion'], 1);
-    expect(preferences.setupVersion, 1);
-    expect(preferences.departments, StructureUseChoice.enabled);
+    expect(preferences.departments, StructureUseChoice.disabled);
+  });
+
+  test('"No streams" is saved as an explicit disabled choice, not left ambiguous', () async {
+    final firestore = FakeFirebaseFirestore();
+    final repository = StructureSetupRepositoryImpl(
+      firestore: firestore,
+      schoolIdOverride: 'school-a',
+    );
+
+    await repository.savePreferences(
+      const StructureSetupPreferences(streams: StructureUseChoice.disabled),
+    );
+    final preferences = await repository.watchPreferences().first;
+
+    expect(preferences.streams, StructureUseChoice.disabled);
+  });
+
+  test('preferences are isolated per school', () async {
+    final firestore = FakeFirebaseFirestore();
+    final repositoryA = StructureSetupRepositoryImpl(
+      firestore: firestore,
+      schoolIdOverride: 'school-a',
+    );
+    final repositoryB = StructureSetupRepositoryImpl(
+      firestore: firestore,
+      schoolIdOverride: 'school-b',
+    );
+
+    await repositoryA.savePreferences(
+      const StructureSetupPreferences(streams: StructureUseChoice.enabled),
+    );
+
+    final preferencesB = await repositoryB.watchPreferences().first;
+
+    expect(preferencesB.streams, StructureUseChoice.undecided);
   });
 }

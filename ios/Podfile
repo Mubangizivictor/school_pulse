@@ -38,13 +38,5 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
-
-    # Google ML Kit pods (pulled in by mobile_scanner) ship no arm64 slice
-    # for the iOS Simulator, so Apple Silicon simulator builds (e.g. iPhone
-    # 17 Pro Max) fail to link. Build those pods as x86_64 (via Rosetta)
-    # for simulator destinations only; device builds are unaffected.
-    target.build_configurations.each do |config|
-      config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
-    end
   end
 end

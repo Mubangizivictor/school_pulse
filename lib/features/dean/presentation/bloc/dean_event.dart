@@ -80,39 +80,35 @@ class HomeworkRecordsRequested extends DeanEvent {
 }
 
 // Assessment & Marks QA
-class PendingModerationAssessmentsRequested extends DeanEvent {}
+class PendingModerationAssessmentsRequested extends DeanEvent {
+  final String schoolId;
+  const PendingModerationAssessmentsRequested({required this.schoolId});
+  @override
+  List<Object?> get props => [schoolId];
+}
 
 class ApproveAssessmentMarksRequested extends DeanEvent {
+  final String schoolId;
   final String assessmentId;
-  const ApproveAssessmentMarksRequested(this.assessmentId);
+  const ApproveAssessmentMarksRequested({
+    required this.schoolId,
+    required this.assessmentId,
+  });
   @override
-  List<Object?> get props => [assessmentId];
+  List<Object?> get props => [schoolId, assessmentId];
 }
 
 class RejectAssessmentMarksRequested extends DeanEvent {
+  final String schoolId;
   final String assessmentId;
   final String reason;
-  const RejectAssessmentMarksRequested(this.assessmentId, this.reason);
+  const RejectAssessmentMarksRequested({
+    required this.schoolId,
+    required this.assessmentId,
+    required this.reason,
+  });
   @override
-  List<Object?> get props => [assessmentId, reason];
-}
-
-// Report Card Approval
-class PendingReportApprovalsRequested extends DeanEvent {}
-
-class ApproveReportCardsRequested extends DeanEvent {
-  final List<String> reportCardIds;
-  const ApproveReportCardsRequested(this.reportCardIds);
-  @override
-  List<Object?> get props => [reportCardIds];
-}
-
-class RejectReportCardsRequested extends DeanEvent {
-  final List<String> reportCardIds;
-  final String reason;
-  const RejectReportCardsRequested(this.reportCardIds, this.reason);
-  @override
-  List<Object?> get props => [reportCardIds, reason];
+  List<Object?> get props => [schoolId, assessmentId, reason];
 }
 
 // Performance Analytics
@@ -173,7 +169,43 @@ class TodaysOperationsRequested extends DeanEvent {}
 class MissedLessonsRequested extends DeanEvent {}
 
 // Assessments Overview
-class AssessmentsOverviewRequested extends DeanEvent {}
+class AssessmentsOverviewRequested extends DeanEvent {
+  final String schoolId;
+  const AssessmentsOverviewRequested({required this.schoolId});
+  @override
+  List<Object?> get props => [schoolId];
+}
+
+class CreateAssessmentRequested extends DeanEvent {
+  final String schoolId;
+  final String? campusId;
+  final String title;
+  final String subjectId;
+  final String classId;
+  final String type;
+  final double maximumMark;
+
+  const CreateAssessmentRequested({
+    required this.schoolId,
+    this.campusId,
+    required this.title,
+    required this.subjectId,
+    required this.classId,
+    required this.type,
+    required this.maximumMark,
+  });
+
+  @override
+  List<Object?> get props => [
+    schoolId,
+    campusId,
+    title,
+    subjectId,
+    classId,
+    type,
+    maximumMark,
+  ];
+}
 
 // Student Academic Profile
 class StudentAcademicProfileRequested extends DeanEvent {

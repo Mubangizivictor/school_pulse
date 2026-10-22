@@ -479,6 +479,9 @@ class NotificationRepositoryImpl implements NotificationRepository {
   Future<Either<NotificationFailure, SchoolNotificationPolicy>> getSchoolPolicy(
     String schoolId,
   ) async {
+    if (schoolId.isEmpty) {
+      return Right(SchoolNotificationPolicy.defaults(schoolId));
+    }
     try {
       if (await isConnected()) {
         final policy = await remoteDataSource.getSchoolPolicy(schoolId);

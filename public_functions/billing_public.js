@@ -1,10 +1,11 @@
 const { onRequest } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
+const { isAllowedOrigin } = require('./allowed_origins');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
-const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
+const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
 // Enterprise is intentionally absent here: this endpoint only ever serves
 // the 3 public/self-service plans (isPublic/isActive filter below already
 // excludes it), so no fallback for it can ever be reached in this file's
@@ -19,7 +20,7 @@ const FALLBACKS = {
 
 function cors(req, res) {
   const origin = req.get('origin');
-  if (origin === WEBSITE_ORIGIN || origin === 'http://localhost:4321') {
+  if (isAllowedOrigin(origin)) {
     res.set('Access-Control-Allow-Origin', origin);
   }
   res.set('Vary', 'Origin');

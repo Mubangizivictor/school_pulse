@@ -62,7 +62,7 @@ class StudentShell extends StatelessWidget {
             },
             child: const Text(
               'Logout',
-              style: TextStyle(color: AppColors.deepOrange),
+              style: TextStyle(color: AppColors.black),
             ),
           ),
         ],
@@ -212,7 +212,7 @@ class StudentShell extends StatelessWidget {
                 backgroundColor: isDark
                     ? AppColors.surfaceDark
                     : AppColors.surfaceLight,
-                indicatorColor: AppColors.electricBlue.withValues(alpha: 0.1),
+                indicatorColor: AppColors.electricBlue,
                 selectedIndex: _calculateSelectedIndex(context),
                 onDestinationSelected: (idx) => _onItemTapped(idx, context),
                 destinations: destinations,
@@ -237,12 +237,10 @@ class _LogoutButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
         child: TextButton.icon(
           onPressed: onPressed,
-          icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
+          icon: const Icon(Icons.logout_rounded, color: AppColors.black),
           label: Text(
             'Logout',
-            style: AppTypography.labelLarge.copyWith(
-              color: AppColors.deepOrange,
-            ),
+            style: AppTypography.labelLarge.copyWith(color: AppColors.black),
           ),
           style: TextButton.styleFrom(
             alignment: Alignment.centerLeft,
@@ -253,7 +251,7 @@ class _LogoutButton extends StatelessWidget {
     }
 
     return IconButton(
-      icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
+      icon: const Icon(Icons.logout_rounded, color: AppColors.black),
       onPressed: onPressed,
       tooltip: 'Logout',
     );

@@ -8,12 +8,14 @@ class GetCompetencyRatings {
   GetCompetencyRatings(this.repository);
 
   Future<Either<Failure, List<CompetencyRating>>> call({
+    required String schoolId,
     required String className,
     required String term,
     required String year,
     required String competency,
   }) async {
     return await repository.getCompetencyRatings(
+      schoolId: schoolId,
       className: className,
       term: term,
       year: year,

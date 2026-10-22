@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import 'package:school_pulse/core/error/friendly_error_message.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
@@ -53,9 +54,16 @@ class _SupportTicketConversationScreenState
       _messageController.clear();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not send message: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              friendlyErrorMessage(
+                e,
+                fallback: 'Could not send message. Please try again.',
+              ),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -244,7 +252,7 @@ class _Chip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -298,7 +306,7 @@ class _MessageBubble extends StatelessWidget {
                         ? message.senderName
                         : 'Support'),
               style: AppTypography.labelSmall.copyWith(
-                color: textColor.withValues(alpha: 0.8),
+                color: textColor,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -311,7 +319,7 @@ class _MessageBubble extends StatelessWidget {
             Text(
               DateFormat('MMM d, h:mm a').format(message.createdAt.toLocal()),
               style: AppTypography.labelSmall.copyWith(
-                color: textColor.withValues(alpha: 0.65),
+                color: textColor,
                 fontSize: 10,
               ),
             ),

@@ -76,23 +76,21 @@ class StrategicGoal extends Equatable {
     );
   }
 
-  StrategicGoal copyWith({
-    double? currentValue,
-    GoalStatus? status,
-  }) => StrategicGoal(
-    goalId: goalId,
-    institutionId: institutionId,
-    title: title,
-    description: description,
-    responsibleDepartment: responsibleDepartment,
-    targetValue: targetValue,
-    currentValue: currentValue ?? this.currentValue,
-    unit: unit,
-    status: status ?? this.status,
-    deadline: deadline,
-    createdAt: createdAt,
-    createdBy: createdBy,
-  );
+  StrategicGoal copyWith({double? currentValue, GoalStatus? status}) =>
+      StrategicGoal(
+        goalId: goalId,
+        institutionId: institutionId,
+        title: title,
+        description: description,
+        responsibleDepartment: responsibleDepartment,
+        targetValue: targetValue,
+        currentValue: currentValue ?? this.currentValue,
+        unit: unit,
+        status: status ?? this.status,
+        deadline: deadline,
+        createdAt: createdAt,
+        createdBy: createdBy,
+      );
 
   @override
   List<Object?> get props => [

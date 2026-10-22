@@ -169,11 +169,7 @@ class _EnterMarksScreenState extends State<EnterMarksScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.border(context).withValues(alpha: 0.3),
-          ),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.border(context))),
       ),
       child: Row(
         children: [
@@ -209,7 +205,7 @@ class _EnterMarksScreenState extends State<EnterMarksScreen> {
               height: 36,
               decoration: BoxDecoration(
                 color: hasScore
-                    ? AppColors.primary(context).withValues(alpha: 0.1)
+                    ? AppColors.primary(context)
                     : Colors.transparent,
                 border: Border.all(
                   color: hasScore
@@ -233,11 +229,14 @@ class _EnterMarksScreenState extends State<EnterMarksScreen> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      controller: TextEditingController(
-                        text: entry?.score?.toStringAsFixed(0) ?? '',
-                      )..selection = TextSelection.collapsed(
-                          offset: entry?.score?.toStringAsFixed(0).length ?? 0,
-                        ),
+                      controller:
+                          TextEditingController(
+                              text: entry?.score?.toStringAsFixed(0) ?? '',
+                            )
+                            ..selection = TextSelection.collapsed(
+                              offset:
+                                  entry?.score?.toStringAsFixed(0).length ?? 0,
+                            ),
                       style: TextStyle(
                         color: AppColors.textPrimary(context),
                         fontWeight: FontWeight.bold,
@@ -320,7 +319,8 @@ class _EnterMarksScreenState extends State<EnterMarksScreen> {
             child: OutlinedButton(
               onPressed: state.isSaving
                   ? null
-                  : () => context.read<MarksBloc>().add(const MarksDraftSaved()),
+                  : () =>
+                        context.read<MarksBloc>().add(const MarksDraftSaved()),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: AppColors.border(context)),
                 padding: const EdgeInsets.symmetric(vertical: 16),

@@ -1,5 +1,46 @@
 import 'package:equatable/equatable.dart';
 
+/// One approved mark a student earned on one assessment component, for the
+/// per-subject drill-down. Distinct from [StudentPerformanceSummary], which
+/// only carries the subject-level average.
+class StudentAssessmentResult extends Equatable {
+  final String assessmentId;
+  final String componentId;
+  final String assessmentTitle;
+  final String componentName;
+  final double score;
+  final double maximumMark;
+  final DateTime? assessmentDate;
+
+  const StudentAssessmentResult({
+    required this.assessmentId,
+    required this.componentId,
+    this.assessmentTitle = '',
+    this.componentName = '',
+    required this.score,
+    required this.maximumMark,
+    this.assessmentDate,
+  });
+
+  double get percentage => maximumMark > 0 ? (score / maximumMark) * 100 : 0;
+
+  /// What the tile shows as its title - the assessment name, or the
+  /// component name when the assessment carries no title of its own.
+  String get displayName =>
+      assessmentTitle.isNotEmpty ? assessmentTitle : componentName;
+
+  @override
+  List<Object?> get props => [
+    assessmentId,
+    componentId,
+    assessmentTitle,
+    componentName,
+    score,
+    maximumMark,
+    assessmentDate,
+  ];
+}
+
 /// One student's standing across every subject, as the Class Teacher sees it.
 ///
 /// Built only from marks the Assessment engine has already approved. Marks

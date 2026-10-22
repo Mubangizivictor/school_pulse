@@ -6,7 +6,9 @@ import '../models/subscription_plan_model.dart';
 import '../models/audit_log_model.dart';
 import '../models/school_application_model.dart';
 import '../../domain/repositories/super_admin_repository.dart'
-    show SupportModeSession;
+    show SupportModeSession, SchoolAdminSummary;
+import 'package:school_pulse/features/billing/domain/entities/subscription_cycle.dart';
+import 'package:school_pulse/features/billing/data/datasources/subscription_cycle_remote_data_source.dart';
 
 abstract class SuperAdminRemoteDataSource {
   Future<List<SchoolModel>> getAllSchools();
@@ -17,6 +19,25 @@ abstract class SuperAdminRemoteDataSource {
     String adminPassword,
   );
   Future<void> updateSchool(SchoolModel school);
+
+  /// Calls the `setSchoolLifecycleStatus` Cloud Function, which changes a
+  /// school's status and writes the platform audit entry in one Admin-SDK
+  /// transaction. Use this instead of [updateSchool] for suspend/activate/
+  /// archive so the status change and its audit record can't drift apart.
+  Future<void> setSchoolLifecycleStatus({
+    required String schoolId,
+    required String status,
+    String? reason,
+  });
+
+  /// Calls the `updateSchoolSubscriptionPlan` Cloud Function, which changes
+  /// a school's plan/expiry and writes the platform audit entry atomically.
+  Future<void> updateSchoolSubscriptionPlan({
+    required String schoolId,
+    required String planId,
+    required DateTime expiry,
+  });
+
   Future<List<SchoolApplicationModel>> getSchoolApplications();
   Future<String> approveSchoolApplication(String applicationId);
   Future<void> rejectSchoolApplication(String applicationId, String reason);
@@ -36,6 +57,15 @@ abstract class SuperAdminRemoteDataSource {
   /// Calls `exitSupportMode` while still signed in as the impersonated
   /// admin, tearing down the server-side session doc and logging the exit.
   Future<void> exitSupportMode({required String ownerId, String? schoolId});
+
+  /// Queries the flat `users` collection for schoolAdmin-role accounts
+  /// scoped to [schoolId]. There is no dedicated school-admins subcollection.
+  Future<List<SchoolAdminSummary>> getSchoolAdmins(String schoolId);
+
+  Future<List<SubscriptionCycle>> getSubscriptionCyclesForSchool(
+    String schoolId,
+  );
+  Future<List<SubscriptionCycle>> getAllUpcomingSubscriptionCycles();
 }
 
 class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
@@ -43,6 +73,23 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
   final FirebaseAuth auth;
 
   SuperAdminRemoteDataSourceImpl({required this.firestore, required this.auth});
+
+  // Delegates to the shared cross-feature data source (see
+  // lib/features/billing/data/datasources/subscription_cycle_remote_data_source.dart)
+  // rather than duplicating the subscription_cycles query logic here - the
+  // School Admin calendar screen reads the same collection via that same
+  // shared class.
+  SubscriptionCycleRemoteDataSource get _cycles =>
+      SubscriptionCycleRemoteDataSource(firestore: firestore);
+
+  @override
+  Future<List<SubscriptionCycle>> getSubscriptionCyclesForSchool(
+    String schoolId,
+  ) => _cycles.getSubscriptionCyclesForSchool(schoolId);
+
+  @override
+  Future<List<SubscriptionCycle>> getAllUpcomingSubscriptionCycles() =>
+      _cycles.getAllUpcomingSubscriptionCycles();
 
   // public_functions/ (codebase "publicwebsite") - getSchoolApplicationsForOwner,
   // approveSchoolApplication, rejectSchoolApplication.
@@ -106,24 +153,28 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
     String adminEmail,
     String adminPassword,
   ) async {
-    // schools/{id} is the sole institution tenant source of truth as of
-    // Phase 1 (classification/divisions/displayLabel live on this doc). The
-    // legacy tenants/{tenantId} doc is deprecated in place - no new writes
-    // go there; existing docs are left untouched, not migrated.
-    await firestore.collection('schools').doc(school.id).set(school.toJson());
-
-    // Manual owner provisioning remains available for schools that did not
-    // start on the public website. The invitation is consumed server-side;
-    // the plaintext temporary password is never readable from the client.
-    await firestore.collection('school_admin_invitations').add({
-      'email': adminEmail,
-      'schoolId': school.id,
-      'tenantId': school.tenantId,
-      'tempPassword': adminPassword,
-      'role': 'schoolAdmin',
-      'createdAt': FieldValue.serverTimestamp(),
-      'status': 'pending',
-    });
+    // Tenant creation, slug reservation, membership provisioning, and audit
+    // logging must be one Admin-SDK transaction. In particular, never write
+    // an invitation containing a password from this client path.
+    final slug = school.slug.isNotEmpty
+        ? school.slug
+        : school.tenantId.toLowerCase();
+    try {
+      await _ownerFunctions.httpsCallable('createSchoolPortal').call({
+        'schoolName': school.name,
+        'slug': slug,
+        'adminEmail': adminEmail,
+        'planId': school.subscriptionPlanId,
+        'branding': {
+          ...school.branding,
+          'address': school.address,
+          'phone': school.contactPhone,
+          'email': school.contactEmail,
+        },
+      });
+    } on FirebaseFunctionsException catch (e) {
+      throw StateError(e.message ?? 'Unable to create the school portal.');
+    }
   }
 
   @override
@@ -132,6 +183,40 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
         .collection('schools')
         .doc(school.id)
         .update(school.toJson());
+  }
+
+  @override
+  Future<void> setSchoolLifecycleStatus({
+    required String schoolId,
+    required String status,
+    String? reason,
+  }) async {
+    try {
+      await _ownerFunctions.httpsCallable('setSchoolLifecycleStatus').call({
+        'schoolId': schoolId,
+        'status': status,
+        'reason': ?reason,
+      });
+    } on FirebaseFunctionsException catch (e) {
+      throw StateError(e.message ?? 'Unable to update the school status.');
+    }
+  }
+
+  @override
+  Future<void> updateSchoolSubscriptionPlan({
+    required String schoolId,
+    required String planId,
+    required DateTime expiry,
+  }) async {
+    try {
+      await _ownerFunctions.httpsCallable('updateSchoolSubscriptionPlan').call({
+        'schoolId': schoolId,
+        'planId': planId,
+        'expiry': expiry.millisecondsSinceEpoch,
+      });
+    } on FirebaseFunctionsException catch (e) {
+      throw StateError(e.message ?? 'Unable to update the subscription.');
+    }
   }
 
   @override
@@ -273,7 +358,35 @@ class SuperAdminRemoteDataSourceImpl implements SuperAdminRemoteDataSource {
     final callable = _defaultCodebaseFunctions.httpsCallable('exitSupportMode');
     await callable.call<Map<String, dynamic>>({
       'ownerId': ownerId,
-      if (schoolId != null) 'schoolId': schoolId,
+      'schoolId': ?schoolId,
     });
+  }
+
+  @override
+  Future<List<SchoolAdminSummary>> getSchoolAdmins(String schoolId) async {
+    final snapshot = await firestore
+        .collection('users')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('roles', arrayContains: 'schoolAdmin')
+        .get();
+    final admins = snapshot.docs.map((doc) {
+      final data = doc.data();
+      final lastSignIn = data['lastSignInAt'] ?? data['lastSignIn'];
+      return SchoolAdminSummary(
+        uid: doc.id,
+        name: (data['name'] as String?)?.trim().isNotEmpty == true
+            ? data['name'] as String
+            : 'Unnamed admin',
+        email: data['email'] as String? ?? '',
+        isPrimary: data['isPrimaryAdmin'] == true,
+        mfaEnabled: data['mfaEnabled'] == true,
+        lastSignInAt: lastSignIn is Timestamp ? lastSignIn.toDate() : null,
+      );
+    }).toList();
+    admins.sort((a, b) {
+      if (a.isPrimary != b.isPrimary) return a.isPrimary ? -1 : 1;
+      return a.name.compareTo(b.name);
+    });
+    return admins;
   }
 }

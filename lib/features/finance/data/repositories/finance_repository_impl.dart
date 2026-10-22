@@ -1,4 +1,6 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import '../../../../core/error/failures.dart';
 import '../../domain/entities/budget.dart';
 import '../../domain/entities/expenditure.dart';
@@ -8,9 +10,8 @@ import '../../domain/entities/fee_structure.dart';
 import '../../domain/entities/payment_record.dart';
 import '../../domain/entities/student_financial_account.dart';
 import '../../domain/repositories/finance_repository.dart';
+import '../datasources/finance_governance_remote_data_source.dart';
 import '../datasources/finance_remote_data_source.dart';
-import '../models/budget_model.dart';
-import '../models/expenditure_model.dart';
 import '../models/fee_category_model.dart';
 import '../models/fee_structure_model.dart';
 import '../models/payment_record_model.dart';
@@ -19,7 +20,46 @@ import '../models/student_financial_account_model.dart';
 class FinanceRepositoryImpl implements FinanceRepository {
   final FinanceRemoteDataSource remoteDataSource;
 
-  FinanceRepositoryImpl({required this.remoteDataSource});
+  /// Callable-only path for expenditure requisitions/decisions and budget
+  /// lines (audit area 2). Never null in production DI; kept optional so
+  /// existing repository unit tests that only exercise read paths don't
+  /// have to construct it.
+  final FinanceGovernanceRemoteDataSource? governance;
+
+  FinanceRepositoryImpl({required this.remoteDataSource, this.governance});
+
+  FinanceGovernanceRemoteDataSource get _governance {
+    final g = governance;
+    if (g == null) {
+      throw StateError(
+        'FinanceGovernanceRemoteDataSource is required for finance writes',
+      );
+    }
+    return g;
+  }
+
+  Failure _callableFailure(Object e) {
+    if (e is StateError) {
+      // Misconfiguration, not a user-facing failure — surface it loudly.
+      throw e;
+    }
+    if (e is FirebaseFunctionsException) {
+      final msg = e.message ?? 'The finance service rejected this request.';
+      switch (e.code) {
+        case 'permission-denied':
+        case 'unauthenticated':
+          return PermissionDeniedFailure(msg);
+        case 'invalid-argument':
+        case 'failed-precondition':
+        case 'already-exists':
+        case 'not-found':
+          return ValidationFailure(msg);
+        default:
+          return ServerFailure(msg);
+      }
+    }
+    return ServerFailure();
+  }
 
   @override
   Future<Either<Failure, List<FeeCategory>>> getFeeCategories(
@@ -242,7 +282,8 @@ class FinanceRepositoryImpl implements FinanceRepository {
     try {
       final history = await remoteDataSource.getAllPaymentHistory();
       return Right(history);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('FinanceRepositoryImpl.getAllPaymentHistory error: $e\n$st');
       return Left(ServerFailure());
     }
   }
@@ -252,7 +293,8 @@ class FinanceRepositoryImpl implements FinanceRepository {
     try {
       final fees = await remoteDataSource.getFees(studentId);
       return Right(fees);
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('FinanceRepositoryImpl.getFees error: $e\n$st');
       return Left(ServerFailure());
     }
   }
@@ -287,21 +329,14 @@ class FinanceRepositoryImpl implements FinanceRepository {
 
   @override
   Future<Either<Failure, void>> saveBudget(Budget budget) async {
+    // Callable-only (audit area 2): saveSchoolBudget enforces validation,
+    // tenant/role checks, keeps `spentAmount` server-authoritative, and
+    // writes an audit event. Direct Firestore writes are denied by rules.
     try {
-      final model = BudgetModel(
-        id: budget.id,
-        schoolId: budget.schoolId,
-        name: budget.name,
-        academicYear: budget.academicYear,
-        term: budget.term,
-        allocatedAmount: budget.allocatedAmount,
-        spentAmount: budget.spentAmount,
-        description: budget.description,
-      );
-      await remoteDataSource.saveBudget(model);
+      await _governance.saveSchoolBudget(budget);
       return const Right(null);
     } catch (e) {
-      return Left(ServerFailure());
+      return Left(_callableFailure(e));
     }
   }
 
@@ -321,38 +356,13 @@ class FinanceRepositoryImpl implements FinanceRepository {
   Future<Either<Failure, void>> createExpenditureRequest(
     ExpenditureRequest request,
   ) async {
+    // Callable-only (audit area 2): submitExpenditure validates the amount
+    // (positive whole UGX), enforces role/tenant, is idempotent, and audits.
     try {
-      final model = ExpenditureRequestModel(
-        id: request.id,
-        schoolId: request.schoolId,
-        requesterId: request.requesterId,
-        requesterName: request.requesterName,
-        description: request.description,
-        amount: request.amount,
-        budgetCategoryId: request.budgetCategoryId,
-        supplierId: request.supplierId,
-        supplierName: request.supplierName,
-        status: request.status,
-        attachmentUrls: request.attachmentUrls,
-        createdAt: request.createdAt,
-        approvalHistory: request.approvalHistory
-            .map(
-              (s) => ApprovalStepModel(
-                id: s.id,
-                approverId: s.approverId,
-                approverName: s.approverName,
-                approverRole: s.approverRole,
-                status: s.status,
-                comment: s.comment,
-                updatedAt: s.updatedAt,
-              ),
-            )
-            .toList(),
-      );
-      await remoteDataSource.createExpenditureRequest(model);
+      await _governance.submitExpenditure(request);
       return const Right(null);
     } catch (e) {
-      return Left(ServerFailure());
+      return Left(_callableFailure(e));
     }
   }
 
@@ -366,19 +376,20 @@ class FinanceRepositoryImpl implements FinanceRepository {
     String approverRole,
     String? comment,
   ) async {
+    // Callable-only (audit area 2): decideExpenditure enforces the
+    // requester-can't-self-approve rule, records the approval step + audit
+    // event in one transaction, and is idempotent on retry. The approver
+    // identity is taken from the authenticated call, not these params.
     try {
-      await remoteDataSource.updateExpenditureStatus(
-        schoolId,
-        requestId,
-        status,
-        approverId,
-        approverName,
-        approverRole,
-        comment,
+      await _governance.decideExpenditure(
+        schoolId: schoolId,
+        expenditureId: requestId,
+        decision: FinanceGovernanceRemoteDataSource.decisionFor(status),
+        comment: comment,
       );
       return const Right(null);
     } catch (e) {
-      return Left(ServerFailure());
+      return Left(_callableFailure(e));
     }
   }
 

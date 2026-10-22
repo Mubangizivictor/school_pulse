@@ -1,17 +1,10 @@
-// ignore_for_file: unused_import
-
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
-import 'package:school_pulse/core/user_roles.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:school_pulse/features/hr/presentation/screens/leave_management_screen.dart';
 import 'package:school_pulse/features/hr/presentation/screens/staff_appraisals_screen.dart';
 import 'package:school_pulse/features/hr/presentation/screens/payroll_management_screen.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 
 class HRDashboardScreen extends StatelessWidget {
   const HRDashboardScreen({super.key});
@@ -22,159 +15,56 @@ class HRDashboardScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
-      body: CustomScrollView(
-        slivers: [
-          _buildAppBar(context, isDesktop),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildStatsRow(context, isDesktop),
-                  const SizedBox(height: 15),
-                  _buildMainGrid(context, isDesktop),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAppBar(BuildContext context, bool isDesktop) {
-    return SliverAppBar(
-      pinned: true,
-      expandedHeight: 80,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      title: const Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Human Resources',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24),
-          ),
-          Text(
-            'Staff Management & Recruitment',
-            style: TextStyle(fontSize: 12),
-          ),
-        ],
-      ),
-      actions: [
-        NotificationBellButton(
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-        ),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.logout_rounded),
-          color: Theme.of(context).colorScheme.error,
-          style: IconButton.styleFrom(
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-          ),
-          onPressed: () {
-            context.read<AuthBloc>().add(LogoutPressed());
-            context.go('/welcome');
-          },
-        ),
-        const SizedBox(width: 16),
-      ],
-    );
-  }
-
-  Widget _buildStatsRow(BuildContext context, bool isDesktop) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (isDesktop) {
-          return Row(
+      appBar: staffDashboardAppBar(context, roleLabel: 'Human Resources'),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: DashboardStatCard(
-                  title: 'Total Staff',
-                  value: 84,
-                  icon: Icons.people,
-                  color: Colors.blue,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DashboardStatCard(
-                  title: 'Recruits',
-                  value: 12,
-                  icon: Icons.person_add,
-                  color: Colors.green,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DashboardStatCard(
-                  title: 'Leave',
-                  value: 5,
-                  icon: Icons.time_to_leave,
-                  color: Colors.orange,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DashboardStatCard(
-                  title: 'Appraisals',
-                  value: 8,
-                  icon: Icons.assessment,
-                  color: Colors.purple,
-                ),
-              ),
+              _buildHero(context),
+              const SizedBox(height: 15),
+              _buildMainGrid(context, isDesktop),
             ],
-          );
-        }
+          ),
+        ),
+      ),
+    );
+  }
 
-        return Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: DashboardStatCard(
-                    title: 'Total Staff',
-                    value: 84,
-                    icon: Icons.people,
-                    color: Colors.blue,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DashboardStatCard(
-                    title: 'Recruits',
-                    value: 12,
-                    icon: Icons.person_add,
-                    color: Colors.green,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: DashboardStatCard(
-                    title: 'Leave',
-                    value: 5,
-                    icon: Icons.time_to_leave,
-                    color: Colors.orange,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DashboardStatCard(
-                    title: 'Appraisals',
-                    value: 8,
-                    icon: Icons.assessment,
-                    color: Colors.purple,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
+  Widget _buildHero(BuildContext context) {
+    return StaffHeroSummaryCard(
+      greetingNameFallback: 'there',
+      kpis: [
+        StaffKpiData(
+          title: 'Total Staff',
+          valueText: '84',
+          subtitle: 'Employed',
+          icon: Icons.people,
+          color: Colors.black,
+        ),
+        StaffKpiData(
+          title: 'Recruits',
+          valueText: '12',
+          subtitle: 'In pipeline',
+          icon: Icons.person_add,
+          color: Colors.black,
+        ),
+        StaffKpiData(
+          title: 'On Leave',
+          valueText: '5',
+          subtitle: 'Currently away',
+          icon: Icons.time_to_leave,
+          color: Colors.black,
+        ),
+        StaffKpiData(
+          title: 'Appraisals',
+          valueText: '8',
+          subtitle: 'Pending review',
+          icon: Icons.assessment,
+          color: Colors.black,
+        ),
+      ],
     );
   }
 
@@ -191,21 +81,21 @@ class HRDashboardScreen extends StatelessWidget {
           icon: Icons.assignment_ind,
           label: 'Staff Recruitment',
           subtitle: 'Manage job openings & interviews',
-          color: Colors.blue,
+          color: Colors.black,
           onTap: () {},
         ),
         _MenuTile(
           icon: Icons.history_edu,
           label: 'Contracts',
           subtitle: 'Staff agreements & terms',
-          color: Colors.teal,
+          color: Colors.black,
           onTap: () {},
         ),
         _MenuTile(
           icon: Icons.event_note,
           label: 'Leave Management',
           subtitle: 'Requests, approvals & balances',
-          color: Colors.orange,
+          color: Colors.black,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -217,7 +107,7 @@ class HRDashboardScreen extends StatelessWidget {
           icon: Icons.trending_up,
           label: 'Appraisals',
           subtitle: 'Performance reviews & scores',
-          color: Colors.purple,
+          color: Colors.black,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -229,7 +119,7 @@ class HRDashboardScreen extends StatelessWidget {
           icon: Icons.payments,
           label: 'Payroll (PAYE/NSSF)',
           subtitle: 'Uganda tax & social security',
-          color: Colors.green,
+          color: Colors.black,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -241,21 +131,21 @@ class HRDashboardScreen extends StatelessWidget {
           icon: Icons.warning_amber,
           label: 'Staff Warnings',
           subtitle: 'Disciplinary records',
-          color: Colors.red,
+          color: Colors.black,
           onTap: () {},
         ),
         _MenuTile(
           icon: Icons.folder_shared,
           label: 'Staff Documents',
           subtitle: 'IDs, certificates & forms',
-          color: Colors.indigo,
+          color: Colors.black,
           onTap: () {},
         ),
         _MenuTile(
           icon: Icons.exit_to_app,
           label: 'Exit Management',
           subtitle: 'Resignations & terminations',
-          color: Colors.blueGrey,
+          color: Colors.black,
           onTap: () {},
         ),
       ],
@@ -288,10 +178,7 @@ class _MenuTile extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 28),
           ),
           const SizedBox(height: 12),

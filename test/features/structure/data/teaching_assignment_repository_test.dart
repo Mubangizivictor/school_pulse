@@ -50,6 +50,7 @@ void main() {
       id: 'subject-a',
       staffId: 'teacher-a',
       academicYearId: '2026',
+      academicTermId: 'term-1',
       responsibilityType: TeachingResponsibilityType.subjectTeacher,
       classId: 's1',
       streamId: 'blue',
@@ -68,24 +69,28 @@ void main() {
     );
   });
 
-  test('whole-class curriculum permits stream-scoped subject teacher', () async {
-    await seedCurriculum();
-    const assignment = TeachingAssignment(
-      id: 'subject-a',
-      staffId: 'teacher-a',
-      academicYearId: '2026',
-      responsibilityType: TeachingResponsibilityType.subjectTeacher,
-      classId: 's1',
-      streamId: 'blue',
-      subjectId: 'math',
-    );
+  test(
+    'whole-class curriculum permits stream-scoped subject teacher',
+    () async {
+      await seedCurriculum();
+      const assignment = TeachingAssignment(
+        id: 'subject-a',
+        staffId: 'teacher-a',
+        academicYearId: '2026',
+        academicTermId: 'term-1',
+        responsibilityType: TeachingResponsibilityType.subjectTeacher,
+        classId: 's1',
+        streamId: 'blue',
+        subjectId: 'math',
+      );
 
-    await repository.saveAssignment(assignment);
-    final saved = await repository.watchAssignments().first;
-    expect(saved, hasLength(1));
-    expect(saved.single.staffId, 'teacher-a');
-    expect(saved.single.streamId, 'blue');
-  });
+      await repository.saveAssignment(assignment);
+      final saved = await repository.watchAssignments().first;
+      expect(saved, hasLength(1));
+      expect(saved.single.staffId, 'teacher-a');
+      expect(saved.single.streamId, 'blue');
+    },
+  );
 
   test('one login can hold subject teacher and class teacher roles', () async {
     await seedCurriculum();
@@ -94,6 +99,7 @@ void main() {
         id: 'subject-a',
         staffId: 'teacher-a',
         academicYearId: '2026',
+        academicTermId: 'term-1',
         responsibilityType: TeachingResponsibilityType.subjectTeacher,
         classId: 's1',
         subjectId: 'math',
@@ -104,6 +110,7 @@ void main() {
         id: 'class-a',
         staffId: 'teacher-a',
         academicYearId: '2026',
+        academicTermId: 'term-1',
         responsibilityType: TeachingResponsibilityType.classTeacher,
         classId: 's1',
       ),
@@ -120,36 +127,41 @@ void main() {
     );
   });
 
-  test('same staff cannot be class teacher for two classes in one year', () async {
-    await repository.saveAssignment(
-      const TeachingAssignment(
-        id: 'class-s1',
-        staffId: 'teacher-a',
-        academicYearId: '2026',
-        responsibilityType: TeachingResponsibilityType.classTeacher,
-        classId: 's1',
-      ),
-    );
-
-    expect(
-      () => repository.saveAssignment(
+  test(
+    'same staff cannot be class teacher for two classes in one year',
+    () async {
+      await repository.saveAssignment(
         const TeachingAssignment(
-          id: 'class-s2',
+          id: 'class-s1',
           staffId: 'teacher-a',
           academicYearId: '2026',
+          academicTermId: 'term-1',
           responsibilityType: TeachingResponsibilityType.classTeacher,
-          classId: 's2',
+          classId: 's1',
         ),
-      ),
-      throwsA(
-        isA<StateError>().having(
-          (error) => error.message.toString(),
-          'message',
-          contains('another class/stream'),
+      );
+
+      expect(
+        () => repository.saveAssignment(
+          const TeachingAssignment(
+            id: 'class-s2',
+            staffId: 'teacher-a',
+            academicYearId: '2026',
+            academicTermId: 'term-1',
+            responsibilityType: TeachingResponsibilityType.classTeacher,
+            classId: 's2',
+          ),
         ),
-      ),
-    );
-  });
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message.toString(),
+            'message',
+            contains('another class/stream'),
+          ),
+        ),
+      );
+    },
+  );
 
   test('inactive staff cannot receive new responsibilities', () async {
     await firestore.collection('users').doc('teacher-b').update({
@@ -163,6 +175,7 @@ void main() {
           id: 'inactive',
           staffId: 'teacher-b',
           academicYearId: '2026',
+          academicTermId: 'term-1',
           responsibilityType: TeachingResponsibilityType.subjectTeacher,
           classId: 's1',
           subjectId: 'math',
@@ -176,5 +189,88 @@ void main() {
         ),
       ),
     );
+  });
+
+  test('same scope may be assigned in another term', () async {
+    await seedCurriculum();
+    const base = TeachingAssignment(
+      id: 'term-one',
+      staffId: 'teacher-a',
+      academicYearId: '2026',
+      academicTermId: 'term-1',
+      responsibilityType: TeachingResponsibilityType.subjectTeacher,
+      classId: 's1',
+      subjectId: 'math',
+    );
+    await repository.saveAssignment(base);
+    await repository.saveAssignment(
+      base.copyWith(id: 'term-two', academicTermId: 'term-2'),
+    );
+    expect(await repository.watchAssignments().first, hasLength(2));
+  });
+
+  test('ending a responsibility preserves its audit row', () async {
+    await seedCurriculum();
+    const assignment = TeachingAssignment(
+      id: 'audited',
+      staffId: 'teacher-a',
+      academicYearId: '2026',
+      academicTermId: 'term-1',
+      responsibilityType: TeachingResponsibilityType.subjectTeacher,
+      classId: 's1',
+      subjectId: 'math',
+    );
+    await repository.saveAssignment(assignment);
+    await repository.endAssignment(
+      assignment.id,
+      endDate: DateTime(2026, 4, 1),
+    );
+    final saved = await repository.watchAssignments().first;
+    expect(saved, hasLength(1));
+    expect(saved.single.isActive, isFalse);
+    expect(saved.single.endDate, DateTime(2026, 4, 1));
+  });
+
+  test(
+    'does not rewrite an assignment scope that may be historical audit data',
+    () async {
+      await seedCurriculum();
+      const assignment = TeachingAssignment(
+        id: 'immutable',
+        staffId: 'teacher-a',
+        academicYearId: '2026',
+        academicTermId: 'term-1',
+        responsibilityType: TeachingResponsibilityType.subjectTeacher,
+        classId: 's1',
+        subjectId: 'math',
+      );
+      await repository.saveAssignment(assignment);
+
+      expect(
+        () => repository.saveAssignment(
+          assignment.copyWith(staffId: 'teacher-b'),
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(
+        (await repository.watchAssignments().first).single.staffId,
+        'teacher-a',
+      );
+    },
+  );
+
+  test('never reads another tenant’s responsibilities', () async {
+    await firestore
+        .collection('structure_teaching_assignments')
+        .doc('other')
+        .set({
+          'schoolId': 'school-b',
+          'staffId': 'other',
+          'academicYearId': '2026',
+          'academicTermId': 'term-1',
+          'responsibilityType': 'academicCoordinator',
+          'isActive': true,
+        });
+    expect(await repository.watchAssignments().first, isEmpty);
   });
 }

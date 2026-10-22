@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_radius.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/dean/domain/entities/academic_dashboard_stats.dart';
@@ -10,8 +11,10 @@ import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
 import 'package:school_pulse/injection_container.dart';
 
+enum _AlertFilter { all, critical, attention }
+
 /// Academic Alerts — the full list of [AcademicAlert]s surfaced on the
-/// dashboard, with a client-side severity filter.
+/// dashboard, with an All/Critical/Attention filter.
 class AcademicAlertsScreen extends StatefulWidget {
   const AcademicAlertsScreen({super.key});
 
@@ -20,7 +23,7 @@ class AcademicAlertsScreen extends StatefulWidget {
 }
 
 class _AcademicAlertsScreenState extends State<AcademicAlertsScreen> {
-  AlertSeverity? _filter;
+  _AlertFilter _filter = _AlertFilter.all;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +32,7 @@ class _AcademicAlertsScreenState extends State<AcademicAlertsScreen> {
       child: Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(
-          backgroundColor: AppColors.surface(context),
+          backgroundColor: AppColors.surfaceContainer(context),
           title: Text('Academic Alerts', style: AppTypography.titleLarge),
         ),
         body: BlocBuilder<DeanBloc, DeanState>(
@@ -52,9 +55,19 @@ class _AcademicAlertsScreenState extends State<AcademicAlertsScreen> {
   }
 
   Widget _buildContent(BuildContext context, List<AcademicAlert> allAlerts) {
-    final alerts = _filter == null
-        ? allAlerts
-        : allAlerts.where((a) => a.severity == _filter).toList();
+    final criticalCount = allAlerts
+        .where((a) => a.severity == AlertSeverity.critical)
+        .length;
+    final attentionCount = allAlerts
+        .where((a) => a.severity != AlertSeverity.critical)
+        .length;
+    final alerts = switch (_filter) {
+      _AlertFilter.all => allAlerts,
+      _AlertFilter.critical =>
+        allAlerts.where((a) => a.severity == AlertSeverity.critical).toList(),
+      _AlertFilter.attention =>
+        allAlerts.where((a) => a.severity != AlertSeverity.critical).toList(),
+    };
 
     return Column(
       children: [
@@ -65,21 +78,21 @@ class _AcademicAlertsScreenState extends State<AcademicAlertsScreen> {
             AppSpacing.xl,
             AppSpacing.m,
           ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _filterChip(context, null, 'All'),
-                const SizedBox(width: AppSpacing.m),
-                _filterChip(context, AlertSeverity.critical, 'Critical'),
-                const SizedBox(width: AppSpacing.m),
-                _filterChip(context, AlertSeverity.high, 'High'),
-                const SizedBox(width: AppSpacing.m),
-                _filterChip(context, AlertSeverity.medium, 'Medium'),
-                const SizedBox(width: AppSpacing.m),
-                _filterChip(context, AlertSeverity.low, 'Low'),
-              ],
-            ),
+          child: SegmentedButton<_AlertFilter>(
+            segments: [
+              const ButtonSegment(value: _AlertFilter.all, label: Text('All')),
+              ButtonSegment(
+                value: _AlertFilter.critical,
+                label: Text('Critical ($criticalCount)'),
+              ),
+              ButtonSegment(
+                value: _AlertFilter.attention,
+                label: Text('Attention ($attentionCount)'),
+              ),
+            ],
+            selected: {_filter},
+            onSelectionChanged: (selection) =>
+                setState(() => _filter = selection.first),
           ),
         ),
         Expanded(
@@ -89,7 +102,7 @@ class _AcademicAlertsScreenState extends State<AcademicAlertsScreen> {
                   title: 'No alerts',
                   message: 'Nothing matches this filter right now.',
                 )
-              : ListView.builder(
+              : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.xl,
                     0,
@@ -97,41 +110,18 @@ class _AcademicAlertsScreenState extends State<AcademicAlertsScreen> {
                     AppSpacing.xl,
                   ),
                   itemCount: alerts.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.l),
                   itemBuilder: (context, index) {
                     final alert = alerts[index];
-                    return AlertBanner(
-                      title: alert.title,
-                      message:
-                          '${alert.message}  •  ${_formatTime(alert.timestamp)}',
+                    return _AlertCard(
+                      alert: alert,
                       color: _severityColor(context, alert.severity),
-                      icon: Icons.warning_amber,
                     );
                   },
                 ),
         ),
       ],
-    );
-  }
-
-  Widget _filterChip(
-    BuildContext context,
-    AlertSeverity? severity,
-    String label,
-  ) {
-    final selected = _filter == severity;
-    final color = severity == null
-        ? AppColors.primary(context)
-        : _severityColor(context, severity);
-    return ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      onSelected: (_) => setState(() => _filter = severity),
-      selectedColor: color.withValues(alpha: 0.15),
-      labelStyle: AppTypography.labelMedium.copyWith(
-        color: selected ? color : AppColors.textSecondary(context),
-        fontWeight: FontWeight.w700,
-      ),
-      side: BorderSide(color: selected ? color : AppColors.border(context)),
     );
   }
 
@@ -147,8 +137,80 @@ class _AcademicAlertsScreenState extends State<AcademicAlertsScreen> {
         return AppColors.textMuted(context);
     }
   }
+}
 
-  String _formatTime(DateTime dt) {
-    return '${dt.hour}:${dt.minute.toString().padLeft(2, "0")}';
+class _AlertCard extends StatelessWidget {
+  final AcademicAlert alert;
+  final Color color;
+
+  const _AlertCard({required this.alert, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: AppRadius.large,
+      onTap: () => showDialog(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(alert.title),
+          content: Text(alert.message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer(context),
+          borderRadius: AppRadius.large,
+          border: Border(left: BorderSide(color: color, width: 4)),
+        ),
+        padding: const EdgeInsets.all(AppSpacing.l),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.warning_amber, color: color, size: 22),
+            const SizedBox(width: AppSpacing.m),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    alert.title.toUpperCase(),
+                    style: AppTypography.labelMedium.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    alert.message,
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textSecondary(context),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s),
+                  Text(
+                    'Tap to view',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textMuted(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: AppColors.textMuted(context),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

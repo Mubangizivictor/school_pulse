@@ -78,8 +78,14 @@ test('exactly four converged authentication methods are recognized: password_tot
   assert.deepEqual([...VALID_METHODS].sort(), ['apple_totp', 'google_totp', 'password_totp', 'recovery_code']);
 });
 
-test('session TTL is 12 hours - a normal owner console session, not indefinite', () => {
-  assert.equal(SESSION_TTL_MS, 12 * 60 * 60 * 1000);
+test('session TTL is null - valid until explicit sign-out/revoke, not time-limited', () => {
+  assert.equal(SESSION_TTL_MS, null);
+});
+
+test('a null expiresAt (no TTL) never expires', () => {
+  const noTtl = freshSession({ expiresAt: null });
+  assert.equal(isSessionValid(noTtl, OWNER_UID, NOW), true);
+  assert.equal(isSessionValid(noTtl, OWNER_UID, NOW + 999 * 24 * 60 * 60 * 1000), true);
 });
 
 console.log('\nSource-level safety checks');

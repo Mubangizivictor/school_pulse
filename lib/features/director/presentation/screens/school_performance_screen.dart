@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_bloc.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_event.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_state.dart';
@@ -42,7 +43,12 @@ class SchoolPerformanceScreen extends StatelessWidget {
               : semantic.error;
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.l,
+              AppSpacing.xl,
+              AppSpacing.x3l,
+            ),
             children: [
               AppCard(
                 child: Column(
@@ -58,14 +64,14 @@ class SchoolPerformanceScreen extends StatelessWidget {
                       color: gaugeColor,
                       size: 180,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.m),
                     Text(
                       'Overall Performance Index',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.s),
                     StatusBadge(
                       label:
                           '${isPositive ? "+" : ""}${stats.improvementTrend}% vs Last Term',
@@ -74,42 +80,40 @@ class SchoolPerformanceScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xl),
               const SectionHeader(title: 'Performance Breakdown'),
-              const SizedBox(height: 8),
               AppCard(
                 child: Column(
                   children: [
                     LabeledProgressRow(
                       label: 'Academic',
                       percent: stats.overallSchoolAverage / 100,
-                      color: Colors.blue,
+                      color: Colors.black,
                     ),
                     LabeledProgressRow(
                       label: 'Financial (Fee Collection)',
                       percent: stats.collectionPercentage / 100,
-                      color: Colors.green,
+                      color: Colors.black,
                     ),
                     LabeledProgressRow(
                       label: 'Operational (Staff Attendance)',
                       percent: stats.staffAttendanceRate / 100,
-                      color: Colors.orange,
+                      color: Colors.black,
                     ),
                     LabeledProgressRow(
                       label: 'Engagement (Parent Portal Usage)',
                       percent: stats.parentPortalUsageRate / 100,
-                      color: Colors.purple,
+                      color: Colors.black,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xl),
               // TODO: Wire to a real historical-terms data source once the
               // director module exposes term-over-term performance history.
               // Until then, an honest empty state replaces a fabricated
               // trend line.
               const SectionHeader(title: 'Performance Trend'),
-              const SizedBox(height: 8),
               AppCard(
                 child: EmptyState(
                   icon: Icons.show_chart,

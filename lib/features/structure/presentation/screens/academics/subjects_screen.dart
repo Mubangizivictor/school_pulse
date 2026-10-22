@@ -31,8 +31,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
   _Order _order = _Order.nameAsc;
   @override
   Widget build(BuildContext context) {
-    final user =
-        (context.watch<AuthBloc>().state as AuthAuthenticated).user;
+    final user = (context.watch<AuthBloc>().state as AuthAuthenticated).user;
     final schoolId = user.schoolId;
     return BlocBuilder<StructureBloc, StructureState>(
       builder: (context, state) {
@@ -248,20 +247,15 @@ class _Summary extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
     child: Row(
       children: [
-        _item(
-          Icons.menu_book_outlined,
-          total,
-          'Total\nSubjects',
-          Colors.indigo,
-        ),
-        _item(Icons.check_circle_outline, active, 'Active', Colors.green),
+        _item(Icons.menu_book_outlined, total, 'Total\nSubjects', Colors.black),
+        _item(Icons.check_circle_outline, active, 'Active', Colors.black),
         _item(
           Icons.account_balance_outlined,
           departments,
           'Departments',
-          Colors.purple,
+          Colors.black,
         ),
-        _item(Icons.science_outlined, practical, 'Practical', Colors.orange),
+        _item(Icons.science_outlined, practical, 'Practical', Colors.black),
       ],
     ),
   );
@@ -270,7 +264,7 @@ class _Summary extends StatelessWidget {
       children: [
         CircleAvatar(
           radius: 20,
-          backgroundColor: color.withValues(alpha: .12),
+          backgroundColor: color.withValues(alpha: 0.12),
           child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(height: 7),
@@ -348,7 +342,7 @@ class _Card extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: .1),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -794,9 +788,12 @@ class _MultiState extends State<_Multi> {
           16,
           16 + MediaQuery.viewInsetsOf(context).bottom,
         ),
-        child: SizedBox(
-          height: 480,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+          ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 widget.title,
@@ -814,8 +811,9 @@ class _MultiState extends State<_Multi> {
                 ),
               ),
               const SizedBox(height: 8),
-              Expanded(
+              Flexible(
                 child: ListView(
+                  shrinkWrap: true,
                   children: items
                       .map(
                         (x) => CheckboxListTile(
@@ -834,6 +832,7 @@ class _MultiState extends State<_Multi> {
                       .toList(),
                 ),
               ),
+              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/core/usecases/usecase.dart';
+import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
+import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/injection_container.dart' as di;
+import '../../domain/entities/campus_entities.dart';
 import '../bloc/structure_bloc.dart';
 import '../bloc/structure_event.dart';
 import '../bloc/structure_state.dart';
@@ -18,7 +24,9 @@ import '../widgets/structure_ui_kit.dart';
 /// only the task being configured instead of a tab bar full of unrelated
 /// future setup.
 class CampusFacilitiesScreen extends StatelessWidget {
-  const CampusFacilitiesScreen({super.key});
+  const CampusFacilitiesScreen({super.key, this.showAppBar = true});
+
+  final bool showAppBar;
 
   @override
   Widget build(BuildContext context) {
@@ -39,7 +47,8 @@ class CampusFacilitiesScreen extends StatelessWidget {
         (context.read<AuthBloc>().state as AuthAuthenticated).user.schoolId;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_sectionTitle(section))),
+      appBar: showAppBar ? AppBar(title: Text(_sectionTitle(section))) : null,
+      backgroundColor: showAppBar ? null : Colors.transparent,
       body: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, state) => switch (section) {
           'houses' => _HousesTab(state: state, schoolId: schoolId),
@@ -87,7 +96,7 @@ class _HousesTab extends StatelessWidget {
                 final house = state.houses[index];
                 return StructureListRow(
                   icon: Icons.home_outlined,
-                  color: _fromHex(house.colorHex, Colors.blueGrey),
+                  color: _fromHex(house.colorHex, Colors.black),
                   title: house.name,
                   subtitle: house.description,
                   isActive: house.isActive,
@@ -141,7 +150,7 @@ class _ClubsTab extends StatelessWidget {
                 final club = state.clubs[index];
                 return StructureListRow(
                   icon: Icons.groups_outlined,
-                  color: Colors.deepPurple,
+                  color: Colors.black,
                   title: club.name,
                   subtitle: [
                     if (club.category.isNotEmpty) club.category,
@@ -189,65 +198,314 @@ class _FacilitiesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bloc = context.read<StructureBloc>();
-    return Scaffold(
-      body: state.facilities.isEmpty
-          ? const StructureEmptyHint(
-              'No rooms or learning spaces defined yet. Add classrooms, laboratories, halls, workshops or custom spaces used by this school.',
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(12),
-              itemCount: state.facilities.length,
-              itemBuilder: (context, index) {
-                final facility = state.facilities[index];
-                return StructureListRow(
-                  icon: Icons.holiday_village_outlined,
-                  color: Colors.brown,
-                  title: facility.name,
-                  subtitle: [
-                    if (facility.facilityType.isNotEmpty) facility.facilityType,
-                    if (facility.location.isNotEmpty) facility.location,
-                    if (facility.capacity > 0) 'Capacity ${facility.capacity}',
-                  ].join(' - '),
-                  isActive: facility.isActive,
-                  onEdit: () => showFacilityFormDialog(
-                    context,
-                    schoolId: schoolId,
-                    existing: facility,
-                    onSave: (u) => bloc.add(SaveFacilityRequested(u)),
+    final scheme = Theme.of(context).colorScheme;
+
+    void onAdd() => showFacilityFormDialog(
+      context,
+      schoolId: schoolId,
+      campuses: state.campuses,
+      onSave: (f) => bloc.add(SaveFacilityRequested(f)),
+    );
+
+    final campusesById = {for (final c in state.campuses) c.id: c};
+    final byBuilding = <String, List<Facility>>{};
+    for (final facility in state.facilities) {
+      final label = campusesById[facility.campusId]?.name ?? 'Unassigned';
+      byBuilding.putIfAbsent(label, () => []).add(facility);
+    }
+
+    void onAddCampus() => showCampusFormDialog(
+      context,
+      schoolId: schoolId,
+      onSave: (c) => bloc.add(SaveCampusRequested(c)),
+    );
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Campuses',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                  onDelete: () async {
-                    final confirmed = await showDeleteConfirmDialog(
-                      context,
-                      title: 'Delete Facility',
-                      message: 'Delete "${facility.name}"?',
-                    );
-                    if (confirmed == true) {
-                      bloc.add(DeleteFacilityRequested(facility.id));
-                    }
-                  },
-                );
-              },
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: onAddCampus,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add campus'),
+                ),
+              ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => showFacilityFormDialog(
-          context,
-          schoolId: schoolId,
-          onSave: (f) => bloc.add(SaveFacilityRequested(f)),
+            const SizedBox(height: 12),
+            if (state.campuses.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'Every school needs at least one campus - it is required '
+                  'before staff, classes and other setup can be assigned.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              )
+            else
+              for (final campus in state.campuses)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: AppCard(
+                    child: ListTile(
+                      leading: const Icon(Icons.location_city_outlined),
+                      title: Text(
+                        campus.name,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: campus.address.isNotEmpty
+                          ? Text(campus.address)
+                          : null,
+                      trailing: PopupMenuButton<String>(
+                        icon: const Icon(Icons.more_vert),
+                        onSelected: (action) {
+                          if (action == 'edit') {
+                            showCampusFormDialog(
+                              context,
+                              schoolId: schoolId,
+                              existing: campus,
+                              onSave: (u) => bloc.add(SaveCampusRequested(u)),
+                            );
+                          }
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    state.facilities.isEmpty
+                        ? 'Add the physical spaces used for teaching and school operations.'
+                        : 'Physical spaces used for teaching and school operations.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: onAdd,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add space'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            if (state.facilities.isEmpty)
+              _FacilitiesEmptyState(onAdd: onAdd)
+            else
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    for (final entry in byBuilding.entries) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          entry.key.toUpperCase(),
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: scheme.primary,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.6,
+                              ),
+                        ),
+                      ),
+                      for (final facility in entry.value)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: AppCard(
+                            child: ListTile(
+                              leading: Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: scheme.primary,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  facilityTypeIcon(facility.facilityType),
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                              ),
+                              title: Text(
+                                facility.name,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  decoration: facility.isActive
+                                      ? null
+                                      : TextDecoration.lineThrough,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(facility.facilityType),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: [
+                                      if (facility.location.isNotEmpty)
+                                        _tagChip(
+                                          context,
+                                          Icons.place_outlined,
+                                          facility.location,
+                                        ),
+                                      if (facility.capacity > 0)
+                                        _tagChip(
+                                          context,
+                                          Icons.people_outline,
+                                          'Capacity ${facility.capacity}',
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              trailing: PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert),
+                                onSelected: (action) async {
+                                  if (action == 'edit') {
+                                    showFacilityFormDialog(
+                                      context,
+                                      schoolId: schoolId,
+                                      existing: facility,
+                                      campuses: state.campuses,
+                                      onSave: (u) =>
+                                          bloc.add(SaveFacilityRequested(u)),
+                                    );
+                                  } else {
+                                    final confirmed =
+                                        await showDeleteConfirmDialog(
+                                          context,
+                                          title: 'Delete Space',
+                                          message: 'Delete "${facility.name}"?',
+                                        );
+                                    if (confirmed == true) {
+                                      bloc.add(
+                                        DeleteFacilityRequested(facility.id),
+                                      );
+                                    }
+                                  }
+                                },
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text('Edit'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text('Delete'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                    ],
+                  ],
+                ),
+              ),
+          ],
         ),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Space'),
       ),
+    );
+  }
+
+  Widget _tagChip(BuildContext context, IconData icon, String label) {
+    final scheme = Theme.of(context).colorScheme;
+    return Chip(
+      avatar: Icon(icon, size: 16, color: scheme.onSecondaryContainer),
+      label: Text(label, style: TextStyle(color: scheme.onSecondaryContainer)),
+      visualDensity: VisualDensity.compact,
+      backgroundColor: scheme.secondaryContainer,
+      side: BorderSide.none,
     );
   }
 }
 
-class _HostelStructureTab extends StatelessWidget {
+class _FacilitiesEmptyState extends StatelessWidget {
+  final VoidCallback onAdd;
+
+  const _FacilitiesEmptyState({required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    return EmptyState(
+      icon: Icons.holiday_village_outlined,
+      title: 'No spaces added',
+      message: 'Add classrooms, laboratories, halls or other facilities.',
+      ctaLabel: 'Add space',
+      onCtaPressed: onAdd,
+    );
+  }
+}
+
+class _HostelStructureTab extends StatefulWidget {
   final StructureState state;
   final String schoolId;
   const _HostelStructureTab({required this.state, required this.schoolId});
 
   @override
+  State<_HostelStructureTab> createState() => _HostelStructureTabState();
+}
+
+class _HostelStructureTabState extends State<_HostelStructureTab> {
+  List<UserEntity> _matronPatronStaff = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMatronPatronStaff();
+  }
+
+  Future<void> _loadMatronPatronStaff() async {
+    final result = await di.sl<GetStaffMembers>()(NoParams());
+    if (!mounted) return;
+    final staff = result.getOrElse(() => const []);
+    setState(() {
+      _matronPatronStaff = staff
+          .where(
+            (s) =>
+                s.roles.contains(UserRole.boardingMatron) ||
+                s.roles.contains(UserRole.boardingPatron),
+          )
+          .toList();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
+    final schoolId = widget.schoolId;
     final bloc = context.read<StructureBloc>();
     return ListView(
       padding: const EdgeInsets.all(12),
@@ -264,6 +522,7 @@ class _HostelStructureTab extends StatelessWidget {
           onAction: () => showHostelFormDialog(
             context,
             schoolId: schoolId,
+            matronPatronStaff: _matronPatronStaff,
             onSave: (h) => bloc.add(SaveHostelRequested(h)),
           ),
         ),
@@ -272,7 +531,7 @@ class _HostelStructureTab extends StatelessWidget {
         ...state.hostels.map(
           (hostel) => StructureListRow(
             icon: Icons.night_shelter_outlined,
-            color: Colors.brown,
+            color: Colors.black,
             title: hostel.name,
             subtitle: [
               hostel.gender,
@@ -285,6 +544,7 @@ class _HostelStructureTab extends StatelessWidget {
               context,
               schoolId: schoolId,
               existing: hostel,
+              matronPatronStaff: _matronPatronStaff,
               onSave: (u) => bloc.add(SaveHostelRequested(u)),
             ),
             onDelete: () async {
@@ -322,7 +582,7 @@ class _HostelStructureTab extends StatelessWidget {
               .firstOrNull;
           return StructureListRow(
             icon: Icons.meeting_room_outlined,
-            color: Colors.brown,
+            color: Colors.black,
             title: 'Room ${room.roomNumber}',
             subtitle: [
               hostel?.name ?? 'No hostel',
@@ -385,7 +645,7 @@ class _TransportStructureTab extends StatelessWidget {
         ...state.transportRoutes.map(
           (route) => StructureListRow(
             icon: Icons.route_outlined,
-            color: Colors.teal,
+            color: Colors.black,
             title: route.name,
             subtitle: route.code,
             isActive: route.isActive,
@@ -430,7 +690,7 @@ class _TransportStructureTab extends StatelessWidget {
               .firstOrNull;
           return StructureListRow(
             icon: Icons.pin_drop_outlined,
-            color: Colors.teal,
+            color: Colors.black,
             title: stop.name,
             subtitle: [
               route?.name ?? 'No route',
@@ -476,7 +736,7 @@ class _TransportStructureTab extends StatelessWidget {
               .firstOrNull;
           return StructureListRow(
             icon: Icons.directions_bus_outlined,
-            color: Colors.teal,
+            color: Colors.black,
             title: vehicle.busNumber,
             subtitle: [
               if (vehicle.plateNumber.isNotEmpty) vehicle.plateNumber,

@@ -49,7 +49,9 @@ class _ImportMarksScreenState extends State<ImportMarksScreen> {
     final roster = context.read<MarksBloc>().state.students;
     final byAdmission = {for (final s in roster) s.admissionNumber: s};
     final matched = parsed.keys.where(byAdmission.containsKey).length;
-    final unmatched = parsed.keys.where((k) => !byAdmission.containsKey(k)).toList();
+    final unmatched = parsed.keys
+        .where((k) => !byAdmission.containsKey(k))
+        .toList();
 
     setState(() {
       _fileName = file.name;
@@ -90,12 +92,26 @@ class _ImportMarksScreenState extends State<ImportMarksScreen> {
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            leading: IconButton(
-              icon: Icon(
-                Icons.chevron_left,
-                color: AppColors.textPrimary(context),
+            leadingWidth: 64,
+            leading: Center(
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated(context),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border(context)),
+                ),
+                child: IconButton(
+                  tooltip: 'Back',
+                  padding: EdgeInsets.zero,
+                  icon: Icon(
+                    Icons.chevron_left,
+                    color: AppColors.textPrimary(context),
+                  ),
+                  onPressed: () => context.pop(),
+                ),
               ),
-              onPressed: () => context.pop(),
             ),
             title: Text(
               'Import Marks',
@@ -129,18 +145,14 @@ class _ImportMarksScreenState extends State<ImportMarksScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.surfaceElevated(context),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.border(context).withValues(alpha: 0.5),
-                      ),
+                      border: Border.all(color: AppColors.border(context)),
                     ),
                     child: Column(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: AppColors.success(
-                              context,
-                            ).withValues(alpha: 0.1),
+                            color: AppColors.success(context),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
@@ -189,7 +201,10 @@ class _ImportMarksScreenState extends State<ImportMarksScreen> {
                   const SizedBox(height: 16),
                   Text(
                     'Not matched to your roster: ${_unmatched.join(', ')}',
-                    style: TextStyle(color: AppColors.danger(context), fontSize: 12),
+                    style: TextStyle(
+                      color: AppColors.danger(context),
+                      fontSize: 12,
+                    ),
                   ),
                 ],
                 const Spacer(),

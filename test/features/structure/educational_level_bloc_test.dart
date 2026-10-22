@@ -192,6 +192,94 @@ void main() {
     );
 
     blocTest<StructureBloc, StructureState>(
+      'DeleteLevelRequested is blocked when classes depend on the level',
+      build: () => StructureBloc(repository: repository),
+      seed: () => StructureState(
+        levels: [_level()],
+        classes: [
+          SchoolClass(
+            id: 'class-1',
+            schoolId: 'school-1',
+            name: 'P1',
+            levelId: 'level-1',
+          ),
+        ],
+      ),
+      act: (bloc) => bloc.add(const DeleteLevelRequested('level-1')),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
+      expect: () => [
+        isA<StructureState>().having(
+          (s) => s.errorMessage,
+          'errorMessage',
+          isNotNull,
+        ),
+      ],
+      verify: (_) {
+        verifyNever(() => repository.deleteLevel(any()));
+      },
+    );
+
+    blocTest<StructureBloc, StructureState>(
+      'ReorderLevelsRequested calls repository.reorderLevels with the new order',
+      build: () {
+        when(() => repository.reorderLevels(any())).thenAnswer((_) async {});
+        return StructureBloc(repository: repository);
+      },
+      act: (bloc) => bloc.add(
+        ReorderLevelsRequested([
+          _level(id: 'level-2').copyWith(order: 0),
+          _level(id: 'level-1').copyWith(order: 1),
+        ]),
+      ),
+      verify: (_) {
+        verify(() => repository.reorderLevels(any())).called(1);
+      },
+    );
+
+    blocTest<StructureBloc, StructureState>(
+      'SaveLevelWithReorderRequested calls repository.saveLevelsBatch atomically',
+      build: () {
+        when(() => repository.saveLevelsBatch(any())).thenAnswer((_) async {});
+        return StructureBloc(repository: repository);
+      },
+      act: (bloc) => bloc.add(
+        SaveLevelWithReorderRequested([
+          _level(id: 'level-new').copyWith(name: 'Secondary', order: 0),
+          _level(id: 'level-1').copyWith(order: 1),
+        ]),
+      ),
+      verify: (_) {
+        verify(() => repository.saveLevelsBatch(any())).called(1);
+      },
+    );
+
+    blocTest<StructureBloc, StructureState>(
+      'SaveLevelWithReorderRequested rejects a duplicate active level name',
+      build: () => StructureBloc(repository: repository),
+      seed: () => StructureState(levels: [_level(id: 'level-1')]),
+      act: (bloc) => bloc.add(
+        SaveLevelWithReorderRequested([
+          _level(id: 'level-new').copyWith(name: 'Primary', order: 1),
+        ]),
+      ),
+      // _validationFailed emits a null-error state first so repeat
+      // errors re-trigger the SnackBar listener; assert the error itself.
+      skip: 1,
+      expect: () => [
+        isA<StructureState>().having(
+          (s) => s.errorMessage,
+          'errorMessage',
+          isNotNull,
+        ),
+      ],
+      verify: (_) {
+        verifyNever(() => repository.saveLevelsBatch(any()));
+      },
+    );
+
+    blocTest<StructureBloc, StructureState>(
       'Structure entry finishes loading without waiting for optional modules',
       build: () {
         when(

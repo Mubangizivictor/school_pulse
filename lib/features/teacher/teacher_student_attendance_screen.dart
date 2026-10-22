@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/teacher/domain/entities/class_attendance.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_history_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/widgets/teacher_student_detail_ui.dart';
 
 class TeacherStudentAttendanceScreen extends StatefulWidget {
   final String studentId;
@@ -35,115 +35,91 @@ class _TeacherStudentAttendanceScreenState
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: isDark ? Colors.white : Colors.black,
-          ),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Attendance',
-          style: AppTypography.headlineSmall.copyWith(
-            color: isDark
-                ? AppColors.textPrimaryDark
-                : AppColors.textPrimaryLight,
-          ),
-        ),
-      ),
-      body: BlocBuilder<ClassAttendanceHistoryBloc, ClassAttendanceHistoryState>(
-        builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      backgroundColor: AppColors.background(context),
+      appBar: const TeacherStudentDetailAppBar(title: 'Attendance'),
+      body:
+          BlocBuilder<ClassAttendanceHistoryBloc, ClassAttendanceHistoryState>(
+            builder: (context, state) {
+              if (state.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          final entries = <(DateTime, ClassAttendanceEntry)>[];
-          for (final session in state.sessions) {
-            final entry = session.entries
-                .where((e) => e.studentId == widget.studentId)
-                .firstOrNull;
-            if (entry != null) entries.add((session.date, entry));
-          }
-          entries.sort((a, b) => b.$1.compareTo(a.$1));
+              final entries = <(DateTime, ClassAttendanceEntry)>[];
+              for (final session in state.sessions) {
+                final entry = session.entries
+                    .where((e) => e.studentId == widget.studentId)
+                    .firstOrNull;
+                if (entry != null) entries.add((session.date, entry));
+              }
+              entries.sort((a, b) => b.$1.compareTo(a.$1));
 
-          final optionByCode = {for (final o in state.options) o.code: o};
-          int present = 0, authorisedAbsent = 0, unauthorisedAbsent = 0;
-          for (final (_, entry) in entries) {
-            final option = optionByCode[entry.statusCode];
-            if (option == null) continue;
-            if (option.countsAsPresent) {
-              present++;
-            } else if (option.isAuthorisedAbsence) {
-              authorisedAbsent++;
-            } else {
-              unauthorisedAbsent++;
-            }
-          }
-          final total = entries.length;
+              final optionByCode = {for (final o in state.options) o.code: o};
+              int present = 0, authorisedAbsent = 0, unauthorisedAbsent = 0;
+              for (final (_, entry) in entries) {
+                final option = optionByCode[entry.statusCode];
+                if (option == null) continue;
+                if (option.countsAsPresent) {
+                  present++;
+                } else if (option.isAuthorisedAbsence) {
+                  authorisedAbsent++;
+                } else {
+                  unauthorisedAbsent++;
+                }
+              }
+              final total = entries.length;
 
-          if (total == 0) {
-            return Center(
-              child: Padding(
+              if (total == 0) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xl),
+                    child: Text(
+                      'No attendance has been recorded for this student yet.',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMutedLight,
+                      ),
+                    ),
+                  ),
+                );
+              }
+
+              return SingleChildScrollView(
                 padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Text(
-                  'No attendance has been recorded for this student yet.',
-                  textAlign: TextAlign.center,
-                  style: AppTypography.bodyMedium.copyWith(
-                    color: isDark
-                        ? AppColors.textMutedDark
-                        : AppColors.textMutedLight,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSummaryCards(
+                      isDark,
+                      present,
+                      authorisedAbsent + unauthorisedAbsent,
+                      total,
+                    ),
+                    const SizedBox(height: AppSpacing.x2l),
+                    Text(
+                      'Recent Records',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: AppColors.textPrimary(context),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.l),
+                    for (final (date, entry) in entries.take(20))
+                      _RecentRecordRow(
+                        date: _formatDate(date),
+                        option: optionByCode[entry.statusCode],
+                        isDark: isDark,
+                      ),
+                  ],
                 ),
-              ),
-            );
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(AppSpacing.xl),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSummaryCards(
-                  isDark,
-                  present,
-                  authorisedAbsent + unauthorisedAbsent,
-                  total,
-                ),
-                const SizedBox(height: AppSpacing.x2l),
-                Text(
-                  'Recent Records',
-                  style: AppTypography.titleMedium.copyWith(
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimaryLight,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.l),
-                for (final (date, entry) in entries.take(20))
-                  _RecentRecordRow(
-                    date: _formatDate(date),
-                    option: optionByCode[entry.statusCode],
-                    isDark: isDark,
-                  ),
-              ],
-            ),
-          );
-        },
-      ),
+              );
+            },
+          ),
     );
   }
 
-  Widget _buildSummaryCards(
-    bool isDark,
-    int present,
-    int absent,
-    int total,
-  ) {
+  Widget _buildSummaryCards(bool isDark, int present, int absent, int total) {
     return Row(
       children: [
         Expanded(
@@ -185,8 +161,18 @@ class _TeacherStudentAttendanceScreenState
 
   static String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
@@ -233,9 +219,7 @@ class _SummaryCard extends StatelessWidget {
           Text(
             value,
             style: AppTypography.headlineSmall.copyWith(
-              color: isDark
-                  ? AppColors.textPrimaryDark
-                  : AppColors.textPrimaryLight,
+              color: AppColors.textPrimary(context),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -281,9 +265,7 @@ class _RecentRecordRow extends StatelessWidget {
           Text(
             date,
             style: AppTypography.bodyMedium.copyWith(
-              color: isDark
-                  ? AppColors.textPrimaryDark
-                  : AppColors.textPrimaryLight,
+              color: AppColors.textPrimary(context),
             ),
           ),
           Row(

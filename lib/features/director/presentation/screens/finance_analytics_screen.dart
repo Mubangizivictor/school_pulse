@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_bloc.dart';
 import 'package:school_pulse/features/director/presentation/bloc/director_event.dart';
@@ -39,17 +40,22 @@ class _FinanceAnalyticsScreenState extends State<FinanceAnalyticsScreen> {
           final semantic = Theme.of(context).extension<SemanticColors>()!;
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.l,
+              AppSpacing.xl,
+              AppSpacing.x3l,
+            ),
             children: [
               SegmentedTabControl(
                 labels: const ['Revenue', 'Expenses', 'Budget'],
                 selectedIndex: _tab,
                 onChanged: (i) => setState(() => _tab = i),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: AppSpacing.xl),
               if (_tab == 0) ...[
                 const SectionHeader(title: 'Revenue Trend — This Year'),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.s),
                 AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +69,7 @@ class _FinanceAnalyticsScreenState extends State<FinanceAnalyticsScreen> {
                         'Total revenue this year',
                         style: TextStyle(color: Theme.of(context).hintColor),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpacing.l),
                       // TODO: Wire to a real monthly revenue series once the
                       // director module tracks month-bucketed history.
                       const TrendLineChart(values: []),
@@ -72,7 +78,7 @@ class _FinanceAnalyticsScreenState extends State<FinanceAnalyticsScreen> {
                 ),
               ] else if (_tab == 1) ...[
                 const SectionHeader(title: 'Expense Trend — This Year'),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.s),
                 AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,7 +92,7 @@ class _FinanceAnalyticsScreenState extends State<FinanceAnalyticsScreen> {
                         'Total expenditure this year',
                         style: TextStyle(color: Theme.of(context).hintColor),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpacing.l),
                       // TODO: Wire to a real monthly expense series once the
                       // director module tracks month-bucketed history.
                       const TrendLineChart(values: []),
@@ -95,7 +101,7 @@ class _FinanceAnalyticsScreenState extends State<FinanceAnalyticsScreen> {
                 ),
               ] else ...[
                 const SectionHeader(title: 'Collection Trend — This Year'),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.s),
                 AppCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,14 +115,14 @@ class _FinanceAnalyticsScreenState extends State<FinanceAnalyticsScreen> {
                         'Fee collection percentage',
                         style: TextStyle(color: Theme.of(context).hintColor),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpacing.l),
                       LabeledProgressRow(
                         label: 'Budget Utilization',
                         percent: (stats.budgetUtilization / 100).clamp(0, 1),
                         trailingText: '${stats.budgetUtilization}%',
                         color: semantic.warning,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: AppSpacing.m),
                       // TODO: Wire to a real collection-trend series once the
                       // director module tracks month-bucketed history.
                       const TrendLineChart(values: []),

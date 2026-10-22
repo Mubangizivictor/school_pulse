@@ -117,7 +117,7 @@ class _BedManagementScreenState extends State<BedManagementScreen> {
                           label: 'Occupied',
                           value: '${occupied.length}',
                           icon: Icons.person_outline,
-                          color: Colors.orange,
+                          color: Colors.black,
                         ),
                       ),
                       const SizedBox(width: AppSpacing.m),

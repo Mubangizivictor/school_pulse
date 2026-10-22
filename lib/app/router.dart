@@ -1,14 +1,18 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/app/school_splash_user_resolver.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/login_flow/welcome_screen.dart';
+import 'package:school_pulse/features/registration/presentation/pages/registration_root_page.dart'
+    as school_registration;
 import 'package:school_pulse/features/auth/login_flow/parent_login_screens.dart';
 import 'package:school_pulse/features/auth/login_flow/staff_login_screens.dart';
-import 'package:school_pulse/features/auth/login_flow/platform_owner_access_screen.dart';
+import 'package:school_pulse/features/auth/login_flow/forgot_password_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/login_flow/platform_owner_access_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/mfa_challenge_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:school_pulse/features/auth/login_flow/student_login_screen.dart';
@@ -17,7 +21,10 @@ import 'package:school_pulse/features/matron/presentation/screens/dormitory_mana
     as matron_scr;
 import 'package:school_pulse/features/patron/presentation/screens/dormitory_management_screen.dart'
     as patron_scr;
-import 'package:school_pulse/features/admin/admin_dashboard_screen.dart';
+import 'package:school_pulse/features/admin/presentation/shell/admin_section.dart';
+import 'package:school_pulse/features/admin/presentation/shell/admin_shell.dart';
+import 'package:school_pulse/features/admin/school_workspace_screen.dart';
+import 'package:school_pulse/features/admin/presentation/pages/school_subdomain_screen.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_cubit.dart';
 import 'package:school_pulse/features/institution/presentation/bloc/institution_context_state.dart';
 import 'package:school_pulse/app/screens/institution_suspended_screen.dart';
@@ -28,6 +35,8 @@ import 'package:school_pulse/features/patron/domain/entities/patron_entities.dar
 import 'package:school_pulse/features/matron/presentation/screens/bed_management_screen.dart'
     as matron_scr;
 import 'package:school_pulse/features/patron/presentation/screens/bed_management_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/roll_call_screen.dart';
+import 'package:school_pulse/features/patron/presentation/screens/roll_call_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/force_set_password_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/onboarding/onboarding_flow_screen.dart';
 import 'package:school_pulse/features/auth/login_flow/school_splash_screen.dart';
@@ -38,11 +47,10 @@ import 'package:school_pulse/features/student/presentation/bloc/selected_student
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/staff_panel_host.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/class_teacher_more_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/class_activities_screen.dart';
 import 'package:school_pulse/core/user_roles.dart';
-import 'package:school_pulse/features/admin/presentation/pages/user_management_page.dart';
-import 'package:school_pulse/features/admin/presentation/pages/staff_list_page.dart';
-import 'package:school_pulse/features/admin/presentation/pages/staff_detail_screen.dart';
-import 'package:school_pulse/features/admin/presentation/add_staff_wizard/add_staff_wizard_page.dart';
+import 'package:school_pulse/features/admin/presentation/screens/school_setup_screen.dart';
 import 'package:school_pulse/features/admin/broadcast_sms_screen.dart';
 import 'package:school_pulse/features/admin/system_config_screen.dart';
 import 'package:school_pulse/features/integrations/presentation/integrations_center_screen.dart';
@@ -53,7 +61,10 @@ import 'package:school_pulse/features/integrations/presentation/integration_webh
 import 'package:school_pulse/features/structure/presentation/screens/structure_wizard_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/levels_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/years_terms_screen.dart';
+import 'package:school_pulse/features/structure/presentation/screens/billing/academic_calendar_confirmation_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/classes_streams_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/fee_plan_builder/fee_plan_builder_screen.dart';
+import 'package:school_pulse/features/hr/presentation/screens/salary_structure_builder/salary_structure_builder_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/subjects_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/subject_class_assignments_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/academics/departments_screen.dart';
@@ -75,8 +86,6 @@ import 'package:school_pulse/features/structure/presentation/screens/attendance_
 import 'package:school_pulse/features/structure/presentation/screens/communication_config_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/document_templates_screen.dart';
 import 'package:school_pulse/features/structure/presentation/screens/custom_fields_screen.dart';
-import 'package:school_pulse/features/admin/admin_staff_attendance_screen.dart';
-import 'package:school_pulse/features/appointments/presentation/screens/appointments_workspace_screen.dart';
 import 'package:school_pulse/features/admin/audit_log_screen.dart';
 import 'package:school_pulse/features/admin/support_center_screen.dart';
 import 'package:school_pulse/features/communication_center/presentation/screens/communication_center_screen.dart';
@@ -94,8 +103,8 @@ import 'package:school_pulse/features/parent/academics_screen.dart';
 import 'package:school_pulse/features/parent/report_card_screen.dart';
 import 'package:school_pulse/features/parent/attendance_detail_screen.dart';
 import 'package:school_pulse/features/parent/fees_screen.dart';
-import 'package:school_pulse/features/parent/pay_now_screen.dart';
-import 'package:school_pulse/features/parent/payment_history_screen.dart';
+import 'package:school_pulse/features/parent/how_to_pay_screen.dart';
+import 'package:school_pulse/features/parent/receipts_screen.dart';
 import 'package:school_pulse/features/parent/health_screen.dart';
 import 'package:school_pulse/features/parent/library_screen.dart';
 import 'package:school_pulse/features/parent/discipline_screen.dart';
@@ -118,24 +127,13 @@ import 'package:school_pulse/features/messages/presentation/screens/broadcast_de
 import 'package:school_pulse/features/messages/presentation/screens/chat_settings_screen.dart';
 import 'package:school_pulse/features/messages/presentation/screens/archived_chats_screen.dart';
 import 'package:school_pulse/features/messages/presentation/widgets/messages_nav_icon.dart';
+import 'package:school_pulse/features/parent_offline/presentation/widgets/parent_offline_gate.dart';
+import 'package:school_pulse/features/parent_offline/presentation/widgets/parent_web_online_gate.dart';
 import 'package:school_pulse/features/parent/profile_screen.dart';
-import 'package:school_pulse/features/parent/more_menu_screen.dart';
 import 'package:school_pulse/features/parent/boarding_screen.dart';
 import 'package:school_pulse/features/parent/security_activity_screen.dart';
 import 'package:school_pulse/features/shared/shell_screen.dart';
 import 'package:school_pulse/features/shared/presentation/staff_hub_screen.dart';
-import 'package:school_pulse/features/student/domain/entities/admission_application.dart';
-import 'package:school_pulse/features/student/presentation/screens/admission_review_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/admissions_list_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/admin_students_dashboard_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/admin_students_list_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/admin_student_profile_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/admin_student_documents_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/student_portal_codes_screen.dart';
-import 'package:school_pulse/features/student_identity/presentation/screens/identity_and_cards_screen.dart';
-import 'package:school_pulse/features/student/presentation/screens/new_application_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/report_wizard/report_wizard_bloc.dart';
-import 'package:school_pulse/features/profile/presentation/screens/profile_more_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/edit_profile_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/personal_information_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/security_privacy_screen.dart';
@@ -145,6 +143,9 @@ import 'package:school_pulse/features/profile/presentation/screens/active_sessio
 import 'package:school_pulse/features/profile/presentation/screens/account_activity_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/help_center_screen.dart';
 import 'package:school_pulse/features/profile/presentation/screens/terms_of_service_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/attendance_settings_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/offline_data_screen.dart';
+import 'package:school_pulse/features/profile/presentation/screens/about_school_pulse_screen.dart';
 import 'package:school_pulse/features/school_directory/presentation/screens/school_directory_screen.dart';
 import 'package:school_pulse/features/announcements/presentation/screens/announcements_screen.dart';
 import 'package:school_pulse/features/announcements/presentation/screens/announcement_detail_screen.dart';
@@ -166,13 +167,16 @@ import 'package:school_pulse/features/shared/tasks/presentation/screens/task_his
 import 'package:school_pulse/features/shared/tasks/presentation/screens/task_reminders_screen.dart';
 import 'package:school_pulse/features/shared/tasks/domain/entities/mock_tasks.dart';
 import 'package:school_pulse/features/lesson_plans/presentation/lesson_plans_screen.dart';
-import 'package:school_pulse/features/bursar/bursar_dashboard.dart';
-import 'package:school_pulse/features/finance/presentation/screens/bursar_student_lookup_screen.dart';
-import 'package:school_pulse/features/nurse/nurse_dashboard.dart';
+import 'package:school_pulse/features/finance/presentation/shell/bursar_shell.dart';
+import 'package:school_pulse/features/finance/presentation/shell/bursar_section.dart';
+import 'package:school_pulse/features/finance/presentation/screens/student_billing/student_bills_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/clearance_policy_editor_screen.dart';
+import 'package:school_pulse/features/finance/presentation/screens/payment_voucher_screen.dart';
+import 'package:school_pulse/features/nurse/presentation/shell/nurse_shell.dart';
 import 'package:school_pulse/features/health/presentation/screens/nurse_student_lookup_screen.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
 import 'package:school_pulse/injection_container.dart' as di;
-import 'package:school_pulse/features/librarian/librarian_dashboard.dart';
+import 'package:school_pulse/features/library/presentation/screens/library_dashboard_screen.dart';
 import 'package:school_pulse/features/library/presentation/screens/library_student_lookup_screen.dart';
 import 'package:school_pulse/features/matron/presentation/screens/matron_dashboard_screen.dart';
 import 'package:school_pulse/features/matron/presentation/screens/leave_management_screen.dart'
@@ -195,6 +199,11 @@ import 'package:school_pulse/features/patron/presentation/screens/communication_
     as patron_scr;
 import 'package:school_pulse/features/patron/presentation/screens/reports_screen.dart'
     as patron_scr;
+import 'package:school_pulse/features/shared/boarding/boarding_more_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/student_profile_screen.dart';
+import 'package:school_pulse/features/patron/presentation/screens/student_profile_screen.dart';
+import 'package:school_pulse/features/matron/presentation/screens/dorm_student_roster_screen.dart';
+import 'package:school_pulse/features/patron/presentation/screens/dorm_student_roster_screen.dart';
 import 'package:school_pulse/features/catering/presentation/catering_dashboard_screen.dart';
 import 'package:school_pulse/features/catering/presentation/screens/catering_student_lookup_screen.dart';
 import 'package:school_pulse/features/gate_ops/presentation/home/gatekeeper_home_screen.dart';
@@ -205,6 +214,7 @@ import 'package:school_pulse/features/transport/presentation/screens/transport_s
 import 'package:school_pulse/features/discipline/presentation/discipline_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/workload/teacher_workload_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/approvals/dean_approvals_screen.dart';
+import 'package:school_pulse/features/headteacher/presentation/screens/headteacher_report_queue_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/interventions/academic_interventions_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/analytics/performance_analytics_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/curriculum/curriculum_management_screen.dart';
@@ -213,7 +223,28 @@ import 'package:school_pulse/features/dean/presentation/screens/qa/marks_qa_scre
 import 'package:school_pulse/features/dean/presentation/screens/observations/class_observations_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/operations/todays_operations_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/alerts/academic_alerts_screen.dart';
-import 'package:school_pulse/features/dean/presentation/screens/exams/exams_overview_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/exam_factory_screens.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/series/exam_series_screens.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/questions/exam_question_form_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/questions/exam_question_list_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/questions/exam_question_review_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/papers/exam_paper_builder_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/print/exam_print_room_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_timetable_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_day_dashboard_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_invigilator_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_attendance_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_incident_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/marking/exam_marking_screens.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/marking/exam_result_approval_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/papers/exam_paper_review_screens.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_seating_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/operations/exam_script_collection_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/exam_reports_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/exam_settings_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/questions/exam_teacher_status_screens.dart';
+import 'package:school_pulse/features/structure/presentation/screens/spaces_rooms_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/widgets/exam_factory_scope.dart';
 import 'package:school_pulse/features/dean/presentation/screens/monitoring/missed_lessons_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/assessments/assessments_overview_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/students/student_academic_profile_screen.dart';
@@ -222,6 +253,7 @@ import 'package:school_pulse/features/religion/presentation/religious_leader_das
 import 'package:school_pulse/features/exams/presentation/exams_dashboard_screen.dart';
 import 'package:school_pulse/features/hr/presentation/screens/hr_dashboard_screen.dart';
 import 'package:school_pulse/features/approvals/presentation/screens/approval_center_screen.dart';
+import 'package:school_pulse/features/approvals/presentation/screens/work_inbox_screen.dart';
 import 'package:school_pulse/features/approvals/presentation/screens/approval_policy_manager_screen.dart';
 import 'package:school_pulse/features/approvals/presentation/screens/approval_delegation_screen.dart';
 import 'package:school_pulse/features/approvals/presentation/screens/approval_request_submission_screen.dart';
@@ -229,21 +261,21 @@ import 'package:school_pulse/features/director/presentation/screens/director_das
 import 'package:school_pulse/features/director/presentation/screens/director_reports_screen.dart';
 import 'package:school_pulse/features/director/presentation/screens/strategic_goals_screen.dart';
 import 'package:school_pulse/features/director/presentation/screens/leadership_meetings_screen.dart';
+import 'package:school_pulse/features/director/presentation/screens/school_performance_screen.dart';
+import 'package:school_pulse/features/director/presentation/screens/financial_overview_screen.dart';
+import 'package:school_pulse/features/director/presentation/screens/finance_analytics_screen.dart';
+import 'package:school_pulse/features/director/presentation/screens/academic_overview_screen.dart';
+import 'package:school_pulse/features/director/presentation/screens/student_analytics_screen.dart';
+import 'package:school_pulse/features/director/presentation/screens/staff_overview_screen.dart';
+import 'package:school_pulse/features/director/presentation/screens/parent_engagement_screen.dart';
+import 'package:school_pulse/features/director/presentation/screens/departments_overview_screen.dart';
+import 'package:school_pulse/features/director/presentation/screens/incidents_screen.dart';
+import 'package:school_pulse/features/director/presentation/screens/communication_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/student_id_card_screen.dart';
 import 'package:school_pulse/features/student_identity/presentation/screens/batch_id_card_screen.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
-import 'package:school_pulse/features/super_admin/domain/owner_security_session_service.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_dashboard.dart';
-import 'package:school_pulse/features/super_admin/presentation/widgets/super_admin_mobile_nav_shell.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/super_admin_notifications_screen.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_preferences_screen.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/owner_notification_history_screen.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/security_center_screen.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/help_support_home_screen.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/submit_support_request_screen.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/support_ticket_conversation_screen.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/contact_about_screen.dart';
-import 'package:school_pulse/features/super_admin/presentation/pages/privacy_policy_screen.dart';
+import 'package:school_pulse/features/super_admin/presentation/super_admin_routes.dart';
+import 'package:school_pulse/features/portal/domain/portal_runtime.dart';
 import 'package:school_pulse/features/games/presentation/screens/games_dashboard_screen.dart';
 import 'package:school_pulse/features/dean/presentation/shell/dean_shell.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -271,7 +303,6 @@ import 'package:school_pulse/features/attendance/presentation/screens/attendance
 import 'package:school_pulse/features/attendance/presentation/screens/attendance_list_screen.dart';
 import 'package:school_pulse/features/branding/presentation/screens/splash_screen.dart'
     as pulse_splash;
-import 'package:school_pulse/features/branding/presentation/screens/authenticated_bootstrap_screen.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
 
@@ -284,7 +315,6 @@ import 'package:school_pulse/features/student/presentation/screens/student_more_
 import 'package:school_pulse/features/student/presentation/screens/student_profile_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/student_fees_screen.dart';
 import 'package:school_pulse/features/student/presentation/screens/student_timetable_screen.dart';
-import 'package:school_pulse/features/teacher/teacher_student_list_screen.dart';
 import 'package:school_pulse/features/teacher/teacher_student_profile_screen.dart';
 import 'package:school_pulse/features/teacher/teacher_student_attendance_screen.dart';
 import 'package:school_pulse/features/teacher/teacher_student_performance_screen.dart';
@@ -294,6 +324,9 @@ import 'package:school_pulse/features/teacher/teacher_student_more_options_scree
 import 'package:school_pulse/features/teacher/teacher_student_health_info_screen.dart';
 import 'package:school_pulse/features/teacher/teacher_student_leave_applications_screen.dart';
 import 'package:school_pulse/features/teacher/teacher_student_communications_screen.dart';
+import 'package:school_pulse/features/teacher/teacher_student_documents_screen.dart';
+import 'package:school_pulse/features/teacher/teacher_student_sibling_info_screen.dart';
+import 'package:school_pulse/features/teacher/teacher_student_notes_screen.dart';
 import 'package:school_pulse/features/teacher/teacher_classes_list_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/classes/class_details_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/classes/class_students_list_screen.dart';
@@ -306,22 +339,8 @@ import 'package:school_pulse/features/teacher/presentation/screens/classes/class
 import 'package:school_pulse/features/teacher/presentation/screens/classes/class_behaviour_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/report_making/reports_dashboard_screen.dart';
 import 'package:school_pulse/features/reports/presentation/screens/central_reports_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/select_class_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/select_term_profile_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/report_sections_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/select_students_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/subject_progress_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/enter_scores_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/ca_ea_breakdown_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/competency_entry_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/attendance_summary_screen.dart'
-    as report_scr;
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/behaviour_conduct_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/teacher_comment_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/report_preview_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/generate_reports_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/reports_generated_success_screen.dart';
-import 'package:school_pulse/features/teacher/presentation/screens/report_making/a4_report_card_template.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/report_making/class_report_detail_screen.dart';
+import 'package:school_pulse/features/teacher/presentation/screens/report_making/class_report_card_preview_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/marks/marks_dashboard_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/marks/select_assessment_screen.dart';
 import 'package:school_pulse/features/teacher/presentation/screens/marks/select_component_screen.dart';
@@ -346,6 +365,8 @@ import 'package:school_pulse/features/teacher/presentation/screens/lessons/lesso
 
 import 'package:school_pulse/features/health/presentation/screens/nurse_records_hub_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/nurse_clinic_visits_screen.dart';
+import 'package:school_pulse/features/health/presentation/screens/nurse_home_screen.dart';
+import 'package:school_pulse/features/nurse/presentation/screens/nurse_more_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/record_clinic_visit_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/student_health_profile_screen.dart';
 import 'package:school_pulse/features/health/presentation/screens/health_history_screen.dart';
@@ -394,20 +415,71 @@ import 'package:school_pulse/features/teacher/presentation/screens/resources/sto
 /// real Authenticated/Unauthenticated state lands.
 class GoRouterRefreshStream extends ChangeNotifier {
   GoRouterRefreshStream(Stream<dynamic> stream) {
-    notifyListeners();
-    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+    // No eager notifyListeners() here: GoRouter already evaluates `redirect`
+    // once on construction, and an extra synchronous refresh before the
+    // first route settles only invites a redirect race.
+    _subscription = stream.asBroadcastStream().listen((_) => _scheduleNotify());
   }
 
   late final StreamSubscription<dynamic> _subscription;
+  Timer? _debounce;
+  bool _disposed = false;
+
+  /// AuthBloc (and anything else feeding this) can emit a burst of states
+  /// in quick succession - e.g. entering the Super Admin console dispatches
+  /// several bloc events in `initState`, each landing here as a separate
+  /// async delivery. Collapsing a burst into a single trailing-edge
+  /// notification means GoRouter re-runs its (async) redirect once instead
+  /// of N times, which is what let a slow redirect resolve against a route
+  /// the user had already been navigated past. 16ms ~= one frame: short
+  /// enough to feel instant, long enough to swallow a same-turn burst.
+  void _scheduleNotify() {
+    if (_disposed) return;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 16), () {
+      if (!_disposed) notifyListeners();
+    });
+  }
 
   @override
   void dispose() {
+    _disposed = true;
+    _debounce?.cancel();
     _subscription.cancel();
     super.dispose();
   }
 }
 
+/// The single shared full-page transition for the app: a fast, subtle
+/// fade-through. No slide, scale, bounce, or platform-specific animation -
+/// so section-to-section navigation in shell-style consoles (notably Super
+/// Admin) and browser Back/Forward all look identical and calm.
+CustomTransitionPage<T> fadeThroughPage<T>({
+  required Widget child,
+  LocalKey? key,
+  String? name,
+  Object? arguments,
+}) {
+  return CustomTransitionPage<T>(
+    key: key,
+    name: name,
+    arguments: arguments,
+    transitionDuration: const Duration(milliseconds: 180),
+    reverseTransitionDuration: const Duration(milliseconds: 180),
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+        child: child,
+      );
+    },
+  );
+}
+
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final router = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/',
   // di.sl<AuthBloc>() is a lazy singleton (see injection_container.dart),
   // so this is the exact same instance main.dart's BlocProvider supplies
@@ -420,6 +492,7 @@ final router = GoRouter(
         state.uri.path.contains('/welcome') ||
         state.uri.path == '/owner-login' ||
         state.uri.path == '/owner/mfa-setup' ||
+        state.uri.path == '/register-school' ||
         state.uri.path == '/';
 
     if (authState is AuthInitial && !isLoggingIn) return '/';
@@ -431,14 +504,25 @@ final router = GoRouter(
     // real Authenticated/Unauthenticated state.
     if (authState is AuthLoading) return null;
 
+    // Host selection is not authorization. A valid portal hostname must
+    // still match the authenticated user's home tenant, preventing a user
+    // from carrying a School A session into School B's URL (including via a
+    // hand-crafted deep link). Platform owners use the root console only.
+    final portalTenant = PortalRuntime.tenant;
+    if (portalTenant != null &&
+        authState is AuthAuthenticated &&
+        (authState.user.role == UserRole.superAdmin ||
+            authState.user.schoolId != portalTenant.schoolId)) {
+      return '/welcome';
+    }
+
     // A Firebase session alone is never enough to render a tenant route.
-    // The branding state is loaded only by /school-bootstrap after the
+    // The branding state is loaded only by /school-splash after the
     // authenticated profile has supplied a trusted schoolId.
     final path = state.uri.path;
     final isPipelineRoute =
         path == '/' ||
         path == '/welcome' ||
-        path == '/school-bootstrap' ||
         path == '/school-splash' ||
         path.startsWith('/auth') ||
         path.startsWith('/owner') ||
@@ -449,7 +533,7 @@ final router = GoRouter(
       final branding = context.read<BrandingBloc>().state;
       if (branding is! BrandingLoaded ||
           branding.branding?.schoolId != authState.user.schoolId) {
-        return '/school-bootstrap';
+        return '/school-splash';
       }
     }
 
@@ -461,54 +545,27 @@ final router = GoRouter(
     // convenience, not a security boundary: this router-level guard is the
     // actual one, catching a superAdmin session on any staff surface
     // before it ever builds, and sending it through the same
-    // /school-bootstrap -> /super-admin path a fresh owner login takes.
+    // /school-splash -> /super-admin path a fresh owner login takes.
     if (authState is AuthAuthenticated &&
         authState.user.role == UserRole.superAdmin &&
         (state.uri.path == '/staff/login' ||
             state.uri.path.startsWith('/staff/'))) {
-      return '/school-bootstrap';
+      return '/school-splash';
     }
 
-    // Protect Super Admin routes
+    // Protect Super Admin routes. Only the *synchronous* checks live here
+    // in the global redirect: the async mandatory-MFA-enrollment and
+    // owner-security-session validation moved onto each route in
+    // `superAdminRoutes`'s own `redirect` (see super_admin_routes.dart).
+    // Keeping an `await` out of
+    // this hot, every-navigation callback is what stops a slow session
+    // check from resolving against a route the user was already navigated
+    // past - the flash/return bug.
     if (state.uri.path.startsWith('/super-admin')) {
       if (authState is AuthAuthenticated) {
         if (authState.user.role != UserRole.superAdmin) {
           return UserRoleRouting.dashboardPath(authState.user.role);
         }
-        // Mandatory TOTP: Firebase only *enforces* an MFA challenge at
-        // sign-in for a user who already has a factor enrolled
-        // (FirebaseAuthMultiFactorException gates AuthAuthenticated from
-        // ever emitting in that case). It does not require enrollment to
-        // exist in the first place, so an owner who never set up an
-        // authenticator app reaches here on the first factor alone.
-        // Force enrollment before the console ever renders.
-        final currentUser = FirebaseAuth.instance.currentUser;
-        if (currentUser != null) {
-          final factors = await currentUser.multiFactor.getEnrolledFactors();
-          if (factors.isEmpty) return '/owner/mfa-setup';
-        }
-
-        // The unified elevated session every owner login path converges
-        // into (password+TOTP, Google+TOTP, recovery code) - re-validated
-        // live against the server on every navigation into /super-admin,
-        // never trusted from AuthBloc's client-side role state alone. A
-        // session explicitly revoked (Revoke All Sessions) fails closed
-        // here even though the underlying Firebase session is still valid -
-        // that's the whole point of a separate revocation surface.
-        //
-        // The in-memory sessionId does not survive an app restart (by
-        // design - never persisted to SharedPreferences/localStorage), so
-        // a restart re-establishes a fresh session here rather than
-        // bouncing an otherwise-fully-authenticated owner back to
-        // /owner-login: Firebase's own persisted session plus a still-live
-        // `currentUser.multiFactor` enrollment already prove the owner
-        // completed both factors previously, and requireOwner() gates the
-        // establish call itself, so this is not a weaker check - it is the
-        // same guarantee the original login already gave, just re-derived
-        // instead of re-proven.
-        final session = await OwnerSecuritySessionService.instance
-            .validateOrReestablish();
-        if (session == null) return '/owner-login';
       } else {
         return '/welcome';
       }
@@ -523,6 +580,9 @@ final router = GoRouter(
         !isLoggingIn &&
         !isInstitutionSuspendedRoute &&
         !state.uri.path.startsWith('/super-admin')) {
+      // The router owns this redirect callback; its context remains valid for
+      // the life of the redirect evaluation after the security await above.
+      // ignore: use_build_context_synchronously
       final contextState = context.read<InstitutionContextCubit>().state;
       if (contextState is InstitutionContextSuspended) {
         return '/institution-suspended';
@@ -531,6 +591,7 @@ final router = GoRouter(
     // A user who was suspended and got reactivated shouldn't stay stuck on
     // the suspended screen once the context reloads as active.
     if (isInstitutionSuspendedRoute && authState is AuthAuthenticated) {
+      // ignore: use_build_context_synchronously
       final contextState = context.read<InstitutionContextCubit>().state;
       if (contextState is InstitutionContextLoaded) {
         return UserRoleRouting.dashboardPath(authState.user.role);
@@ -565,48 +626,56 @@ final router = GoRouter(
       builder: (context, state) => const WelcomeScreen(),
     ),
     GoRoute(
-      path: '/school-bootstrap',
-      redirect: (context, state) {
-        final authState = context.read<AuthBloc>().state;
-        if (authState is! AuthAuthenticated) return '/welcome';
-        // superAdmin is the SaaS platform owner, not a school tenant - they
-        // have no schoolId to resolve and every other route in this file
-        // already exempts them from the tenant pipeline (see the top-level
-        // redirect above). AuthenticatedBootstrapScreen has no exit of its
-        // own once landed on, so without this a superAdmin routed here from
-        // any login/session-restore path was stuck indefinitely on
-        // "Preparing your school workspace".
-        if (authState.user.role == UserRole.superAdmin) {
-          return UserRoleRouting.dashboardPath(UserRole.superAdmin);
-        }
-        return null;
-      },
-      builder: (context, state) => const AuthenticatedBootstrapScreen(),
+      path: '/register-school',
+      builder: (context, state) =>
+          const school_registration.RegistrationRootPage(),
     ),
     GoRoute(
       path: '/institution-suspended',
       builder: (context, state) => const InstitutionSuspendedScreen(),
     ),
+    // A shared standalone route so every role sees the same About experience
+    // without inheriting any role shell or bottom navigation.
+    GoRoute(
+      path: '/about-school-pulse',
+      builder: (context, state) => const AboutSchoolPulseScreen(),
+    ),
     GoRoute(
       path: '/school-splash',
       redirect: (context, state) {
-        final user = resolveSchoolSplashUser(
-          state.extra,
-          context.read<AuthBloc>().state,
-        );
-        final branding = context.read<BrandingBloc>().state;
-        return user == null
-            ? '/welcome'
-            : branding is BrandingLoaded &&
-                  branding.branding?.schoolId == user.schoolId
-            ? null
-            : '/school-bootstrap';
+        final authState = context.read<AuthBloc>().state;
+        // MFA completion starts AuthCheckRequested and then navigates here.
+        // During that short check the state is AuthLoading, not an absent
+        // user. Treating it as absent used to redirect to /welcome before
+        // the verified superAdmin state arrived, which looked like a
+        // successful 2FA sign-in had been thrown back to authentication.
+        if (authState is AuthLoading || authState is AuthInitial) {
+          return null;
+        }
+        // superAdmin is the SaaS platform owner, not a school tenant - they
+        // have no schoolId to resolve and every other route in this file
+        // already exempts them from the tenant pipeline (see the top-level
+        // redirect above). SchoolSplashScreen has no exit of its own once
+        // landed on, so without this a superAdmin routed here from any
+        // login/session-restore path was stuck indefinitely resolving
+        // branding for a school they don't belong to.
+        if (authState is AuthAuthenticated &&
+            authState.user.role == UserRole.superAdmin) {
+          return UserRoleRouting.dashboardPath(UserRole.superAdmin);
+        }
+        final user = resolveSchoolSplashUser(state.extra, authState);
+        return user == null ? '/welcome' : null;
       },
       builder: (context, state) {
         final user = resolveSchoolSplashUser(
           state.extra,
           context.read<AuthBloc>().state,
-        )!;
+        );
+        if (user == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
         return SchoolSplashScreen(user: user);
       },
     ),
@@ -620,6 +689,12 @@ final router = GoRouter(
         GoRoute(
           path: '/student/academics',
           builder: (context, state) => const StudentAcademicsScreen(),
+          routes: [
+            GoRoute(
+              path: 'report-card',
+              builder: (context, state) => const ReportCardScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/student/homework',
@@ -632,6 +707,41 @@ final router = GoRouter(
         GoRoute(
           path: '/student/library',
           builder: (context, state) => const StudentLibraryScreen(),
+        ),
+        GoRoute(
+          path: '/student/notifications',
+          builder: (context, state) => const NotificationListScreen(),
+          routes: [
+            // Literal-path children must be declared before the `:id`
+            // wildcard below - go_router matches nested routes in
+            // declaration order, so `:id` would otherwise shadow every
+            // named route (e.g. a push to .../filter would match `:id`
+            // with id == 'filter' instead of the filter screen).
+            GoRoute(
+              path: 'filter',
+              builder: (context, state) => const NotificationFilterScreen(),
+            ),
+            GoRoute(
+              path: 'center',
+              builder: (context, state) =>
+                  const NotificationCenterGroupedScreen(),
+            ),
+            GoRoute(
+              path: ':id',
+              builder: (context, state) {
+                // The list passes the notification as `extra` so the details
+                // screen paints immediately. A push tapped from the system
+                // tray has no `extra`, so that path loads by id instead.
+                final notification = state.extra;
+                if (notification is NotificationItem) {
+                  return NotificationDetailsScreen(notification: notification);
+                }
+                return NotificationDetailsLoaderScreen(
+                  notificationId: state.pathParameters['id'] ?? '',
+                );
+              },
+            ),
+          ],
         ),
         GoRoute(
           path: '/student/more',
@@ -681,8 +791,40 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/parent/login/pin',
+      // GoRouter's refreshListenable re-evaluates this route's builder on
+      // every AuthBloc emission (e.g. the auto-login this screen itself
+      // triggers after PIN setup: AuthLoading immediately, then
+      // AuthAuthenticated once it resolves), but `extra` is only ever
+      // populated on the original push - every one of those re-evaluations
+      // sees it as null. Redirect instead of crashing, but only once the
+      // outcome is actually known: AuthLoading is a mid-flight state, not a
+      // failure, so bouncing on it would send an about-to-succeed login back
+      // to square one before AuthAuthenticated ever gets to fire.
+      redirect: (context, state) {
+        final extra = state.extra;
+        if (extra is! Map<String, dynamic> ||
+            extra['accessCode'] is! ParentAccessCode ||
+            extra['phoneNumber'] is! String) {
+          final authState = context.read<AuthBloc>().state;
+          if (authState is AuthAuthenticated) return '/school-splash';
+          if (authState is AuthLoading) return null;
+          return '/parent/login/child-id';
+        }
+        return null;
+      },
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>;
+        final extra = state.extra;
+        // Mirrors the redirect above: during the AuthLoading window the
+        // redirect deliberately stays put rather than navigating away, so
+        // the builder must tolerate the same missing `extra` without
+        // crashing - a brief loading frame beats a red error screen.
+        if (extra is! Map<String, dynamic> ||
+            extra['accessCode'] is! ParentAccessCode ||
+            extra['phoneNumber'] is! String) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
         return ParentPinScreen(
           accessCode: extra['accessCode'] as ParentAccessCode,
           phoneNumber: extra['phoneNumber'] as String,
@@ -705,6 +847,10 @@ final router = GoRouter(
       path: '/auth/mfa-challenge',
       builder: (context, state) =>
           MfaChallengeScreen(resolver: state.extra as MultiFactorResolver),
+    ),
+    GoRoute(
+      path: '/auth/forgot-password',
+      builder: (context, state) => const ForgotPasswordScreen(),
     ),
     GoRoute(
       path: '/student/login',
@@ -751,10 +897,14 @@ final router = GoRouter(
           builder: (context, state) => const ParentHomeScreen(),
         ),
         GoRoute(
-          path: '/parent/academics',
+          path: '/parent/learn',
           builder: (context, state) => ParentModuleGuard(
             isAllowed: (v) => v.academics,
-            child: const AcademicsScreen(),
+            child: AcademicsScreen(
+              initialTab: state.extra is int
+                  ? state.extra as int
+                  : AcademicsTab.homework,
+            ),
           ),
           routes: [
             GoRoute(
@@ -774,24 +924,24 @@ final router = GoRouter(
           ],
         ),
         GoRoute(
-          path: '/parent/fees',
+          path: '/parent/payments',
           builder: (context, state) => ParentModuleGuard(
             isAllowed: (v) => v.fees,
             child: const FeesScreen(),
           ),
           routes: [
             GoRoute(
-              path: 'pay',
+              path: 'how-to-pay',
               builder: (context, state) => ParentModuleGuard(
                 isAllowed: (v) => v.fees,
-                child: const PayNowScreen(),
+                child: const HowToPayScreen(),
               ),
             ),
             GoRoute(
-              path: 'history',
+              path: 'receipts',
               builder: (context, state) => ParentModuleGuard(
                 isAllowed: (v) => v.fees,
-                child: const PaymentHistoryScreen(),
+                child: const ReceiptsScreen(),
               ),
             ),
           ],
@@ -805,7 +955,7 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/parent/more',
-          builder: (context, state) => const MoreMenuScreen(),
+          redirect: (context, state) => '/parent/profile',
         ),
         GoRoute(
           path: '/parent/health',
@@ -845,6 +995,12 @@ final router = GoRouter(
         GoRoute(
           path: '/parent/profile',
           builder: (context, state) => const ProfileScreen(),
+          routes: [
+            GoRoute(
+              path: 'edit',
+              builder: (context, state) => const EditProfileScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/parent/notifications',
@@ -874,6 +1030,12 @@ final router = GoRouter(
           builder: (context, state) => const CalendarHomeScreen(),
         ),
         GoRoute(
+          path: '/parent/announcements/:id',
+          builder: (context, state) => AnnouncementDetailScreen(
+            announcementId: state.pathParameters['id'] ?? '',
+          ),
+        ),
+        GoRoute(
           path: '/parent/boarding',
           builder: (context, state) => ParentModuleGuard(
             isAllowed: (v) => v.boarding,
@@ -900,7 +1062,10 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/students',
-          builder: (context, state) => const TeacherStudentListScreen(),
+          // Class Teacher roster is scoped by the active responsibility,
+          // rather than the broad teacher directory used by Subject Teachers.
+          builder: (context, state) =>
+              const ClassStudentsListScreen(classId: ''),
           routes: [
             GoRoute(
               path: ':id',
@@ -924,6 +1089,7 @@ final router = GoRouter(
                   path: 'assessments',
                   builder: (context, state) => TeacherStudentAssessmentsScreen(
                     studentId: state.pathParameters['id']!,
+                    initialSubjectId: state.uri.queryParameters['subjectId'],
                   ),
                 ),
                 GoRoute(
@@ -957,6 +1123,24 @@ final router = GoRouter(
                       TeacherStudentCommunicationsScreen(
                         studentId: state.pathParameters['id']!,
                       ),
+                ),
+                GoRoute(
+                  path: 'documents',
+                  builder: (context, state) => TeacherStudentDocumentsScreen(
+                    studentId: state.pathParameters['id']!,
+                  ),
+                ),
+                GoRoute(
+                  path: 'siblings',
+                  builder: (context, state) => TeacherStudentSiblingInfoScreen(
+                    studentId: state.pathParameters['id']!,
+                  ),
+                ),
+                GoRoute(
+                  path: 'notes',
+                  builder: (context, state) => TeacherStudentNotesScreen(
+                    studentId: state.pathParameters['id']!,
+                  ),
                 ),
               ],
             ),
@@ -1033,76 +1217,49 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/admin/reports',
+          redirect: (context, state) {
+            final auth = context.read<AuthBloc>().state;
+            if (auth is! AuthAuthenticated) return '/welcome';
+            if (!auth.user.roles.any(
+              UserRoleDisplay.adminConsoleRoles.contains,
+            )) {
+              return UserRoleRouting.dashboardPath(auth.user.role);
+            }
+            return null;
+          },
           builder: (context, state) => const CentralReportsScreen(),
         ),
         GoRoute(
           path: '/staff/reports',
-          builder: (context, state) => BlocProvider(
-            create: (_) => di.sl<ReportWizardBloc>(),
-            child: const ReportsDashboardScreen(),
-          ),
+          builder: (context, state) => const ReportsDashboardScreen(),
           routes: [
             GoRoute(
-              path: 'select-class',
-              builder: (context, state) => const SelectClassScreen(),
+              path: 'student/:studentId',
+              builder: (context, state) => ClassReportDetailScreen(
+                studentId: state.pathParameters['studentId']!,
+              ),
             ),
-            GoRoute(
-              path: 'select-term',
-              builder: (context, state) => const SelectTermProfileScreen(),
-            ),
-            GoRoute(
-              path: 'sections',
-              builder: (context, state) => const ReportSectionsScreen(),
-            ),
-            GoRoute(
-              path: 'select-students',
-              builder: (context, state) => const SelectStudentsScreen(),
-            ),
-            GoRoute(
-              path: 'subject-progress',
-              builder: (context, state) => const SubjectProgressScreen(),
-            ),
-            GoRoute(
-              path: 'enter-scores',
-              builder: (context, state) => const EnterScoresScreen(),
-            ),
-            GoRoute(
-              path: 'ca-ea-breakdown',
-              builder: (context, state) => const CaEaBreakdownScreen(),
-            ),
-            GoRoute(
-              path: 'competency-entry',
-              builder: (context, state) => const CompetencyEntryScreen(),
-            ),
-            GoRoute(
-              path: 'attendance-summary',
-              builder: (context, state) =>
-                  const report_scr.AttendanceSummaryScreen(),
-            ),
-            GoRoute(
-              path: 'behaviour-conduct',
-              builder: (context, state) => const BehaviourConductScreen(),
-            ),
-            GoRoute(
-              path: 'teacher-comment',
-              builder: (context, state) => const TeacherCommentScreen(),
-            ),
+            // The real report-card preview - opened via `extra` since it
+            // needs the full ActiveResponsibilityContext alongside the
+            // report card id, not just a path parameter. See
+            // ReportsDashboardScreen's "View Report" action.
             GoRoute(
               path: 'preview',
-              builder: (context, state) => const ReportPreviewScreen(),
+              builder: (context, state) {
+                final extra = state.extra as ClassReportCardPreviewArgs;
+                return ClassReportCardPreviewScreen(
+                  reportCardId: extra.reportCardId,
+                  responsibilityContext: extra.context,
+                );
+              },
             ),
+            // Catches any stale deep link into the old 12-screen report
+            // wizard, since removed - it used sample classes, students and
+            // PDF content and duplicated what ClassReportDetailScreen above
+            // already does against real data.
             GoRoute(
-              path: 'generate',
-              builder: (context, state) => const GenerateReportsScreen(),
-            ),
-            GoRoute(
-              path: 'generated-success',
-              builder: (context, state) =>
-                  const ReportsGeneratedSuccessScreen(),
-            ),
-            GoRoute(
-              path: 'a4-template',
-              builder: (context, state) => const A4ReportCardTemplate(),
+              path: ':legacy',
+              redirect: (context, state) => '/staff/reports',
             ),
           ],
         ),
@@ -1112,24 +1269,13 @@ final router = GoRouter(
         ),
         GoRoute(
           path: '/staff/bursar',
-          builder: (context, state) => const BursarDashboardScreen(),
-          routes: [
-            GoRoute(
-              path: 'lookup',
-              builder: (context, state) => const BursarStudentLookupScreen(),
-            ),
-          ],
-        ),
-        GoRoute(
-          path: '/staff/nurse',
           redirect: (context, state) {
             final auth = context.read<AuthBloc>().state;
             if (auth is! AuthAuthenticated) return '/welcome';
             const permitted = {
-              UserRole.nurse,
+              UserRole.bursar,
               UserRole.schoolAdmin,
               UserRole.headTeacher,
-              UserRole.deputyHead,
               UserRole.director,
             };
             if (!auth.user.roles.any(permitted.contains)) {
@@ -1137,74 +1283,219 @@ final router = GoRouter(
             }
             return null;
           },
-          builder: (context, state) => const NurseDashboardScreen(),
+          builder: (context, state) =>
+              const BursarShell(section: BursarSection.overview),
           routes: [
             GoRoute(
-              path: 'records',
-              builder: (context, state) => BlocProvider.value(
-                value: context.read<HealthBloc>(),
-                child: const NurseRecordsHubScreen(),
-              ),
+              path: 'lookup',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.students),
+            ),
+            // Console sections. Every `/staff/bursar/<slug>` builds
+            // `BursarShell(section: …)`, which renders the width-appropriate
+            // chrome (desktop sidebar / tablet rail / mobile bottom-nav) and
+            // resolves that exact section — so direct URL load, browser
+            // refresh, back/forward and shared links all land correctly at
+            // every width. On mobile a section without its own tab opens on
+            // **More** with the section screen pushed.
+            GoRoute(
+              path: 'overview',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.overview),
             ),
             GoRoute(
-              path: 'visits',
+              path: 'students',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.students),
+            ),
+            GoRoute(
+              path: 'approvals',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.approvals),
+            ),
+            GoRoute(
+              path: 'cash-bank',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.cashBank),
+            ),
+            GoRoute(
+              path: 'budget',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.budget),
+            ),
+            GoRoute(
+              path: 'expenses',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.expenses),
+            ),
+            GoRoute(
+              path: 'suppliers',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.suppliers),
+            ),
+            GoRoute(
+              path: 'petty-cash',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.pettyCash),
+            ),
+            GoRoute(
+              path: 'payroll',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.payroll),
+            ),
+            GoRoute(
+              path: 'reports',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.reports),
+            ),
+            GoRoute(
+              path: 'report-release',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.reportRelease),
+            ),
+            GoRoute(
+              path: 'entitlements',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.entitlements),
+            ),
+            GoRoute(
+              path: 'clearance-policy',
+              builder: (context, state) => const ClearancePolicyEditorScreen(),
+            ),
+            // Payment vouchers is reachable from the mobile "More" list; this
+            // route gives it a URL + deep link so it is also reachable on
+            // tablet/desktop/web (the sidebar button for it is added with the
+            // tablet-rail work in bursar_web_shell.dart).
+            GoRoute(
+              path: 'payment-vouchers',
+              builder: (context, state) => const PaymentVouchersListScreen(),
+            ),
+            GoRoute(
+              path: 'audit',
+              builder: (context, state) =>
+                  const BursarShell(section: BursarSection.audit),
+            ),
+            GoRoute(
+              path: 'student/:studentId/bills',
+              builder: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                final schoolId = auth is AuthAuthenticated
+                    ? auth.user.schoolId
+                    : '';
+                return BursarShell(
+                  section: BursarSection.students,
+                  studentDetail: StudentBillsScreen(
+                    schoolId: schoolId,
+                    studentId: state.pathParameters['studentId']!,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        ShellRoute(
+          builder: (context, state, child) => NurseShell(child: child),
+          routes: [
+            GoRoute(
+              path: '/staff/nurse',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.nurse,
+                  UserRole.schoolAdmin,
+                  UserRole.headTeacher,
+                  UserRole.deputyHead,
+                  UserRole.director,
+                };
+                if (!auth.user.roles.any(permitted.contains)) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
               builder: (context, state) => BlocProvider.value(
                 value: context.read<HealthBloc>(),
-                child: const NurseClinicVisitsScreen(),
+                child: const NurseHomeScreen(),
               ),
               routes: [
                 GoRoute(
-                  path: 'new',
+                  path: 'records',
                   builder: (context, state) => BlocProvider.value(
                     value: context.read<HealthBloc>(),
-                    child: RecordClinicVisitScreen(
-                      studentId: state.extra as String,
+                    child: const NurseRecordsHubScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'visits',
+                  builder: (context, state) => BlocProvider.value(
+                    value: context.read<HealthBloc>(),
+                    child: const NurseClinicVisitsScreen(),
+                  ),
+                  routes: [
+                    GoRoute(
+                      path: 'new',
+                      builder: (context, state) => BlocProvider.value(
+                        value: context.read<HealthBloc>(),
+                        child: RecordClinicVisitScreen(
+                          studentId: state.extra as String,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                GoRoute(
+                  path: 'inventory',
+                  builder: (context, state) => BlocProvider.value(
+                    value: context.read<HealthBloc>(),
+                    child: const MedicineInventoryScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'history',
+                  builder: (context, state) => BlocProvider.value(
+                    value: context.read<HealthBloc>(),
+                    child: const HealthHistoryScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'profile/:id',
+                  builder: (context, state) => BlocProvider.value(
+                    value: context.read<HealthBloc>(),
+                    child: StudentHealthProfileScreen(
+                      studentId: state.pathParameters['id']!,
                     ),
                   ),
                 ),
+                GoRoute(
+                  path: 'incident/:id',
+                  builder: (context, state) => BlocProvider.value(
+                    value: context.read<HealthBloc>(),
+                    child: IncidentDetailsScreen(
+                      incidentId: state.pathParameters['id']!,
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'lookup',
+                  builder: (context, state) => const NurseStudentLookupScreen(),
+                ),
+                GoRoute(
+                  path: 'more',
+                  builder: (context, state) => const NurseMoreScreen(),
+                ),
               ],
-            ),
-            GoRoute(
-              path: 'inventory',
-              builder: (context, state) => BlocProvider.value(
-                value: context.read<HealthBloc>(),
-                child: const MedicineInventoryScreen(),
-              ),
-            ),
-            GoRoute(
-              path: 'history',
-              builder: (context, state) => BlocProvider.value(
-                value: context.read<HealthBloc>(),
-                child: const HealthHistoryScreen(),
-              ),
-            ),
-            GoRoute(
-              path: 'profile/:id',
-              builder: (context, state) => BlocProvider.value(
-                value: context.read<HealthBloc>(),
-                child: StudentHealthProfileScreen(
-                  studentId: state.pathParameters['id']!,
-                ),
-              ),
-            ),
-            GoRoute(
-              path: 'incident/:id',
-              builder: (context, state) => BlocProvider.value(
-                value: context.read<HealthBloc>(),
-                child: IncidentDetailsScreen(
-                  incidentId: state.pathParameters['id']!,
-                ),
-              ),
-            ),
-            GoRoute(
-              path: 'lookup',
-              builder: (context, state) => const NurseStudentLookupScreen(),
             ),
           ],
         ),
         GoRoute(
           path: '/staff/librarian',
-          builder: (context, state) => const LibrarianDashboardScreen(),
+          builder: (context, state) {
+            final authState = context.read<AuthBloc>().state;
+            final schoolId = authState is AuthAuthenticated
+                ? authState.user.schoolId
+                : '';
+            return LibraryDashboardScreen(schoolId: schoolId);
+          },
           routes: [
             GoRoute(
               path: 'lookup',
@@ -1317,7 +1608,30 @@ final router = GoRouter(
                     dormitory: state.extra as matron_scr.Dormitory,
                   ),
                 ),
+                GoRoute(
+                  path: 'students',
+                  builder: (context, state) => MatronDormStudentRosterScreen(
+                    dormitory: state.extra as matron_scr.Dormitory,
+                  ),
+                ),
               ],
+            ),
+            GoRoute(
+              path: 'roll-call',
+              builder: (context, state) => const MatronRollCallScreen(),
+            ),
+            GoRoute(
+              path: 'students/:id',
+              builder: (context, state) => MatronStudentProfileScreen(
+                studentId: state.pathParameters['id']!,
+              ),
+            ),
+            GoRoute(
+              path: 'more',
+              builder: (context, state) => const BoardingMoreScreen(
+                basePath: '/staff/matron',
+                genderLabel: 'Girls',
+              ),
             ),
             GoRoute(
               path: 'leave',
@@ -1396,7 +1710,30 @@ final router = GoRouter(
                   builder: (context, state) =>
                       BedManagementScreen(dormitory: state.extra as Dormitory),
                 ),
+                GoRoute(
+                  path: 'students',
+                  builder: (context, state) => PatronDormStudentRosterScreen(
+                    dormitory: state.extra as Dormitory,
+                  ),
+                ),
               ],
+            ),
+            GoRoute(
+              path: 'roll-call',
+              builder: (context, state) => const PatronRollCallScreen(),
+            ),
+            GoRoute(
+              path: 'students/:id',
+              builder: (context, state) => PatronStudentProfileScreen(
+                studentId: state.pathParameters['id']!,
+              ),
+            ),
+            GoRoute(
+              path: 'more',
+              builder: (context, state) => const BoardingMoreScreen(
+                basePath: '/staff/patron',
+                genderLabel: 'Boys',
+              ),
             ),
             GoRoute(
               path: 'leave',
@@ -1450,6 +1787,87 @@ final router = GoRouter(
         GoRoute(
           path: '/staff/discipline',
           builder: (context, state) => const DisciplineDashboardScreen(),
+        ),
+        GoRoute(
+          path: '/staff/exam-factory',
+          builder: (context, state) => _examFactoryScoped(
+            context,
+            const ExamQuestionListScreen(
+              mode: ExamQuestionListMode.myQuestions,
+            ),
+          ),
+          routes: [
+            GoRoute(
+              path: 'my-questions',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamQuestionListScreen(
+                  mode: ExamQuestionListMode.myQuestions,
+                ),
+              ),
+            ),
+            GoRoute(
+              path: 'submit-question',
+              builder: (context, state) =>
+                  _examFactoryScoped(context, const ExamQuestionFormScreen()),
+            ),
+            GoRoute(
+              path: 'edit-question',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                ExamQuestionFormScreen(
+                  questionId: state.uri.queryParameters['questionId'],
+                ),
+              ),
+            ),
+            GoRoute(
+              path: 'question-details',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                ExamQuestionReviewScreen(
+                  questionId: state.uri.queryParameters['questionId'] ?? '',
+                  readOnly: true,
+                ),
+              ),
+            ),
+            GoRoute(
+              path: 'changes-requested',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamChangesRequestedScreen(),
+              ),
+            ),
+            GoRoute(
+              path: 'submission-history',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamSubmissionHistoryScreen(),
+              ),
+            ),
+            GoRoute(
+              path: 'assigned-marking',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamAssignedMarkingScreen(),
+              ),
+            ),
+            GoRoute(
+              path: 'mark-entry',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                ExamMarkEntryScreen(
+                  paperId: state.uri.queryParameters['paperId'] ?? '',
+                ),
+              ),
+            ),
+            GoRoute(
+              path: 'marking-progress',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamMarkingProgressScreen(),
+              ),
+            ),
+          ],
         ),
         GoRoute(
           path: '/staff/dean',
@@ -1506,7 +1924,283 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'exams',
-              builder: (context, state) => const ExamsOverviewScreen(),
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamFactoryDashboardScreen(),
+              ),
+            ),
+            GoRoute(
+              path: 'exam-factory',
+              builder: (context, state) => _examFactoryScoped(
+                context,
+                const ExamFactoryDashboardScreen(),
+              ),
+              routes: [
+                GoRoute(
+                  path: 'series',
+                  builder: (context, state) =>
+                      _examFactoryScoped(context, const ExamSeriesListScreen()),
+                ),
+                GoRoute(
+                  path: 'series-editor',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamSeriesEditorScreen(
+                      seriesId: state.uri.queryParameters['seriesId'],
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'question-bank',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamQuestionListScreen(
+                      mode: ExamQuestionListMode.questionBank,
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'question-details',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamQuestionReviewScreen(
+                      questionId: state.uri.queryParameters['questionId'] ?? '',
+                      readOnly: true,
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'moderation',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamQuestionListScreen(
+                      mode: ExamQuestionListMode.moderationQueue,
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'review-question',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamQuestionReviewScreen(
+                      questionId: state.uri.queryParameters['questionId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'papers',
+                  builder: (context, state) =>
+                      _examFactoryScoped(context, const ExamPaperListScreen()),
+                ),
+                GoRoute(
+                  path: 'create-paper',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamPaperBuilderScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'paper-builder',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamPaperBuilderScreen(
+                      paperId: state.uri.queryParameters['paperId'],
+                      initialQuestionIds:
+                          state.uri.queryParameters['questionIds']?.split(
+                            ',',
+                          ) ??
+                          const [],
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'print-room',
+                  builder: (context, state) =>
+                      _examFactoryScoped(context, const ExamPrintRoomScreen()),
+                ),
+                GoRoute(
+                  path: 'print-job',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamPrintJobScreen(
+                      paperId: state.uri.queryParameters['paperId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'timetable',
+                  builder: (context, state) =>
+                      _examFactoryScoped(context, const ExamTimetableScreen()),
+                ),
+                GoRoute(
+                  path: 'schedule-editor',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamScheduleEditorScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'exam-day',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamDayDashboardScreen(
+                      sittingId: state.uri.queryParameters['sittingId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'invigilators',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamInvigilatorScreen(
+                      sittingId: state.uri.queryParameters['sittingId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'attendance',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamAttendanceScreen(
+                      sittingId: state.uri.queryParameters['sittingId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'incidents',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamIncidentScreen(
+                      sittingId: state.uri.queryParameters['sittingId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'marking',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamMarkingDashboardScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'mark-entry',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamMarkEntryScreen(
+                      paperId: state.uri.queryParameters['paperId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'missing-marks',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamMissingMarksScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'result-verification',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamResultVerificationScreen(
+                      paperId: state.uri.queryParameters['paperId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'question-search',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamQuestionListScreen(
+                      mode: ExamQuestionListMode.questionBank,
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'moderation-history',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamApprovalHistoryScreen(
+                      questionId: state.uri.queryParameters['questionId'],
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'paper-settings',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamPaperBuilderScreen(
+                      paperId: state.uri.queryParameters['paperId'],
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'paper-preview',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamPaperPreviewScreen(
+                      paperId: state.uri.queryParameters['paperId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'final-review',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamFinalPaperReviewScreen(
+                      paperId: state.uri.queryParameters['paperId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'approval-history',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamApprovalHistoryScreen(
+                      paperId: state.uri.queryParameters['paperId'],
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'rooms',
+                  builder: (context, state) => const SpacesRoomsScreen(),
+                ),
+                GoRoute(
+                  path: 'seating',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamSeatingScreen(
+                      sittingId: state.uri.queryParameters['sittingId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'scripts',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    ExamScriptCollectionScreen(
+                      sittingId: state.uri.queryParameters['sittingId'] ?? '',
+                    ),
+                  ),
+                ),
+                GoRoute(
+                  path: 'result-approval',
+                  builder: (context, state) => _examFactoryScoped(
+                    context,
+                    const ExamResultApprovalScreen(),
+                  ),
+                ),
+                GoRoute(
+                  path: 'reports',
+                  builder: (context, state) =>
+                      _examFactoryScoped(context, const ExamReportsScreen()),
+                ),
+                GoRoute(
+                  path: 'settings',
+                  builder: (context, state) =>
+                      _examFactoryScoped(context, const ExamSettingsScreen()),
+                ),
+              ],
             ),
             GoRoute(
               path: 'missed-lessons',
@@ -1576,12 +2270,90 @@ final router = GoRouter(
               path: 'meetings',
               builder: (context, state) => const LeadershipMeetingsScreen(),
             ),
+            GoRoute(
+              path: 'performance',
+              builder: (context, state) => const SchoolPerformanceScreen(),
+            ),
+            GoRoute(
+              path: 'finance',
+              builder: (context, state) => const FinancialOverviewScreen(),
+            ),
+            GoRoute(
+              path: 'finance/analytics',
+              builder: (context, state) => const FinanceAnalyticsScreen(),
+            ),
+            GoRoute(
+              path: 'academics',
+              builder: (context, state) => const AcademicOverviewScreen(),
+            ),
+            GoRoute(
+              path: 'students',
+              builder: (context, state) => const StudentAnalyticsScreen(),
+            ),
+            GoRoute(
+              path: 'staff',
+              builder: (context, state) => const StaffOverviewScreen(),
+            ),
+            GoRoute(
+              path: 'parents',
+              builder: (context, state) => const ParentEngagementScreen(),
+            ),
+            GoRoute(
+              path: 'departments',
+              builder: (context, state) => const DepartmentsOverviewScreen(),
+            ),
+            GoRoute(
+              path: 'incidents',
+              builder: (context, state) => const IncidentsScreen(),
+            ),
+            GoRoute(
+              path: 'communication',
+              builder: (context, state) => const CommunicationScreen(),
+            ),
           ],
         ),
         GoRoute(
+          path: '/staff/headteacher/report-approvals',
+          redirect: (context, state) {
+            final auth = context.read<AuthBloc>().state;
+            if (auth is! AuthAuthenticated) return '/welcome';
+            const permitted = {
+              UserRole.headTeacher,
+              UserRole.director,
+              UserRole.schoolAdmin,
+            };
+            return auth.user.roles.any(permitted.contains)
+                ? null
+                : UserRoleRouting.dashboardPath(auth.user.role);
+          },
+          builder: (context, state) => const HeadteacherReportQueueScreen(),
+        ),
+        GoRoute(
           path: '/staff/admin',
-          builder: (context, state) => const AdminDashboardScreen(),
+          builder: (context, state) =>
+              const AdminShell(section: AdminSection.home),
           routes: [
+            GoRoute(
+              path: 'school-setup',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                // Same subset as the Structure hub's own admin-tier gate
+                // (UserRoleRouting.adminConsoleRoles) - a School Admin's own
+                // identity editor, never Bursar/Teacher/Parent/Student.
+                const allowedRoles = [
+                  UserRole.schoolAdmin,
+                  UserRole.headTeacher,
+                  UserRole.deputyHead,
+                  UserRole.director,
+                ];
+                if (!auth.user.roles.any(allowedRoles.contains)) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
+              builder: (context, state) => const SchoolSetupScreen(),
+            ),
             GoRoute(
               path: 'data-management',
               redirect: (context, state) {
@@ -1617,7 +2389,8 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'approvals',
-              builder: (context, state) => const ApprovalCenterScreen(),
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.approvals),
               routes: [
                 GoRoute(
                   path: 'policies',
@@ -1636,12 +2409,54 @@ final router = GoRouter(
               ],
             ),
             GoRoute(
+              path: 'parents',
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.parents),
+              routes: [
+                // All Parents sub-screens render through AdminShell
+                // (AdminParentsSectionBody resolves the live URL) so the
+                // canonical sidebar / bottom nav stays mounted with Parents
+                // highlighted across the directory, the Link Parent flow
+                // (both steps, Back, Save draft, refresh), the review page,
+                // and the parent detail/access screen - never as a bare
+                // standalone page.
+                GoRoute(
+                  path: 'link',
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.parents),
+                ),
+                // Must stay below the literal 'link' route - declaration
+                // order matters, this wildcard would otherwise capture it.
+                GoRoute(
+                  path: ':inviteId',
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.parents),
+                ),
+              ],
+            ),
+            GoRoute(
               path: 'users',
-              builder: (context, state) => const StaffListPage(),
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                if (!auth.user.roles.any(
+                  UserRoleDisplay.adminConsoleRoles.contains,
+                )) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.staff),
               routes: [
                 GoRoute(
                   path: 'overview',
-                  builder: (context, state) => const UserManagementPage(),
+                  // Renders through AdminShell (AdminStaffSectionBody
+                  // resolves the URL to UserManagementPage) so the
+                  // persistent sidebar/bottom-nav stays mounted with Staff
+                  // highlighted, instead of opening as a bare standalone page.
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.staff),
                 ),
                 GoRoute(
                   path: 'add-staff',
@@ -1663,24 +2478,55 @@ final router = GoRouter(
                     }
                     return null;
                   },
-                  builder: (context, state) => const AddStaffWizardPage(),
+                  // Renders through AdminShell (AdminStaffSectionBody
+                  // resolves the URL to AddStaffWizardPage) so the
+                  // persistent sidebar/bottom-nav stays mounted with Staff
+                  // highlighted across every wizard step, Back, Continue,
+                  // Save draft, and refresh - instead of the wizard opening
+                  // as a bare standalone page with no shell chrome.
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.staff),
                 ),
                 // Must stay below the literal 'overview'/'add-staff' routes -
                 // go_router matches path segments in declaration order, and
                 // this wildcard would otherwise capture them as a :uid.
                 GoRoute(
                   path: ':uid',
+                  // Renders through AdminShell (AdminStaffSectionBody
+                  // resolves the uid from the live URL) so the persistent
+                  // sidebar/bottom-nav stays mounted with Staff highlighted,
+                  // instead of the profile opening as a bare standalone page.
                   builder: (context, state) =>
-                      StaffDetailScreen(uid: state.pathParameters['uid']!),
+                      const AdminShell(section: AdminSection.staff),
                 ),
               ],
             ),
             GoRoute(
               path: 'broadcast-sms',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                if (!auth.user.roles.any(
+                  UserRoleDisplay.adminConsoleRoles.contains,
+                )) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
               builder: (context, state) => const BroadcastSmsScreen(),
             ),
             GoRoute(
               path: 'config',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                if (!auth.user.roles.any(
+                  UserRoleDisplay.adminConsoleRoles.contains,
+                )) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
               builder: (context, state) => const SystemConfigScreen(),
             ),
             GoRoute(
@@ -1734,6 +2580,24 @@ final router = GoRouter(
               // `StructureScreen` once every step is complete. Old deep
               // links that used to carry `?section=...` now land on the
               // same gate rather than jumping into an obsolete tabbed view.
+              //
+              // parentNavigatorKey pins this route (and its children) to the
+              // root Navigator so it always renders as a standalone full
+              // page, even when pushed from AdminMoreScreen/AdminShell's
+              // nested per-section Navigator — otherwise it stacks on top of
+              // that nested Navigator and AdminShell's sidebar stays mounted
+              // underneath, producing a double sidebar.
+              parentNavigatorKey: rootNavigatorKey,
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                if (!auth.user.roles.any(
+                  UserRoleDisplay.adminConsoleRoles.contains,
+                )) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
               builder: (context, state) => const StructureWizardScreen(),
               routes: [
                 GoRoute(
@@ -1757,8 +2621,27 @@ final router = GoRouter(
                 ),
                 GoRoute(
                   path: 'academics',
+                  // Only redirects the bare `academics` path itself - a
+                  // redirect on a parent GoRoute in go_router fires for every
+                  // matched location under it, so returning unconditionally
+                  // here was also hijacking every child route below (fee-
+                  // structures, subjects, levels, etc.), bouncing them all
+                  // back to the wizard gate before their own builder ran.
+                  //
+                  // `state.matchedLocation` is NOT the requested URL here -
+                  // for an ancestor GoRoute it is always that route's own
+                  // matched prefix ('/staff/admin/structure/academics'),
+                  // identical whether the actual request is bare `academics`
+                  // or `academics/fee-structures` beneath it. A prior fix
+                  // compared against `matchedLocation` expecting it to differ
+                  // between those two requests; it never does, so the
+                  // redirect kept firing for every child unconditionally.
+                  // `state.uri.path` is the actual full requested path and is
+                  // the only field that distinguishes the two.
                   redirect: (context, state) =>
-                      '/staff/admin/structure?section=academics',
+                      state.uri.path == '/staff/admin/structure/academics'
+                      ? '/staff/admin/structure?section=academics'
+                      : null,
                   routes: [
                     GoRoute(
                       path: 'levels',
@@ -1784,6 +2667,11 @@ final router = GoRouter(
                       ),
                     ),
                     GoRoute(
+                      path: 'calendar-confirmation',
+                      builder: (context, state) =>
+                          const AcademicCalendarConfirmationScreen(),
+                    ),
+                    GoRoute(
                       path: 'classes-streams',
                       builder: (context, state) => ClassesStreamsScreen(
                         wizardStep: int.tryParse(
@@ -1796,6 +2684,17 @@ final router = GoRouter(
                             state.uri.queryParameters['wizardStepId'] ??
                             'classes',
                       ),
+                    ),
+                    GoRoute(
+                      path: 'fee-structures',
+                      // Phase 1: the new Fee Plan Builder (immutable
+                      // published fee-plan versions, integer UGX) replaces
+                      // the legacy FeeConfigurationScreen here. School admin
+                      // reaches this from Structure > Academics > Fee Plans
+                      // without going through any Bursar-prefixed screen.
+                      // FeeConfigurationScreen itself is left in place for
+                      // any other legacy caller/read path.
+                      builder: (context, state) => const FeePlanBuilderScreen(),
                     ),
                     GoRoute(
                       path: 'subjects',
@@ -1852,15 +2751,22 @@ final router = GoRouter(
                 GoRoute(
                   path: 'people',
                   builder: (context, state) => const PeopleStructureScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'salary-structures',
+                      // Salary Structure Builder (immutable published
+                      // structure versions, integer UGX, keyed by staff
+                      // designation) - mirrors the Fee Plan Builder pattern
+                      // for payroll. Reached from Structure > People >
+                      // Salary Structures.
+                      builder: (context, state) =>
+                          const SalaryStructureBuilderScreen(),
+                    ),
+                  ],
                 ),
                 GoRoute(
                   path: 'assessment',
-                  builder: (context, state) {
-                    final tab =
-                        int.tryParse(state.uri.queryParameters['tab'] ?? '0') ??
-                        0;
-                    return AssessmentGradingScreen(initialTab: tab);
-                  },
+                  builder: (context, state) => const AssessmentGradingScreen(),
                 ),
                 GoRoute(
                   path: 'campus',
@@ -1966,7 +2872,45 @@ final router = GoRouter(
             ),
             GoRoute(
               path: 'staff-attendance',
-              builder: (context, state) => const AdminStaffAttendanceScreen(),
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.attendance),
+            ),
+            // The desktop/tablet sidebar's "More" item and the mobile More
+            // tab both need this to be a real, deep-linkable, refresh-safe
+            // route - not just an AdminMoreScreen widget reached in-memory.
+            // Same admin-console gate as the Structure/settings hubs.
+            GoRoute(
+              path: 'more',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                if (!auth.user.roles.any(
+                  UserRoleDisplay.adminConsoleRoles.contains,
+                )) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.more),
+            ),
+            GoRoute(
+              path: 'fees',
+              redirect: (context, state) {
+                final auth = context.read<AuthBloc>().state;
+                if (auth is! AuthAuthenticated) return '/welcome';
+                const permitted = {
+                  UserRole.schoolAdmin,
+                  UserRole.headTeacher,
+                  UserRole.director,
+                };
+                if (!auth.user.roles.any(permitted.contains)) {
+                  return UserRoleRouting.dashboardPath(auth.user.role);
+                }
+                return null;
+              },
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.fees),
             ),
             GoRoute(
               path: 'batch-id-cards',
@@ -2012,18 +2956,34 @@ final router = GoRouter(
                 }
                 return null;
               },
-              builder: (context, state) => const AdmissionsListScreen(),
+              // Renders through AdminShell (AdminStudentsSectionBody resolves
+              // the URL to the right admission screen) so the persistent
+              // sidebar/bottom-nav stays mounted with Students highlighted,
+              // instead of these steps opening as bare standalone Scaffolds.
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.students),
               routes: [
                 GoRoute(
                   path: 'new',
                   builder: (context, state) =>
-                      NewApplicationScreen(schoolId: state.extra as String),
+                      const AdminShell(section: AdminSection.students),
+                ),
+                GoRoute(
+                  path: 'register',
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.students),
                 ),
                 GoRoute(
                   path: 'review',
-                  builder: (context, state) => AdmissionReviewScreen(
-                    application: state.extra as AdmissionApplication,
-                  ),
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.students),
+                  routes: [
+                    GoRoute(
+                      path: 'enroll',
+                      builder: (context, state) =>
+                          const AdminShell(section: AdminSection.students),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -2046,36 +3006,48 @@ final router = GoRouter(
                 }
                 return null;
               },
-              builder: (context, state) => const AdminStudentsDashboardScreen(),
+              // Students is a working directory, not a dashboard. The
+              // dashboard remains available from its own workspace entry;
+              // this route deliberately matches the compact learner list.
+              // Renders inside AdminShell so the persistent sidebar/bottom
+              // nav is present, matching every other admin console screen.
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.students),
               routes: [
                 GoRoute(
                   path: 'list',
-                  builder: (context, state) => const AdminStudentsListScreen(),
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.students),
+                ),
+                GoRoute(
+                  path: 'directory',
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.students),
                 ),
                 GoRoute(
                   path: ':id',
-                  builder: (context, state) => AdminStudentProfileScreen(
-                    studentId: state.pathParameters['id']!,
-                  ),
+                  // Renders through AdminShell (AdminStudentsSectionBody
+                  // resolves the studentId/`?tab=`/`extra` from the live
+                  // URL) so the persistent sidebar/bottom-nav stays mounted
+                  // with Students highlighted, instead of the profile and
+                  // its subpages opening as bare standalone Scaffolds.
+                  builder: (context, state) =>
+                      const AdminShell(section: AdminSection.students),
                   routes: [
                     GoRoute(
                       path: 'documents',
-                      builder: (context, state) => AdminStudentDocumentsScreen(
-                        student: state.extra as Student,
-                        canMutate: true,
-                      ),
+                      builder: (context, state) =>
+                          const AdminShell(section: AdminSection.students),
                     ),
                     GoRoute(
                       path: 'identity',
-                      builder: (context, state) => IdentityAndCardsScreen(
-                        student: state.extra as Student,
-                      ),
+                      builder: (context, state) =>
+                          const AdminShell(section: AdminSection.students),
                     ),
                     GoRoute(
                       path: 'portal',
-                      builder: (context, state) => StudentPortalCodesScreen(
-                        student: state.extra as Student,
-                      ),
+                      builder: (context, state) =>
+                          const AdminShell(section: AdminSection.students),
                     ),
                   ],
                 ),
@@ -2098,7 +3070,8 @@ final router = GoRouter(
                     ? null
                     : UserRoleRouting.dashboardPath(auth.user.role);
               },
-              builder: (context, state) => const AppointmentsWorkspaceScreen(),
+              builder: (context, state) =>
+                  const AdminShell(section: AdminSection.appointments),
             ),
             GoRoute(
               path: 'audit-log',
@@ -2485,8 +3458,33 @@ final router = GoRouter(
           builder: (context, state) => const TeacherTimetableScreen(),
         ),
         GoRoute(
+          path: '/staff/activities',
+          builder: (context, state) => const ClassActivitiesScreen(),
+        ),
+        GoRoute(
+          path: '/staff/work',
+          builder: (context, state) => const WorkInboxScreen(),
+        ),
+        GoRoute(
+          path: '/staff/school',
+          builder: (context, state) => const SchoolWorkspaceScreen(),
+        ),
+        GoRoute(
+          path: '/staff/admin/school-subdomain',
+          builder: (context, state) => const SchoolSubdomainScreen(),
+        ),
+        GoRoute(
           path: '/staff/more',
-          builder: (context, state) => const ProfileMoreScreen(),
+          // A nurse must never fall through to the shared admin/teacher More
+          // route. Their portal owns its own navigation and More screen.
+          redirect: (context, state) {
+            final auth = context.read<AuthBloc>().state;
+            if (auth is AuthAuthenticated && auth.user.role == UserRole.nurse) {
+              return '/staff/nurse';
+            }
+            return null;
+          },
+          builder: (context, state) => const ClassTeacherMoreScreen(),
           routes: [
             GoRoute(
               path: 'subjects',
@@ -2520,6 +3518,18 @@ final router = GoRouter(
               path: 'notification-preferences',
               builder: (context, state) =>
                   const NotificationPreferencesScreen(),
+            ),
+            GoRoute(
+              path: 'attendance-settings',
+              builder: (context, state) => const AttendanceSettingsScreen(),
+            ),
+            GoRoute(
+              path: 'offline-data',
+              builder: (context, state) => const OfflineDataScreen(),
+            ),
+            GoRoute(
+              path: 'about',
+              builder: (context, state) => const AboutSchoolPulseScreen(),
             ),
             GoRoute(
               path: 'security-privacy',
@@ -2582,8 +3592,15 @@ final router = GoRouter(
           ],
         ),
         GoRoute(
-          path: '/staff/homework',
+          path: '/staff/classwork',
           builder: (context, state) => const HomeworkScreen(),
+        ),
+        // Kept for bookmarked links. The former task manager is no longer a
+        // primary Class Teacher destination; classwork uses the canonical
+        // homework/assessment repository instead.
+        GoRoute(
+          path: '/staff/homework',
+          redirect: (context, state) => '/staff/classwork',
         ),
         // The Class Teacher's own daily register - distinct from the shared
         // /staff/attendance method-chooser above, which every staff role
@@ -2614,6 +3631,10 @@ final router = GoRouter(
         GoRoute(
           path: '/staff/calendar',
           builder: (context, state) => const CalendarHomeScreen(),
+        ),
+        GoRoute(
+          path: '/staff/class-tasks',
+          redirect: (context, state) => '/staff/classwork',
         ),
         GoRoute(
           path: '/staff/tasks',
@@ -2719,243 +3740,143 @@ final router = GoRouter(
         ),
       ],
     ),
-    GoRoute(
-      path: '/messages',
-      builder: (context, state) => const MessagesListScreen(),
+    ShellRoute(
+      // Messaging uses shared routes for every role. Keep the parent shell
+      // around those shared subflows so selecting a contact, opening a chat,
+      // or changing message settings never makes the parent navigation vanish.
+      builder: (context, state, child) => _messagingShell(context, child),
       routes: [
         GoRoute(
-          path: 'search',
-          builder: (context, state) => const SearchMessagesScreen(),
-        ),
-        GoRoute(
-          path: 'requests',
-          builder: (context, state) => const MessageRequestsScreen(),
-        ),
-        GoRoute(
-          path: 'archived',
-          builder: (context, state) => const ArchivedChatsScreen(),
-        ),
-        GoRoute(
-          path: 'starred',
-          builder: (context, state) => const StarredMessagesScreen(),
-        ),
-        GoRoute(
-          path: 'pinned',
-          builder: (context, state) => const PinnedMessagesScreen(),
-        ),
-        GoRoute(
-          path: 'settings',
-          builder: (context, state) => const ChatSettingsScreen(),
-        ),
-        GoRoute(
-          path: 'broadcast/:id',
-          builder: (context, state) =>
-              BroadcastDetailsScreen(broadcastId: state.pathParameters['id']!),
-        ),
-        GoRoute(
-          path: 'new',
-          builder: (context, state) => const NewMessageTypeScreen(),
+          path: '/messages',
+          builder: (context, state) => const MessagesListScreen(),
           routes: [
             GoRoute(
-              path: 'contacts',
-              builder: (context, state) => const SelectContactsScreen(),
+              path: 'search',
+              builder: (context, state) => const SearchMessagesScreen(),
             ),
             GoRoute(
-              path: 'group',
-              builder: (context, state) =>
-                  const SelectContactsScreen(isGroupSelection: true),
+              path: 'requests',
+              builder: (context, state) => const MessageRequestsScreen(),
+            ),
+            GoRoute(
+              path: 'archived',
+              builder: (context, state) => const ArchivedChatsScreen(),
+            ),
+            GoRoute(
+              path: 'starred',
+              builder: (context, state) => const StarredMessagesScreen(),
+            ),
+            GoRoute(
+              path: 'pinned',
+              builder: (context, state) => const PinnedMessagesScreen(),
+            ),
+            GoRoute(
+              path: 'settings',
+              builder: (context, state) => const ChatSettingsScreen(),
+            ),
+            GoRoute(
+              path: 'broadcast/:id',
+              builder: (context, state) => BroadcastDetailsScreen(
+                broadcastId: state.pathParameters['id']!,
+              ),
+            ),
+            GoRoute(
+              path: 'new',
+              builder: (context, state) => const NewMessageTypeScreen(),
               routes: [
-                // Shared by the group, broadcast and channel flows - which
-                // one is being created travels in the NewConversationDraft.
                 GoRoute(
-                  path: 'details',
-                  builder: (context, state) => NewGroupDetailsScreen(
-                    draft: state.extra as NewConversationDraft?,
+                  path: 'contacts',
+                  builder: (context, state) => const SelectContactsScreen(),
+                ),
+                GoRoute(
+                  path: 'group',
+                  builder: (context, state) =>
+                      const SelectContactsScreen(isGroupSelection: true),
+                  routes: [
+                    // Shared by the group, broadcast and channel flows - which
+                    // one is being created travels in the NewConversationDraft.
+                    GoRoute(
+                      path: 'details',
+                      builder: (context, state) => NewGroupDetailsScreen(
+                        draft: state.extra as NewConversationDraft?,
+                      ),
+                    ),
+                  ],
+                ),
+                GoRoute(
+                  path: 'broadcast',
+                  builder: (context, state) => const SelectContactsScreen(
+                    isGroupSelection: true,
+                    conversationType: ChatType.broadcast,
+                  ),
+                ),
+                GoRoute(
+                  path: 'channel',
+                  builder: (context, state) => const SelectContactsScreen(
+                    isGroupSelection: true,
+                    conversationType: ChatType.channel,
                   ),
                 ),
               ],
             ),
             GoRoute(
-              path: 'broadcast',
-              builder: (context, state) => const SelectContactsScreen(
-                isGroupSelection: true,
-                conversationType: ChatType.broadcast,
+              path: 'chat/:chatId',
+              builder: (context, state) => ChatConversationScreen(
+                chatId: state.pathParameters['chatId']!,
               ),
-            ),
-            GoRoute(
-              path: 'channel',
-              builder: (context, state) => const SelectContactsScreen(
-                isGroupSelection: true,
-                conversationType: ChatType.channel,
-              ),
-            ),
-          ],
-        ),
-        GoRoute(
-          path: 'chat/:chatId',
-          builder: (context, state) =>
-              ChatConversationScreen(chatId: state.pathParameters['chatId']!),
-          routes: [
-            GoRoute(
-              path: 'info',
-              builder: (context, state) =>
-                  ChatInfoScreen(chatId: state.pathParameters['chatId']!),
-            ),
-            GoRoute(
-              path: 'media',
-              builder: (context, state) =>
-                  MediaLinksDocsScreen(chatId: state.pathParameters['chatId']!),
-            ),
-            GoRoute(
-              path: 'profile',
-              builder: (context, state) => ContactProfileScreen(
-                contactId: state.pathParameters['chatId']!,
-              ),
+              routes: [
+                GoRoute(
+                  path: 'info',
+                  builder: (context, state) =>
+                      ChatInfoScreen(chatId: state.pathParameters['chatId']!),
+                ),
+                GoRoute(
+                  path: 'media',
+                  builder: (context, state) => MediaLinksDocsScreen(
+                    chatId: state.pathParameters['chatId']!,
+                  ),
+                ),
+                GoRoute(
+                  path: 'profile',
+                  builder: (context, state) => ContactProfileScreen(
+                    contactId: state.pathParameters['chatId']!,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ],
     ),
-    // Deliberately outside every ShellRoute above - the owner console has
-    // its own complete navigation (sidebar on wide, bottom nav on mobile)
-    // and must never be wrapped in StaffShell's staff-facing bottom nav.
-    GoRoute(
-      path: '/super-admin',
-      builder: (context, state) => const SuperAdminDashboard(),
-      routes: [
-        // Top-level sidebar/bottom-nav sections. Each renders the same
-        // SuperAdminDashboard, which reads the active section back out of
-        // the URL (see `_sectionIndexForLocation` in super_admin_dashboard
-        // .dart) - giving every section its own real, refreshable,
-        // back/forward-able address without duplicating the dashboard's
-        // IndexedStack/nested-Navigator shell per route.
-        //
-        // Detail screens (School Details, Application Review, Payment
-        // Review) are deliberately NOT full GoRoutes: they're pushed onto
-        // the section's own nested Navigator (SuperAdminTabNavigator) so
-        // the sidebar/bottom-nav stays visible, exactly as before this
-        // change. Their :id child routes below exist only so the URL bar
-        // reflects that a detail screen is open and Back/Forward has a
-        // history entry to land on - navigating to one directly (no
-        // `extra`, e.g. a cold refresh) falls back to the section list,
-        // since there is no fetch-by-id path yet for these entities.
-        GoRoute(
-          path: 'schools',
-          builder: (context, state) => const SuperAdminDashboard(),
-          routes: [
-            GoRoute(
-              path: ':schoolId',
-              builder: (context, state) => const SuperAdminDashboard(),
-            ),
-            GoRoute(
-              path: 'applications/:applicationId',
-              builder: (context, state) => const SuperAdminDashboard(),
-            ),
-          ],
-        ),
-        GoRoute(
-          path: 'payments',
-          builder: (context, state) => const SuperAdminDashboard(),
-          routes: [
-            GoRoute(
-              path: ':paymentId',
-              builder: (context, state) => const SuperAdminDashboard(),
-            ),
-          ],
-        ),
-        GoRoute(
-          path: 'plans',
-          builder: (context, state) => const SuperAdminDashboard(),
-        ),
-        GoRoute(
-          path: 'notifications',
-          builder: (context, state) => const SuperAdminDashboard(),
-        ),
-        GoRoute(
-          path: 'audit-logs',
-          builder: (context, state) => const SuperAdminDashboard(),
-        ),
-        GoRoute(
-          path: 'settings',
-          builder: (context, state) => const SuperAdminDashboard(),
-        ),
-        GoRoute(
-          path: 'settings/notifications',
-          builder: (context, state) => const SuperAdminMobileNavShell(
-            child: SuperAdminNotificationsScreen(),
-          ),
-          routes: [
-            GoRoute(
-              path: 'preferences',
-              builder: (context, state) => const SuperAdminMobileNavShell(
-                child: OwnerNotificationPreferencesScreen(),
-              ),
-            ),
-            GoRoute(
-              path: 'history',
-              builder: (context, state) => const SuperAdminMobileNavShell(
-                child: OwnerNotificationHistoryScreen(),
-              ),
-            ),
-          ],
-        ),
-        GoRoute(
-          path: 'settings/security',
-          builder: (context, state) =>
-              const SuperAdminMobileNavShell(child: SecurityCenterScreen()),
-        ),
-        GoRoute(
-          path: 'settings/support',
-          builder: (context, state) =>
-              const SuperAdminMobileNavShell(child: HelpSupportHomeScreen()),
-          routes: [
-            GoRoute(
-              path: 'help-center',
-              builder: (context, state) => const SuperAdminMobileNavShell(
-                child: SupportHelpCenterScreen(),
-              ),
-            ),
-            GoRoute(
-              path: 'faqs',
-              builder: (context, state) =>
-                  const SuperAdminMobileNavShell(child: SupportFaqsScreen()),
-            ),
-            GoRoute(
-              path: 'new',
-              builder: (context, state) => SuperAdminMobileNavShell(
-                child: SubmitSupportRequestScreen(
-                  args:
-                      state.extra as SubmitSupportRequestArgs? ??
-                      const SubmitSupportRequestArgs(origin: 'submit_request'),
-                ),
-              ),
-            ),
-            GoRoute(
-              path: 'ticket/:id',
-              builder: (context, state) => SuperAdminMobileNavShell(
-                child: SupportTicketConversationScreen(
-                  ticketId: state.pathParameters['id']!,
-                ),
-              ),
-            ),
-          ],
-        ),
-        GoRoute(
-          path: 'settings/about',
-          builder: (context, state) =>
-              const SuperAdminMobileNavShell(child: ContactAboutScreen()),
-          routes: [
-            GoRoute(
-              path: 'privacy-policy',
-              builder: (context, state) =>
-                  const SuperAdminMobileNavShell(child: PrivacyPolicyScreen()),
-            ),
-          ],
-        ),
-      ],
-    ),
+    // The `/super-admin` (SaaS owner console) subtree lives in
+    // features/super_admin/presentation/super_admin_routes.dart so every
+    // owner-console screen, path and nested Navigator stays inside that
+    // module. Deliberately outside every ShellRoute above - the console
+    // has its own navigation and must never be wrapped in StaffShell.
+    ...superAdminRoutes,
   ],
 );
+
+/// Wraps an Exam Factory screen with a cubit scoped to the signed-in user's
+/// institution. Built per navigation rather than as a DI singleton because
+/// institutionId/uid are only known once authenticated.
+Widget _examFactoryScoped(BuildContext context, Widget child) =>
+    examFactoryScoped(context, child);
+
+Widget _messagingShell(BuildContext context, Widget child) {
+  final authState = context.read<AuthBloc>().state;
+  if (authState is AuthAuthenticated &&
+      authState.user.roles.contains(UserRole.parent)) {
+    // Web Parent Portal is online-only; mobile instead gets the local
+    // PIN/biometric re-entry gate so setup-completed parents can reopen the
+    // portal offline. See ParentWebOnlineGate / ParentOfflineGate docs.
+    final shell = ParentShell(child: child);
+    return kIsWeb
+        ? ParentWebOnlineGate(child: shell)
+        : ParentOfflineGate(child: shell);
+  }
+  return child;
+}
 
 class ParentShell extends StatelessWidget {
   final Widget child;
@@ -2964,10 +3885,11 @@ class ParentShell extends StatelessWidget {
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).uri.path;
     if (location.startsWith('/parent/home')) return 0;
-    if (location.startsWith('/parent/academics')) return 1;
-    if (location.startsWith('/parent/fees')) return 2;
-    if (location.startsWith('/parent/messages')) return 3;
-    if (location.startsWith('/parent/more')) return 4;
+    if (location.startsWith('/parent/learn')) return 1;
+    if (location.startsWith('/parent/messages')) return 2;
+    if (location.startsWith('/messages')) return 2;
+    if (location.startsWith('/parent/payments')) return 3;
+    if (location.startsWith('/parent/profile')) return 4;
     return 0;
   }
 
@@ -2977,16 +3899,16 @@ class ParentShell extends StatelessWidget {
         context.go('/parent/home');
         break;
       case 1:
-        context.go('/parent/academics');
+        context.go('/parent/learn');
         break;
       case 2:
-        context.go('/parent/fees');
-        break;
-      case 3:
         context.go('/parent/messages');
         break;
+      case 3:
+        context.go('/parent/payments');
+        break;
       case 4:
-        context.go('/parent/more');
+        context.go('/parent/profile');
         break;
     }
   }
@@ -3008,9 +3930,9 @@ class ParentShell extends StatelessWidget {
               Navigator.pop(context);
               context.go('/welcome');
             },
-            child: const Text(
+            child: Text(
               'Logout',
-              style: TextStyle(color: AppColors.deepOrange),
+              style: TextStyle(color: AppColors.danger(context)),
             ),
           ),
         ],
@@ -3023,37 +3945,38 @@ class ParentShell extends StatelessWidget {
     final isMobile = MediaQuery.of(context).size.width < 600;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final selectedIconColor = AppColors.textPrimary(context);
     final destinations = [
-      const NavigationDestination(
-        icon: Icon(Icons.home_outlined),
-        selectedIcon: Icon(Icons.home, color: AppColors.royalBlue),
+      NavigationDestination(
+        icon: const Icon(Icons.home_rounded),
+        selectedIcon: Icon(Icons.home_rounded, color: selectedIconColor),
         label: 'Home',
       ),
-      const NavigationDestination(
-        icon: Icon(Icons.school_outlined),
-        selectedIcon: Icon(Icons.school, color: AppColors.royalBlue),
+      NavigationDestination(
+        icon: const Icon(Icons.auto_stories_outlined),
+        selectedIcon: Icon(Icons.auto_stories, color: selectedIconColor),
         label: 'Academics',
       ),
-      const NavigationDestination(
-        icon: Icon(Icons.account_balance_wallet_outlined),
-        selectedIcon: Icon(
-          Icons.account_balance_wallet,
-          color: AppColors.royalBlue,
-        ),
-        label: 'Fees',
-      ),
-      const NavigationDestination(
-        icon: MessagesNavIcon(icon: Icons.message_outlined),
+      NavigationDestination(
+        icon: const MessagesNavIcon(icon: Icons.chat_bubble_outline_rounded),
         selectedIcon: MessagesNavIcon(
-          icon: Icons.message,
-          color: AppColors.royalBlue,
+          icon: Icons.chat_bubble_rounded,
+          color: selectedIconColor,
         ),
         label: 'Messages',
       ),
-      const NavigationDestination(
-        icon: Icon(Icons.grid_view_outlined),
-        selectedIcon: Icon(Icons.grid_view_rounded, color: AppColors.royalBlue),
-        label: 'More',
+      NavigationDestination(
+        icon: const Icon(Icons.account_balance_wallet_rounded),
+        selectedIcon: Icon(
+          Icons.account_balance_wallet_rounded,
+          color: selectedIconColor,
+        ),
+        label: 'Fees',
+      ),
+      NavigationDestination(
+        icon: const Icon(Icons.person_outline_rounded),
+        selectedIcon: Icon(Icons.person_rounded, color: selectedIconColor),
+        label: 'Profile',
       ),
     ];
 
@@ -3180,16 +4103,29 @@ class ParentShell extends StatelessWidget {
                   ),
                 ],
               ),
-              child: NavigationBar(
-                height: 64,
-                backgroundColor: isDark
-                    ? AppColors.surfaceDark
-                    : AppColors.surfaceLight,
-                indicatorColor: AppColors.electricBlue.withValues(alpha: 0.1),
-                selectedIndex: _calculateSelectedIndex(context),
-                onDestinationSelected: (idx) => _onItemTapped(idx, context),
-                destinations: destinations,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              child: NavigationBarTheme(
+                data: NavigationBarThemeData(
+                  labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                    final selected = states.contains(WidgetState.selected);
+                    return AppTypography.labelSmall.copyWith(
+                      color: selected
+                          ? AppColors.textPrimary(context)
+                          : AppColors.textMuted(context),
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    );
+                  }),
+                ),
+                child: NavigationBar(
+                  height: 64,
+                  backgroundColor: isDark
+                      ? AppColors.surfaceDark
+                      : AppColors.surfaceLight,
+                  indicatorColor: AppColors.surfaceContainerHigh(context),
+                  selectedIndex: _calculateSelectedIndex(context),
+                  onDestinationSelected: (idx) => _onItemTapped(idx, context),
+                  destinations: destinations,
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                ),
               ),
             )
           : null,
@@ -3210,12 +4146,10 @@ class _LogoutButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
         child: TextButton.icon(
           onPressed: onPressed,
-          icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
+          icon: const Icon(Icons.logout_rounded, color: AppColors.black),
           label: Text(
             'Logout',
-            style: AppTypography.labelLarge.copyWith(
-              color: AppColors.deepOrange,
-            ),
+            style: AppTypography.labelLarge.copyWith(color: AppColors.black),
           ),
           style: TextButton.styleFrom(
             alignment: Alignment.centerLeft,
@@ -3226,7 +4160,7 @@ class _LogoutButton extends StatelessWidget {
     }
 
     return IconButton(
-      icon: const Icon(Icons.logout_rounded, color: AppColors.deepOrange),
+      icon: const Icon(Icons.logout_rounded, color: AppColors.black),
       onPressed: onPressed,
       tooltip: 'Logout',
     );

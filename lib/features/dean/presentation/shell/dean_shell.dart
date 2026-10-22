@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/dean/presentation/screens/alerts/academic_alerts_screen.dart';
-import 'package:school_pulse/features/dean/presentation/screens/analytics/performance_analytics_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/assessments/assessments_overview_screen.dart';
-import 'package:school_pulse/features/dean/presentation/screens/curriculum/curriculum_management_screen.dart';
-import 'package:school_pulse/features/dean/presentation/screens/dean_dashboard_screen.dart';
-import 'package:school_pulse/features/dean/presentation/screens/exams/exams_overview_screen.dart';
+import 'package:school_pulse/features/dean/presentation/screens/curriculum/curriculum_coverage_list_screen.dart';
+import 'package:school_pulse/features/exam_factory/presentation/screens/exam_factory_screens.dart';
+import 'package:school_pulse/features/exam_factory/presentation/widgets/exam_factory_scope.dart';
 import 'package:school_pulse/features/dean/presentation/screens/interventions/academic_interventions_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/monitoring/lesson_monitoring_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/monitoring/missed_lessons_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/more/dean_more_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/operations/todays_operations_screen.dart';
+import 'package:school_pulse/features/dean/presentation/screens/qa/marks_completion_matrix_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/qa/marks_qa_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/students/student_academic_profile_screen.dart';
 import 'package:school_pulse/features/dean/presentation/screens/workload/teacher_workload_screen.dart';
 
 /// Bottom-navigation shell for the Dean of Studies (DOS) module.
 ///
-/// 5 tabs: Overview / Teaching / Assessments / Reports / More.
+/// 5 tabs mirror the live DOS workflow: Today / Teaching / Assessments /
+/// Exams / More.
 /// Each tab owns a nested [Navigator] so that screens pushed on top of a
 /// tab's root keep the [DeanShell]'s bottom nav visible (push-on-top-of-tab
 /// pattern). Pushed screens are reached via named routes registered on each
@@ -37,59 +39,42 @@ class _DeanShellState extends State<DeanShell> {
     (_) => GlobalKey<NavigatorState>(),
   );
 
-  static const List<NavigationDestination> _destinations = [
-    NavigationDestination(
-      icon: Icon(Icons.dashboard_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.dashboard_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
+  List<NavigationDestination> _destinations(BuildContext context) {
+    final active = AppColors.information(context);
+    return [
+      NavigationDestination(
+        icon: const Icon(Icons.dashboard_outlined, size: 24),
+        selectedIcon: Icon(Icons.dashboard_rounded, size: 24, color: active),
+        label: 'Today',
       ),
-      label: 'Overview',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.school_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.school_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
+      NavigationDestination(
+        icon: const Icon(Icons.school_outlined, size: 24),
+        selectedIcon: Icon(Icons.school_rounded, size: 24, color: active),
+        label: 'Teaching',
       ),
-      label: 'Teaching',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.fact_check_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.fact_check_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
+      NavigationDestination(
+        icon: const Icon(Icons.fact_check_outlined, size: 24),
+        selectedIcon: Icon(Icons.fact_check_rounded, size: 24, color: active),
+        label: 'Assessments',
       ),
-      label: 'Assessments',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.bar_chart_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.bar_chart_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
+      NavigationDestination(
+        icon: const Icon(Icons.assignment_outlined, size: 24),
+        selectedIcon: Icon(Icons.assignment_rounded, size: 24, color: active),
+        label: 'Exams',
       ),
-      label: 'Reports',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.grid_view_outlined, size: 24),
-      selectedIcon: Icon(
-        Icons.grid_view_rounded,
-        size: 24,
-        color: AppColors.royalBlue,
+      NavigationDestination(
+        icon: const Icon(Icons.grid_view_outlined, size: 24),
+        selectedIcon: Icon(Icons.grid_view_rounded, size: 24, color: active),
+        label: 'More',
       ),
-      label: 'More',
-    ),
-  ];
+    ];
+  }
 
   /// Each tab's route table: `/` is the tab root, other entries are screens
   /// pushed on top of that tab per the plan's tab-mapping table.
   Widget Function(BuildContext) _routeBuilder(int tabIndex, String routeName) {
     switch (tabIndex) {
-      case 0: // Overview
+      case 0: // Today
         switch (routeName) {
           case 'today':
             return (_) => const TodaysOperationsScreen();
@@ -102,7 +87,7 @@ class _DeanShellState extends State<DeanShell> {
               return StudentAcademicProfileScreen(studentId: studentId);
             };
           default:
-            return (_) => const DeanDashboardScreen();
+            return (_) => const TodaysOperationsScreen();
         }
       case 1: // Teaching
         switch (routeName) {
@@ -111,7 +96,7 @@ class _DeanShellState extends State<DeanShell> {
           case 'missed-lessons':
             return (_) => const MissedLessonsScreen();
           case 'syllabus':
-            return (_) => const CurriculumManagementScreen();
+            return (_) => const CurriculumCoverageListScreen();
           default:
             return (_) => const TeacherWorkloadScreen();
         }
@@ -119,17 +104,20 @@ class _DeanShellState extends State<DeanShell> {
         switch (routeName) {
           case 'marks-qa':
             return (_) => const MarksQAScreen();
+          case 'marks-completion':
+            return (_) => const MarksCompletionMatrixScreen();
           case 'interventions':
             return (_) => const AcademicInterventionsScreen();
           default:
             return (_) => const AssessmentsOverviewScreen();
         }
-      case 3: // Reports
+      case 3: // Exams
         switch (routeName) {
-          case 'readiness':
-            return (_) => const PerformanceAnalyticsScreen();
           default:
-            return (_) => const ExamsOverviewScreen();
+            return (context) => examFactoryScoped(
+              context,
+              const ExamFactoryDashboardScreen(),
+            );
         }
       case 4: // More
       default:
@@ -172,8 +160,6 @@ class _DeanShellState extends State<DeanShell> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
@@ -188,27 +174,25 @@ class _DeanShellState extends State<DeanShell> {
           index: _selectedIndex,
           children: List.generate(5, _buildTabNavigator),
         ),
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow(context),
-                blurRadius: 20,
-                offset: const Offset(0, -5),
-              ),
-            ],
+        bottomNavigationBar: NavigationBar(
+          height: 68,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          indicatorColor: AppColors.informationSurface(context),
+          labelTextStyle: WidgetStateProperty.resolveWith(
+            (states) => AppTypography.labelLarge.copyWith(
+              fontSize: 13,
+              color: states.contains(WidgetState.selected)
+                  ? AppColors.information(context)
+                  : AppColors.textSecondary(context),
+              fontWeight: states.contains(WidgetState.selected)
+                  ? FontWeight.w700
+                  : FontWeight.w500,
+            ),
           ),
-          child: NavigationBar(
-            height: 64,
-            backgroundColor: isDark
-                ? AppColors.surfaceDark
-                : AppColors.surfaceLight,
-            indicatorColor: AppColors.electricBlue.withValues(alpha: 0.1),
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: _onDestinationSelected,
-            destinations: _destinations,
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          ),
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onDestinationSelected,
+          destinations: _destinations(context),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         ),
       ),
     );

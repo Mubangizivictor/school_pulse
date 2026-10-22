@@ -104,7 +104,7 @@ class _ParentBoardingScreenState extends State<ParentBoardingScreen> {
                   child: ListTile(
                     leading: const Icon(
                       Icons.campaign_outlined,
-                      color: Colors.orange,
+                      color: Colors.black,
                     ),
                     title: Text(announcement.title),
                     subtitle: Text(announcement.content),
@@ -158,19 +158,17 @@ class _ParentBoardingScreenState extends State<ParentBoardingScreen> {
             trailing: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color:
-                    (boardingData?.status == 'Present'
-                            ? Colors.green
-                            : Colors.orange)
-                        .withValues(alpha: 0.1),
+                color: (boardingData?.status == 'Present'
+                    ? Colors.black
+                    : Colors.black),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 boardingData?.status ?? 'Unknown',
                 style: TextStyle(
                   color: boardingData?.status == 'Present'
-                      ? Colors.green
-                      : Colors.orange,
+                      ? Colors.black
+                      : Colors.black,
                   fontWeight: FontWeight.bold,
                   fontSize: 12,
                 ),
@@ -269,19 +267,17 @@ class _ParentBoardingScreenState extends State<ParentBoardingScreen> {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color:
-                          (incident.status == 'Resolved'
-                                  ? Colors.green
-                                  : Colors.orange)
-                              .withValues(alpha: 0.1),
+                      color: (incident.status == 'Resolved'
+                          ? Colors.black
+                          : Colors.black),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       incident.status,
                       style: TextStyle(
                         color: incident.status == 'Resolved'
-                            ? Colors.green
-                            : Colors.orange,
+                            ? Colors.black
+                            : Colors.black,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),

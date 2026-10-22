@@ -77,10 +77,7 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
         .where((t) => t.id == timetable.termId)
         .map((t) => t.name)
         .firstOrNull;
-    final classLabel = [
-      className ?? timetable.name,
-      if (streamName != null) streamName,
-    ].join(' - ');
+    final classLabel = [className ?? timetable.name, ?streamName].join(' - ');
 
     final pdfData = await TimetablePdfGenerator.generate(
       timetable: timetable,
@@ -105,8 +102,15 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
     List<TimetableLesson> lessons,
     StructureState structureState,
   ) async {
-    final built = await _buildPdf(timetable, config, lessons, structureState);
-    await TimetablePdfGenerator.print(built.pdfData);
+    try {
+      final built = await _buildPdf(timetable, config, lessons, structureState);
+      await TimetablePdfGenerator.print(built.pdfData);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not print timetable: $e')));
+    }
   }
 
   Future<void> _save(
@@ -115,16 +119,24 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
     List<TimetableLesson> lessons,
     StructureState structureState,
   ) async {
-    final built = await _buildPdf(timetable, config, lessons, structureState);
-    final fileName = '${built.classLabel.replaceAll(' ', '_')}_Timetable.pdf';
-    await TimetablePdfGenerator.save(built.pdfData, fileName);
+    try {
+      final built = await _buildPdf(timetable, config, lessons, structureState);
+      final fileName = '${built.classLabel.replaceAll(' ', '_')}_Timetable.pdf';
+      await TimetablePdfGenerator.save(built.pdfData, fileName);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save timetable: $e')));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<TimetableBloc, TimetableState>(
       listenWhen: (previous, current) =>
-          previous.publishConflicts != current.publishConflicts,
+          previous.publishConflicts != current.publishConflicts ||
+          previous.errorMessage != current.errorMessage,
       listener: (context, state) {
         if (state.publishConflicts.isNotEmpty) {
           final total = state.publishConflicts.values.fold<int>(
@@ -138,6 +150,11 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
               ),
             ),
           );
+        }
+        if (state.errorMessage != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
         }
       },
       builder: (context, state) {
@@ -198,10 +215,7 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
                   children: [
                     Expanded(
                       child: Text(
-                        [
-                          className ?? timetable.name,
-                          if (streamName != null) streamName,
-                        ].join(' - '),
+                        [className ?? timetable.name, ?streamName].join(' - '),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
@@ -210,7 +224,7 @@ class _TimetableBuilderScreenState extends State<TimetableBuilderScreen> {
                     ),
                     StructureStatusBadge(
                       label: timetable.status.label,
-                      isActive: timetable.status == TimetableStatus.active,
+                      isActive: timetable.status == TimetableStatus.published,
                     ),
                   ],
                 ),
@@ -356,7 +370,7 @@ class _SlotRow extends StatelessWidget {
       child: Material(
         color: lesson == null
             ? Theme.of(context).cardColor
-            : colors.primaryContainer.withValues(alpha: .3),
+            : colors.primaryContainer,
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
@@ -372,7 +386,7 @@ class _SlotRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: colors.outline.withValues(alpha: .18)),
+              border: Border.all(color: colors.outline),
             ),
             child: Row(
               children: [

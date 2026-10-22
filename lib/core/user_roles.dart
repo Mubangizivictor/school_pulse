@@ -110,6 +110,18 @@ class UserRoleDisplay {
     UserRole.deputyHead,
   ];
 
+  /// Roles allowed to export staff attendance and to file an authorised
+  /// manual correction. Deputy Head can *view* the Staff Attendance
+  /// dashboard (it's part of [adminConsoleRoles]) but not export it or
+  /// alter records - the same narrowing payroll uses. Mirrored server-side
+  /// by `functions/staff_attendance_corrections.js` CORRECTOR_ROLES.
+  static const List<UserRole> staffAttendanceManagers = [
+    UserRole.director,
+    UserRole.headTeacher,
+    UserRole.schoolAdmin,
+    UserRole.hrOfficer,
+  ];
+
   /// The dormitory wing a Matron (girls) or Patron (boys) is scoped to, so
   /// neither sees the other's dormitories/boarders. Null for every other
   /// role (unscoped - e.g. an admin previewing the same screen).
@@ -205,6 +217,16 @@ class UserRoleRouting {
         return '/staff/patron';
       case UserRole.boardingMatron:
         return '/staff/matron';
+      case UserRole.transportCoordinator:
+        return '/staff/transport';
+      case UserRole.guidanceDiscipline:
+        return '/staff/discipline';
+      case UserRole.gamesMaster:
+        return '/staff/games';
+      case UserRole.cateringManager:
+        return '/staff/catering';
+      case UserRole.religiousLeader:
+        return '/staff/religious-leader';
       case UserRole.student:
         return '/student/dashboard';
       default:

@@ -56,11 +56,19 @@ class ConversationModel {
     );
     final pinnedMessage = data['pinnedMessage'] as Map<String, dynamic>?;
 
+    final directOther = type == ChatType.direct
+        ? participants.where((participant) => participant.id != currentUserId)
+        : const <MessageParticipant>[];
+
     return ChatConversation(
       id: doc.id,
       title: title.isEmpty ? 'Conversation' : title,
       subtitle: subtitle,
-      avatarUrl: data['avatarUrl'] as String?,
+      // One-to-one chats do not have a shared image: show the other person's
+      // uploaded profile image instead.
+      avatarUrl:
+          data['avatarUrl'] as String? ??
+          (directOther.isEmpty ? null : directOther.first.avatarUrl),
       type: type,
       lastMessage: _lastMessage(
         data['lastMessage'] as Map<String, dynamic>?,

@@ -89,15 +89,15 @@ Future<void> showTimetableSlotFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        TimetableSlot(
-          name: nameController.text,
-          startTime: startController.text,
-          endTime: endController.text,
-          type: selectedType,
-        ),
+      final slot = TimetableSlot(
+        name: nameController.text,
+        startTime: startController.text,
+        endTime: endController.text,
+        type: selectedType,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(slot);
     },
   );
 }
@@ -158,16 +158,16 @@ Future<void> showAttendanceTypeFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        AttendanceTypeDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          colorHex: _colorToHex(selectedColor),
-          isActive: isActive,
-        ),
+      final type = AttendanceTypeDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        colorHex: _colorToHex(selectedColor),
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(type);
     },
   );
 }
@@ -211,15 +211,15 @@ Future<void> showAttendanceSessionFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        AttendanceSessionDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          isActive: isActive,
-        ),
+      final session = AttendanceSessionDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(session);
     },
   );
 }
@@ -261,15 +261,15 @@ Future<void> showAnnouncementCategoryFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        AnnouncementCategoryDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          isActive: isActive,
-        ),
+      final category = AnnouncementCategoryDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(category);
     },
   );
 }
@@ -311,15 +311,15 @@ Future<void> showNotificationCategoryFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        NotificationCategoryDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          isActive: isActive,
-        ),
+      final category = NotificationCategoryDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(category);
     },
   );
 }
@@ -389,18 +389,18 @@ Future<void> showMessageTemplateFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        MessageTemplateDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          channel: selectedChannel,
-          subject: subjectController.text,
-          body: bodyController.text,
-          isActive: isActive,
-        ),
+      final template = MessageTemplateDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        channel: selectedChannel,
+        subject: subjectController.text,
+        body: bodyController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(template);
     },
   );
 }
@@ -457,17 +457,17 @@ Future<void> showDocumentTemplateFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        DocumentTemplateDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          templateType: typeController.text,
-          description: descController.text,
-          isActive: isActive,
-        ),
+      final template = DocumentTemplateDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        templateType: typeController.text,
+        description: descController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(template);
     },
   );
 }

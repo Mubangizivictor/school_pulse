@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/error/failures.dart';
+import 'package:school_pulse/features/student/domain/services/enrollment_audit_service.dart';
 import '../../domain/entities/student_identity.dart';
 import '../../domain/repositories/student_identity_repository.dart';
 import '../../domain/services/nfc_credential_service.dart';
@@ -13,10 +14,12 @@ class StudentIdentityBloc
     extends Bloc<StudentIdentityEvent, StudentIdentityState> {
   final StudentIdentityRepository repository;
   final NfcCredentialService nfcCredentialService;
+  final EnrollmentAuditService auditService;
 
   StudentIdentityBloc({
     required this.repository,
     required this.nfcCredentialService,
+    required this.auditService,
   }) : super(StudentIdentityInitial()) {
     on<LoadStudentIdentityEvent>((event, emit) async {
       emit(StudentIdentityLoading());
@@ -208,12 +211,21 @@ class StudentIdentityBloc
         emit(StudentIdentityError(error.toString()));
       }
     });
+
+    on<RecordIdentityPreviewedEvent>((event, emit) async {
+      // Fire-and-forget: never blocks the caller's navigation to the
+      // preview/print screen, never emits Loading/Error for this event.
+      unawaited(
+        auditService.recordIdentityPreview(
+          schoolId: event.schoolId,
+          studentId: event.studentId,
+          kind: event.kind,
+        ),
+      );
+    });
   }
 
-  Future<String?> _lookupAssignedCard(
-    String studentId,
-    String schoolId,
-  ) async {
+  Future<String?> _lookupAssignedCard(String studentId, String schoolId) async {
     try {
       final result = await nfcCredentialService
           .findAssignedCardForStudent(
@@ -221,7 +233,7 @@ class StudentIdentityBloc
             schoolId: schoolId,
           )
           .timeout(const Duration(seconds: 8));
-      return result.fold((_) => null, (cardUid) => cardUid);
+      return await result.fold((_) => null, (cardUid) => cardUid);
     } catch (_) {
       return null;
     }
@@ -229,14 +241,7 @@ class StudentIdentityBloc
 
   StudentIdentity _withNfcStatus(StudentIdentity identity, String status) {
     if (identity.nfcStatus == status) return identity;
-    return StudentIdentity(
-      studentId: identity.studentId,
-      schoolId: identity.schoolId,
-      uniqueSystemId: identity.uniqueSystemId,
-      schoolStudentId: identity.schoolStudentId,
-      qrCodeData: identity.qrCodeData,
-      nfcStatus: status,
-    );
+    return identity.copyWith(nfcStatus: status);
   }
 
   Future<void> _emitNfcActionResult(

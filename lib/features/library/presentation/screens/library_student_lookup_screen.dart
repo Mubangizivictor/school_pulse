@@ -150,12 +150,12 @@ class _LibraryStudentLookupScreenState
               if (_loadingView) const Center(child: SchoolPulseLoader()),
               if (_error != null)
                 Card(
-                  color: Colors.red.shade50,
+                  color: Colors.black,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       _error!,
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(color: Colors.black),
                     ),
                   ),
                 ),
@@ -184,15 +184,13 @@ class _LibraryViewCard extends StatelessWidget {
             const SizedBox(height: 12),
             Chip(
               label: Text(view.eligible ? 'Eligible' : 'Not Eligible'),
-              backgroundColor: view.eligible
-                  ? Colors.green.shade100
-                  : Colors.red.shade100,
+              backgroundColor: view.eligible ? Colors.black : Colors.black,
             ),
             const SizedBox(height: 12),
             Text('Currently borrowed: ${view.currentlyBorrowed}'),
             Text('Overdue: ${view.overdueCount}'),
             const SizedBox(height: 8),
-            Text(view.message, style: const TextStyle(color: Colors.grey)),
+            Text(view.message, style: const TextStyle(color: Colors.black)),
           ],
         ),
       ),

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/components/pulse_button.dart';
+import 'package:school_pulse/design_system/components/pulse_card.dart';
+import 'package:school_pulse/design_system/components/pulse_text_field.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
@@ -11,15 +14,22 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/student/presentation/screens/admin_students_list_screen.dart';
 import 'package:school_pulse/features/teacher/domain/entities/class_student_summary.dart';
 import 'package:school_pulse/features/teacher/domain/entities/lesson_attendance.dart';
+import 'package:school_pulse/features/teacher/domain/entities/staff_role_assignment.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_students/class_students_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_state.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_teacher_context/subject_teacher_context_bloc.dart';
+import 'package:school_pulse/features/teacher/subject_teacher_student_list_screen.dart';
 
 /// Role-aware student entry point.
 ///
 /// School leadership is bounced to the rebuilt admin Students module
-/// (AdminStudentsListScreen, which provides its own StudentsBloc). A class
-/// teacher keeps the scoped class roster below.
+/// (AdminStudentsListScreen, which provides its own StudentsBloc). Which
+/// teacher roster is shown - class or subject - follows the active
+/// responsibility, exactly like StaffPanelHost picks the dashboard: reading
+/// `user.role` here would show the Class Teacher roster to a Subject
+/// Teacher whose account also happens to hold a Class Teacher assignment,
+/// which is the one thing this screen must never do.
 class TeacherStudentListScreen extends StatelessWidget {
   const TeacherStudentListScreen({super.key});
 
@@ -30,9 +40,17 @@ class TeacherStudentListScreen extends StatelessWidget {
         auth.user.roles.any(UserRoleDisplay.adminConsoleRoles.contains)) {
       // Rebuilt admin Students module lives under /staff/admin/students -
       // this route stays only as the legacy entry point shared with the
-      // class-teacher roster below, so an admin landing here is bounced
-      // straight to the real screen instead of the retired directory.
+      // teacher rosters below, so an admin landing here is bounced straight
+      // to the real screen instead of the retired directory.
       return const AdminStudentsListScreen();
+    }
+
+    final subjectActive = context
+        .watch<SubjectTeacherContextBloc>()
+        .state
+        .active;
+    if (subjectActive?.roleType == StaffResponsibilityType.subjectTeacher) {
+      return const SubjectTeacherStudentListScreen();
     }
     return const _ClassTeacherStudentListScreen();
   }
@@ -73,169 +91,528 @@ class _ClassTeacherStudentListScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Students',
-          style: AppTypography.headlineMedium.copyWith(
-            color: AppColors.textPrimary(context),
-          ),
-        ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
-          onPressed: () => context.pop(),
-        ),
-      ),
-      body: BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
-        builder: (context, contextState) {
-          if (contextState.active == null) {
-            return EmptyState(
-              icon: Icons.class_outlined,
-              title: 'No class assigned',
-              message:
-                  'You are not currently the Class Teacher for any class, so there is no class list to show.',
-            );
-          }
+    return BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
+      builder: (context, contextState) {
+        final active = contextState.active;
+        final placement = active == null
+            ? ''
+            : [
+                active.className,
+                active.streamName,
+              ].where((e) => e != null && e.isNotEmpty).join(' ');
 
-          return BlocBuilder<ClassStudentsBloc, ClassStudentsState>(
-            builder: (context, state) => Column(
+        return Scaffold(
+          backgroundColor: AppColors.background(context),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl,
+                Text(
+                  'Students',
+                  style: AppTypography.headlineSmall.copyWith(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.bold,
                   ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) => context
-                        .read<ClassStudentsBloc>()
-                        .add(ClassStudentsSearched(value)),
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: AppColors.textPrimary(context),
+                ),
+                Row(
+                  children: [
+                    Text(
+                      placement.isEmpty ? 'No class assigned' : placement,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary(context),
+                      ),
                     ),
-                    decoration: InputDecoration(
-                      hintText: 'Search students...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSpacing.m),
+                    if (placement.isNotEmpty)
+                      Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 18,
+                        color: AppColors.textSecondary(context),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          body: active == null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.x3l),
+                    child: Text(
+                      'You are not currently the Class Teacher for any class, '
+                      'so there are no students to show.',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary(context),
                       ),
                     ),
                   ),
+                )
+              : BlocBuilder<ClassStudentsBloc, ClassStudentsState>(
+                  builder: (context, state) {
+                    if (state.isLoading && state.students.isEmpty) {
+                      return const Center(child: SchoolPulseLoader());
+                    }
+
+                    return RefreshIndicator(
+                      onRefresh: () async => _load(forceRefresh: true),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.xl,
+                        ),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: AppSpacing.l),
+                            if (state.errorMessage != null) ...[
+                              _buildErrorBanner(context, state.errorMessage!),
+                              const SizedBox(height: AppSpacing.l),
+                            ],
+                            _buildStatsCard(context, state),
+                            const SizedBox(height: AppSpacing.l),
+                            _buildSearchField(context),
+                            const SizedBox(height: AppSpacing.m),
+                            _buildQuickFilters(context, state),
+                            const SizedBox(height: AppSpacing.m),
+                            Expanded(child: _buildStudentsList(context, state)),
+                            const SizedBox(height: AppSpacing.m),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-                const SizedBox(height: AppSpacing.l),
-                Expanded(child: _body(context, state)),
-              ],
+        );
+      },
+    );
+  }
+
+  Widget _buildErrorBanner(BuildContext context, String message) {
+    return PulseCard(
+      backgroundColor: AppColors.danger(context),
+      borderColor: AppColors.danger(context),
+      padding: const EdgeInsets.all(AppSpacing.l),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: AppColors.danger(context)),
+          const SizedBox(width: AppSpacing.m),
+          Expanded(
+            child: Text(
+              message,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textPrimary(context),
+              ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _body(BuildContext context, ClassStudentsState state) {
-    if (state.isLoading && state.students.isEmpty) {
-      return ListView.builder(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        itemCount: 6,
-        itemBuilder: (_, _) => const Padding(
-          padding: EdgeInsets.only(bottom: AppSpacing.l),
-          child: Skeleton(height: 72, borderRadius: AppSpacing.l),
+  Widget _buildStatsCard(BuildContext context, ClassStudentsState state) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.xl,
+        horizontal: AppSpacing.m,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primary(context), AppColors.primary(context)],
         ),
-      );
-    }
-    if (state.students.isEmpty && state.errorMessage != null) {
-      return EmptyState(
-        icon: Icons.cloud_off,
-        title: 'Could not load your class list',
-        message: state.errorMessage!,
-        ctaLabel: 'Retry',
-        onCtaPressed: () => _load(forceRefresh: true),
-      );
-    }
-    if (state.students.isEmpty) {
-      return const EmptyState(
-        icon: Icons.people_outline,
-        title: 'No students yet',
-        message:
-            'No students have been placed in your class for this academic year. Admissions adds them.',
-      );
-    }
-    final visible = state.visibleStudents;
-    if (visible.isEmpty) {
-      return const EmptyState(
-        icon: Icons.search_off,
-        title: 'No matching students',
-        message: 'No student in your class matches the current search.',
-      );
-    }
-    return RefreshIndicator(
-      onRefresh: () async => _load(forceRefresh: true),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        itemCount: visible.length,
-        itemBuilder: (context, index) {
-          final student = visible[index];
-          return _StudentListTile(
-            student: student,
-            status: state.statusOf(student.studentId),
-            onTap: () => context.push('/staff/students/${student.studentId}'),
-          );
-        },
+        borderRadius: BorderRadius.circular(AppSpacing.xl),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildStatItem(
+              context,
+              icon: Icons.groups_rounded,
+              iconColor: AppColors.primary(context),
+              value: '${state.students.length}',
+              label: 'Total Students',
+            ),
+          ),
+          _statDivider(context),
+          Expanded(
+            child: _buildStatItem(
+              context,
+              icon: Icons.check_circle_rounded,
+              iconColor: AppColors.success(context),
+              value: '${state.presentCount}',
+              label: 'Present Today',
+            ),
+          ),
+          _statDivider(context),
+          Expanded(
+            child: _buildStatItem(
+              context,
+              icon: Icons.cancel_rounded,
+              iconColor: AppColors.danger(context),
+              value: '${state.absentCount}',
+              label: 'Absent Today',
+            ),
+          ),
+          _statDivider(context),
+          Expanded(
+            child: _buildStatItem(
+              context,
+              icon: Icons.schedule_rounded,
+              iconColor: AppColors.warning(context),
+              value: '${state.lateCount}',
+              label: 'Late Today',
+            ),
+          ),
+        ],
       ),
     );
   }
-}
 
-class _StudentListTile extends StatelessWidget {
-  const _StudentListTile({
-    required this.student,
-    required this.status,
-    required this.onTap,
-  });
+  Widget _statDivider(BuildContext context) {
+    return Container(width: 1, height: 48, color: AppColors.border(context));
+  }
 
-  final ClassStudentSummary student;
-  final LessonAttendanceStatus status;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: AppSpacing.l),
-      child: ListTile(
-        onTap: onTap,
-        leading: CircleAvatar(
-          radius: 24,
-          backgroundImage: (student.photoUrl?.isNotEmpty ?? false)
-              ? NetworkImage(student.photoUrl!)
-              : null,
-          child: (student.photoUrl?.isNotEmpty ?? false)
-              ? null
-              : Text(student.initials),
+  Widget _buildStatItem(
+    BuildContext context, {
+    required IconData icon,
+    required Color iconColor,
+    required String value,
+    required String label,
+  }) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.s),
+          decoration: BoxDecoration(
+            color: iconColor,
+            borderRadius: BorderRadius.circular(AppSpacing.m),
+          ),
+          child: Icon(icon, color: iconColor, size: 20),
         ),
-        title: Text(
-          student.name,
-          style: AppTypography.titleMedium.copyWith(
+        const SizedBox(height: AppSpacing.s),
+        Text(
+          value,
+          style: AppTypography.titleLarge.copyWith(
             color: AppColors.textPrimary(context),
             fontWeight: FontWeight.bold,
           ),
         ),
-        subtitle: Text('Admission No: ${student.admissionNumber}'),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
+        const SizedBox(height: 2),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: AppTypography.labelSmall.copyWith(
+            color: AppColors.textMuted(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchField(BuildContext context) {
+    return PulseTextField(
+      controller: _searchController,
+      hint: 'Search students...',
+      prefixIcon: Icons.search,
+      onChanged: (value) =>
+          context.read<ClassStudentsBloc>().add(ClassStudentsSearched(value)),
+    );
+  }
+
+  Widget _buildStudentsList(BuildContext context, ClassStudentsState state) {
+    if (state.students.isEmpty && state.errorMessage != null) {
+      return _buildEmptyState(
+        context,
+        title: 'Could not load your class list',
+        message: state.errorMessage!,
+        showRetryButton: true,
+      );
+    }
+
+    if (state.students.isEmpty) {
+      return _buildEmptyState(
+        context,
+        title: 'No students found',
+        message: 'There are no students enrolled in this class yet.',
+        showRetryButton: false,
+      );
+    }
+
+    final students = List<ClassStudentSummary>.from(state.visibleStudents)
+      ..sort((a, b) => a.name.compareTo(b.name));
+
+    if (students.isEmpty) {
+      return _buildEmptyState(
+        context,
+        title: 'No matching students',
+        message: 'No student in your class matches the current search.',
+        showRetryButton: false,
+      );
+    }
+
+    return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: students.length,
+      separatorBuilder: (context, index) =>
+          const SizedBox(height: AppSpacing.m),
+      itemBuilder: (context, index) =>
+          _buildStudentItem(context, state, students[index]),
+    );
+  }
+
+  Widget _buildEmptyState(
+    BuildContext context, {
+    required String title,
+    required String message,
+    required bool showRetryButton,
+  }) {
+    return Center(
+      child: SingleChildScrollView(
+        child: PulseCard(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.x3l,
+            horizontal: AppSpacing.xl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                decoration: BoxDecoration(
+                  color: AppColors.primary(context),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.groups_rounded,
+                  size: 48,
+                  color: AppColors.primary(context),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.l),
+              Text(
+                title,
+                style: AppTypography.titleLarge.copyWith(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary(context),
+                ),
+              ),
+              if (showRetryButton) ...[
+                const SizedBox(height: AppSpacing.xl),
+                PulseButton(
+                  label: 'Retry',
+                  icon: Icons.refresh,
+                  onPressed: () => _load(forceRefresh: true),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStudentItem(
+    BuildContext context,
+    ClassStudentsState state,
+    ClassStudentSummary student,
+  ) {
+    final status = state.statusOf(student.studentId);
+    final statusColor = _colorForStatus(context, status);
+
+    return PulseCard(
+      padding: const EdgeInsets.all(AppSpacing.m),
+      onTap: () => context.push('/staff/students/${student.studentId}'),
+      child: Row(
+        children: [
+          _buildAvatar(context, student),
+          const SizedBox(width: AppSpacing.m),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  student.name,
+                  style: AppTypography.titleMedium.copyWith(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  student.admissionNumber,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textMuted(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s,
+              vertical: 2,
+            ),
+            decoration: BoxDecoration(
+              color: statusColor,
+              borderRadius: BorderRadius.circular(AppSpacing.s),
+            ),
+            child: Text(
               status.label,
-              style: AppTypography.labelMedium.copyWith(
-                color: status.countsAsPresent
-                    ? AppColors.success(context)
-                    : AppColors.textMuted(context),
+              style: AppTypography.labelSmall.copyWith(
+                color: statusColor,
+                fontSize: 10,
               ),
             ),
-            const SizedBox(width: AppSpacing.s),
-            const Icon(Icons.chevron_right),
+          ),
+          const SizedBox(width: AppSpacing.s),
+          Icon(Icons.chevron_right, color: AppColors.textMuted(context)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(BuildContext context, ClassStudentSummary student) {
+    if (student.photoUrl != null && student.photoUrl!.isNotEmpty) {
+      return CircleAvatar(
+        radius: 24,
+        backgroundImage: NetworkImage(student.photoUrl!),
+      );
+    }
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor: AppColors.primary(context),
+      child: Text(
+        student.initials,
+        style: AppTypography.titleMedium.copyWith(
+          color: AppColors.primary(context),
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Color _colorForStatus(BuildContext context, LessonAttendanceStatus status) {
+    return switch (status) {
+      LessonAttendanceStatus.present => AppColors.success(context),
+      LessonAttendanceStatus.late => AppColors.warning(context),
+      LessonAttendanceStatus.absent => AppColors.danger(context),
+      LessonAttendanceStatus.excused ||
+      LessonAttendanceStatus.medical ||
+      LessonAttendanceStatus.approvedLeave => AppColors.information(context),
+      LessonAttendanceStatus.notMarked => AppColors.textMuted(context),
+    };
+  }
+
+  Widget _buildQuickFilters(BuildContext context, ClassStudentsState state) {
+    return PulseCard(
+      // Match the roster-card footprint while keeping filters in one compact row.
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.m,
+        vertical: AppSpacing.s,
+      ),
+      child: SizedBox(
+        height: 64,
+        child: Row(
+          children: [
+            Text(
+              'Quick Filters',
+              style: AppTypography.titleMedium.copyWith(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.m),
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildFilterChip(
+                      context,
+                      'All',
+                      ClassRosterFilter.all,
+                      state,
+                    ),
+                    _buildFilterChip(
+                      context,
+                      'Present',
+                      ClassRosterFilter.present,
+                      state,
+                    ),
+                    _buildFilterChip(
+                      context,
+                      'Absent',
+                      ClassRosterFilter.absent,
+                      state,
+                    ),
+                    _buildFilterChip(
+                      context,
+                      'Late',
+                      ClassRosterFilter.late,
+                      state,
+                    ),
+                    _buildFilterChip(
+                      context,
+                      'No Data',
+                      ClassRosterFilter.noData,
+                      state,
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(
+    BuildContext context,
+    String label,
+    ClassRosterFilter filter,
+    ClassStudentsState state,
+  ) {
+    final isSelected = state.filter == filter;
+    return Padding(
+      padding: const EdgeInsets.only(right: AppSpacing.m),
+      child: GestureDetector(
+        onTap: () => context.read<ClassStudentsBloc>().add(
+          ClassStudentsFiltered(filter),
+        ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.l,
+            vertical: AppSpacing.s,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary(context) : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppSpacing.m),
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.primary(context)
+                  : AppColors.border(context),
+            ),
+          ),
+          child: Text(
+            label,
+            style: AppTypography.labelMedium.copyWith(
+              color: isSelected
+                  ? AppColors.primary(context)
+                  : AppColors.textSecondary(context),
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
         ),
       ),
     );

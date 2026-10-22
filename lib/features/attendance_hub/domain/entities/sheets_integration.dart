@@ -65,7 +65,9 @@ class SheetsIntegration extends Equatable {
       lastSyncAt: toDate(map['lastSyncAt']),
       lastSyncStatus: (map['lastSyncStatus'] as String?) ?? '',
       connectedAccountEmail: (map['connectedAccountEmail'] as String?) ?? '',
-      connectionStatus: _connectionStatusFrom(map['connectionStatus'] as String?),
+      connectionStatus: _connectionStatusFrom(
+        map['connectionStatus'] as String?,
+      ),
       connectedBy: (map['connectedBy'] as String?) ?? '',
       connectedAt: toDate(map['connectedAt']),
     );
@@ -94,7 +96,8 @@ class SheetsIntegration extends Equatable {
       syncFrequency: syncFrequency ?? this.syncFrequency,
       lastSyncAt: lastSyncAt ?? this.lastSyncAt,
       lastSyncStatus: lastSyncStatus ?? this.lastSyncStatus,
-      connectedAccountEmail: connectedAccountEmail ?? this.connectedAccountEmail,
+      connectedAccountEmail:
+          connectedAccountEmail ?? this.connectedAccountEmail,
       connectionStatus: connectionStatus ?? this.connectionStatus,
       connectedBy: connectedBy ?? this.connectedBy,
       connectedAt: connectedAt ?? this.connectedAt,
@@ -130,14 +133,21 @@ class ResyncResult extends Equatable {
   });
 
   @override
-  List<Object?> get props => [recordsScanned, recordsExported, recordsSkippedAlreadyExported];
+  List<Object?> get props => [
+    recordsScanned,
+    recordsExported,
+    recordsSkippedAlreadyExported,
+  ];
 }
 
 class SessionExportResult extends Equatable {
   final int recordCount;
   final int alreadyExportedCount;
 
-  const SessionExportResult({required this.recordCount, required this.alreadyExportedCount});
+  const SessionExportResult({
+    required this.recordCount,
+    required this.alreadyExportedCount,
+  });
 
   @override
   List<Object?> get props => [recordCount, alreadyExportedCount];

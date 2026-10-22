@@ -140,6 +140,23 @@ class AcademicTerm extends Equatable {
   final AcademicPeriodType periodType;
   final bool isArchived;
 
+  /// True once this term's calendar has been confirmed via the
+  /// `confirmAcademicCalendar` Cloud Function callable (billing/
+  /// subscription_cycles generation keys off this, at the term level, not
+  /// the year level - each term gets its own renewal cycle). Clients cannot
+  /// set this directly; firestore.rules blocks it and the callable
+  /// re-validates and writes it server-side. Defaults to false so existing
+  /// and newly-drafted terms are never silently treated as confirmed.
+  final bool isConfirmed;
+
+  /// Optional single school-closure/holiday date range within this period
+  /// (e.g. a mid-term break). Both null when no closure is set; when set,
+  /// both must fall inside [startDate]..[endDate] (enforced by
+  /// [StructureIntegrityValidator]). Kept as a single pair - not a list -
+  /// because the reference UI only surfaces one closure block per period.
+  final DateTime? closureStartDate;
+  final DateTime? closureEndDate;
+
   const AcademicTerm({
     required this.id,
     required this.schoolId,
@@ -151,6 +168,9 @@ class AcademicTerm extends Equatable {
     this.isCurrent = false,
     this.periodType = AcademicPeriodType.term,
     this.isArchived = false,
+    this.isConfirmed = false,
+    this.closureStartDate,
+    this.closureEndDate,
   });
 
   AcademicTerm copyWith({
@@ -164,6 +184,10 @@ class AcademicTerm extends Equatable {
     bool? isCurrent,
     AcademicPeriodType? periodType,
     bool? isArchived,
+    bool? isConfirmed,
+    DateTime? closureStartDate,
+    DateTime? closureEndDate,
+    bool clearClosure = false,
   }) {
     return AcademicTerm(
       id: id ?? this.id,
@@ -176,6 +200,13 @@ class AcademicTerm extends Equatable {
       isCurrent: isCurrent ?? this.isCurrent,
       periodType: periodType ?? this.periodType,
       isArchived: isArchived ?? this.isArchived,
+      isConfirmed: isConfirmed ?? this.isConfirmed,
+      closureStartDate: clearClosure
+          ? null
+          : (closureStartDate ?? this.closureStartDate),
+      closureEndDate: clearClosure
+          ? null
+          : (closureEndDate ?? this.closureEndDate),
     );
   }
 
@@ -191,6 +222,9 @@ class AcademicTerm extends Equatable {
     isCurrent,
     periodType,
     isArchived,
+    isConfirmed,
+    closureStartDate,
+    closureEndDate,
   ];
 }
 
@@ -202,9 +236,17 @@ class SchoolClass extends Equatable {
   final String name;
   final String code;
   final String levelId;
+
+  /// Display order within [levelId]. Zero is retained for legacy documents.
+  final int order;
   final int capacity;
   final String description;
   final bool isActive;
+
+  /// Optional campus restriction. Empty means "no campus restriction" —
+  /// available at any campus. Same pattern as [levelId]: existing
+  /// classes/schools without campus setup keep working unchanged.
+  final String campusId;
 
   const SchoolClass({
     required this.id,
@@ -212,9 +254,11 @@ class SchoolClass extends Equatable {
     required this.name,
     this.code = '',
     this.levelId = '',
+    this.order = 0,
     this.capacity = 0,
     this.description = '',
     this.isActive = true,
+    this.campusId = '',
   });
 
   SchoolClass copyWith({
@@ -223,9 +267,11 @@ class SchoolClass extends Equatable {
     String? name,
     String? code,
     String? levelId,
+    int? order,
     int? capacity,
     String? description,
     bool? isActive,
+    String? campusId,
   }) {
     return SchoolClass(
       id: id ?? this.id,
@@ -233,9 +279,11 @@ class SchoolClass extends Equatable {
       name: name ?? this.name,
       code: code ?? this.code,
       levelId: levelId ?? this.levelId,
+      order: order ?? this.order,
       capacity: capacity ?? this.capacity,
       description: description ?? this.description,
       isActive: isActive ?? this.isActive,
+      campusId: campusId ?? this.campusId,
     );
   }
 
@@ -246,9 +294,11 @@ class SchoolClass extends Equatable {
     name,
     code,
     levelId,
+    order,
     capacity,
     description,
     isActive,
+    campusId,
   ];
 }
 
@@ -326,6 +376,10 @@ class Subject extends Equatable {
   final List<String> assignedLevelIds;
   final List<String> assignedClassIds;
 
+  /// Display order within the tenant's subject catalogue. Zero is retained
+  /// for legacy documents, mirroring [SchoolClass.order].
+  final int order;
+
   const Subject({
     required this.id,
     required this.schoolId,
@@ -341,6 +395,7 @@ class Subject extends Equatable {
     this.isActive = true,
     this.assignedLevelIds = const [],
     this.assignedClassIds = const [],
+    this.order = 0,
   });
 
   Subject copyWith({
@@ -358,6 +413,7 @@ class Subject extends Equatable {
     bool? isActive,
     List<String>? assignedLevelIds,
     List<String>? assignedClassIds,
+    int? order,
   }) {
     return Subject(
       id: id ?? this.id,
@@ -374,6 +430,7 @@ class Subject extends Equatable {
       isActive: isActive ?? this.isActive,
       assignedLevelIds: assignedLevelIds ?? this.assignedLevelIds,
       assignedClassIds: assignedClassIds ?? this.assignedClassIds,
+      order: order ?? this.order,
     );
   }
 
@@ -393,6 +450,7 @@ class Subject extends Equatable {
     isActive,
     assignedLevelIds,
     assignedClassIds,
+    order,
   ];
 }
 

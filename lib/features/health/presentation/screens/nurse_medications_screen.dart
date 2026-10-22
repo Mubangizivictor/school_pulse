@@ -35,7 +35,7 @@ class _NurseMedicationsScreenState extends State<NurseMedicationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF070914),
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -102,7 +102,7 @@ class _NurseMedicationsScreenState extends State<NurseMedicationsScreen> {
         ), // Again, look up student to administer
         label: const Text('Administer Med'),
         icon: const Icon(Icons.add),
-        backgroundColor: const Color(0xFFF04400),
+        backgroundColor: Colors.black,
       ),
     );
   }
@@ -114,12 +114,10 @@ class _NurseMedicationsScreenState extends State<NurseMedicationsScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF151929),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isLowStock
-              ? Colors.orange.withValues(alpha: 0.3)
-              : const Color(0xFF1E293B),
+          color: isLowStock ? Colors.black : Colors.black,
           width: 1,
         ),
       ),
@@ -128,13 +126,12 @@ class _NurseMedicationsScreenState extends State<NurseMedicationsScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: (isLowStock ? Colors.orange : const Color(0xFF3B82F6))
-                  .withValues(alpha: 0.1),
+              color: (isLowStock ? Colors.black : Colors.black),
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.medication,
-              color: isLowStock ? Colors.orange : const Color(0xFF3B82F6),
+              color: isLowStock ? Colors.black : Colors.black,
               size: 24,
             ),
           ),
@@ -152,9 +149,7 @@ class _NurseMedicationsScreenState extends State<NurseMedicationsScreen> {
                 ),
                 Text(
                   '${item.category} • ${item.quantity} ${item.unit} left',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: const Color(0xFF64748B),
-                  ),
+                  style: AppTypography.bodySmall.copyWith(color: Colors.black),
                 ),
               ],
             ),
@@ -163,13 +158,13 @@ class _NurseMedicationsScreenState extends State<NurseMedicationsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.1),
+                color: Colors.black,
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
                 'LOW',
                 style: AppTypography.labelSmall.copyWith(
-                  color: Colors.orange,
+                  color: Colors.black,
                   fontWeight: FontWeight.bold,
                 ),
               ),

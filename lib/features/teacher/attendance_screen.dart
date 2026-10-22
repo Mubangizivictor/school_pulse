@@ -9,6 +9,7 @@ import 'package:school_pulse/features/teacher/domain/entities/class_attendance.d
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_context/class_teacher_context_state.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/class_teacher_dashboard/class_teacher_dashboard_bloc.dart';
 
 class TeacherAttendanceScreen extends StatefulWidget {
   const TeacherAttendanceScreen({super.key});
@@ -71,8 +72,22 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
           return BlocConsumer<ClassAttendanceBloc, ClassAttendanceState>(
             listenWhen: (previous, current) =>
                 previous.errorMessage != current.errorMessage ||
-                previous.successMessage != current.successMessage,
+                previous.successMessage != current.successMessage ||
+                previous.isSubmitted != current.isSubmitted,
             listener: (context, state) {
+              // The Home tab's attendance card and "Needs your attention"
+              // both read ClassTeacherDashboardBloc, which has no way to
+              // know a register was just submitted here - without this, a
+              // teacher who submits and taps Home sees stale "Not taken"
+              // figures until something else happens to trigger a refetch.
+              if (state.isSubmitted && contextState.active != null) {
+                context.read<ClassTeacherDashboardBloc>().add(
+                  ClassDashboardRequested(
+                    contextState.active!,
+                    forceRefresh: true,
+                  ),
+                );
+              }
               final message = state.successMessage ?? state.errorMessage;
               if (message == null) return;
               ScaffoldMessenger.of(context)
@@ -278,11 +293,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.border(context).withValues(alpha: 0.1),
-          ),
-        ),
+        border: Border(bottom: BorderSide(color: AppColors.border(context))),
       ),
       child: Row(
         children: [
@@ -534,7 +545,7 @@ class _StatusButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isSelected ? color : color.withValues(alpha: 0.1),
+            color: isSelected ? color : color,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 18, color: isSelected ? Colors.white : color),

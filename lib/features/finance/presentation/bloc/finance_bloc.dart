@@ -1,5 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/services/printer/printer_service.dart';
+import '../../domain/entities/fee_category.dart';
+import '../../domain/entities/fee_structure.dart';
 import '../../domain/repositories/finance_repository.dart';
 import '../../domain/services/finance_service.dart';
 import 'finance_event.dart';
@@ -265,15 +267,19 @@ class FinanceBloc extends Bloc<FinanceEvent, FinanceState> {
     LoadFeeCategories event,
     Emitter<FinanceState> emit,
   ) async {
-    emit(FinanceLoading());
     final categoriesResult = await repository.getFeeCategories(event.schoolId);
+    // Read prior state after the await, not before — LoadFeeStructures runs
+    // concurrently and may have already emitted by the time this resolves;
+    // capturing "prior" at handler-start clobbers that emit's data instead of merging it.
+    final priorStructures = state is FeeConfigurationLoaded
+        ? (state as FeeConfigurationLoaded).structures
+        : const <FeeStructure>[];
     categoriesResult.fold(
       (failure) => emit(const FinanceError('Failed to load fee categories')),
       (categories) => emit(
         FeeConfigurationLoaded(
           categories: categories,
-          structures:
-              const [], // Will be loaded by another event if needed or combined
+          structures: priorStructures,
         ),
       ),
     );
@@ -294,12 +300,17 @@ class FinanceBloc extends Bloc<FinanceEvent, FinanceState> {
     LoadFeeStructures event,
     Emitter<FinanceState> emit,
   ) async {
-    emit(FinanceLoading());
     final structuresResult = await repository.getFeeStructures(event.schoolId);
+    final priorCategories = state is FeeConfigurationLoaded
+        ? (state as FeeConfigurationLoaded).categories
+        : const <FeeCategory>[];
     structuresResult.fold(
       (failure) => emit(const FinanceError('Failed to load fee structures')),
       (structures) => emit(
-        FeeConfigurationLoaded(categories: const [], structures: structures),
+        FeeConfigurationLoaded(
+          categories: priorCategories,
+          structures: structures,
+        ),
       ),
     );
   }

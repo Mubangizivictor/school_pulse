@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
+import 'package:school_pulse/features/dean/presentation/widgets/glass_icon_button.dart';
 import 'package:school_pulse/injection_container.dart';
 import 'package:school_pulse/features/dean/presentation/screens/curriculum/subject_list_screen.dart';
 
@@ -17,7 +19,14 @@ class CurriculumManagementScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Curriculum Management'),
-          actions: [IconButton(icon: const Icon(Icons.add), onPressed: () {})],
+          actions: [
+            GlassIconButton(
+              icon: Icons.add,
+              tooltip: 'Add Curriculum',
+              onPressed: () => _showAddCurriculumSheet(context),
+            ),
+            const SizedBox(width: 16),
+          ],
         ),
         body: BlocBuilder<DeanBloc, DeanState>(
           builder: (context, state) {
@@ -64,7 +73,17 @@ class CurriculumManagementScreen extends StatelessWidget {
                                       (l) => Chip(
                                         label: Text(
                                           l,
-                                          style: const TextStyle(fontSize: 10),
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: AppColors.primary(context),
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        backgroundColor: AppColors.primary(
+                                          context,
+                                        ),
+                                        side: BorderSide(
+                                          color: AppColors.primary(context),
                                         ),
                                         visualDensity: VisualDensity.compact,
                                       ),
@@ -141,6 +160,56 @@ class CurriculumManagementScreen extends StatelessWidget {
             }
             return const Center(child: CircularProgressIndicator());
           },
+        ),
+      ),
+    );
+  }
+
+  void _showAddCurriculumSheet(BuildContext context) {
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+          left: 16,
+          right: 16,
+          top: 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SectionHeader(title: 'New Curriculum'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Curriculum Name'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(labelText: 'Description'),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(sheetContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      '"${nameController.text}" will be added once curriculum creation is available.',
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Create'),
+            ),
+            const SizedBox(height: 16),
+          ],
         ),
       ),
     );

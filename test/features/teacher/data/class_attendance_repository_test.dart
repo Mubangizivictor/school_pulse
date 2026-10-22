@@ -157,7 +157,9 @@ void main() {
     when(() => network.isConnected).thenAnswer((_) async => true);
     when(() => deviceId.getDeviceId()).thenAnswer((_) async => 'device1');
     when(() => local.saveAttendanceDraft(any())).thenAnswer((_) async {});
-    when(() => local.getAttendanceDraft(any())).thenAnswer((_) async => null);
+    when(
+      () => local.getAttendanceDraft(any(), schoolId: any(named: 'schoolId')),
+    ).thenAnswer((_) async => null);
     when(() => remote.saveAttendanceSession(any())).thenAnswer((_) async {});
     when(() => queue.enqueueOperation(any())).thenAnswer((_) async {});
     when(

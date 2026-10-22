@@ -530,7 +530,7 @@ class _RequestTile extends StatelessWidget {
             children: [
               OutlinedButton(
                 onPressed: () => onStatusChanged(ProcurementStatus.rejected),
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.black),
                 child: const Text('Reject'),
               ),
               const SizedBox(width: 8),
@@ -545,10 +545,10 @@ class _RequestTile extends StatelessWidget {
     ),
   );
   Color _requestColor(ProcurementStatus status) => switch (status) {
-    ProcurementStatus.pending => Colors.orange,
-    ProcurementStatus.approved => Colors.green,
-    ProcurementStatus.rejected => Colors.red,
-    ProcurementStatus.completed => Colors.blue,
+    ProcurementStatus.pending => Colors.black,
+    ProcurementStatus.approved => Colors.black,
+    ProcurementStatus.rejected => Colors.black,
+    ProcurementStatus.completed => Colors.black,
   };
 }
 
@@ -640,11 +640,11 @@ class _OrderTile extends StatelessWidget {
     PurchaseOrderStatus.received || PurchaseOrderStatus.cancelled => const [],
   };
   Color _orderColor(PurchaseOrderStatus status) => switch (status) {
-    PurchaseOrderStatus.pending => Colors.orange,
-    PurchaseOrderStatus.approved => Colors.blue,
-    PurchaseOrderStatus.ordered => Colors.indigo,
-    PurchaseOrderStatus.received => Colors.green,
-    PurchaseOrderStatus.cancelled => Colors.red,
+    PurchaseOrderStatus.pending => Colors.black,
+    PurchaseOrderStatus.approved => Colors.black,
+    PurchaseOrderStatus.ordered => Colors.black,
+    PurchaseOrderStatus.received => Colors.black,
+    PurchaseOrderStatus.cancelled => Colors.black,
   };
   String _statusLabel(PurchaseOrderStatus status) =>
       status.name[0].toUpperCase() + status.name.substring(1);

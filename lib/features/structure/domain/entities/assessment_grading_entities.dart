@@ -71,6 +71,7 @@ class GradingSystemDef extends Equatable {
   final List<String> classIds;
   final List<String> academicYearIds;
   final int version;
+  final double maximumMark;
 
   const GradingSystemDef({
     required this.id,
@@ -91,6 +92,7 @@ class GradingSystemDef extends Equatable {
     this.classIds = const [],
     this.academicYearIds = const [],
     this.version = 1,
+    this.maximumMark = 0,
   });
 
   GradingSystemDef copyWith({
@@ -112,6 +114,7 @@ class GradingSystemDef extends Equatable {
     List<String>? classIds,
     List<String>? academicYearIds,
     int? version,
+    double? maximumMark,
   }) {
     return GradingSystemDef(
       id: id ?? this.id,
@@ -132,6 +135,7 @@ class GradingSystemDef extends Equatable {
       classIds: classIds ?? this.classIds,
       academicYearIds: academicYearIds ?? this.academicYearIds,
       version: version ?? this.version,
+      maximumMark: maximumMark ?? this.maximumMark,
     );
   }
 
@@ -155,6 +159,7 @@ class GradingSystemDef extends Equatable {
     classIds,
     academicYearIds,
     version,
+    maximumMark,
   ];
 }
 

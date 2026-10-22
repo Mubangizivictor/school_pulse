@@ -1,7 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -15,18 +14,16 @@ class Skeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Shimmer.fromColors(
-      baseColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
-      highlightColor: isDark ? Colors.grey[700]! : Colors.grey[100]!,
-      child: Container(
-        height: height,
-        width: width,
-        decoration: BoxDecoration(
-          color: isDark ? Colors.grey[850] : Colors.white,
-          borderRadius: BorderRadius.circular(borderRadius),
-        ),
+    final scheme = Theme.of(context).colorScheme;
+    final foreground = scheme.onSurface;
+    final background = scheme.surface;
+    return Container(
+      height: height,
+      width: width,
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: Border.all(color: foreground, width: 2),
       ),
     );
   }
@@ -39,6 +36,7 @@ class AppCard extends StatefulWidget {
   final VoidCallback? onTap;
   final Color? color;
   final Color? borderColor;
+  final double borderWidth;
   final bool showBorder;
   final bool showShadow;
 
@@ -50,6 +48,7 @@ class AppCard extends StatefulWidget {
     this.onTap,
     this.color,
     this.borderColor,
+    this.borderWidth = 1,
     this.showBorder = true,
     this.showShadow = true,
   });
@@ -83,7 +82,7 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
 
     return GestureDetector(
       onTapDown: widget.onTap != null ? (_) => _controller.reverse() : null,
@@ -95,29 +94,14 @@ class _AppCardState extends State<AppCard> with SingleTickerProviderStateMixin {
         child: Container(
           margin: widget.margin,
           decoration: BoxDecoration(
-            color:
-                widget.color ??
-                (isDark ? Theme.of(context).colorScheme.surface : Colors.white),
+            color: widget.color ?? scheme.surface,
             borderRadius: BorderRadius.circular(16),
             border: widget.showBorder
                 ? Border.all(
-                    color:
-                        widget.borderColor ??
-                        Theme.of(context).colorScheme.outlineVariant.withValues(
-                          alpha: isDark ? 0.7 : 0.8,
-                        ),
-                    width: 1,
+                    color: widget.borderColor ?? scheme.outlineVariant,
+                    width: widget.borderWidth,
                   )
                 : null,
-            boxShadow: (widget.showShadow && !isDark)
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : [],
           ),
           clipBehavior: Clip.antiAlias,
           // A Material ancestor here (rather than relying on whatever
@@ -152,16 +136,12 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.15 : 0.08),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withValues(alpha: isDark ? 0.3 : 0.2),
-          width: 1,
-        ),
+        border: Border.all(color: color, width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -170,13 +150,19 @@ class StatusBadge extends StatelessWidget {
             Icon(icon, size: 12, color: color),
             const SizedBox(width: 4),
           ],
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              color: isDark ? Color.lerp(color, Colors.white, 0.4) : color,
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.5,
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label.toUpperCase(),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ),
           ),
         ],
@@ -203,20 +189,20 @@ class AlertBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: isDark ? 0.14 : 0.08),
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: color, width: 4)),
+        border: Border.all(color: scheme.outline, width: 1),
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 20),
+            Icon(icon, color: scheme.onSurface, size: 20),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -225,7 +211,7 @@ class AlertBanner extends StatelessWidget {
                   Text(
                     title,
                     style: TextStyle(
-                      color: color,
+                      color: scheme.onSurface,
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
                     ),
@@ -233,19 +219,14 @@ class AlertBanner extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     message,
-                    style: TextStyle(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.85),
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: scheme.onSurface, fontSize: 13),
                   ),
                 ],
               ),
             ),
             if (onDismiss != null)
               IconButton(
-                icon: Icon(Icons.close, color: color, size: 18),
+                icon: Icon(Icons.close, color: scheme.onSurface, size: 18),
                 onPressed: onDismiss,
                 visualDensity: VisualDensity.compact,
               ),
@@ -396,11 +377,14 @@ class OfflineIndicator extends StatelessWidget {
     if (!isOffline) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
-      color: Colors.grey[800],
+      color: Theme.of(context).colorScheme.inverseSurface,
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
       child: Text(
         'Offline — showing data from ${lastSynced.hour}:${lastSynced.minute.toString().padLeft(2, '0')}',
-        style: const TextStyle(color: Colors.white, fontSize: 12),
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onInverseSurface,
+          fontSize: 12,
+        ),
         textAlign: TextAlign.center,
       ),
     );
@@ -700,7 +684,7 @@ class _DashboardStatCardState extends State<DashboardStatCard>
               Container(
                 padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
-                  color: widget.color.withValues(alpha: 0.1),
+                  color: widget.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: ScaleTransition(
@@ -807,13 +791,12 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard>
   @override
   Widget build(BuildContext context) {
     final semantic = Theme.of(context).extension<SemanticColors>()!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AppCard(
       padding: EdgeInsets.zero,
       showShadow: false,
       color: Colors.transparent,
-      borderColor: widget.color.withValues(alpha: isDark ? 0.2 : 0.15),
+      borderColor: widget.color,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
@@ -821,8 +804,8 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              widget.color.withValues(alpha: isDark ? 0.15 : 0.08),
-              widget.color.withValues(alpha: isDark ? 0.05 : 0.02),
+              widget.color.withValues(alpha: 0.10),
+              widget.color.withValues(alpha: 0.04),
             ],
           ),
         ),
@@ -831,7 +814,7 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard>
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: widget.color.withValues(alpha: 0.1),
+                color: widget.color.withValues(alpha: 0.16),
                 shape: BoxShape.circle,
               ),
               child: ScaleTransition(
@@ -850,9 +833,7 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.8),
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -913,7 +894,7 @@ class ProgressCard extends StatelessWidget {
           const SizedBox(height: 12),
           LinearProgressIndicator(
             value: progress,
-            backgroundColor: activeColor.withValues(alpha: 0.1),
+            backgroundColor: activeColor,
             color: activeColor,
             minHeight: 8,
             borderRadius: BorderRadius.circular(4),
@@ -1039,7 +1020,7 @@ class QuickActionGrid extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: item.color.withValues(alpha: 0.1),
+                  color: item.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(item.icon, color: item.color, size: 20),
@@ -1132,7 +1113,7 @@ Future<bool?> confirmActionDialog(
           onPressed: () => Navigator.pop(context, true),
           child: Text(
             confirmLabel,
-            style: TextStyle(color: isDestructive ? Colors.red : null),
+            style: TextStyle(color: isDestructive ? Colors.black : null),
           ),
         ),
       ],
@@ -1217,7 +1198,7 @@ class CircularPercentGauge extends StatelessWidget {
             child: CircularProgressIndicator(
               value: 1,
               strokeWidth: strokeWidth,
-              color: activeColor.withValues(alpha: 0.1),
+              color: activeColor,
             ),
           ),
           SizedBox.expand(
@@ -1292,11 +1273,17 @@ class LabeledProgressRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
               ),
               Text(
                 pctText,
-                style: TextStyle(fontWeight: FontWeight.w800, color: activeColor),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: activeColor,
+                ),
               ),
             ],
           ),
@@ -1306,7 +1293,7 @@ class LabeledProgressRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: percent.clamp(0.0, 1.0),
               minHeight: 8,
-              backgroundColor: activeColor.withValues(alpha: 0.1),
+              backgroundColor: activeColor,
               color: activeColor,
             ),
           ),
@@ -1409,10 +1396,7 @@ class TrendLineChart extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    activeColor.withValues(alpha: 0.18),
-                    activeColor.withValues(alpha: 0.0),
-                  ],
+                  colors: [activeColor, activeColor],
                 ),
               ),
             ),
@@ -1548,7 +1532,9 @@ class SegmentedTabControl extends StatelessWidget {
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
-                    color: i == selectedIndex ? colors.primary : Colors.transparent,
+                    color: i == selectedIndex
+                        ? colors.primary
+                        : Colors.transparent,
                     borderRadius: BorderRadius.circular(9),
                   ),
                   alignment: Alignment.center,
@@ -1574,6 +1560,87 @@ class SegmentedTabControl extends StatelessWidget {
   }
 }
 
+/// Slim step-progress indicator for multi-step wizards - a "Step X of N"
+/// label plus a linear bar of filled/unfilled segments, one per step.
+/// Used by the Enrollment Setup Wizard; kept generic enough for any
+/// fixed-step flow.
+class WizardStepProgress extends StatelessWidget {
+  final int currentStep; // 0-based
+  final int stepCount;
+  final String stepTitle;
+
+  const WizardStepProgress({
+    super.key,
+    required this.currentStep,
+    required this.stepCount,
+    required this.stepTitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Step ${currentStep + 1} of $stepCount',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  color: colors.onSurfaceVariant,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              Text(
+                '${(((currentStep + 1) / stepCount) * 100).round()}%',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                  color: colors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            stepTitle,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              for (int i = 0; i < stepCount; i++) ...[
+                if (i > 0) const SizedBox(width: 4),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: 1,
+                      minHeight: 5,
+                      backgroundColor: colors.primary.withValues(alpha: 0.15),
+                      color: i <= currentStep
+                          ? colors.primary
+                          : colors.primary.withValues(alpha: 0.15),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Theme preference row for the "More"/Settings screens.
 ///
 /// Reads and writes [ThemeProvider] directly so any screen can drop it in
@@ -1592,7 +1659,14 @@ class ThemeSwitchTile extends StatelessWidget {
         ThemeMode.dark => Icons.dark_mode_rounded,
         ThemeMode.system => Icons.brightness_auto_rounded,
       }, color: Theme.of(context).colorScheme.primary),
-      title: const Text('App Theme'),
+      title: Text(
+        'App Theme',
+        style: TextStyle(
+          color: AppColors.textPrimary(context),
+          fontWeight: FontWeight.w600,
+          fontSize: 15,
+        ),
+      ),
       trailing: Text(
         switch (themeProvider.themeMode) {
           ThemeMode.light => 'Light',
@@ -1674,7 +1748,15 @@ class ThemeSwitchTile extends StatelessWidget {
         icon,
         color: isSelected ? colors.onPrimaryContainer : colors.onSurfaceVariant,
       ),
-      title: Text(label),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: isSelected
+              ? colors.onPrimaryContainer
+              : AppColors.textPrimary(context),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       trailing: isSelected
           ? Icon(Icons.check, color: colors.onPrimaryContainer)
           : null,

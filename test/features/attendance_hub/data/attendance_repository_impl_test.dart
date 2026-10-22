@@ -73,7 +73,7 @@ void main() {
         level: EducationLevel.primary,
       );
       when(
-        () => students.searchStudents(schoolId: 'school-a', classId: 'class-a'),
+        () => students.getAllStudents(schoolId: 'school-a'),
       ).thenAnswer((_) async => Right([active, withdrawn]));
 
       final result = await repository.getRoster(
@@ -94,9 +94,7 @@ void main() {
       expect(roster, hasLength(1));
       expect(roster.single.id, 'student-a');
       expect(roster.single.subtitle, 'SPA001');
-      verify(
-        () => students.searchStudents(schoolId: 'school-a', classId: 'class-a'),
-      ).called(1);
+      verify(() => students.getAllStudents(schoolId: 'school-a')).called(1);
     },
   );
 }

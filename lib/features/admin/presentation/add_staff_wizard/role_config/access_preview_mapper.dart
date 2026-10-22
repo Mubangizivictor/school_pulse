@@ -76,9 +76,9 @@ class AccessPreviewMapper {
           .toList();
       final label = actionWords.isEmpty
           ? module
-          : actionWords.map((w) => w[0].toUpperCase() + w.substring(1)).join(
-              ' ',
-            );
+          : actionWords
+                .map((w) => w[0].toUpperCase() + w.substring(1))
+                .join(' ');
       byModule.putIfAbsent(module, () => []).add(label);
     }
     for (final labels in byModule.values) {

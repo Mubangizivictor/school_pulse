@@ -128,7 +128,7 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
                       label: 'Total Capacity',
                       value: '$totalCapacity',
                       icon: Icons.groups_outlined,
-                      color: Colors.orange,
+                      color: Colors.black,
                     ),
                   ),
                 ],
@@ -188,10 +188,12 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
                     roomLeaderName: dorm.roomLeaderName,
                     dormPrefectName: dorm.dormPrefectName,
                     accent: Theme.of(context).colorScheme.primary,
-                    onBeds: () =>
-                        context.push('/staff/patron/dorms/beds', extra: dorm),
-                    onStudents: () => _showAllocationSheet(context, dorm),
-                    onLeadership: () => _showLeadershipSheet(context, dorm),
+                    compact: true,
+                    subtitle: 'Boys Dormitory',
+                    onTap: () => context.push(
+                      '/staff/patron/dorms/students',
+                      extra: dorm,
+                    ),
                     onMore: () => _showDormMenu(context, dorm, semanticColors),
                   ),
             ],
@@ -224,6 +226,22 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
               onTap: () {
                 Navigator.pop(sheetContext);
                 _openDormForm(context, dorm: dorm);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.group_add_outlined),
+              title: const Text('Allocate Student'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _showAllocationSheet(context, dorm);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.bed_outlined),
+              title: const Text('Manage Beds'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                context.push('/staff/patron/dorms/beds', extra: dorm);
               },
             ),
             ListTile(
@@ -264,20 +282,6 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  void _showLeadershipSheet(BuildContext context, Dormitory dorm) {
-    final bloc = context.read<PatronBloc>();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return BlocProvider.value(
-          value: bloc,
-          child: _LeadershipSheet(dorm: dorm),
-        );
-      },
     );
   }
 
@@ -334,96 +338,6 @@ class _DormitoryManagementScreenState extends State<DormitoryManagementScreen> {
         ),
       );
     }
-  }
-}
-
-class _LeadershipSheet extends StatefulWidget {
-  final Dormitory dorm;
-  const _LeadershipSheet({required this.dorm});
-
-  @override
-  State<_LeadershipSheet> createState() => _LeadershipSheetState();
-}
-
-class _LeadershipSheetState extends State<_LeadershipSheet> {
-  String? _roomLeaderId;
-  String? _dormPrefectId;
-
-  @override
-  void initState() {
-    super.initState();
-    context.read<PatronBloc>().add(
-      WatchBoardingStudents(dormitoryId: widget.dorm.id),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        top: 24,
-        left: 24,
-        right: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: BlocBuilder<PatronBloc, PatronState>(
-        buildWhen: (previous, current) => current is BoardingStudentsLoaded,
-        builder: (context, state) {
-          final students = state is BoardingStudentsLoaded
-              ? state.students
-              : <BoardingStudent>[];
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Dorm Leadership',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              SearchablePickerField<BoardingStudent>(
-                label: 'Room Leader',
-                value: students.where((s) => s.id == _roomLeaderId).firstOrNull,
-                items: students,
-                labelBuilder: (s) => s.name,
-                subtitleBuilder: (s) => s.studentClass,
-                onChanged: (s) => setState(() => _roomLeaderId = s.id),
-              ),
-              const SizedBox(height: 16),
-              SearchablePickerField<BoardingStudent>(
-                label: 'Dorm Prefect',
-                value: students
-                    .where((s) => s.id == _dormPrefectId)
-                    .firstOrNull,
-                items: students,
-                labelBuilder: (s) => s.name,
-                subtitleBuilder: (s) => s.studentClass,
-                onChanged: (s) => setState(() => _dormPrefectId = s.id),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    context.read<PatronBloc>().add(
-                      SetDormLeadershipEvent(
-                        widget.dorm.id,
-                        roomLeaderId: _roomLeaderId,
-                        dormPrefectId: _dormPrefectId,
-                      ),
-                    );
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Save'),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
   }
 }
 

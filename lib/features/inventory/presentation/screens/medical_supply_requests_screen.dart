@@ -72,7 +72,7 @@ class _MedicalSupplyRequestsScreenState
     final failure = result.fold((value) => value, (_) => null);
     if (failure != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(failure.message), backgroundColor: Colors.red),
+        SnackBar(content: Text(failure.message), backgroundColor: Colors.black),
       );
       setState(() => _updatingRequestIds.remove(request.id));
       return;
@@ -277,10 +277,10 @@ class _MedicalSupplyRequestsScreenState
   };
 
   Color _statusColor(SupplyRequestStatus status) => switch (status) {
-    SupplyRequestStatus.pending => Colors.orange,
-    SupplyRequestStatus.approved => Colors.green,
-    SupplyRequestStatus.purchased => Colors.blue,
-    SupplyRequestStatus.delivered => Colors.teal,
-    SupplyRequestStatus.rejected => Colors.red,
+    SupplyRequestStatus.pending => Colors.black,
+    SupplyRequestStatus.approved => Colors.black,
+    SupplyRequestStatus.purchased => Colors.black,
+    SupplyRequestStatus.delivered => Colors.black,
+    SupplyRequestStatus.rejected => Colors.black,
   };
 }

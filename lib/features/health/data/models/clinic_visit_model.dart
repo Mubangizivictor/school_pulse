@@ -30,6 +30,7 @@ class ClinicVisitModel extends ClinicVisit {
     required super.outcome,
     required super.recordedBy,
     super.schoolId,
+    super.attachmentPaths,
   });
 
   factory ClinicVisitModel.fromJson(Map<String, dynamic> json) {
@@ -64,6 +65,11 @@ class ClinicVisitModel extends ClinicVisit {
       ),
       recordedBy: json['recordedBy'] as String? ?? '',
       schoolId: json['schoolId'] as String?,
+      attachmentPaths:
+          (json['attachmentPaths'] as List?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
     );
   }
 
@@ -103,6 +109,7 @@ class ClinicVisitModel extends ClinicVisit {
       'outcome': outcome.toString(),
       'recordedBy': recordedBy,
       'schoolId': schoolId,
+      'attachmentPaths': attachmentPaths,
     };
   }
 }

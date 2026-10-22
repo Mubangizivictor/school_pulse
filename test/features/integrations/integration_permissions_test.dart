@@ -21,43 +21,62 @@ void main() {
     Permission.integrationsViewSensitiveMetadata,
   ];
 
-  test('every integrations.* permission id follows the dot-form convention', () {
-    for (final id in integrationsPermissions) {
-      expect(id, startsWith('integrations.'));
-    }
-    expect(integrationsPermissions.toSet(), hasLength(integrationsPermissions.length));
-  });
+  test(
+    'every integrations.* permission id follows the dot-form convention',
+    () {
+      for (final id in integrationsPermissions) {
+        expect(id, startsWith('integrations.'));
+      }
+      expect(
+        integrationsPermissions.toSet(),
+        hasLength(integrationsPermissions.length),
+      );
+    },
+  );
 
-  test('every integrations.* permission id is registered in Permission.all', () {
-    final allIds = Permission.all.map((entry) => entry.$2).toSet();
-    for (final id in integrationsPermissions) {
-      expect(allIds.contains(id), isTrue, reason: '$id missing from Permission.all');
-    }
-  });
-
-  test('schoolAdmin/headTeacher/director hold the full integrations permission set by default', () {
-    for (final role in [
-      UserRole.schoolAdmin,
-      UserRole.headTeacher,
-      UserRole.director,
-    ]) {
-      final granted = RolePermissionDefaults.permissionsFor([role]);
+  test(
+    'every integrations.* permission id is registered in Permission.all',
+    () {
+      final allIds = Permission.all.map((entry) => entry.$2).toSet();
       for (final id in integrationsPermissions) {
         expect(
-          granted.contains(id),
+          allIds.contains(id),
           isTrue,
-          reason: '$role is missing default permission $id',
+          reason: '$id missing from Permission.all',
         );
       }
-    }
-  });
+    },
+  );
 
-  test('ordinary teaching roles do not receive integrations permissions by default', () {
-    final granted = RolePermissionDefaults.permissionsFor([
-      UserRole.subjectTeacher,
-    ]);
-    for (final id in integrationsPermissions) {
-      expect(granted.contains(id), isFalse);
-    }
-  });
+  test(
+    'schoolAdmin/headTeacher/director hold the full integrations permission set by default',
+    () {
+      for (final role in [
+        UserRole.schoolAdmin,
+        UserRole.headTeacher,
+        UserRole.director,
+      ]) {
+        final granted = RolePermissionDefaults.permissionsFor([role]);
+        for (final id in integrationsPermissions) {
+          expect(
+            granted.contains(id),
+            isTrue,
+            reason: '$role is missing default permission $id',
+          );
+        }
+      }
+    },
+  );
+
+  test(
+    'ordinary teaching roles do not receive integrations permissions by default',
+    () {
+      final granted = RolePermissionDefaults.permissionsFor([
+        UserRole.subjectTeacher,
+      ]);
+      for (final id in integrationsPermissions) {
+        expect(granted.contains(id), isFalse);
+      }
+    },
+  );
 }

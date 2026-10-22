@@ -42,9 +42,7 @@ class CircularProgressGauge extends StatelessWidget {
   Widget build(BuildContext context) {
     final clamped = value.clamp(0.0, 1.0);
     final color = _colorForValue(context);
-    final trackColor = Theme.of(
-      context,
-    ).colorScheme.outlineVariant.withValues(alpha: 0.4);
+    final trackColor = Theme.of(context).colorScheme.outlineVariant;
 
     return SizedBox(
       width: size,

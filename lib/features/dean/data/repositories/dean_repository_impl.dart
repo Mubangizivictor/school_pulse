@@ -9,7 +9,6 @@ import '../../domain/entities/lesson_tracking.dart';
 import '../../domain/entities/teacher_workload.dart';
 import '../../domain/entities/homework_record.dart';
 import '../../domain/entities/assessment_moderation.dart';
-import '../../domain/entities/report_card_approval.dart';
 import '../../domain/entities/today_operations.dart';
 import '../../domain/repositories/dean_repository.dart';
 import '../datasources/dean_remote_data_source.dart';
@@ -105,55 +104,31 @@ class DeanRepositoryImpl implements DeanRepository {
   }
 
   @override
-  Future<Either<Failure, void>> approveAssessmentMarks(
-    String assessmentId,
-  ) async {
+  Future<Either<Failure, void>> approveAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+  }) async {
     return _callRemote(
-      () => remoteDataSource.approveAssessmentMarks(assessmentId),
+      () => remoteDataSource.approveAssessmentMarks(
+        schoolId: schoolId,
+        assessmentId: assessmentId,
+      ),
     );
   }
 
   @override
-  Future<Either<Failure, void>> rejectAssessmentMarks(
-    String assessmentId,
-    String reason,
-  ) async {
+  Future<Either<Failure, void>> rejectAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+    required String reason,
+  }) async {
     return _callRemote(
-      () => remoteDataSource.rejectAssessmentMarks(assessmentId, reason),
+      () => remoteDataSource.rejectAssessmentMarks(
+        schoolId: schoolId,
+        assessmentId: assessmentId,
+        reason: reason,
+      ),
     );
-  }
-
-  @override
-  Future<Either<Failure, List<AssessmentModeration>>>
-  getPendingModerationAssessments() async {
-    return _callRemote(
-      () => remoteDataSource.getPendingModerationAssessments(),
-    );
-  }
-
-  @override
-  Future<Either<Failure, void>> approveReportCards(
-    List<String> reportCardIds,
-  ) async {
-    return _callRemote(
-      () => remoteDataSource.approveReportCards(reportCardIds),
-    );
-  }
-
-  @override
-  Future<Either<Failure, void>> rejectReportCards(
-    List<String> reportCardIds,
-    String reason,
-  ) async {
-    return _callRemote(
-      () => remoteDataSource.rejectReportCards(reportCardIds, reason),
-    );
-  }
-
-  @override
-  Future<Either<Failure, List<ReportCardApproval>>>
-  getPendingReportApprovals() async {
-    return _callRemote(() => remoteDataSource.getPendingReportApprovals());
   }
 
   @override
@@ -230,9 +205,35 @@ class DeanRepositoryImpl implements DeanRepository {
   }
 
   @override
-  Future<Either<Failure, List<AssessmentModeration>>>
-  getAssessmentsOverview() async {
-    return _callRemote(() => remoteDataSource.getAssessmentsOverview());
+  Future<Either<Failure, List<AssessmentModeration>>> getAssessmentsOverview({
+    required String schoolId,
+  }) async {
+    return _callRemote(
+      () => remoteDataSource.getAssessmentsOverview(schoolId: schoolId),
+    );
+  }
+
+  @override
+  Future<Either<Failure, void>> createAssessment({
+    required String schoolId,
+    String? campusId,
+    required String title,
+    required String subjectId,
+    required String classId,
+    required String type,
+    required double maximumMark,
+  }) async {
+    return _callRemote(
+      () => remoteDataSource.createAssessment(
+        schoolId: schoolId,
+        campusId: campusId,
+        title: title,
+        subjectId: subjectId,
+        classId: classId,
+        type: type,
+        maximumMark: maximumMark,
+      ),
+    );
   }
 
   @override

@@ -23,9 +23,9 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
   ) async {
     emit(StudentsLoading());
     try {
-      final result = await getStudentsByIds(event.studentIds).timeout(
-        const Duration(seconds: 15),
-      );
+      final result = await getStudentsByIds(
+        event.studentIds,
+      ).timeout(const Duration(seconds: 15));
       result.fold(
         (failure) => emit(StudentsError(failure.message)),
         (students) => emit(StudentsLoaded(students)),
@@ -53,9 +53,9 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
     }
 
     try {
-      final result = await getAllStudents(schoolId: schoolId).timeout(
-        const Duration(seconds: 15),
-      );
+      final result = await getAllStudents(
+        schoolId: schoolId,
+      ).timeout(const Duration(seconds: 15));
       result.fold(
         (failure) => emit(StudentsError(failure.message)),
         (students) => emit(StudentsLoaded(students)),
@@ -81,7 +81,9 @@ class StudentsBloc extends Bloc<StudentsEvent, StudentsState> {
     // a cross-tenant collection scan.
     emit(StudentsLoading());
     try {
-      final result = await getAllStudents().timeout(const Duration(seconds: 15));
+      final result = await getAllStudents().timeout(
+        const Duration(seconds: 15),
+      );
       result.fold((failure) => emit(StudentsError(failure.message)), (
         students,
       ) {

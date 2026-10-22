@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_pulse/features/structure/domain/services/structure_configuration_service.dart';
 import '../models/dean_stats_model.dart';
 import '../../domain/entities/academic_dashboard_stats.dart';
 import '../../domain/entities/teacher_workload.dart';
@@ -7,7 +9,6 @@ import '../../domain/entities/academic_intervention.dart';
 import '../../domain/entities/class_observation.dart';
 import '../../domain/entities/curriculum.dart';
 import '../../domain/entities/assessment_moderation.dart';
-import '../../domain/entities/report_card_approval.dart';
 import '../../domain/entities/today_operations.dart';
 import '../../domain/entities/examination_schedule.dart';
 
@@ -44,12 +45,15 @@ abstract class DeanRemoteDataSource {
   );
   Future<List<Curriculum>> getCurricula();
   Future<void> updateCurriculum(Curriculum curriculum);
-  Future<void> approveAssessmentMarks(String assessmentId);
-  Future<void> rejectAssessmentMarks(String assessmentId, String reason);
-  Future<List<AssessmentModeration>> getPendingModerationAssessments();
-  Future<void> approveReportCards(List<String> reportCardIds);
-  Future<void> rejectReportCards(List<String> reportCardIds, String reason);
-  Future<List<ReportCardApproval>> getPendingReportApprovals();
+  Future<void> approveAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+  });
+  Future<void> rejectAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+    required String reason,
+  });
   Future<Map<String, dynamic>> getPerformanceAnalytics({
     required String type,
     String? id,
@@ -60,7 +64,18 @@ abstract class DeanRemoteDataSource {
   Future<List> getExaminationSchedules();
   Future<TodaysOperations> getTodaysOperations();
   Future<(List<LessonRecord>, Map<String, bool>)> getMissedLessons();
-  Future<List<AssessmentModeration>> getAssessmentsOverview();
+  Future<List<AssessmentModeration>> getAssessmentsOverview({
+    required String schoolId,
+  });
+  Future<void> createAssessment({
+    required String schoolId,
+    String? campusId,
+    required String title,
+    required String subjectId,
+    required String classId,
+    required String type,
+    required double maximumMark,
+  });
   Future<Map<String, dynamic>> getStudentAcademicProfile(String studentId);
   Future<void> sendAcademicAnnouncement({
     required String title,
@@ -71,6 +86,50 @@ abstract class DeanRemoteDataSource {
 }
 
 class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
+  DeanRemoteDataSourceImpl({
+    required this.firestore,
+    required this.structureConfigurationService,
+  });
+
+  final FirebaseFirestore firestore;
+  final StructureConfigurationService structureConfigurationService;
+
+  CollectionReference<Map<String, dynamic>> _assessments(String schoolId) =>
+      firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('subject_assessments');
+
+  CollectionReference<Map<String, dynamic>> _marks(String schoolId) =>
+      firestore.collection('schools').doc(schoolId).collection('student_marks');
+
+  CollectionReference<Map<String, dynamic>> _classHomework(String schoolId) =>
+      firestore
+          .collection('schools')
+          .doc(schoolId)
+          .collection('class_homework');
+
+  static const _visibleStatuses = [
+    'submitted',
+    'approved',
+    'published',
+    'locked',
+    'returned',
+  ];
+
+  ModerationStatus _moderationStatusFor(String status) {
+    switch (status) {
+      case 'approved':
+      case 'published':
+      case 'locked':
+        return ModerationStatus.approved;
+      case 'returned':
+        return ModerationStatus.rejected;
+      default:
+        return ModerationStatus.pending;
+    }
+  }
+
   @override
   Future<DeanStatsModel> getDeanDashboardStats() async {
     return DeanStatsModel(
@@ -152,8 +211,8 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
     return [
       TeacherWorkload(
         teacherId: "t1",
-        teacherName: "John Doe",
-        weeklyLessonsCount: 20,
+        teacherName: "Mr. Ssemanda",
+        weeklyLessonsCount: 22,
         lessonsDelivered: 18,
         lessonsMissed: 2,
         assessmentsCreated: 5,
@@ -172,6 +231,78 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
             classId: "c2",
             className: "P.7 Red",
             weeklyLessons: 10,
+          ),
+        ],
+      ),
+      TeacherWorkload(
+        teacherId: "t2",
+        teacherName: "Ms. Nakato",
+        weeklyLessonsCount: 20,
+        lessonsDelivered: 20,
+        lessonsMissed: 0,
+        assessmentsCreated: 4,
+        marksPending: 0,
+        assignedSubjects: const [
+          AssignedSubject(
+            subjectId: "s2",
+            subjectName: "English",
+            classId: "c3",
+            className: "S3B",
+            weeklyLessons: 20,
+          ),
+        ],
+      ),
+      TeacherWorkload(
+        teacherId: "t3",
+        teacherName: "Mr. Ogwang",
+        weeklyLessonsCount: 25,
+        lessonsDelivered: 15,
+        lessonsMissed: 5,
+        assessmentsCreated: 3,
+        marksPending: 12,
+        assignedSubjects: const [
+          AssignedSubject(
+            subjectId: "s3",
+            subjectName: "Physics",
+            classId: "c4",
+            className: "S4A",
+            weeklyLessons: 25,
+          ),
+        ],
+      ),
+      TeacherWorkload(
+        teacherId: "t4",
+        teacherName: "Ms. Achieng",
+        weeklyLessonsCount: 18,
+        lessonsDelivered: 16,
+        lessonsMissed: 1,
+        assessmentsCreated: 6,
+        marksPending: 8,
+        assignedSubjects: const [
+          AssignedSubject(
+            subjectId: "s4",
+            subjectName: "Biology",
+            classId: "c5",
+            className: "S2B",
+            weeklyLessons: 18,
+          ),
+        ],
+      ),
+      TeacherWorkload(
+        teacherId: "t5",
+        teacherName: "Mr. Kato",
+        weeklyLessonsCount: 15,
+        lessonsDelivered: 12,
+        lessonsMissed: 1,
+        assessmentsCreated: 2,
+        marksPending: 3,
+        assignedSubjects: const [
+          AssignedSubject(
+            subjectId: "s5",
+            subjectName: "History",
+            classId: "c6",
+            className: "S1A",
+            weeklyLessons: 15,
           ),
         ],
       ),
@@ -384,75 +515,82 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   }
 
   @override
-  Future<void> approveAssessmentMarks(String assessmentId) async {}
-
-  @override
-  Future<void> rejectAssessmentMarks(
-    String assessmentId,
-    String reason,
-  ) async {}
-
-  @override
-  Future<List<AssessmentModeration>> getPendingModerationAssessments() async {
-    return [
-      AssessmentModeration(
-        id: "am1",
-        assessmentId: "as1",
-        title: "Mid-Term Algebra Test",
-        className: "Year 10A",
-        subjectName: "Mathematics",
-        teacherName: "John Doe",
-        submissionCount: 28,
-        totalStudents: 30,
-        averageScore: 72.5,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      AssessmentModeration(
-        id: "am2",
-        assessmentId: "as2",
-        title: "Weekly Physics Quiz",
-        className: "S.4 Science",
-        subjectName: "Physics",
-        teacherName: "Jane Smith",
-        submissionCount: 45,
-        totalStudents: 45,
-        averageScore: 68.2,
-        createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-      ),
-    ];
+  Future<void> approveAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+  }) async {
+    await _setAssessmentMarksStatus(
+      schoolId: schoolId,
+      assessmentId: assessmentId,
+      assessmentStatus: 'approved',
+      markStatus: 'approved',
+    );
   }
 
   @override
-  Future<void> approveReportCards(List<String> reportCardIds) async {}
+  Future<void> rejectAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+    required String reason,
+  }) async {
+    await _setAssessmentMarksStatus(
+      schoolId: schoolId,
+      assessmentId: assessmentId,
+      assessmentStatus: 'returned',
+      markStatus: 'returned',
+      rejectionReason: reason,
+    );
+  }
 
-  @override
-  Future<void> rejectReportCards(
-    List<String> reportCardIds,
-    String reason,
-  ) async {}
+  /// Moves an assessment's moderation status and every one of its marks in
+  /// lockstep. The class teacher's report engine reads `student_marks` by
+  /// `markStatus` alone (it has no notion of `subject_assessments`), while
+  /// the QA screens read `subject_assessments.status` - so a decision here
+  /// that only touched one collection would leave the other showing stale
+  /// information.
+  Future<void> _setAssessmentMarksStatus({
+    required String schoolId,
+    required String assessmentId,
+    required String assessmentStatus,
+    required String markStatus,
+    String? rejectionReason,
+  }) async {
+    final assessmentRef = _assessments(schoolId).doc(assessmentId);
+    final marksSnapshot = await _marks(
+      schoolId,
+    ).where('assessmentId', isEqualTo: assessmentId).get();
 
-  @override
-  Future<List<ReportCardApproval>> getPendingReportApprovals() async {
-    return [
-      const ReportCardApproval(
-        id: "rc1",
-        studentId: "st1",
-        studentName: "Namono Grace",
-        className: "P.7 Blue",
-        averageScore: 88.5,
-        term: "Term 3",
-        year: "2024",
-      ),
-      const ReportCardApproval(
-        id: "rc2",
-        studentId: "st2",
-        studentName: "Musa Kevin",
-        className: "P.7 Blue",
-        averageScore: 72.1,
-        term: "Term 3",
-        year: "2024",
-      ),
-    ];
+    // A batch caps at 500 writes; one per mark document plus the assessment
+    // itself is comfortably within that for a single assessment's cohort,
+    // but chunk defensively rather than assume a class size ceiling.
+    const chunkSize = 400;
+    final markDocs = marksSnapshot.docs;
+
+    for (var offset = 0; offset < markDocs.length; offset += chunkSize) {
+      final batch = firestore.batch();
+      if (offset == 0) {
+        batch.update(assessmentRef, {
+          'status': assessmentStatus,
+          'rejectionReason': ?rejectionReason,
+        });
+      }
+      for (final doc in markDocs.skip(offset).take(chunkSize)) {
+        batch.update(doc.reference, {
+          'markStatus': markStatus,
+          'returnReason': ?rejectionReason,
+        });
+      }
+      await batch.commit();
+    }
+
+    if (markDocs.isEmpty) {
+      // No marks yet is still a valid moderation decision on the assessment
+      // itself (e.g. rejecting before any submissions exist).
+      await assessmentRef.update({
+        'status': assessmentStatus,
+        'rejectionReason': ?rejectionReason,
+      });
+    }
   }
 
   @override
@@ -481,10 +619,18 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
         {'name': 'Namono Grace', 'class': 'P.7 Blue', 'score': 0.92},
       ],
       'unebReadiness': {
-        'overallReadiness': 0.78,
+        'overallReadiness': 0.72,
         'mockExamsCompleted': 3,
         'mockExamsPlanned': 4,
         'candidatesRegistered': 240,
+        'readinessCategories': [
+          {'category': 'Candidate Records', 'readiness': 0.85},
+          {'category': 'Subject Achievement', 'readiness': 0.68},
+          {'category': 'Activities of Integration', 'readiness': 0.60},
+          {'category': 'Project Work', 'readiness': 0.70},
+          {'category': 'CA Marks Completion', 'readiness': 0.75},
+          {'category': 'Exam Readiness', 'readiness': 0.80},
+        ],
         'subjectBreakdown': [
           {
             'subject': 'Mathematics',
@@ -501,7 +647,14 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
         ],
       },
       'reportsReadiness': {
-        'overallReadiness': 0.62,
+        'overallReadiness': 0.78,
+        'classesReady': 10,
+        'classesTotal': 16,
+        'marksCompletePct': 0.78,
+        'teacherRemarksPct': 0.65,
+        'classTeacherRemarksPct': 0.72,
+        'moderationCompletePct': 0.60,
+        'dosReviewStatus': 'Pending',
         'reportCardsPublished': 0,
         'reportCardsPendingApproval': 150,
         'marksFullyEntered': 0.71,
@@ -657,49 +810,266 @@ class DeanRemoteDataSourceImpl implements DeanRemoteDataSource {
   }
 
   @override
-  Future<List<AssessmentModeration>> getAssessmentsOverview() async {
-    return [
-      AssessmentModeration(
-        id: "ao1",
-        assessmentId: "as1",
-        title: "Mid-Term Algebra Test",
-        className: "Year 10A",
-        subjectName: "Mathematics",
-        teacherName: "John Doe",
-        submissionCount: 28,
-        totalStudents: 30,
-        averageScore: 72.5,
-        status: ModerationStatus.pending,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      AssessmentModeration(
-        id: "ao2",
-        assessmentId: "as2",
-        title: "Weekly Physics Quiz",
-        className: "S.4 Science",
-        subjectName: "Physics",
-        teacherName: "Jane Smith",
-        submissionCount: 45,
-        totalStudents: 45,
-        averageScore: 68.2,
-        status: ModerationStatus.approved,
-        createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-      ),
-      AssessmentModeration(
-        id: "ao3",
-        assessmentId: "as3",
-        title: "English Comprehension CAT",
-        className: "P.6 Green",
-        subjectName: "English",
-        teacherName: "Robert Okello",
-        submissionCount: 30,
-        totalStudents: 32,
-        averageScore: 61.0,
-        status: ModerationStatus.rejected,
-        rejectionReason: "Marks entry incomplete for 2 students",
-        createdAt: DateTime.now().subtract(const Duration(days: 3)),
-      ),
-    ];
+  Future<List<AssessmentModeration>> getAssessmentsOverview({
+    required String schoolId,
+  }) async {
+    final year = await structureConfigurationService.getCurrentAcademicYear(
+      schoolId,
+    );
+    final term = await structureConfigurationService.getCurrentAcademicPeriod(
+      schoolId,
+    );
+    if (year == null) return [];
+
+    Query<Map<String, dynamic>> query = _assessments(schoolId)
+        .where('academicYearId', isEqualTo: year.id)
+        .where('status', whereIn: _visibleStatuses);
+    if (term != null) {
+      query = query.where('termId', isEqualTo: term.id);
+    }
+
+    final snapshot = await query.get();
+    Query<Map<String, dynamic>> homeworkQuery = _classHomework(
+      schoolId,
+    ).where('academicYearId', isEqualTo: year.id);
+    if (term != null) {
+      homeworkQuery = homeworkQuery.where('termId', isEqualTo: term.id);
+    }
+    final homeworkSnapshot = await homeworkQuery.get();
+    final results = <AssessmentModeration>[];
+
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final subjectId = data['subjectId'] as String? ?? '';
+      final classId = data['classId'] as String? ?? '';
+      final assessmentId = doc.id;
+
+      final marksSnapshot = await _marks(
+        schoolId,
+      ).where('assessmentId', isEqualTo: assessmentId).get();
+      final scores = marksSnapshot.docs
+          .map((m) => (m.data()['score'] as num?)?.toDouble())
+          .whereType<double>()
+          .toList();
+      final submissionCount = scores.length;
+      final averageScore = scores.isEmpty
+          ? 0.0
+          : scores.reduce((a, b) => a + b) / scores.length;
+
+      final subjectName = await _lookupName(
+        collection: 'subjects',
+        id: subjectId,
+      );
+      final className = await _lookupName(collection: 'classes', id: classId);
+      final teacherStaffId = data['staffId'] as String? ?? '';
+      final teacherName = teacherStaffId.isEmpty
+          ? ''
+          : await _lookupUserName(teacherStaffId);
+
+      final totalStudents = await _eligibleStudentCount(
+        schoolId: schoolId,
+        classId: classId,
+        academicYearId: year.id,
+        streamId: data['streamId'] as String?,
+      );
+      final type =
+          (data['assessmentTypeName'] as String? ??
+                  data['assessmentTypeId'] as String? ??
+                  'Other')
+              .trim();
+      // Formal examinations have a dedicated workflow and never appear in
+      // continuous-assessment oversight.
+      if (type.toLowerCase().contains('exam')) continue;
+      final rawStatus = data['status'] as String? ?? 'draft';
+      results.add(
+        AssessmentModeration(
+          id: assessmentId,
+          assessmentId: assessmentId,
+          title: data['title'] as String? ?? '',
+          className: className,
+          subjectName: subjectName,
+          teacherName: teacherName,
+          submissionCount: submissionCount,
+          totalStudents: totalStudents,
+          averageScore: averageScore,
+          status: _moderationStatusFor(data['status'] as String? ?? ''),
+          rejectionReason: data['rejectionReason'] as String?,
+          createdAt:
+              _date(data['createdAt']) ??
+              _date(data['assessmentDate']) ??
+              DateTime.now(),
+          subjectId: subjectId,
+          classId: classId,
+          teacherStaffId: teacherStaffId,
+          academicYearId: data['academicYearId'] as String? ?? '',
+          termId: data['termId'] as String? ?? '',
+          type: type,
+          rawStatus: rawStatus,
+          streamId: data['streamId'] as String?,
+          description:
+              data['instructions'] as String? ?? data['description'] as String?,
+          dueDate: _date(data['dueDate']),
+          publishedAt: _date(data['publishedAt']),
+          updatedAt: _date(data['updatedAt']),
+          markedCount: submissionCount,
+          missingMarksCount: (totalStudents - submissionCount).clamp(
+            0,
+            totalStudents,
+          ),
+          attachments: List<String>.from(
+            data['attachments'] as List? ?? const [],
+          ),
+        ),
+      );
+    }
+
+    // Class teachers already write canonical homework records.  Read the
+    // same tenant-scoped documents here; no DOS copy is created or edited.
+    for (final doc in homeworkSnapshot.docs) {
+      final data = doc.data();
+      final rawStatus = data['status'] as String? ?? 'draft';
+      if (rawStatus == 'draft' ||
+          rawStatus == 'archived' ||
+          rawStatus == 'cancelled') {
+        continue;
+      }
+      final classId = data['classId'] as String? ?? '';
+      final streamId = data['streamId'] as String?;
+      final totalStudents = await _eligibleStudentCount(
+        schoolId: schoolId,
+        classId: classId,
+        academicYearId: year.id,
+        streamId: streamId,
+      );
+      final teacherId = data['createdBy'] as String? ?? '';
+      results.add(
+        AssessmentModeration(
+          id: 'homework-${doc.id}',
+          assessmentId: doc.id,
+          title: data['title'] as String? ?? '',
+          className: (data['className'] as String?)?.trim().isNotEmpty == true
+              ? data['className'] as String
+              : await _lookupName(collection: 'classes', id: classId),
+          subjectName: data['subjectName'] as String? ?? '',
+          teacherName: teacherId.isEmpty
+              ? ''
+              : await _lookupUserName(teacherId),
+          submissionCount: 0,
+          totalStudents: totalStudents,
+          averageScore: 0,
+          status: ModerationStatus.approved,
+          createdAt: _date(data['createdAt']) ?? DateTime.now(),
+          classId: classId,
+          teacherStaffId: teacherId,
+          academicYearId: data['academicYearId'] as String? ?? '',
+          termId: data['termId'] as String? ?? '',
+          type: 'Homework',
+          rawStatus: rawStatus,
+          streamId: streamId,
+          description:
+              data['instructions'] as String? ?? data['description'] as String?,
+          dueDate: _date(data['dueDate']),
+          publishedAt: _date(data['publishedAt']),
+          updatedAt: _date(data['updatedAt']),
+          attachments: List<String>.from(
+            data['attachments'] as List? ?? const [],
+          ),
+        ),
+      );
+    }
+
+    results.sort((a, b) => _activityDate(b).compareTo(_activityDate(a)));
+
+    return results;
+  }
+
+  DateTime _activityDate(AssessmentModeration assessment) =>
+      assessment.updatedAt ?? assessment.publishedAt ?? assessment.createdAt;
+
+  DateTime? _date(Object? value) => value is Timestamp
+      ? value.toDate()
+      : value is DateTime
+      ? value
+      : null;
+
+  Future<int> _eligibleStudentCount({
+    required String schoolId,
+    required String classId,
+    required String academicYearId,
+    String? streamId,
+  }) async {
+    if (classId.isEmpty || academicYearId.isEmpty) return 0;
+    Query<Map<String, dynamic>> query = firestore
+        .collection('students')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('classId', isEqualTo: classId)
+        .where('academicYearId', isEqualTo: academicYearId)
+        .where('status', isEqualTo: 'active');
+    if (streamId != null && streamId.isNotEmpty) {
+      query = query.where('streamId', isEqualTo: streamId);
+    }
+    return (await query.count().get()).count ?? 0;
+  }
+
+  Future<String> _lookupName({
+    required String collection,
+    required String id,
+  }) async {
+    if (id.isEmpty) return '';
+    final doc = await firestore.collection(collection).doc(id).get();
+    if (!doc.exists) return '';
+    final data = doc.data();
+    return (data?['name'] as String?) ?? '';
+  }
+
+  Future<String> _lookupUserName(String uid) async {
+    final doc = await firestore.collection('users').doc(uid).get();
+    if (!doc.exists) return '';
+    final data = doc.data();
+    return (data?['name'] as String?) ?? '';
+  }
+
+  @override
+  Future<void> createAssessment({
+    required String schoolId,
+    String? campusId,
+    required String title,
+    required String subjectId,
+    required String classId,
+    required String type,
+    required double maximumMark,
+  }) async {
+    final year = await structureConfigurationService.getCurrentAcademicYear(
+      schoolId,
+    );
+    final term = await structureConfigurationService.getCurrentAcademicPeriod(
+      schoolId,
+    );
+
+    final componentId = _assessments(schoolId).doc().id;
+    await _assessments(schoolId).add({
+      'campusId': campusId,
+      'academicYearId': year?.id ?? '',
+      'termId': term?.id ?? '',
+      'subjectId': subjectId,
+      'classId': classId,
+      'assessmentTypeId': type.toLowerCase().replaceAll(' ', '_'),
+      'assessmentTypeName': type,
+      'title': title,
+      'maximumMark': maximumMark,
+      'status': 'draft',
+      'requiresApproval': true,
+      'components': [
+        {
+          'id': componentId,
+          'name': title,
+          'maximumMark': maximumMark,
+          'weight': 100.0,
+          'isRequired': true,
+          'entryStatus': 'draft',
+        },
+      ],
+    });
   }
 
   @override

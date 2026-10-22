@@ -168,7 +168,7 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
                         record.dormitoryId,
                         style: Theme.of(
                           context,
-                        ).textTheme.labelSmall?.copyWith(color: Colors.grey),
+                        ).textTheme.labelSmall?.copyWith(color: Colors.black),
                       ),
                     ],
                   ),
@@ -186,7 +186,7 @@ class _AttendanceListScreenState extends State<AttendanceListScreen> {
                       DateFormat('h:mm a').format(record.date),
                       style: const TextStyle(
                         fontSize: 10,
-                        color: Colors.grey,
+                        color: Colors.black,
                         fontWeight: FontWeight.w500,
                       ),
                     ),

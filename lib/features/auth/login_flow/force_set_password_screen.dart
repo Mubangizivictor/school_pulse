@@ -32,6 +32,8 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
   final _confirmController = TextEditingController();
   bool _isLoading = false;
   String? _error;
+  String? _passwordError;
+  String? _confirmError;
 
   @override
   void dispose() {
@@ -47,24 +49,28 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
 
     if (_isParent) {
       if (password.length != 4 || int.tryParse(password) == null) {
-        setState(() => _error = 'PIN must be 4 digits.');
+        setState(() => _passwordError = 'PIN must be 4 digits.');
         return;
       }
     } else {
       if (password.length < 6) {
-        setState(() => _error = 'Password must be at least 6 characters.');
+        setState(
+          () => _passwordError = 'Password must be at least 6 characters.',
+        );
         return;
       }
     }
 
     if (password != _confirmController.text) {
-      setState(() => _error = 'Entries do not match.');
+      setState(() => _confirmError = 'Entries do not match.');
       return;
     }
 
     setState(() {
       _isLoading = true;
       _error = null;
+      _passwordError = null;
+      _confirmError = null;
     });
 
     if (_isParent) {
@@ -101,9 +107,7 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
         // navigate away, with no visible error.
         final authBloc = context.read<AuthBloc>();
         authBloc.add(AuthCheckRequested());
-        await authBloc.stream.firstWhere(
-          (state) => state is! AuthLoading,
-        );
+        await authBloc.stream.firstWhere((state) => state is! AuthLoading);
         if (!mounted) return;
         setState(() => _isLoading = false);
         _routeToDashboard();
@@ -117,7 +121,7 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
       return;
     }
 
-    context.go('/school-bootstrap');
+    context.go('/school-splash');
   }
 
   @override
@@ -159,18 +163,16 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
                       : null,
                   decoration: isDesktop
                       ? BoxDecoration(
-                          color: isDark
-                              ? AppColors.surfaceDark.withValues(alpha: 0.5)
-                              : Colors.white,
+                          color: isDark ? AppColors.surfaceDark : Colors.white,
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
                             color: isDark
-                                ? AppColors.white.withValues(alpha: 0.1)
+                                ? AppColors.white
                                 : AppColors.borderLight,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
+                              color: Colors.black,
                               blurRadius: 20,
                               offset: const Offset(0, 10),
                             ),
@@ -219,6 +221,13 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
                         prefixIcon: _isParent
                             ? Icons.dialpad
                             : Icons.lock_outline,
+                        errorText: _passwordError,
+                        isRequired: true,
+                        onChanged: (_) {
+                          if (_passwordError != null) {
+                            setState(() => _passwordError = null);
+                          }
+                        },
                       ),
                       const SizedBox(height: AppSpacing.xl),
                       PulseTextField(
@@ -232,7 +241,16 @@ class _ForceSetPasswordScreenState extends State<ForceSetPasswordScreen> {
                         prefixIcon: _isParent
                             ? Icons.dialpad
                             : Icons.lock_reset_rounded,
-                        validator: (_) => _error,
+                        errorText: _confirmError ?? _error,
+                        isRequired: true,
+                        onChanged: (_) {
+                          if (_confirmError != null || _error != null) {
+                            setState(() {
+                              _confirmError = null;
+                              _error = null;
+                            });
+                          }
+                        },
                       ),
                       const SizedBox(height: AppSpacing.x4l),
                       PulseButton(

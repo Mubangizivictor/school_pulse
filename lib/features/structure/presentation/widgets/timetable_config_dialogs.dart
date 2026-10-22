@@ -177,20 +177,20 @@ Future<void> showTimetableSlotFormDialog(
         ).showSnackBar(SnackBar(content: Text(problem)));
         return;
       }
-      onSave(
-        TimetableSlot(
-          id: existing?.id ?? const Uuid().v4(),
-          name: nameController.text.trim(),
-          startTime: start,
-          endTime: end,
-          type: type,
-          displayOrder: existing?.displayOrder ?? occupiedSlots.length,
-          isActive: existing?.isActive ?? true,
-          days: selectedDays,
-          notes: notesController.text.trim(),
-        ),
+      final slot = TimetableSlot(
+        id: existing?.id ?? const Uuid().v4(),
+        name: nameController.text.trim(),
+        startTime: start,
+        endTime: end,
+        type: type,
+        displayOrder: existing?.displayOrder ?? occupiedSlots.length,
+        isActive: existing?.isActive ?? true,
+        days: selectedDays,
+        notes: notesController.text.trim(),
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(slot);
     },
   );
 }

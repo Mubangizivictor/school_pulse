@@ -36,6 +36,7 @@ function validBody(overrides = {}) {
       category: 'Private',
       prefix: 'SHS',
       studentCapacity: 650,
+      slug: 'sunrise-high',
     },
     location: {
       region: 'Central',

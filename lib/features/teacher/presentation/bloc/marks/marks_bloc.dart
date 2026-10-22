@@ -4,9 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/error/failures.dart';
 
 import '../../../domain/entities/active_responsibility_context.dart';
+import '../../../domain/entities/class_subject.dart';
 import '../../../domain/entities/subject_assessment.dart';
 import '../../../domain/entities/subject_enrollment.dart';
 import '../../../domain/policies/marks_entry_policy.dart';
+import '../../../domain/repositories/class_student_repository.dart';
 import '../../../domain/repositories/marks_repository.dart';
 import '../../../domain/repositories/subject_student_repository.dart';
 
@@ -26,6 +28,33 @@ class MarksRequested extends MarksEvent {
 
   @override
   List<Object?> get props => [context];
+}
+
+/// Only relevant when the active context has no ambient subject (a Class
+/// Teacher marking a subject that is not their own) - picks which of the
+/// class's subjects every following action is scoped to.
+class MarksSubjectSelected extends MarksEvent {
+  final ClassSubject subject;
+
+  const MarksSubjectSelected(this.subject);
+
+  @override
+  List<Object?> get props => [subject];
+}
+
+class MarksAssessmentCreated extends MarksEvent {
+  final String title;
+  final String assessmentType;
+  final double maximumMark;
+
+  const MarksAssessmentCreated({
+    required this.title,
+    required this.assessmentType,
+    required this.maximumMark,
+  });
+
+  @override
+  List<Object?> get props => [title, assessmentType, maximumMark];
 }
 
 class MarksAssessmentSelected extends MarksEvent {
@@ -97,6 +126,12 @@ class MarksState extends Equatable {
   final List<SubjectAssessment> assessments;
   final List<SubjectStudentSummary> students;
 
+  /// Every subject taught in the class, offered only when [context] has no
+  /// ambient subject of its own (a Class Teacher). Empty for a Subject
+  /// Teacher, whose one subject already comes from the context.
+  final List<ClassSubject> classSubjects;
+  final ClassSubject? selectedSubject;
+
   final SubjectAssessment? selectedAssessment;
   final AssessmentComponent? selectedComponent;
 
@@ -112,6 +147,8 @@ class MarksState extends Equatable {
     this.context,
     this.assessments = const [],
     this.students = const [],
+    this.classSubjects = const [],
+    this.selectedSubject,
     this.selectedAssessment,
     this.selectedComponent,
     this.entries = const {},
@@ -119,6 +156,12 @@ class MarksState extends Equatable {
   });
 
   const MarksState.initial() : this(isLoading: true);
+
+  /// Whether the screen still needs the teacher to say which subject they
+  /// mean before anything subject-scoped (assessments, roster, entry) can
+  /// load. Never true for a Subject Teacher, whose context already names one.
+  bool get needsSubjectSelection =>
+      context?.subjectId == null && selectedSubject == null;
 
   int get enteredCount =>
       entries.values.where((e) => e.status.isResolved).length;
@@ -131,6 +174,8 @@ class MarksState extends Equatable {
     ActiveResponsibilityContext? context,
     List<SubjectAssessment>? assessments,
     List<SubjectStudentSummary>? students,
+    List<ClassSubject>? classSubjects,
+    ClassSubject? selectedSubject,
     SubjectAssessment? selectedAssessment,
     AssessmentComponent? selectedComponent,
     Map<String, StudentMarkEntry>? entries,
@@ -149,6 +194,8 @@ class MarksState extends Equatable {
       context: context ?? this.context,
       assessments: assessments ?? this.assessments,
       students: students ?? this.students,
+      classSubjects: classSubjects ?? this.classSubjects,
+      selectedSubject: selectedSubject ?? this.selectedSubject,
       selectedAssessment: selectedAssessment ?? this.selectedAssessment,
       selectedComponent: selectedComponent ?? this.selectedComponent,
       entries: entries ?? this.entries,
@@ -165,6 +212,8 @@ class MarksState extends Equatable {
     context,
     assessments,
     students,
+    classSubjects,
+    selectedSubject,
     selectedAssessment,
     selectedComponent,
     entries,
@@ -175,10 +224,16 @@ class MarksState extends Equatable {
 class MarksBloc extends Bloc<MarksEvent, MarksState> {
   final MarksRepository marksRepository;
   final SubjectStudentRepository studentRepository;
+  final ClassStudentRepository classStudentRepository;
 
-  MarksBloc({required this.marksRepository, required this.studentRepository})
-    : super(const MarksState.initial()) {
+  MarksBloc({
+    required this.marksRepository,
+    required this.studentRepository,
+    required this.classStudentRepository,
+  }) : super(const MarksState.initial()) {
     on<MarksRequested>(_onRequested);
+    on<MarksSubjectSelected>(_onSubjectSelected);
+    on<MarksAssessmentCreated>(_onAssessmentCreated);
     on<MarksAssessmentSelected>(_onAssessmentSelected);
     on<MarksComponentSelected>(_onComponentSelected);
     on<MarksEntryChanged>(_onEntryChanged);
@@ -195,12 +250,74 @@ class MarksBloc extends Bloc<MarksEvent, MarksState> {
   ) async {
     emit(MarksState(isLoading: true, context: event.context));
 
+    // A Class Teacher's context names no subject of its own - the screen
+    // must ask which of the class's subjects this session is for before
+    // anything subject-scoped can be fetched.
+    if (event.context.subjectId == null) {
+      final subjects = await marksRepository.getClassSubjects(
+        context: event.context,
+      );
+      emit(
+        state.copyWith(
+          isLoading: false,
+          classSubjects: subjects.getOrElse(() => const []),
+          errorMessage: subjects.fold(_messageFor, (_) => null),
+          clearError: subjects.isRight(),
+        ),
+      );
+      return;
+    }
+
+    await _loadSubjectScoped(event.context, null, emit);
+  }
+
+  Future<void> _onSubjectSelected(
+    MarksSubjectSelected event,
+    Emitter<MarksState> emit,
+  ) async {
+    final context = state.context;
+    if (context == null) return;
+
+    emit(state.copyWith(isLoading: true, selectedSubject: event.subject));
+    await _loadSubjectScoped(context, event.subject.id, emit);
+  }
+
+  /// Loads assessments and the roster for one subject. [subjectId] is the
+  /// explicit override for a Class Teacher's picked subject; null lets the
+  /// repository fall back to `context.subjectId` for a Subject Teacher.
+  Future<void> _loadSubjectScoped(
+    ActiveResponsibilityContext context,
+    String? subjectId,
+    Emitter<MarksState> emit,
+  ) async {
     final assessments = await marksRepository.getAssessments(
-      context: event.context,
+      context: context,
+      subjectId: subjectId,
     );
-    final roster = await studentRepository.getSubjectStudents(
-      context: event.context,
-    );
+    // A Class Teacher's roster is the whole class regardless of subject; a
+    // Subject Teacher's is scoped to who is actually enrolled in theirs.
+    final roster = subjectId == null
+        ? await studentRepository.getSubjectStudents(context: context)
+        : await classStudentRepository
+              .getClassStudents(context: context)
+              .then(
+                (either) => either.map(
+                  (rows) => rows
+                      .map(
+                        (r) => SubjectStudentSummary(
+                          studentId: r.studentId,
+                          name: r.name,
+                          admissionNumber: r.admissionNumber,
+                          photoUrl: r.photoUrl,
+                          classId: r.classId,
+                          className: r.className,
+                          streamId: r.streamId,
+                          streamName: r.streamName,
+                        ),
+                      )
+                      .toList(),
+                ),
+              );
 
     emit(
       state.copyWith(
@@ -209,6 +326,38 @@ class MarksBloc extends Bloc<MarksEvent, MarksState> {
         students: roster.getOrElse(() => const []),
         errorMessage: assessments.fold(_messageFor, (_) => null),
         clearError: assessments.isRight(),
+      ),
+    );
+  }
+
+  Future<void> _onAssessmentCreated(
+    MarksAssessmentCreated event,
+    Emitter<MarksState> emit,
+  ) async {
+    final context = state.context;
+    if (context == null) return;
+
+    emit(state.copyWith(isSaving: true, clearError: true, clearSuccess: true));
+
+    final result = await marksRepository.createAssessment(
+      context: context,
+      subjectId: state.selectedSubject?.id,
+      title: event.title,
+      assessmentType: event.assessmentType,
+      maximumMark: event.maximumMark,
+    );
+
+    result.fold(
+      (failure) => emit(
+        state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
+      ),
+      (assessment) => emit(
+        state.copyWith(
+          isSaving: false,
+          assessments: [...state.assessments, assessment],
+          successMessage: 'Assessment created.',
+          clearError: true,
+        ),
       ),
     );
   }
@@ -266,17 +415,18 @@ class MarksBloc extends Bloc<MarksEvent, MarksState> {
   void _onEntryChanged(MarksEntryChanged event, Emitter<MarksState> emit) {
     final updated = Map<String, StudentMarkEntry>.from(state.entries);
     final current = updated[event.studentId];
-    updated[event.studentId] = (current ??
-            StudentMarkEntry(
-              studentId: event.studentId,
-              componentId: state.selectedComponent?.id ?? '',
-            ))
-        .copyWith(
-          score: event.score,
-          status: event.status,
-          clearScore: event.score == null,
-          enteredAt: DateTime.now(),
-        );
+    updated[event.studentId] =
+        (current ??
+                StudentMarkEntry(
+                  studentId: event.studentId,
+                  componentId: state.selectedComponent?.id ?? '',
+                ))
+            .copyWith(
+              score: event.score,
+              status: event.status,
+              clearScore: event.score == null,
+              enteredAt: DateTime.now(),
+            );
 
     emit(state.copyWith(entries: updated));
   }
@@ -335,8 +485,9 @@ class MarksBloc extends Bloc<MarksEvent, MarksState> {
       (failure) => emit(
         state.copyWith(isSaving: false, errorMessage: _messageFor(failure)),
       ),
-      (report) =>
-          emit(state.copyWith(isSaving: false, review: report, clearError: true)),
+      (report) => emit(
+        state.copyWith(isSaving: false, review: report, clearError: true),
+      ),
     );
   }
 
@@ -410,7 +561,10 @@ class MarksBloc extends Bloc<MarksEvent, MarksState> {
     );
   }
 
-  void _onFeedbackCleared(MarksFeedbackCleared event, Emitter<MarksState> emit) {
+  void _onFeedbackCleared(
+    MarksFeedbackCleared event,
+    Emitter<MarksState> emit,
+  ) {
     emit(state.copyWith(clearError: true, clearSuccess: true));
   }
 

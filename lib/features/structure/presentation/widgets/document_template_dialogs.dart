@@ -76,17 +76,17 @@ Future<void> showDocumentTemplateFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        DocumentTemplateDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          templateType: templateType,
-          description: descController.text,
-          isActive: isActive,
-        ),
+      final template = DocumentTemplateDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        templateType: templateType,
+        description: descController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(template);
     },
   );
 }

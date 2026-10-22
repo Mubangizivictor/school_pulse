@@ -26,6 +26,8 @@ abstract class StructureRepository {
   Future<void> deleteLevel(String levelId);
   Future<void> archiveLevel(String levelId);
   Future<void> restoreLevel(String levelId);
+  Future<void> reorderLevels(List<EducationalLevel> orderedLevels);
+  Future<void> saveLevelsBatch(List<EducationalLevel> levels);
 
   // Academic Years
   Stream<List<AcademicYear>> watchAcademicYears(String schoolId);
@@ -48,6 +50,8 @@ abstract class StructureRepository {
   // Classes
   Stream<List<SchoolClass>> watchClasses(String schoolId);
   Future<void> addClass(SchoolClass schoolClass);
+  Future<void> addClasses(List<SchoolClass> classes);
+  Future<void> reorderClasses(List<SchoolClass> orderedClasses);
   Future<void> updateClass(SchoolClass schoolClass);
   Future<void> deleteClass(String classId);
   Future<void> archiveClass(String classId);
@@ -56,6 +60,7 @@ abstract class StructureRepository {
   // Streams / Sections
   Stream<List<ClassStream>> watchStreams(String schoolId);
   Future<void> addStream(ClassStream stream);
+  Future<void> addStreams(List<ClassStream> streams);
   Future<void> updateStream(ClassStream stream);
   Future<void> deleteStream(String streamId);
   Future<void> archiveStream(String streamId);
@@ -64,16 +69,24 @@ abstract class StructureRepository {
   // Subjects
   Stream<List<Subject>> watchSubjects(String schoolId);
   Future<void> addSubject(Subject subject);
+  Future<void> addSubjects(List<Subject> subjects);
   Future<void> updateSubject(Subject subject);
   Future<void> deleteSubject(String subjectId);
   Future<void> archiveSubject(String subjectId);
+  Future<void> reorderSubjects(List<Subject> orderedSubjects);
 
   // Departments
   Stream<List<Department>> watchDepartments(String schoolId);
   Future<void> addDepartment(Department department);
+  Future<void> saveDepartmentWithSubjects(
+    Department department,
+    List<Subject> addedSubjects,
+    List<Subject> removedSubjects,
+  );
   Future<void> updateDepartment(Department department);
   Future<void> deleteDepartment(String departmentId);
   Future<void> archiveDepartment(String departmentId);
+  Future<void> reorderDepartments(List<Department> orderedDepartments);
 
   // Staff Designations / Role Definitions
   Stream<List<StaffDesignation>> watchDesignations(String schoolId);
@@ -164,6 +177,10 @@ abstract class StructureRepository {
   // Grading Systems
   Stream<List<GradingSystemDef>> watchGradingSystems(String schoolId);
   Future<void> addGradingSystem(GradingSystemDef system);
+  Future<void> saveGradingSystemWithBands(
+    GradingSystemDef system,
+    List<GradeBand> bands,
+  );
   Future<void> updateGradingSystem(GradingSystemDef system);
   Future<void> deleteGradingSystem(String systemId);
 

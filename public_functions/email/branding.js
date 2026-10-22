@@ -3,49 +3,56 @@
 // sender identity, support address, and footer legal text never change —
 // every transactional email is sent and owned by School Pulse itself.
 
-const SENDER = 'School Pulse <notifications@schoolpulse.victorbee.com>';
-const SUPPORT_EMAIL = 'support@schoolpulse.victorbee.com';
-const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
+// mail.schoolpulseapp.com is the domain actually added and verified in
+// Resend (resend.com/domains) - the bare schoolpulseapp.com apex was never
+// added there, so any sender using @schoolpulseapp.com directly is
+// rejected by Resend at send time ("domain is not verified"), regardless
+// of whether the underlying DNS is otherwise fine. Every sender below uses
+// the mail. subdomain to match what Resend has actually verified.
+const EMAIL_DOMAIN = 'mail.schoolpulseapp.com';
+const SENDER = `School Pulse <notifications@${EMAIL_DOMAIN}>`;
+const SUPPORT_EMAIL = 'support@schoolpulseapp.com';
+const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
 const STATUS_URL = `${WEBSITE_ORIGIN}/application-status`;
 
-// Per-category senders, all under the already-verified schoolpulse.victorbee.com
-// domain — no new domain/DNS configuration. Falls back to the general
-// `notifications@` sender (SENDER) for any templateId not listed below.
+// Per-category senders under the verified mail.schoolpulseapp.com email
+// domain. Falls back to the general `notifications@` sender (SENDER) for
+// any templateId not listed below.
 const SENDER_BY_TEMPLATE = {
-  application_received: 'School Pulse <applications@schoolpulse.victorbee.com>',
-  application_approved: 'School Pulse <applications@schoolpulse.victorbee.com>',
-  application_rejected: 'School Pulse <applications@schoolpulse.victorbee.com>',
+  application_received: `School Pulse <applications@${EMAIL_DOMAIN}>`,
+  application_approved: `School Pulse <applications@${EMAIL_DOMAIN}>`,
+  application_rejected: `School Pulse <applications@${EMAIL_DOMAIN}>`,
 
-  payment_proof_received: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  manual_payment_approved: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  manual_payment_rejected: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  mobile_money_payment_success: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  mobile_money_payment_failed: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  payment_receipt: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  payment_reversed: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  payment_overdue: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  subscription_activated: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  subscription_renewed: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  subscription_expiring: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  subscription_expired: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  subscription_suspended: 'School Pulse <payments@schoolpulse.victorbee.com>',
-  subscription_reactivated: 'School Pulse <payments@schoolpulse.victorbee.com>',
+  payment_proof_received: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  manual_payment_approved: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  manual_payment_rejected: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  mobile_money_payment_success: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  mobile_money_payment_failed: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  payment_receipt: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  payment_reversed: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  payment_overdue: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  subscription_activated: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  subscription_renewed: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  subscription_expiring: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  subscription_expired: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  subscription_suspended: `School Pulse <payments@${EMAIL_DOMAIN}>`,
+  subscription_reactivated: `School Pulse <payments@${EMAIL_DOMAIN}>`,
 
-  school_admin_account_created: 'School Pulse <accounts@schoolpulse.victorbee.com>',
-  staff_account_created: 'School Pulse <accounts@schoolpulse.victorbee.com>',
-  password_reset: 'School Pulse <accounts@schoolpulse.victorbee.com>',
+  school_admin_account_created: `School Pulse <accounts@${EMAIL_DOMAIN}>`,
+  staff_account_created: `School Pulse <accounts@${EMAIL_DOMAIN}>`,
+  password_reset: `School Pulse <accounts@${EMAIL_DOMAIN}>`,
 
-  email_verification: 'School Pulse <security@schoolpulse.victorbee.com>',
-  new_login_alert: 'School Pulse <security@schoolpulse.victorbee.com>',
-  suspicious_login_alert: 'School Pulse <security@schoolpulse.victorbee.com>',
-  sessions_revoked: 'School Pulse <security@schoolpulse.victorbee.com>',
-  account_locked: 'School Pulse <security@schoolpulse.victorbee.com>',
-  account_reactivated: 'School Pulse <security@schoolpulse.victorbee.com>',
-  password_changed: 'School Pulse <security@schoolpulse.victorbee.com>',
-  two_step_verification_enabled: 'School Pulse <security@schoolpulse.victorbee.com>',
-  two_step_verification_disabled: 'School Pulse <security@schoolpulse.victorbee.com>',
-  trusted_device_added: 'School Pulse <security@schoolpulse.victorbee.com>',
-  trusted_device_removed: 'School Pulse <security@schoolpulse.victorbee.com>',
+  email_verification: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  new_login_alert: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  suspicious_login_alert: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  sessions_revoked: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  account_locked: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  account_reactivated: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  password_changed: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  two_step_verification_enabled: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  two_step_verification_disabled: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  trusted_device_added: `School Pulse <security@${EMAIL_DOMAIN}>`,
+  trusted_device_removed: `School Pulse <security@${EMAIL_DOMAIN}>`,
 };
 
 /**

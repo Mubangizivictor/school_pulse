@@ -42,10 +42,7 @@ void main() {
 
   group('countStudentsInStream', () {
     test('returns 0 when no students are in the stream', () async {
-      final count = await service.countStudentsInStream(
-        'school-1',
-        'stream-1',
-      );
+      final count = await service.countStudentsInStream('school-1', 'stream-1');
       expect(count, 0);
     });
 
@@ -66,10 +63,7 @@ void main() {
         'streamId': 'stream-1',
       });
 
-      final count = await service.countStudentsInStream(
-        'school-1',
-        'stream-1',
-      );
+      final count = await service.countStudentsInStream('school-1', 'stream-1');
       expect(count, 1);
     });
   });

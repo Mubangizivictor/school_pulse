@@ -170,7 +170,7 @@ class StaffIdentityBloc extends Bloc<StaffIdentityEvent, StaffIdentityState> {
       final result = await nfcCredentialService
           .findAssignedCardForStaff(staffId: staffId, schoolId: schoolId)
           .timeout(const Duration(seconds: 8));
-      return result.fold((_) => null, (cardUid) => cardUid);
+      return await result.fold((_) => null, (cardUid) => cardUid);
     } catch (_) {
       return null;
     }

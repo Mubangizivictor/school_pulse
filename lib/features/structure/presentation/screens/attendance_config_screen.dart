@@ -105,7 +105,7 @@ class _AttendanceTypesTab extends StatelessWidget {
               itemCount: state.attendanceTypes.length,
               itemBuilder: (context, index) {
                 final type = state.attendanceTypes[index];
-                Color color = Colors.blueGrey;
+                Color color = Colors.black;
                 if (type.colorHex.isNotEmpty) {
                   try {
                     color = Color(
@@ -178,7 +178,7 @@ class _AttendanceSessionsTab extends StatelessWidget {
                 final session = state.attendanceSessions[index];
                 return StructureListRow(
                   icon: Icons.schedule_outlined,
-                  color: Colors.cyan,
+                  color: Colors.black,
                   title: session.name,
                   isActive: session.isActive,
                   badge: StructureStatusBadge(

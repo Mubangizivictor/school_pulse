@@ -31,9 +31,7 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
+    final primaryColor = AppColors.textPrimary(context);
 
     return BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
       builder: (context, contextState) {
@@ -46,7 +44,7 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
               ].where((e) => e != null && e.isNotEmpty).join(' ');
 
         return Scaffold(
-          backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+          backgroundColor: AppColors.background(context),
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -151,9 +149,8 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
                                 context,
                                 folder,
                                 isDark,
-                                onTap: () => context.push(
-                                  '/staff/resources/folders',
-                                ),
+                                onTap: () =>
+                                    context.push('/staff/resources/folders'),
                               ),
                             const SizedBox(height: AppSpacing.xl),
                           ],
@@ -194,9 +191,7 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
           Text(
             title,
             style: AppTypography.titleMedium.copyWith(
-              color: isDark
-                  ? AppColors.textPrimaryDark
-                  : AppColors.textPrimaryLight,
+              color: AppColors.textPrimary(context),
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -222,7 +217,7 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
             Container(
               padding: const EdgeInsets.all(AppSpacing.s),
               decoration: BoxDecoration(
-                color: iconData.$2.withValues(alpha: 0.1),
+                color: iconData.$2,
                 borderRadius: BorderRadius.circular(AppSpacing.s),
               ),
               child: Icon(iconData.$1, color: iconData.$2, size: 24),
@@ -235,9 +230,7 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
                   Text(
                     resource.name,
                     style: AppTypography.bodyMedium.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
+                      color: AppColors.textPrimary(context),
                       fontWeight: FontWeight.bold,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -271,14 +264,17 @@ class _ClassResourcesScreenState extends State<ClassResourcesScreen> {
   }
 
   (IconData, Color) _iconFor(ClassResourceKind kind) => switch (kind) {
-    ClassResourceKind.document => (Icons.picture_as_pdf, Colors.red),
-    ClassResourceKind.spreadsheet => (Icons.grid_on, Colors.green),
-    ClassResourceKind.presentation => (Icons.slideshow, Colors.orange),
-    ClassResourceKind.image => (Icons.image, Colors.green),
-    ClassResourceKind.audio => (Icons.audiotrack, Colors.teal),
-    ClassResourceKind.video => (Icons.videocam, Colors.purple),
-    ClassResourceKind.link => (Icons.link, Colors.blue),
-    ClassResourceKind.folder => (Icons.folder, Colors.amber),
-    ClassResourceKind.other => (Icons.insert_drive_file, Colors.grey),
+    ClassResourceKind.document => (Icons.picture_as_pdf, Colors.black),
+    ClassResourceKind.spreadsheet => (Icons.grid_on, Colors.black),
+    ClassResourceKind.presentation => (Icons.slideshow, Colors.black),
+    ClassResourceKind.image => (Icons.image, Colors.black),
+    ClassResourceKind.audio => (Icons.audiotrack, Colors.black),
+    ClassResourceKind.video => (Icons.videocam, Colors.black),
+    ClassResourceKind.link => (Icons.link, Colors.black),
+    ClassResourceKind.folder => (Icons.folder, Colors.black),
+    ClassResourceKind.other => (
+      Icons.insert_drive_file,
+      AppColors.textMutedLight,
+    ),
   };
 }

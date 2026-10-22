@@ -37,13 +37,40 @@
     "bucket": "school-pulse-3d95b.firebasestorage.app"
   },
   "hosting": {
+    "site": "school-pulse-3d95b",
     "public": "build/web",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
+    "appAssociation": "NONE",
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "headers": [
+      {
+        "source": "/robots.txt",
+        "headers": [
+          { "key": "Content-Type", "value": "text/plain; charset=utf-8" },
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      },
+      {
+        "source": "**/*.@(xml)",
+        "headers": [
+          { "key": "Content-Type", "value": "application/xml; charset=utf-8" },
+          { "key": "Cache-Control", "value": "public, max-age=3600" }
+        ]
+      }
+    ],
     "rewrites": [
+      {
+        "source": "/api/webhooks/resend",
+        "function": {
+          "functionId": "resendWebhook",
+          "region": "europe-west1"
+        }
+      },
       {
         "source": "/verify",
         "function": {
@@ -59,8 +86,15 @@
         }
       },
       {
-        "source": "**",
-        "destination": "/index.html"
+        "source": "/verify-report",
+        "function": {
+          "functionId": "verifyReportCard",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/app/**",
+        "destination": "/app/index.html"
       }
     ]
   },
@@ -75,5 +109,22 @@
       "codebase": "publicwebsite",
       "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log"]
     }
-  ]
+  ],
+  "emulators": {
+    "firestore": {
+      "port": 8080
+    },
+    "auth": {
+      "port": 9099
+    },
+    "storage": {
+      "port": 9199
+    },
+    "functions": {
+      "port": 5001
+    },
+    "ui": {
+      "enabled": false
+    }
+  }
 }

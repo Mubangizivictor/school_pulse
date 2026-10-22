@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact Us — School Pulse</title>
+<meta name="description" content="Get in touch with the School Pulse team — email, WhatsApp, phone, or visit us in Booma, Mbarara. Read answers to common questions.">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
+<link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+<style>
+  .contact-wrap { padding-top: 28px; padding-bottom: 40px; }
+  .contact-head { margin-bottom: 24px; }
+  .contact-head h1 { margin: 6px 0 8px; }
+  .contact-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .contact-grid { grid-template-columns: 1fr; }
+  }
+
+  .contact-panel {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-card);
+    padding: 20px;
+  }
+  .contact-panel h2 { font-size: 17px; margin: 0 0 14px; }
+
+  .contact-cards { display: flex; flex-direction: column; gap: 10px; }
+  .contact-card-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: inherit;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .contact-card-link:hover { border-color: var(--color-primary); background: var(--color-primary-soft); }
+  .contact-card-link .cc-icon {
+    flex: none;
+    width: 38px; height: 38px;
+    border-radius: var(--radius-sm);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .contact-card-link .cc-icon svg { width: 19px; height: 19px; }
+  .contact-card-link .cc-label { font-size: 13px; font-weight: 600; color: var(--color-muted); margin-bottom: 2px; }
+  .contact-card-link .cc-value { font-size: 14.5px; font-weight: 600; color: var(--color-ink); }
+
+  .contact-form-panel { padding: 22px; }
+  .contact-form-panel .form-row { gap: 14px; margin-bottom: 0; }
+  .contact-form-panel .form-field { margin-bottom: 14px; }
+  .contact-form-panel textarea { min-height: 110px; resize: vertical; }
+
+  .faq-section { padding-top: 28px; }
+  .faq-section .container { max-width: 900px; }
+
+  /* Mobile fixed tap-to-call / WhatsApp bar */
+  .mobile-contact-bar {
+    display: none;
+  }
+  @media (max-width: 640px) {
+    body { padding-bottom: 66px; }
+    .mobile-contact-bar {
+      display: flex;
+      gap: 10px;
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      z-index: 40;
+      padding: 10px 12px;
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+      background: var(--color-bg);
+      border-top: 1px solid var(--color-border);
+    }
+    .mobile-contact-bar a {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 10px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .mobile-contact-bar a svg { width: 17px; height: 17px; }
+    .mobile-contact-bar .mcb-call { background: var(--color-primary); color: #fff; }
+    .mobile-contact-bar .mcb-whatsapp { background: var(--color-bg); color: var(--color-ink); border: 1px solid var(--color-border); }
+  }
+</style>
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="contact-wrap">
+    <div class="container">
+      <div class="contact-head">
+        <span class="eyebrow">Contact</span>
+        <h1>We'd love to hear from you.</h1>
+        <p class="lead" style="max-width:640px; margin:0;">Questions, feedback or support — we're here to help.</p>
+      </div>
+
+      <div class="contact-grid">
+        <div class="contact-panel">
+          <h2>Get in touch</h2>
+          <div class="contact-cards">
+            <a class="contact-card-link" href="mailto:support@schoolpulseapp.com">
+              <span class="cc-icon" id="icon-mail"></span>
+              <span>
+                <span class="cc-label" style="display:block;">Email</span>
+                <span class="cc-value">support@schoolpulseapp.com</span>
+              </span>
+            </a>
+            <a class="contact-card-link" href="https://wa.me/256793128137" target="_blank" rel="noopener">
+              <span class="cc-icon" id="icon-whatsapp"></span>
+              <span>
+                <span class="cc-label" style="display:block;">WhatsApp</span>
+                <span class="cc-value">0793128137</span>
+              </span>
+            </a>
+            <a class="contact-card-link" href="tel:+256793128137">
+              <span class="cc-icon" id="icon-phone"></span>
+              <span>
+                <span class="cc-label" style="display:block;">Call</span>
+                <span class="cc-value">0793128137</span>
+              </span>
+            </a>
+            <a class="contact-card-link" href="https://maps.google.com/?q=Booma,+Mbarara" target="_blank" rel="noopener">
+              <span class="cc-icon" id="icon-pin"></span>
+              <span>
+                <span class="cc-label" style="display:block;">Visit</span>
+                <span class="cc-value">Booma, Mbarara</span>
+              </span>
+            </a>
+          </div>
+        </div>
+
+        <div class="contact-panel contact-form-panel">
+          <h2>Send us a message</h2>
+          <form id="contactForm" novalidate>
+            <div class="form-row">
+              <div class="form-field">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" placeholder="Your full name">
+                <span class="error-text"></span>
+              </div>
+              <div class="form-field">
+                <label for="schoolName">School</label>
+                <input type="text" id="schoolName" name="schoolName" placeholder="Your school name">
+                <span class="error-text"></span>
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" placeholder="you@example.com">
+              <span class="error-text"></span>
+            </div>
+            <div class="form-field">
+              <label for="subject">Subject</label>
+              <input type="text" id="subject" name="subject" placeholder="How can we help?">
+              <span class="error-text"></span>
+            </div>
+            <div class="form-field">
+              <label for="message">Message</label>
+              <textarea id="message" name="message" placeholder="Type your message here..."></textarea>
+              <span class="error-text"></span>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg btn-block">
+              <span style="display:inline-flex; align-items:center; gap:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                Send Message
+              </span>
+            </button>
+          </form>
+
+          <div id="contactSuccess" class="success-panel" style="display:none;">
+            <div class="icon-circle" id="icon-check"></div>
+            <h3>Thanks — we'll be in touch</h3>
+            <p>Our team will respond to your message shortly.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt faq-section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">FAQ</span>
+        <h2>Frequently asked questions</h2>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-trigger" aria-expanded="false" aria-controls="faq-1">
+          What is School Pulse?
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <div class="accordion-panel" id="faq-1">
+          <div class="accordion-panel-inner">School Pulse is an all-in-one school management platform covering attendance, fees, academics, parent communication and school operations — with a branded website and portal set up automatically for your school.</div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-trigger" aria-expanded="false" aria-controls="faq-2">
+          How do I sign up?
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <div class="accordion-panel" id="faq-2">
+          <div class="accordion-panel-inner">Register your school online in a few steps. Most schools are up and running within a day — you register, we set up your branded website and portal, and our support team helps you import your student and staff records.</div>
+        </div>
+      </div>
+
+      <div class="accordion-item">
+        <button class="accordion-trigger" aria-expanded="false" aria-controls="faq-3">
+          How can I get support?
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <div class="accordion-panel" id="faq-3">
+          <div class="accordion-panel-inner">Reach us by email at support@schoolpulseapp.com, call or WhatsApp us on 0793128137, or fill in the form above — we reply within one business day.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<div class="mobile-contact-bar">
+  <a class="mcb-call" href="tel:+256793128137">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l1.5 4-2 1.5a13 13 0 0 0 6 6l1.5-2 4 1.5v4a2 2 0 0 1-2.2 2A18 18 0 0 1 3 6.2 2 2 0 0 1 5 4Z"/></svg>
+    Call 0793128137
+  </a>
+  <a class="mcb-whatsapp" href="https://wa.me/256793128137" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.4-4.1A8 8 0 1 1 9 18.6L4 20Z"/><path d="M8.5 9.5c0 3.5 2.5 6 6 6"/></svg>
+    WhatsApp
+  </a>
+</div>
+
+<script src="js/icons.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script src="js/faq.js"></script>
+<script src="js/forms.js"></script>
+<script src="js/main.js"></script>
+<script>
+  document.getElementById('icon-mail').innerHTML = window.ICONS.mail;
+  document.getElementById('icon-whatsapp').innerHTML = window.ICONS.whatsapp;
+  document.getElementById('icon-phone').innerHTML = window.ICONS.phone;
+  document.getElementById('icon-pin').innerHTML = window.ICONS.pin;
+  document.getElementById('icon-check').innerHTML = window.ICONS.check;
+</script>
+</body>
+</html>

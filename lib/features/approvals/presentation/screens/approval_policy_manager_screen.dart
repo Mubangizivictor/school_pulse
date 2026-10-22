@@ -59,7 +59,7 @@ class _ApprovalPolicyManagerScreenState
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: policies.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (_, i) {
               final p = policies[i];
               return Card(
@@ -133,7 +133,7 @@ class _PolicyEditorScreenState extends State<_PolicyEditorScreen> {
       widget.existing?.selfApprovalAllowed ?? false;
   late bool _escalationAllowed = widget.existing?.escalationAllowed ?? true;
   late bool _archived = widget.existing?.status == 'archived';
-  late List<_StageDraft> _stages =
+  late final List<_StageDraft> _stages =
       widget.existing?.stages.map((s) => _StageDraft.fromStage(s)).toList() ??
       [_StageDraft(order: 0)];
   bool _saving = false;

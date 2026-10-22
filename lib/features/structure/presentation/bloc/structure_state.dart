@@ -52,6 +52,18 @@ class StructureState extends Equatable {
   final List<DocumentTemplateDef> documentTemplates;
   final List<CustomFieldDef> customFields;
 
+  /// True while ConfirmAcademicCalendarRequested's confirmAcademicCalendar
+  /// callable is in flight.
+  final bool isConfirmingCalendar;
+
+  /// Set once after a successful confirmAcademicCalendar call; the calendar
+  /// screen watches this to show a one-shot success message. Cleared by the
+  /// screen re-dispatching a state that omits it (copyWith default keeps it,
+  /// so screens should not persist it across navigations - see the screen's
+  /// own listener which resets local UI state instead of relying on bloc
+  /// state clearing itself).
+  final bool calendarConfirmed;
+
   const StructureState({
     this.isLoading = true,
     this.errorMessage,
@@ -88,6 +100,8 @@ class StructureState extends Equatable {
     this.messageTemplates = const [],
     this.documentTemplates = const [],
     this.customFields = const [],
+    this.isConfirmingCalendar = false,
+    this.calendarConfirmed = false,
   });
 
   StructureState copyWith({
@@ -126,6 +140,8 @@ class StructureState extends Equatable {
     List<MessageTemplateDef>? messageTemplates,
     List<DocumentTemplateDef>? documentTemplates,
     List<CustomFieldDef>? customFields,
+    bool? isConfirmingCalendar,
+    bool? calendarConfirmed,
   }) {
     return StructureState(
       isLoading: isLoading ?? this.isLoading,
@@ -167,6 +183,8 @@ class StructureState extends Equatable {
       messageTemplates: messageTemplates ?? this.messageTemplates,
       documentTemplates: documentTemplates ?? this.documentTemplates,
       customFields: customFields ?? this.customFields,
+      isConfirmingCalendar: isConfirmingCalendar ?? this.isConfirmingCalendar,
+      calendarConfirmed: calendarConfirmed ?? this.calendarConfirmed,
     );
   }
 
@@ -207,5 +225,7 @@ class StructureState extends Equatable {
     messageTemplates,
     documentTemplates,
     customFields,
+    isConfirmingCalendar,
+    calendarConfirmed,
   ];
 }

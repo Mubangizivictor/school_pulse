@@ -77,6 +77,12 @@ enum NotificationType {
   assignmentDue,
   examScheduled,
   timetableUpdated,
+  // Exam Factory: question submission/moderation is teacher/moderator-
+  // facing; paper workflow (approval/print/schedule/marking) is DOS/marker-
+  // facing. Kept as two types, not one, so each gets its own deep-link
+  // destination and permission rule below.
+  examQuestionModeration,
+  examPaperWorkflow,
   // Library
   bookOverdue,
   bookDueSoon,

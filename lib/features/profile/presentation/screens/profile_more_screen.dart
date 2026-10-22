@@ -1,507 +1,536 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/core/user_roles.dart';
-import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
+import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/institution/presentation/screens/institution_switcher_sheet.dart';
+import 'package:school_pulse/features/teacher/domain/services/subject_sync_service.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
-/// New landing screen for the "More" tab - replaces StaffMoreScreen.
-/// No Language tile per the locked-in product decision; dark mode uses
-/// ThemeSwitchTile() (ThemeProvider-backed) verbatim.
+/// Personal account and app preferences only. Operational modules belong in
+/// School or Work, never in More.
 class ProfileMoreScreen extends StatelessWidget {
   const ProfileMoreScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthBloc>().state;
-    String name = 'Staff Member';
-    String role = 'Staff';
-    String? photoUrl;
-    bool isAdmin = false;
+    final state = context.watch<AuthBloc>().state;
+    if (state is! AuthAuthenticated) return const SizedBox.shrink();
+    return _MorePage(user: state.user);
+  }
+}
 
-    if (authState is AuthAuthenticated) {
-      name = authState.user.name;
-      role = UserRoleDisplay.name(authState.user.role);
-      photoUrl = authState.user.photoUrl;
-      isAdmin = authState.user.roles.any(
-        UserRoleDisplay.adminConsoleRoles.contains,
-      );
-    }
+class _MorePage extends StatelessWidget {
+  const _MorePage({required this.user});
+  final UserEntity user;
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          children: [
-            _MoreHeader(
-              onSettingsTap: () => context.push('/staff/more/security-privacy'),
-            ),
-            const SizedBox(height: 20),
-            _ProfileCard(
-              name: name,
-              role: role,
-              photoUrl: photoUrl,
-              onTap: () => context.push('/staff/more/edit-profile'),
-            ),
-            const SizedBox(height: 24),
-            _MoreSection(
-              title: 'ACCOUNT',
-              tiles: [
-                _MoreTileData(
-                  icon: Icons.person_outline_rounded,
-                  iconColor: AppColors.electricBlue,
-                  title: 'Personal Information',
-                  subtitle: 'Update your personal details',
-                  onTap: () => context.push('/staff/more/personal-information'),
-                ),
-                _MoreTileData(
-                  icon: Icons.notifications_none_rounded,
-                  iconColor: AppColors.electricBlue,
-                  title: 'Notifications',
-                  subtitle: 'Manage your notification preferences',
-                  onTap: () =>
-                      context.push('/staff/more/notification-preferences'),
-                ),
-                _MoreTileData(
-                  icon: Icons.shield_outlined,
-                  iconColor: AppColors.electricBlue,
-                  title: 'Security & Privacy',
-                  subtitle: 'Password, 2FA and privacy settings',
-                  onTap: () => context.push('/staff/more/security-privacy'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            _MoreSection(
-              title: 'SCHOOL',
-              tiles: [
-                _MoreTileData(
-                  icon: Icons.calendar_today_rounded,
-                  iconColor: AppColors.successGreen,
-                  title: 'School Calendar',
-                  subtitle: 'View academic calendar and events',
-                  onTap: () => context.push('/staff/calendar'),
-                ),
-                _MoreTileData(
-                  icon: Icons.campaign_rounded,
-                  iconColor: AppColors.royalBlue,
-                  title: 'Announcements',
-                  subtitle: 'Stay updated with school news',
-                  onTap: () => context.push('/staff/more/announcements'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            _MoreSection(
-              title: 'DIRECTORY & INFORMATION',
-              tiles: [
-                _MoreTileData(
-                  icon: Icons.info_rounded,
-                  iconColor: AppColors.goldenYellow,
-                  title: 'School Directory',
-                  subtitle: 'View faculty, staff and student directory',
-                  onTap: () => context.push('/staff/more/school-directory'),
-                ),
-              ],
-            ),
-            if (isAdmin) ...[
-              const SizedBox(height: 20),
-              _MoreSection(
-                title: 'BILLING',
-                tiles: [
-                  _MoreTileData(
-                    icon: Icons.credit_card_rounded,
-                    iconColor: AppColors.deepOrange,
-                    title: 'Subscription & Billing',
-                    subtitle: 'Manage subscription and payment methods',
-                    onTap: () => context.push('/staff/admin/subscription'),
-                  ),
-                ],
+  List<Widget> get _accountRows => [
+    _Row(
+      icon: Icons.person_outline,
+      title: 'Profile',
+      subtitle: 'Photo, name and contact details',
+      onTap: (context) => context.push('/staff/more/edit-profile'),
+    ),
+    _Row(
+      icon: Icons.shield_outlined,
+      title: 'Security',
+      subtitle: 'Password and sign-in methods',
+      onTap: (context) => context.push('/staff/more/security-privacy'),
+    ),
+    _MembershipRow(user: user),
+  ];
+
+  List<Widget> get _preferenceRows => [
+    _Row(
+      icon: Icons.notifications_none_outlined,
+      title: 'Notifications',
+      value: 'Manage',
+      onTap: (context) => context.push('/staff/more/notification-preferences'),
+    ),
+    _AppearanceRow(user: user),
+    _Row(
+      icon: Icons.cloud_outlined,
+      title: 'Offline & storage',
+      value: 'Manage',
+      onTap: (context) => context.push('/staff/more/offline-data'),
+    ),
+    const _Row(
+      icon: Icons.language_outlined,
+      title: 'Language & region',
+      value: 'English · Uganda',
+      onTap: null,
+    ),
+  ];
+
+  List<Widget> get _supportRows => [
+    _Row(
+      icon: Icons.help_outline,
+      title: 'Help centre',
+      onTap: (context) => context.push('/staff/more/help-center'),
+    ),
+    _Row(
+      icon: Icons.headset_mic_outlined,
+      title: 'Contact support',
+      onTap: (context) => context.push('/staff/more/help-center'),
+    ),
+    _Row(
+      icon: Icons.info_outline,
+      title: 'About School Pulse',
+      value: 'v1.0.0',
+      onTap: (context) => context.push('/staff/more/about'),
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: ResponsiveBuilder(
+        builder: (context, layout) => layout == ResponsiveLayout.mobile
+            ? _MobileMore(
+                user: user,
+                accountRows: _accountRows,
+                preferenceRows: _preferenceRows,
+                supportRows: _supportRows,
+              )
+            : _WideMore(
+                user: user,
+                layout: layout,
+                accountRows: _accountRows,
+                preferenceRows: _preferenceRows,
+                supportRows: _supportRows,
               ),
-            ],
-            const SizedBox(height: 20),
-            _MoreSection(
-              title: 'SUPPORT',
-              tiles: [
-                _MoreTileData(
-                  icon: Icons.help_outline_rounded,
-                  iconColor: AppColors.emeraldGreen,
-                  title: 'Help Center',
-                  subtitle: 'Get help and find answers',
-                  onTap: () => context.push('/staff/more/help-center'),
-                ),
-                _MoreTileData(
-                  icon: Icons.description_outlined,
-                  iconColor: AppColors.goldenYellow,
-                  title: 'Terms of Service',
-                  subtitle: 'Read our terms and conditions',
-                  onTap: () => context.push('/staff/more/terms-of-service'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            const _SectionLabel(title: 'APP SETTINGS'),
-            const SizedBox(height: 8),
-            AppCard(padding: EdgeInsets.zero, child: const ThemeSwitchTile()),
-            const SizedBox(height: 24),
-            SecondaryButton(
-              label: 'Logout',
-              icon: Icons.logout_rounded,
-              onPressed: () => _handleLogout(context),
-            ),
-          ],
-        ),
       ),
-    );
-  }
-
-  Future<void> _handleLogout(BuildContext context) async {
-    final confirmed = await confirmActionDialog(
-      context,
-      title: 'Logout',
-      message: 'Are you sure you want to log out?',
-      confirmLabel: 'Logout',
-      isDestructive: true,
-    );
-
-    if (confirmed == true && context.mounted) {
-      context.read<AuthBloc>().add(LogoutPressed());
-      context.go('/welcome');
-    }
-  }
+    ),
+  );
 }
 
-class _MoreHeader extends StatelessWidget {
-  final VoidCallback onSettingsTap;
-
-  const _MoreHeader({required this.onSettingsTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'More',
-                style: TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary(context),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Manage your account and app preferences',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppColors.textSecondary(context),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.surfaceContainer(context),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: AppColors.border(context).withValues(alpha: 0.4),
-            ),
-          ),
-          child: IconButton(
-            padding: EdgeInsets.zero,
-            iconSize: 18,
-            icon: Icon(
-              Icons.settings_outlined,
-              color: AppColors.textPrimary(context),
-            ),
-            onPressed: onSettingsTap,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ProfileCard extends StatelessWidget {
-  final String name;
-  final String role;
-  final String? photoUrl;
-  final VoidCallback onTap;
-
-  const _ProfileCard({
-    required this.name,
-    required this.role,
-    required this.photoUrl,
-    required this.onTap,
+class _MobileMore extends StatelessWidget {
+  const _MobileMore({
+    required this.user,
+    required this.accountRows,
+    required this.preferenceRows,
+    required this.supportRows,
   });
+  final UserEntity user;
+  final List<Widget> accountRows, preferenceRows, supportRows;
 
   @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return AppCard(
-      onTap: onTap,
-      showShadow: false,
-      color: isDark ? AppColors.elevatedSurfaceDark : null,
-      padding: EdgeInsets.zero,
-      child: Stack(
-        clipBehavior: Clip.hardEdge,
+  Widget build(BuildContext context) => ListView(
+    padding: const EdgeInsets.fromLTRB(20, 12, 20, 88),
+    children: [
+      Row(
         children: [
-          Positioned(
-            top: -30,
-            right: -30,
-            child: _decorativeCircle(90, AppColors.electricBlue, 0.16),
+          const Text(
+            'More',
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
-          Positioned(
-            top: 20,
-            right: 20,
-            child: _decorativeCircle(28, AppColors.brightCyan, 0.20),
-          ),
-          Positioned(
-            top: 55,
-            right: 60,
-            child: _decorativeCircle(14, AppColors.brightCyan, 0.25),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _Avatar(name: name, photoUrl: photoUrl, size: 56),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: AppColors.textPrimary(context),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        role,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary(context),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Edit Profile',
-                            style: TextStyle(
-                              color: AppColors.primary(context),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          Icon(
-                            Icons.chevron_right_rounded,
-                            size: 18,
-                            color: AppColors.primary(context),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          const Spacer(),
+          IconButton(
+            onPressed: () => context.push('/staff/more/security-privacy'),
+            icon: const Icon(Icons.settings_outlined, size: 22),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _decorativeCircle(double size, Color color, double alpha) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: alpha),
-      ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  final String name;
-  final String? photoUrl;
-  final double size;
-
-  const _Avatar({
-    required this.name,
-    required this.photoUrl,
-    required this.size,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (photoUrl == null || photoUrl!.isEmpty) {
-      return AvatarInitials(name: name, size: size);
-    }
-    return ClipOval(
-      child: Image.network(
-        photoUrl!,
-        width: size,
-        height: size,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) =>
-            AvatarInitials(name: name, size: size),
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  final String title;
-
-  const _SectionLabel({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.6,
-          color: AppColors.textSecondary(context),
-        ),
-      ),
-    );
-  }
-}
-
-class _MoreTileData {
-  final IconData icon;
-  final Color iconColor;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-
-  const _MoreTileData({
-    required this.icon,
-    required this.iconColor,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-  });
-}
-
-class _MoreSection extends StatelessWidget {
-  final String title;
-  final List<_MoreTileData> tiles;
-
-  const _MoreSection({required this.title, required this.tiles});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionLabel(title: title),
-        const SizedBox(height: 8),
-        AppCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              for (int i = 0; i < tiles.length; i++) ...[
-                _MoreTile(data: tiles[i]),
-                if (i != tiles.length - 1)
-                  Divider(
-                    height: 1,
-                    thickness: 1,
-                    indent: 68,
-                    color: AppColors.border(context).withValues(alpha: 0.4),
-                  ),
-              ],
-            ],
+      const SizedBox(height: 12),
+      _IdentityRow(user: user),
+      const SizedBox(height: 18),
+      _Section(title: 'ACCOUNT', children: accountRows),
+      const SizedBox(height: 18),
+      _Section(title: 'PREFERENCES', children: preferenceRows),
+      const SizedBox(height: 18),
+      _Section(title: 'SUPPORT', children: supportRows),
+      const SizedBox(height: 18),
+      OutlinedButton.icon(
+        onPressed: () => _signOut(context, user),
+        icon: const Icon(Icons.logout_outlined, size: 20),
+        label: const Text('Sign out'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _ink(context),
+          side: BorderSide(color: _ink(context)),
+          padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
+          alignment: Alignment.centerLeft,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
 }
 
-class _MoreTile extends StatelessWidget {
-  final _MoreTileData data;
-
-  const _MoreTile({required this.data});
+/// Desktop (>=1024) and tablet (600-1023) layout: same rows/callbacks as
+/// mobile, arranged as a bounded profile card plus a two-column section grid.
+class _WideMore extends StatelessWidget {
+  const _WideMore({
+    required this.user,
+    required this.layout,
+    required this.accountRows,
+    required this.preferenceRows,
+    required this.supportRows,
+  });
+  final UserEntity user;
+  final ResponsiveLayout layout;
+  final List<Widget> accountRows, preferenceRows, supportRows;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: data.onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: data.iconColor.withValues(alpha: 0.16),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(data.icon, size: 18, color: data.iconColor),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final isDesktop = layout == ResponsiveLayout.desktop;
+    final left = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _Section(title: 'ACCOUNT', children: accountRows),
+        const SizedBox(height: 24),
+        _Section(title: 'SUPPORT', children: supportRows),
+      ],
+    );
+    final right = _Section(title: 'PREFERENCES', children: preferenceRows);
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        isDesktop ? 32 : 20,
+        24,
+        isDesktop ? 32 : 20,
+        48,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1120),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Text(
-                    data.title,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary(context),
-                    ),
+                  const Text(
+                    'More',
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
                   ),
-                  const SizedBox(height: 1),
-                  Text(
-                    data.subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: AppColors.textSecondary(context),
+                  const Spacer(),
+                  Tooltip(
+                    message: 'Settings',
+                    child: IconButton(
+                      onPressed: () =>
+                          context.push('/staff/more/security-privacy'),
+                      icon: const Icon(Icons.settings_outlined, size: 22),
                     ),
                   ),
                 ],
               ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textMuted(context),
-              size: 20,
-            ),
-          ],
+              const SizedBox(height: 24),
+              _IdentityRow(user: user),
+              const SizedBox(height: 28),
+              if (isDesktop)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: left),
+                    const SizedBox(width: 24),
+                    Expanded(child: right),
+                  ],
+                )
+              else ...[
+                left,
+                const SizedBox(height: 24),
+                right,
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
+
+class _IdentityRow extends StatefulWidget {
+  const _IdentityRow({required this.user});
+  final UserEntity user;
+
+  @override
+  State<_IdentityRow> createState() => _IdentityRowState();
+}
+
+class _IdentityRowState extends State<_IdentityRow> {
+  bool _photoLoadFailed = false;
+
+  UserEntity get user => widget.user;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: () => context.push('/staff/more/edit-profile'),
+    borderRadius: BorderRadius.circular(16),
+    child: Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: _ink(context)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: _paper(context),
+            foregroundColor: _ink(context),
+            backgroundImage: user.photoUrl == null || _photoLoadFailed
+                ? null
+                : NetworkImage(user.photoUrl!),
+            onBackgroundImageError: user.photoUrl == null || _photoLoadFailed
+                ? null
+                : (_, _) {
+                    if (mounted) setState(() => _photoLoadFailed = true);
+                  },
+            child: user.photoUrl == null || _photoLoadFailed
+                ? Text(
+                    _initials(user.name),
+                    style: const TextStyle(fontSize: 15),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.name,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${UserRoleDisplay.name(user.role)} · ${user.schoolName ?? 'Active school'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, color: _ink(context)),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 18),
+        ],
+      ),
+    ),
+  );
+}
+
+class _MembershipRow extends StatelessWidget {
+  const _MembershipRow({required this.user});
+  final UserEntity user;
+  @override
+  Widget build(BuildContext context) =>
+      FutureBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        future: di
+            .sl<FirebaseFirestore>()
+            .collection('institution_memberships')
+            .where('userId', isEqualTo: user.id)
+            .where('status', isEqualTo: 'active')
+            .get(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const SizedBox(height: 0);
+          }
+          if (snapshot.hasError || (snapshot.data?.docs.length ?? 0) <= 1) {
+            return const SizedBox(height: 0);
+          }
+          return _Row(
+            icon: Icons.domain_outlined,
+            title: 'Switch school',
+            subtitle: 'Choose another organisation',
+            onTap: (context) => InstitutionSwitcherSheet.show(context),
+          );
+        },
+      );
+}
+
+class _AppearanceRow extends StatelessWidget {
+  const _AppearanceRow({required this.user});
+  final UserEntity user;
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.watch<ThemeProvider>();
+    final label = switch (theme.themeMode) {
+      ThemeMode.system => 'System',
+      ThemeMode.light => 'Light',
+      ThemeMode.dark => 'Dark',
+    };
+    return _Row(
+      icon: Icons.brightness_6_outlined,
+      title: 'Appearance',
+      value: label,
+      onTap: (context) => _appearancePicker(context, theme),
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.children});
+  final String title;
+  final List<Widget> children;
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        title,
+        style: const TextStyle(
+          fontSize: 13,
+          letterSpacing: .7,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      const SizedBox(height: 6),
+      Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: _ink(context)),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(children: children),
+      ),
+    ],
+  );
+}
+
+class _Row extends StatelessWidget {
+  const _Row({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.value,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String title;
+  final String? subtitle, value;
+  final void Function(BuildContext context)? onTap;
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: onTap == null ? null : () => onTap!(context),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: _paper(context),
+              border: Border.all(color: _ink(context)),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 20, color: _ink(context)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    subtitle!,
+                    style: TextStyle(fontSize: 13, color: _ink(context)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (value != null)
+            Text(value!, style: TextStyle(fontSize: 12, color: _ink(context))),
+          const SizedBox(width: 5),
+          const Icon(Icons.chevron_right, size: 16),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> _appearancePicker(
+  BuildContext context,
+  ThemeProvider theme,
+) async {
+  final mode = await showModalBottomSheet<ThemeMode>(
+    context: context,
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: ThemeMode.values
+            .map(
+              (mode) => ListTile(
+                leading: Icon(
+                  theme.themeMode == mode
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                ),
+                title: Text(switch (mode) {
+                  ThemeMode.system => 'System',
+                  ThemeMode.light => 'Light',
+                  ThemeMode.dark => 'Dark',
+                }),
+                onTap: () => Navigator.pop(context, mode),
+              ),
+            )
+            .toList(),
+      ),
+    ),
+  );
+  if (mode != null) await theme.setThemeMode(mode);
+}
+
+Future<void> _signOut(BuildContext context, UserEntity user) async {
+  final pending = await di.sl<SubjectSyncService>().pending(
+    schoolId: user.schoolId,
+  );
+  if (!context.mounted) return;
+  final message = pending.isEmpty
+      ? 'Sign out of this device? Local tenant data will be securely cleared.'
+      : '${pending.length} offline change${pending.length == 1 ? '' : 's'} still need to sync. Sign out anyway? Those changes will remain queued until this account signs in again.';
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Sign out?'),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text('Cancel', style: TextStyle(color: _ink(context))),
+        ),
+        OutlinedButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: _ink(context),
+            side: BorderSide(color: _ink(context)),
+          ),
+          child: const Text('Sign out'),
+        ),
+      ],
+    ),
+  );
+  if (confirm == true && context.mounted) {
+    context.read<AuthBloc>().add(LogoutPressed());
+    context.go('/welcome');
+  }
+}
+
+String _initials(String name) => name
+    .trim()
+    .split(RegExp(r'\\s+'))
+    .take(2)
+    .map((part) => part.isEmpty ? '' : part[0])
+    .join()
+    .toUpperCase();
+
+Color _ink(BuildContext context) => Theme.of(context).colorScheme.onSurface;
+Color _paper(BuildContext context) => Theme.of(context).colorScheme.surface;

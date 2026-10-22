@@ -46,7 +46,8 @@ class MarksAnalyticsScreen extends StatelessWidget {
             for (final entry in state.entries.values)
               if (entry.status == MarkEntryStatus.scored && entry.score != null)
                 (
-                  name: state.students
+                  name:
+                      state.students
                           .where((s) => s.studentId == entry.studentId)
                           .firstOrNull
                           ?.name ??
@@ -64,7 +65,8 @@ class MarksAnalyticsScreen extends StatelessWidget {
             );
           }
 
-          final avg = named.map((e) => e.percentage).reduce((a, b) => a + b) /
+          final avg =
+              named.map((e) => e.percentage).reduce((a, b) => a + b) /
               named.length;
           final passMark = assessment.passMark ?? 50;
           final passCount = named.where((e) => e.percentage >= passMark).length;
@@ -136,9 +138,7 @@ class MarksAnalyticsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -204,9 +204,7 @@ class MarksAnalyticsScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
         children: [
@@ -228,9 +226,7 @@ class MarksAnalyticsScreen extends StatelessWidget {
                   Expanded(
                     child: LinearProgressIndicator(
                       value: total == 0 ? 0 : entry.value / total,
-                      backgroundColor: AppColors.border(context).withValues(
-                        alpha: 0.2,
-                      ),
+                      backgroundColor: AppColors.border(context),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         AppColors.primary(context),
                       ),
@@ -262,16 +258,12 @@ class MarksAnalyticsScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.surfaceElevated(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.border(context).withValues(alpha: 0.5),
-              ),
+              border: Border.all(color: AppColors.border(context)),
             ),
             child: Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: AppColors.primary(
-                    context,
-                  ).withValues(alpha: 0.1),
+                  backgroundColor: AppColors.primary(context),
                   child: Text(
                     '${i + 1}',
                     style: TextStyle(color: AppColors.primary(context)),

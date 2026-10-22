@@ -97,7 +97,7 @@ class _ReportTemplateConfigScreenState
           Expanded(
             flex: 3,
             child: Container(
-              color: Colors.grey[200],
+              color: Colors.black,
               padding: const EdgeInsets.all(32),
               child: Card(
                 elevation: 4,
@@ -129,7 +129,7 @@ class _ReportTemplateConfigScreenState
                         border: TableBorder.all(),
                         children: [
                           TableRow(
-                            decoration: BoxDecoration(color: Colors.grey[300]),
+                            decoration: BoxDecoration(color: Colors.black),
                             children: [
                               const Padding(
                                 padding: EdgeInsets.all(8),

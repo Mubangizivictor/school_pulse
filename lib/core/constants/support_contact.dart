@@ -26,7 +26,7 @@ class SupportContact {
   /// `wa.me` links require (no leading `+`).
   static const String whatsappNumber = '256793128137';
 
-  static const String websiteUrl = 'https://schoolpulse.victorbee.com/';
+  static const String websiteUrl = 'https://schoolpulseapp.com/';
 
   /// No externally-hosted Terms of Service URL exists anywhere in this
   /// codebase - the only "Terms of Service" screen

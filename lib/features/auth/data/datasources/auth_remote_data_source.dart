@@ -66,15 +66,19 @@ abstract class AuthRemoteDataSource {
 
   /// Calls the `createStaffAccount` Cloud Function, which verifies the
   /// caller is a school administrator before provisioning the Firebase Auth
-  /// account and Firestore profile with the Admin SDK. Returns the
-  /// generated temporary password for the admin to hand to the new staff
-  /// member.
+  /// account and Firestore profile with the Admin SDK. No password is ever
+  /// generated, seen, or transmitted by the client - the Auth user is
+  /// created with a securely random internal password, and the staff member
+  /// sets their own via a verified invitation (signInMethod "invite" issues
+  /// one immediately; "noLogin" leaves the profile unable to sign in until
+  /// an administrator later calls [createStaffInvitation]). Returns the
+  /// created staffCode.
   Future<String> createStaffAccount({
     required String name,
     required String email,
     required String schoolId,
     required List<UserRole> roles,
-    required String password,
+    String? signInMethod,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     String? academicYearId,
@@ -83,7 +87,20 @@ abstract class AuthRemoteDataSource {
     String? campusId,
     String? employmentType,
     DateTime? dateJoined,
+    String? idempotencyKey,
+    bool sendLoginDetailsViaEmail = false,
+    Map<String, dynamic>? staffData,
+    Map<String, dynamic>? roleConfigs,
   });
+
+  /// Calls `createStaffInvitation`, which generates a verified, time-limited
+  /// Firebase Auth password-reset action link and emails it to the staff
+  /// member. Server enforces resend cooldown, tenant match, and admin-only
+  /// access. No password or token is ever returned to the client.
+  Future<void> createStaffInvitation(String uid);
+
+  /// Calls `cancelStaffInvitation` to revoke a pending invitation.
+  Future<void> cancelStaffInvitation(String uid);
 
   /// Sets a new password for the currently signed-in user and clears their
   /// mustChangePassword flag. Used the first time a staff member logs in
@@ -426,6 +443,14 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     await firebaseAuth.signOut();
   }
 
+  /// Staff/parent sessions persist on the device indefinitely (Firebase
+  /// Auth's own default) and are never time-boxed by a token-expiry check -
+  /// the only thing that ends a session automatically is this idle window.
+  /// Anyone who opens the app again before it elapses stays signed in with
+  /// no re-login prompt; only a manual "Log out" or exceeding this window
+  /// forces one.
+  static const Duration _inactivityLimit = Duration(days: 120);
+
   @override
   Future<UserModel?> getCurrentUser() async {
     var user = firebaseAuth.currentUser;
@@ -443,7 +468,8 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
     final doc = await firestore.collection('users').doc(user.uid).get();
     if (doc.exists) {
-      final profile = UserModel.fromJson({...doc.data()!, 'id': doc.id});
+      final data = doc.data()!;
+      final profile = UserModel.fromJson({...data, 'id': doc.id});
       // A persisted Firebase Auth token is not proof that the school account
       // remains active. Re-check the profile on every session restore, just
       // as the interactive login path does, and revoke the local session if
@@ -452,6 +478,13 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         await firebaseAuth.signOut();
         throw const AuthFailure('This account has been disabled.');
       }
+      final lastActive = _parseDate(data['lastActiveAt']);
+      if (lastActive != null &&
+          DateTime.now().difference(lastActive) > _inactivityLimit) {
+        await firebaseAuth.signOut();
+        return null;
+      }
+      unawaited(_touchLastActive(user.uid));
       return profile;
     }
     // Session survives but the profile is missing (e.g. account created via
@@ -472,11 +505,30 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           'This account has been disabled.$reason\nPlease contact your school administrator.',
         );
       }
+      unawaited(_touchLastActive(uid));
       return user;
     }
     throw const AuthFailure(
       'No profile found for this account. Contact your school administrator.',
     );
+  }
+
+  /// Cheap heartbeat so the idle-timeout check above has a real timestamp to
+  /// compare against. Best-effort: a failed write here must never block or
+  /// fail a login/session-restore.
+  Future<void> _touchLastActive(String uid) async {
+    try {
+      await firestore.collection('users').doc(uid).update({
+        'lastActiveAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      // Non-fatal - the next successful login/restore will retry.
+    }
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    return null;
   }
 
   @override
@@ -485,7 +537,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String email,
     required String schoolId,
     required List<UserRole> roles,
-    required String password,
+    String? signInMethod,
     String? assignedClass,
     List<SubjectAssignment>? subjects,
     String? academicYearId,
@@ -494,6 +546,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     String? campusId,
     String? employmentType,
     DateTime? dateJoined,
+    String? idempotencyKey,
+    bool sendLoginDetailsViaEmail = false,
+    Map<String, dynamic>? staffData,
+    Map<String, dynamic>? roleConfigs,
   }) async {
     try {
       final callable = functions.httpsCallable('createStaffAccount');
@@ -502,7 +558,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'email': email,
         'schoolId': schoolId,
         'roles': roles.map((r) => r.name).toList(),
-        'password': password,
+        'signInMethod': signInMethod,
         'assignedClass': assignedClass,
         'subjects': subjects?.map((e) => e.toJson()).toList(),
         'academicYearId': academicYearId,
@@ -511,8 +567,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'campusId': campusId,
         'employmentType': employmentType,
         'dateJoined': dateJoined?.toIso8601String(),
+        'idempotencyKey': idempotencyKey,
+        'sendLoginDetailsViaEmail': sendLoginDetailsViaEmail,
+        ...?staffData,
+        'roleConfigs': roleConfigs,
       });
-      return result.data['temporaryPassword'] as String;
+      // The callable never generates, sees, or returns a password - the
+      // Auth user is created with a securely random internal password and
+      // the staff member sets their own via a verified invitation (see
+      // createStaffAccount/issueStaffInvitation in functions/index.js). The
+      // staffCode is the only meaningful identifier it returns; callers
+      // that need uid look it up separately (see
+      // AddStaffWizardController._lookupStaffCodeAndUid).
+      return (result.data['staffCode'] as String?) ?? '';
     } catch (e) {
       // Staff identities, their tenant membership, and their initial
       // credential must be created together by the privileged callable.
@@ -520,6 +587,32 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // boundary and can leave a partial Auth/profile pair behind.
       if (e is FirebaseFunctionsException) {
         throw AuthFailure(e.message ?? 'Failed to create staff account');
+      }
+      throw AuthFailure(e.toString());
+    }
+  }
+
+  @override
+  Future<void> createStaffInvitation(String uid) async {
+    try {
+      final callable = functions.httpsCallable('createStaffInvitation');
+      await callable.call<Map<String, dynamic>>({'uid': uid});
+    } catch (e) {
+      if (e is FirebaseFunctionsException) {
+        throw AuthFailure(e.message ?? 'Failed to send invitation');
+      }
+      throw AuthFailure(e.toString());
+    }
+  }
+
+  @override
+  Future<void> cancelStaffInvitation(String uid) async {
+    try {
+      final callable = functions.httpsCallable('cancelStaffInvitation');
+      await callable.call<Map<String, dynamic>>({'uid': uid});
+    } catch (e) {
+      if (e is FirebaseFunctionsException) {
+        throw AuthFailure(e.message ?? 'Failed to cancel invitation');
       }
       throw AuthFailure(e.toString());
     }
@@ -678,6 +771,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       );
     }
     await batch.commit();
+    await _syncProfileIntoConversations(user);
   }
 
   @override
@@ -756,5 +850,33 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     'schoolId': user.schoolId,
     'isActive': user.isActive,
     'phone': user.phoneNumber,
+    'photoUrl': user.photoUrl,
   };
+
+  /// Conversation participants are denormalized for a one-query inbox.
+  /// Refresh the safe display fields when a person changes their profile.
+  Future<void> _syncProfileIntoConversations(UserModel user) async {
+    final snapshot = await firestore
+        .collection('conversations')
+        .where('participantIds', arrayContains: user.id)
+        .get();
+
+    for (final doc in snapshot.docs) {
+      final participants = (doc.data()['participants'] as List? ?? const [])
+          .map<Map<String, dynamic>>(
+            (value) => Map<String, dynamic>.from(value as Map),
+          )
+          .map((participant) {
+            if (participant['id'] != user.id) return participant;
+            return {
+              ...participant,
+              'name': user.name,
+              'role': user.role.name,
+              'avatarUrl': user.photoUrl,
+            };
+          })
+          .toList();
+      await doc.reference.update({'participants': participants});
+    }
+  }
 }

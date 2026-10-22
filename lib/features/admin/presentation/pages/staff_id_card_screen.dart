@@ -137,9 +137,9 @@ class _StaffIdCardScreenState extends State<StaffIdCardScreen> {
       await idCardService.printIdCard(pdfData);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to print ID card: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to print ID card: $error')),
+      );
     }
   }
 }
@@ -170,9 +170,225 @@ class _IdentityErrorState extends StatelessWidget {
   }
 }
 
-class _IdCardPreview extends StatelessWidget {
+/// Front/back preview following the Student ID card interaction: show one
+/// print-stable side at a time instead of squeezing two physical cards into
+/// the mobile viewport.
+class _IdCardPreview extends StatefulWidget {
   const _IdCardPreview({required this.staff, required this.identity});
 
+  final UserEntity staff;
+  final StaffIdentity identity;
+
+  @override
+  State<_IdCardPreview> createState() => _IdCardPreviewState();
+}
+
+class _IdCardPreviewState extends State<_IdCardPreview> {
+  bool _showFront = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _StaffCardSideSelector(
+              showFront: _showFront,
+              onChanged: (value) => setState(() => _showFront = value),
+            ),
+            const SizedBox(height: 18),
+            AspectRatio(
+              aspectRatio: 0.62,
+              child: _showFront
+                  ? _CardFront(staff: widget.staff)
+                  : _CardBack(staff: widget.staff, identity: widget.identity),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StaffCardSideSelector extends StatelessWidget {
+  const _StaffCardSideSelector({
+    required this.showFront,
+    required this.onChanged,
+  });
+
+  final bool showFront;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          Expanded(child: _segment(context, 'Front', showFront, true)),
+          Expanded(child: _segment(context, 'Back', !showFront, false)),
+        ],
+      ),
+    );
+  }
+
+  Widget _segment(
+    BuildContext context,
+    String label,
+    bool selected,
+    bool showFront,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: () => onChanged(showFront),
+      borderRadius: BorderRadius.circular(19),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? scheme.onSurface : Colors.transparent,
+          borderRadius: BorderRadius.circular(19),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: selected ? scheme.surface : scheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+const _cardWidth = 240.0;
+const _cardHeight = 380.0;
+// Physical ID cards deliberately keep a fixed print-friendly appearance.
+// They are white regardless of the app's current light/dark theme.
+const _staffCardAccent = Color(0xFF1B2A6B);
+const _staffCardAccentSoft = Color(0xFFE9EBF7);
+
+class _CardFront extends StatelessWidget {
+  const _CardFront({required this.staff});
+  final UserEntity staff;
+
+  @override
+  Widget build(BuildContext context) {
+    final schoolName =
+        context.watch<ThemeProvider>().config?.schoolName ??
+        'SCHOOL PULSE ACADEMY';
+    final roleLabel = staff.roles.isEmpty
+        ? '—'
+        : UserRoleDisplay.name(staff.roles.first);
+
+    return Card(
+      elevation: 4,
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SizedBox(
+        width: _cardWidth,
+        height: _cardHeight,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              color: _staffCardAccent,
+              child: Column(
+                children: [
+                  Text(
+                    schoolName.toUpperCase(),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'STAFF',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.4,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 18),
+            CircleAvatar(
+              radius: 44,
+              backgroundColor: _staffCardAccentSoft,
+              backgroundImage: staff.photoUrl?.isNotEmpty == true
+                  ? NetworkImage(staff.photoUrl!)
+                  : null,
+              child: staff.photoUrl?.isNotEmpty == true
+                  ? null
+                  : const Icon(Icons.person, size: 42, color: _staffCardAccent),
+            ),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                staff.name.toUpperCase(),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              roleLabel,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: const Color(0xFF404040)),
+            ),
+            const Spacer(),
+            if (staff.staffCode != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: _staffCardAccentSoft,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  staff.staffCode!,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: _staffCardAccent,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CardBack extends StatelessWidget {
+  const _CardBack({required this.staff, required this.identity});
   final UserEntity staff;
   final StaffIdentity identity;
 
@@ -181,58 +397,31 @@ class _IdCardPreview extends StatelessWidget {
     final schoolName =
         context.watch<ThemeProvider>().config?.schoolName ??
         'SCHOOL PULSE ACADEMY';
-    final scheme = Theme.of(context).colorScheme;
-    final roleLabel = staff.roles.isEmpty
-        ? '—'
-        : UserRoleDisplay.name(staff.roles.first);
-
     return Card(
       elevation: 4,
-      child: Container(
-        width: 320,
-        padding: const EdgeInsets.all(20),
+      color: Colors.white,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SizedBox(
+        width: _cardWidth,
+        height: _cardHeight,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              schoolName.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: scheme.primary,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              color: _staffCardAccent,
+              child: Text(
+                'STAFF ID CARD',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'STAFF',
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.2,
-                color: Colors.amber.shade800,
-              ),
-            ),
-            const SizedBox(height: 18),
-            CircleAvatar(
-              radius: 46,
-              backgroundImage: staff.photoUrl?.isNotEmpty == true
-                  ? NetworkImage(staff.photoUrl!)
-                  : null,
-              child: staff.photoUrl?.isNotEmpty == true
-                  ? null
-                  : const Icon(Icons.person, size: 44),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              staff.name.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 14),
-            Text(roleLabel),
-            if (staff.staffCode != null) Text('Staff Code: ${staff.staffCode}'),
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
             QrImageView(
               data: identity.qrCodeData.isNotEmpty
                   ? identity.qrCodeData
@@ -240,9 +429,79 @@ class _IdCardPreview extends StatelessWidget {
               version: QrVersions.auto,
               size: 132,
             ),
+            const SizedBox(height: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'THIS CARD IS THE PROPERTY OF $schoolName',
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF404040),
+                ),
+              ),
+            ),
+            const Spacer(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _BackBadge(
+                  icon: Icons.verified_user_outlined,
+                  label: 'Identity\nVerified',
+                ),
+                _BackBadge(
+                  icon: Icons.lock_outline,
+                  label: 'Non-\nTransferable',
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                'If found, please return to the school office.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: const Color(0xFF404040),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _BackBadge extends StatelessWidget {
+  const _BackBadge({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: _staffCardAccentSoft,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 18, color: _staffCardAccent),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: const Color(0xFF404040)),
+        ),
+      ],
     );
   }
 }
@@ -292,7 +551,9 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Your session is not ready. Sign in again and retry.'),
+              content: Text(
+                'Your session is not ready. Sign in again and retry.',
+              ),
             ),
           );
         }
@@ -302,7 +563,10 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
       if (mounted) {
         setState(() => _scanning = true);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(promptMessage), duration: const Duration(seconds: 4)),
+          SnackBar(
+            content: Text(promptMessage),
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
 
@@ -313,7 +577,9 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
           }
         },
         onError: (Object error, StackTrace stackTrace) {
-          if (!completer.isCompleted) completer.completeError(error, stackTrace);
+          if (!completer.isCompleted) {
+            completer.completeError(error, stackTrace);
+          }
         },
       );
 
@@ -355,9 +621,9 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
       return uid;
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not start NFC scan: $error')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not start NFC scan: $error')),
+        );
       }
       return null;
     } finally {
@@ -377,7 +643,8 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
         children: [
           for (final reason in const ['Lost', 'Stolen', 'Damaged', 'Other'])
             SimpleDialogOption(
-              onPressed: () => Navigator.pop(dialogContext, reason.toLowerCase()),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, reason.toLowerCase()),
               child: Text(reason),
             ),
         ],
@@ -484,7 +751,9 @@ class _NfcCardSectionState extends State<_NfcCardSection> {
                   onPressed: _assign,
                   icon: const Icon(Icons.nfc),
                   label: Text(
-                    status == 'revoked' ? 'Assign Replacement Card' : 'Assign Card',
+                    status == 'revoked'
+                        ? 'Assign Replacement Card'
+                        : 'Assign Card',
                   ),
                 ),
               if (status == 'active' && widget.assignedCardUid != null) ...[

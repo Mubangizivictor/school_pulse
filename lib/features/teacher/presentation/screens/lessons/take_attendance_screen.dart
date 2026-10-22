@@ -98,16 +98,14 @@ class TakeAttendanceScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary(context).withValues(alpha: 0.1),
+              color: AppColors.primary(context),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -243,9 +241,7 @@ class TakeAttendanceScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceElevated(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Row(
         children: [
@@ -274,9 +270,9 @@ class TakeAttendanceScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
+              color: statusColor,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+              border: Border.all(color: statusColor),
             ),
             child: Row(
               children: [

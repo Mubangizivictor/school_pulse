@@ -310,29 +310,31 @@ void main() {
       expect(messages, hasLength(2));
     });
 
-    test('omitting clientMessageId keeps the original auto-id behaviour',
-        () async {
-      final conversationId = await repository.startDirectConversation(
-        me: teacher,
-        contact: parentContact,
-      );
+    test(
+      'omitting clientMessageId keeps the original auto-id behaviour',
+      () async {
+        final conversationId = await repository.startDirectConversation(
+          me: teacher,
+          contact: parentContact,
+        );
 
-      await repository.sendMessage(
-        conversationId: conversationId,
-        sender: teacher,
-        content: 'No client id',
-      );
-      await repository.sendMessage(
-        conversationId: conversationId,
-        sender: teacher,
-        content: 'No client id',
-      );
+        await repository.sendMessage(
+          conversationId: conversationId,
+          sender: teacher,
+          content: 'No client id',
+        );
+        await repository.sendMessage(
+          conversationId: conversationId,
+          sender: teacher,
+          content: 'No client id',
+        );
 
-      final messages = await repository
-          .watchMessages(conversationId, teacher.id)
-          .first;
-      expect(messages, hasLength(2));
-    });
+        final messages = await repository
+            .watchMessages(conversationId, teacher.id)
+            .first;
+        expect(messages, hasLength(2));
+      },
+    );
   });
 
   group('message actions', () {

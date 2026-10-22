@@ -45,15 +45,15 @@ Future<void> showAnnouncementCategoryFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        AnnouncementCategoryDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          isActive: isActive,
-        ),
+      final category = AnnouncementCategoryDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(category);
     },
   );
 }
@@ -97,15 +97,15 @@ Future<void> showNotificationCategoryFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        NotificationCategoryDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          isActive: isActive,
-        ),
+      final category = NotificationCategoryDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(category);
     },
   );
 }
@@ -174,18 +174,18 @@ Future<void> showMessageTemplateFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        MessageTemplateDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          channel: channel,
-          subject: subjectController.text,
-          body: bodyController.text,
-          isActive: isActive,
-        ),
+      final template = MessageTemplateDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        channel: channel,
+        subject: subjectController.text,
+        body: bodyController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(template);
     },
   );
 }

@@ -3,6 +3,7 @@ const admin = require('firebase-admin');
 const { enqueueTemplatedEmail } = require('./email/transactional_queue');
 const { ownerRateLimit } = require('./owner_rate_limit');
 const { WEBSITE_ORIGIN } = require('./email/branding');
+const { isAllowedOrigin } = require('./allowed_origins');
 
 if (!admin.apps.length) admin.initializeApp();
 
@@ -11,13 +12,13 @@ function text(value, max = 200) {
 }
 
 const VERIFICATION_ACTION_SETTINGS = {
-  url: `${WEBSITE_ORIGIN}/register?verified=1`,
+  url: `${WEBSITE_ORIGIN}/register-school?verified=1`,
   handleCodeInApp: false,
 };
 
 function cors(req, res) {
   const origin = req.get('origin');
-  if (origin === WEBSITE_ORIGIN || origin === 'http://localhost:4321') {
+  if (isAllowedOrigin(origin)) {
     res.set('Access-Control-Allow-Origin', origin);
   }
   res.set('Vary', 'Origin');

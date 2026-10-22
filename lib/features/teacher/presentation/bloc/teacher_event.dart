@@ -29,27 +29,30 @@ class TeacherAttendanceHistoryRequested extends TeacherEvent {
 }
 
 class TeacherAttendanceRequested extends TeacherEvent {
+  final String schoolId;
   final String className;
 
-  const TeacherAttendanceRequested(this.className);
+  const TeacherAttendanceRequested(this.schoolId, this.className);
 
   @override
-  List<Object?> get props => [className];
+  List<Object?> get props => [schoolId, className];
 }
 
 class TeacherMarksEntryRequested extends TeacherEvent {
+  final String schoolId;
   final String className;
   final String subject;
   final String assessment;
 
   const TeacherMarksEntryRequested({
+    required this.schoolId,
     required this.className,
     required this.subject,
     required this.assessment,
   });
 
   @override
-  List<Object?> get props => [className, subject, assessment];
+  List<Object?> get props => [schoolId, className, subject, assessment];
 }
 
 class TeacherMarksSubmitted extends TeacherEvent {
@@ -125,25 +128,28 @@ class TeacherHomeworkUpdated extends TeacherEvent {
 
 class TeacherHomeworkDeleted extends TeacherEvent {
   final String homeworkId;
-  const TeacherHomeworkDeleted(this.homeworkId);
+  final String schoolId;
+  const TeacherHomeworkDeleted(this.homeworkId, {required this.schoolId});
   @override
-  List<Object?> get props => [homeworkId];
+  List<Object?> get props => [homeworkId, schoolId];
 }
 
 // Report Comment Events
 class TeacherReportCommentsRequested extends TeacherEvent {
+  final String schoolId;
   final String className;
   final String term;
   final String year;
 
   const TeacherReportCommentsRequested({
+    required this.schoolId,
     required this.className,
     required this.term,
     required this.year,
   });
 
   @override
-  List<Object?> get props => [className, term, year];
+  List<Object?> get props => [schoolId, className, term, year];
 }
 
 class TeacherReportCommentSaved extends TeacherEvent {
@@ -155,12 +161,14 @@ class TeacherReportCommentSaved extends TeacherEvent {
 
 // Competency Rating Events
 class TeacherCompetencyRatingsRequested extends TeacherEvent {
+  final String schoolId;
   final String className;
   final String term;
   final String year;
   final String competency;
 
   const TeacherCompetencyRatingsRequested({
+    required this.schoolId,
     required this.className,
     required this.term,
     required this.year,
@@ -168,7 +176,7 @@ class TeacherCompetencyRatingsRequested extends TeacherEvent {
   });
 
   @override
-  List<Object?> get props => [className, term, year, competency];
+  List<Object?> get props => [schoolId, className, term, year, competency];
 }
 
 class TeacherCompetencyRatingSaved extends TeacherEvent {

@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>School Pulse — School Management Software for Ugandan Schools</title>
+<meta name="description" content="Run your school with clarity. School Pulse is the multi-tenant school-management platform for attendance, fees, academics and parent communication.">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
+<link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <span class="eyebrow">Built for Ugandan schools</span>
+        <h1>Run your school with clarity.</h1>
+        <p class="lead">Attendance, fees, academics and parent communication — one platform your whole school actually enjoys using, even with patchy internet.</p>
+        <div class="btn-row">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+          <a href="platform.html" class="btn btn-outline btn-lg">See how it works</a>
+        </div>
+      </div>
+      <div class="mockup">
+        <div class="mockup-chrome">
+          <span class="mockup-dot"></span><span class="mockup-dot"></span><span class="mockup-dot"></span>
+          <span class="mockup-url">app.schoolpulseapp.com/dashboard</span>
+        </div>
+        <div class="mockup-body">
+          <div class="grid grid-2" style="margin-bottom:12px;">
+            <div class="card" style="padding:14px;">
+              <div class="muted" style="font-size:12px;">Today's attendance</div>
+              <div style="font-size:22px; font-weight:800; margin-top:2px;">94.2%</div>
+              <span class="stat-pill green" style="margin-top:6px;">▲ 2.1%</span>
+            </div>
+            <div class="card" style="padding:14px;">
+              <div class="muted" style="font-size:12px;">Fees collected (term)</div>
+              <div style="font-size:22px; font-weight:800; margin-top:2px;">UGX 84.2M</div>
+              <span class="stat-pill blue" style="margin-top:6px;">On track</span>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Learner</th><th>Class</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>Nakato Grace</td><td>P5 East</td><td><span class="badge badge-green">Present</span></td></tr>
+              <tr><td>Okello Brian</td><td>S2 North</td><td><span class="badge badge-amber">Late</span></td></tr>
+              <tr><td>Achieng Mary</td><td>P3 West</td><td><span class="badge badge-red">Absent</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-trust-strip">
+    <div class="container trust-strip">
+      <div class="trust-item" id="icon-offline"></div>
+      <div class="trust-item" id="icon-secure"></div>
+      <div class="trust-item" id="icon-scales"></div>
+      <div class="trust-item" id="icon-support"></div>
+    </div>
+  </section>
+
+  <section class="home-section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Modules</span>
+        <h2>Everything you need. In one place.</h2>
+        <p>Replace the spreadsheets, WhatsApp groups and paper registers with one connected system.</p>
+      </div>
+      <div class="grid grid-4">
+        <div class="card">
+          <div class="card-icon" id="icon-students"></div>
+          <h3>Students &amp; Enrolment</h3>
+          <p>Track every learner from enquiry to enrolment, with full profiles and history.</p>
+          <a href="students-and-enrolment.html" class="btn-ghost">Learn more →</a>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-attendance"></div>
+          <h3>Attendance</h3>
+          <p>Mark attendance in seconds and notify parents automatically.</p>
+          <a href="attendance.html" class="btn-ghost">Learn more →</a>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-fees"></div>
+          <h3>Fees &amp; Payments</h3>
+          <p>Automated collections, balances and reminders — no more chasing.</p>
+          <a href="fees-and-payments.html" class="btn-ghost">Learn more →</a>
+        </div>
+        <div class="card">
+          <div class="card-icon" id="icon-academics"></div>
+          <h3>Academics &amp; Reports</h3>
+          <p>Capture marks and generate report cards your parents will love.</p>
+          <a href="academics-and-report-cards.html" class="btn-ghost">Learn more →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section section-tight section-alt">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Pricing</span>
+        <h2>Simple pricing. Per term.</h2>
+        <p>Pay per learner, per term. No setup fees, no surprises. <a href="pricing.html">See full pricing details →</a></p>
+      </div>
+      <div class="grid grid-4" id="homePricingGrid"></div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/pricing-config.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script>
+  document.getElementById('icon-students').innerHTML = window.ICONS.students;
+  document.getElementById('icon-attendance').innerHTML = window.ICONS.attendance;
+  document.getElementById('icon-fees').innerHTML = window.ICONS.fees;
+  document.getElementById('icon-academics').innerHTML = window.ICONS.academics;
+
+  var trustItems = [
+    [window.ICONS.offline, 'Works offline'],
+    [window.ICONS.secure, 'Bank-grade security'],
+    [window.ICONS.scales, 'Scales with your school'],
+    [window.ICONS.support, 'Local Uganda support']
+  ];
+  document.querySelectorAll('.trust-strip .trust-item').forEach(function (el, i) {
+    el.innerHTML = trustItems[i][0] + '<span>' + trustItems[i][1] + '</span>';
+  });
+
+  var grid = document.getElementById('homePricingGrid');
+  var popularLabel = 'Standard';
+
+  function renderHomePricing() {
+    var tiers = window.PRICING_TIERS;
+
+    if (!tiers.length) {
+      grid.innerHTML = '<p style="grid-column:1/-1; text-align:center; color:var(--color-muted, #666);">Pricing is being updated — <a href="contact.html">contact us</a> for current rates.</p>';
+      return;
+    }
+
+    grid.innerHTML = '';
+    tiers.forEach(function (tier) {
+      var range = tier.max === null ? (tier.min + '+ learners') : (tier.min + '–' + tier.max + ' learners');
+      var isPopular = tier.label === popularLabel;
+      var isCustom = tier.price === null || tier.price === undefined;
+      var priceHtml = isCustom
+        ? '<div class="price-amount"><span class="price-value">Talk to us</span></div>'
+        : '<div class="price-amount">' +
+            '<span class="price-currency">UGX</span>' +
+            '<span class="price-value">' + Number(tier.price).toLocaleString('en-UG') + '</span>' +
+            '<span class="price-per">/ term</span>' +
+          '</div>';
+      grid.innerHTML += '' +
+        '<div class="price-card' + (isPopular ? ' popular' : '') + '">' +
+          (isPopular ? '<span class="tag">Most Popular</span>' : '') +
+          '<div class="price-card-head">' +
+            '<h3>' + tier.label + '</h3>' +
+            '<div class="price-range">' + range + '</div>' +
+          '</div>' +
+          priceHtml +
+          '<a href="pricing.html" class="btn ' + (isPopular ? 'btn-primary' : 'btn-outline') + ' btn-block">See details</a>' +
+        '</div>';
+    });
+  }
+
+  renderHomePricing();
+</script>
+</body>
+</html>

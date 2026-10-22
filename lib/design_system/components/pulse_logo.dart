@@ -32,6 +32,7 @@ class PulseLogo extends StatelessWidget {
   final double? size;
   final PulseLogoVariant variant;
   final bool isDark;
+  final BoxFit fit;
 
   const PulseLogo({
     super.key,
@@ -40,6 +41,7 @@ class PulseLogo extends StatelessWidget {
     this.size,
     this.variant = PulseLogoVariant.full,
     this.isDark = false,
+    this.fit = BoxFit.contain,
   });
 
   @override
@@ -71,7 +73,7 @@ class PulseLogo extends StatelessWidget {
       assetPath,
       width: size ?? width,
       height: size ?? height,
-      fit: BoxFit.contain,
+      fit: fit,
     );
   }
 }

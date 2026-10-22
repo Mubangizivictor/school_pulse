@@ -37,11 +37,14 @@ class GatekeeperActionTile extends StatelessWidget {
               Container(
                 width: 64,
                 height: 64,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                child: Icon(
+                  icon,
+                  color: color.computeLuminance() > 0.5
+                      ? Colors.black
+                      : Colors.white,
+                  size: 34,
                 ),
-                child: Icon(icon, color: color, size: 34),
               ),
               const SizedBox(height: 12),
               Text(
@@ -130,7 +133,7 @@ class GatekeeperPrimaryButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: color.withValues(alpha: 0.4),
+          disabledBackgroundColor: color,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -200,7 +203,7 @@ class GatekeeperStatusChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

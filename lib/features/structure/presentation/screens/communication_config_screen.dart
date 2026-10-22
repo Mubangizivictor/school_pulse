@@ -114,7 +114,7 @@ class _AnnouncementCategoriesTab extends StatelessWidget {
                 final category = state.announcementCategories[index];
                 return StructureListRow(
                   icon: Icons.campaign_outlined,
-                  color: Colors.amber,
+                  color: Colors.black,
                   title: category.name,
                   isActive: category.isActive,
                   badge: StructureStatusBadge(
@@ -180,7 +180,7 @@ class _NotificationCategoriesTab extends StatelessWidget {
                 final category = state.notificationCategories[index];
                 return StructureListRow(
                   icon: Icons.notifications_outlined,
-                  color: Colors.pinkAccent,
+                  color: Colors.black,
                   title: category.name,
                   isActive: category.isActive,
                   badge: StructureStatusBadge(
@@ -246,7 +246,7 @@ class _MessageTemplatesTab extends StatelessWidget {
                 final template = state.messageTemplates[index];
                 return StructureListRow(
                   icon: Icons.mail_outline,
-                  color: Colors.lightBlue,
+                  color: Colors.black,
                   title: template.name,
                   subtitle: template.channel,
                   isActive: template.isActive,

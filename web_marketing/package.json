@@ -1,0 +1,20 @@
+{
+  "name": "school-pulse-marketing-site",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build && node scripts/postbuild.mjs",
+    "test": "node __tests__/register_wizard_step_rendering.test.js"
+  },
+  "dependencies": {
+    "next": "15.5.4",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.6",
+    "@types/react": "19.1.13",
+    "jsdom": "^25.0.0",
+    "typescript": "5.9.2"
+  }
+}

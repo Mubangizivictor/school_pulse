@@ -2,32 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/features/parent/academics_screen.dart'
+    show AcademicsTab;
+
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
-import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
+import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/features/academic/domain/entities/attendance_record.dart';
 import 'package:school_pulse/features/academic/presentation/bloc/academic_bloc.dart';
-import 'package:school_pulse/features/attendance_summary/domain/attendance_summary.dart';
+import 'package:school_pulse/features/announcements/domain/entities/announcement_entity.dart';
+import 'package:school_pulse/features/announcements/presentation/bloc/announcement_bloc.dart';
+import 'package:school_pulse/features/announcements/presentation/bloc/announcement_event.dart';
+import 'package:school_pulse/features/announcements/presentation/bloc/announcement_state.dart';
+import 'package:school_pulse/features/announcements/presentation/screens/announcement_detail_screen.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
-import 'package:school_pulse/features/finance/domain/entities/fee_item.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_event.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_state.dart';
-import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
-import 'package:school_pulse/features/student/presentation/bloc/selected_student_event.dart';
-import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
-import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
-import 'package:school_pulse/features/student/presentation/bloc/students_event.dart';
-import 'package:school_pulse/features/student/presentation/bloc/students_state.dart';
-import 'package:school_pulse/features/student/domain/entities/student.dart';
-import 'package:school_pulse/features/notifications/presentation/bloc/notifications_bloc.dart';
-import 'package:school_pulse/features/notifications/presentation/bloc/notifications_event.dart';
-import 'package:school_pulse/features/notifications/presentation/bloc/notifications_state.dart';
-import 'package:school_pulse/features/notifications/domain/entities/alert.dart';
+import 'package:school_pulse/features/finance/domain/entities/student_bill.dart';
+import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/parent/presentation/bloc/parent_timetable_bloc.dart';
+import 'package:school_pulse/features/parent/widgets/child_selector_sheet.dart';
 import 'package:school_pulse/features/parent_access/domain/entities/parent_module_visibility.dart';
 import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_cubit.dart';
 import 'package:school_pulse/features/parent_access/presentation/bloc/parent_access_state.dart';
+import 'package:school_pulse/features/school_calendar/domain/entities/calendar_event.dart';
+import 'package:school_pulse/features/school_calendar/presentation/bloc/school_calendar_bloc.dart';
+import 'package:school_pulse/features/school_calendar/presentation/bloc/school_calendar_event.dart';
+import 'package:school_pulse/features/school_calendar/presentation/bloc/school_calendar_state.dart';
+import 'package:school_pulse/features/student/domain/entities/student.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_event.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
+import 'package:school_pulse/features/student/presentation/bloc/student_homework_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/student_homework_event.dart';
+import 'package:school_pulse/features/student/presentation/bloc/student_homework_state.dart';
+import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/students_event.dart';
+import 'package:school_pulse/features/student/presentation/bloc/students_state.dart';
+import 'package:school_pulse/features/teacher/domain/entities/homework.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
 class ParentHomeScreen extends StatefulWidget {
   const ParentHomeScreen({super.key});
@@ -37,25 +51,74 @@ class ParentHomeScreen extends StatefulWidget {
 }
 
 class _ParentHomeScreenState extends State<ParentHomeScreen> {
+  late final StudentHomeworkBloc _homeworkBloc;
+  late final AnnouncementBloc _announcementBloc;
+  late final SchoolCalendarBloc _calendarBloc;
+  late final ParentTimetableBloc _timetableBloc;
+
   @override
   void initState() {
     super.initState();
+    _homeworkBloc = di.sl<StudentHomeworkBloc>();
+    _announcementBloc = di.sl<AnnouncementBloc>();
+    _calendarBloc = di.sl<SchoolCalendarBloc>();
+    _timetableBloc = di.sl<ParentTimetableBloc>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final selected = context.read<SelectedStudentBloc>().state;
       if (selected is SelectedStudentLoaded) {
-        _fetchStudentData(selected.student.id);
+        _fetchStudentData(selected.student);
+      }
+      final authState = context.read<AuthBloc>().state;
+      if (authState is AuthAuthenticated) {
+        _fetchSchoolData(authState);
       }
     });
   }
 
-  void _fetchStudentData(String studentId) {
+  @override
+  void dispose() {
+    _homeworkBloc.close();
+    _announcementBloc.close();
+    _calendarBloc.close();
+    _timetableBloc.close();
+    super.dispose();
+  }
+
+  void _fetchStudentData(Student student) {
     context.read<AcademicBloc>().add(
-      GetAcademicRecordsRequested(studentId: studentId),
+      GetAcademicRecordsRequested(studentId: student.id),
     );
     context.read<AcademicBloc>().add(
-      GetAttendanceRecordsRequested(studentId: studentId),
+      GetAttendanceRecordsRequested(studentId: student.id),
     );
-    context.read<FinanceBloc>().add(FetchFees(studentId));
+    if (student.className.isNotEmpty) {
+      _homeworkBloc.add(
+        LoadStudentHomework(student.schoolId, student.className),
+      );
+    }
+    _timetableBloc.add(
+      ParentTimetableRequested(
+        schoolId: student.schoolId,
+        academicYearId: student.academicYearId,
+        classId: student.classId,
+        streamId: student.streamId,
+      ),
+    );
+  }
+
+  void _fetchSchoolData(AuthAuthenticated authState) {
+    _announcementBloc.add(
+      LoadAnnouncementsRequested(
+        schoolId: authState.user.schoolId,
+        operatorUser: authState.user,
+      ),
+    );
+    _calendarBloc.add(
+      LoadCalendarRequested(
+        schoolId: authState.user.schoolId,
+        operatorUser: authState.user,
+      ),
+    );
   }
 
   Future<void> _refresh() async {
@@ -64,534 +127,964 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
       context.read<StudentsBloc>().add(
         FetchStudents(authState.user.studentIds),
       );
-      context.read<NotificationsBloc>().add(
-        FetchAlerts(authState.user.studentIds),
-      );
+      _fetchSchoolData(authState);
     }
     final selected = context.read<SelectedStudentBloc>().state;
     if (selected is SelectedStudentLoaded) {
-      _fetchStudentData(selected.student.id);
+      _fetchStudentData(selected.student);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, authState) {
-        if (authState is! AuthAuthenticated) {
-          return const Scaffold(body: _HomeSkeleton());
-        }
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: _homeworkBloc),
+        BlocProvider.value(value: _announcementBloc),
+        BlocProvider.value(value: _calendarBloc),
+        BlocProvider.value(value: _timetableBloc),
+      ],
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, authState) {
+          if (authState is! AuthAuthenticated) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
 
-        return BlocBuilder<StudentsBloc, StudentsState>(
-          builder: (context, studentsState) {
-            if (studentsState is StudentsInitial) {
-              context.read<StudentsBloc>().add(
-                FetchStudents(authState.user.studentIds),
-              );
-              return const Scaffold(body: _HomeSkeleton());
-            }
+          return BlocBuilder<StudentsBloc, StudentsState>(
+            builder: (context, studentsState) {
+              if (studentsState is StudentsInitial) {
+                context.read<StudentsBloc>().add(
+                  FetchStudents(authState.user.studentIds),
+                );
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
 
-            if (studentsState is StudentsLoading) {
-              return const Scaffold(body: _HomeSkeleton());
-            }
+              if (studentsState is StudentsLoading) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
 
-            if (studentsState is StudentsError) {
-              return Scaffold(
-                body: EmptyState(
-                  icon: Icons.cloud_off,
-                  title: 'Could not load students',
-                  message: studentsState.message,
-                  ctaLabel: 'Retry',
-                  onCtaPressed: () => context.read<StudentsBloc>().add(
-                    FetchStudents(authState.user.studentIds),
+              if (studentsState is StudentsError) {
+                return Scaffold(
+                  body: EmptyState(
+                    icon: Icons.cloud_off,
+                    title: 'Could not load students',
+                    message: studentsState.message,
+                    ctaLabel: 'Retry',
+                    onCtaPressed: () => context.read<StudentsBloc>().add(
+                      FetchStudents(authState.user.studentIds),
+                    ),
                   ),
-                ),
-              );
-            }
+                );
+              }
 
-            final myStudents = (studentsState as StudentsLoaded).students;
+              final myStudents = (studentsState as StudentsLoaded).students;
 
-            return BlocListener<SelectedStudentBloc, SelectedStudentState>(
-              listener: (context, state) {
-                if (state is SelectedStudentLoaded) {
-                  _fetchStudentData(state.student.id);
-                }
-              },
-              child: BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
-                builder: (context, studentState) {
-                  // Initializing selected student if not already done
-                  if (studentState is SelectedStudentInitial) {
-                    if (myStudents.isNotEmpty) {
-                      context.read<SelectedStudentBloc>().add(
-                        SelectStudent(myStudents.first),
+              return BlocListener<SelectedStudentBloc, SelectedStudentState>(
+                listener: (context, state) {
+                  if (state is SelectedStudentLoaded) {
+                    _fetchStudentData(state.student);
+                  }
+                },
+                child: BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
+                  builder: (context, studentState) {
+                    if (studentState is SelectedStudentInitial) {
+                      if (myStudents.isNotEmpty) {
+                        context.read<SelectedStudentBloc>().add(
+                          SelectStudent(myStudents.first),
+                        );
+                      }
+                      return const Scaffold(
+                        body: Center(child: CircularProgressIndicator()),
                       );
-                      return const Scaffold(body: _HomeSkeleton());
                     }
-                  }
 
-                  if (studentState is! SelectedStudentLoaded) {
-                    return const Scaffold(
-                      body: Center(
-                        child: EmptyState(
-                          title: 'No Student Selected',
-                          message: 'Select a student to view their profile.',
-                          icon: Icons.person_off,
+                    if (studentState is! SelectedStudentLoaded) {
+                      return const Scaffold(
+                        body: Center(
+                          child: EmptyState(
+                            title: 'No Student Selected',
+                            message: 'Select a student to view their profile.',
+                            icon: Icons.person_off,
+                          ),
                         ),
-                      ),
-                    );
-                  }
+                      );
+                    }
 
-                  final selectedStudent = studentState.student;
+                    final selectedStudent = studentState.student;
 
-                  return Scaffold(
-                    appBar: const StudentAppBar(title: 'School Pulse'),
-                    body: RefreshIndicator(
-                      onRefresh: _refresh,
-                      child: ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          if (myStudents.length > 1) ...[
-                            FadeInSlide(
-                              delay: const Duration(milliseconds: 100),
-                              child: _buildStudentTabs(
-                                context,
-                                myStudents,
-                                selectedStudent.id,
+                    return BlocBuilder<ParentAccessCubit, ParentAccessState>(
+                      builder: (context, accessState) {
+                        final visibility = accessState is ParentAccessResolved
+                            ? accessState.visibility
+                            : ParentModuleVisibility.none;
+
+                        return Scaffold(
+                          backgroundColor: AppColors.background(context),
+                          body: SafeArea(
+                            child: RefreshIndicator(
+                              onRefresh: _refresh,
+                              child: CustomScrollView(
+                                slivers: [
+                                  _buildSliverAppBar(
+                                    context,
+                                    authState.user.name,
+                                  ),
+                                  SliverToBoxAdapter(
+                                    child: AppResponsiveContent(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(20.0),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            _buildChildSwitcher(
+                                              context,
+                                              selectedStudent,
+                                            ),
+                                            const SizedBox(height: 28),
+                                            _buildPulseSection(
+                                              context,
+                                              selectedStudent,
+                                              visibility,
+                                            ),
+                                            const SizedBox(height: 32),
+                                            _buildActionsSection(
+                                              context,
+                                              visibility,
+                                            ),
+                                            const SizedBox(height: 32),
+                                            _buildWeekSection(context),
+                                            const SizedBox(height: 32),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 24),
-                          ] else ...[
-                            FadeInSlide(
-                              delay: const Duration(milliseconds: 100),
-                              child: _buildHeader(context, selectedStudent),
-                            ),
-                            const SizedBox(height: 24),
-                          ],
-                          FadeInSlide(
-                            delay: const Duration(milliseconds: 300),
-                            child:
-                                BlocBuilder<
-                                  ParentAccessCubit,
-                                  ParentAccessState
-                                >(
-                                  builder: (context, accessState) {
-                                    final visibility =
-                                        accessState is ParentAccessResolved
-                                        ? accessState.visibility
-                                        : ParentModuleVisibility.none;
-                                    return QuickActionGrid(
-                                      items: _buildQuickActions(
-                                        context,
-                                        visibility,
-                                      ),
-                                    );
-                                  },
-                                ),
                           ),
-                          const SizedBox(height: 16),
-                          BlocBuilder<NotificationsBloc, NotificationsState>(
-                            builder: (context, notificationsState) {
-                              if (notificationsState is NotificationsInitial) {
-                                final ids = myStudents
-                                    .map((s) => s.id)
-                                    .toList();
-                                context.read<NotificationsBloc>().add(
-                                  FetchAlerts(ids),
-                                );
-                                return const SizedBox.shrink();
-                              }
-                              if (notificationsState is! NotificationsLoaded) {
-                                return const SizedBox.shrink();
-                              }
-                              return Column(
-                                children: notificationsState.alerts
-                                    .asMap()
-                                    .entries
-                                    .map((entry) {
-                                      final index = entry.key;
-                                      final alert = entry.value;
-                                      return FadeInSlide(
-                                        delay: Duration(
-                                          milliseconds: 400 + (index * 100),
-                                        ),
-                                        child: AlertBanner(
-                                          title: alert.title,
-                                          message: alert.message,
-                                          color: _getAlertColor(
-                                            alert.severity,
-                                            context,
-                                          ),
-                                          icon: _getAlertIcon(alert.severity),
-                                          onDismiss: () {
-                                            final authState = context
-                                                .read<AuthBloc>()
-                                                .state;
-                                            if (authState
-                                                is! AuthAuthenticated) {
-                                              return;
-                                            }
-                                            context
-                                                .read<NotificationsBloc>()
-                                                .add(
-                                                  DismissAlert(
-                                                    alert.id,
-                                                    authState.user.id,
-                                                  ),
-                                                );
-                                          },
-                                        ),
-                                      );
-                                    })
-                                    .toList(),
-                              );
-                            },
-                          ),
-                          const FadeInSlide(
-                            delay: Duration(milliseconds: 500),
-                            child: SectionHeader(title: 'Overview'),
-                          ),
-                          FadeInSlide(
-                            delay: const Duration(milliseconds: 600),
-                            child: _buildStudentSummary(
-                              context,
-                              selectedStudent,
-                            ),
-                          ),
-                          FadeInSlide(
-                            delay: const Duration(milliseconds: 700),
-                            child: SectionHeader(
-                              title: 'Recent Activity',
-                              actionLabel: 'See All',
-                              onActionPressed: () =>
-                                  context.push('/parent/notifications'),
-                            ),
-                          ),
-                          FadeInSlide(
-                            delay: const Duration(milliseconds: 800),
-                            child: _buildRecentActivity(
-                              context,
-                              selectedStudent,
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  List<QuickActionItem> _buildQuickActions(
-    BuildContext context,
-    ParentModuleVisibility visibility,
-  ) {
-    return [
-      if (visibility.academics)
-        QuickActionItem(
-          label: 'Academics',
-          icon: Icons.school_outlined,
-          color: AppColors.primary(context),
-          onTap: () => context.push('/parent/academics'),
-        ),
-      if (visibility.fees)
-        QuickActionItem(
-          label: 'Fees',
-          icon: Icons.account_balance_wallet_outlined,
-          color: AppColors.secondary(context),
-          onTap: () => context.push('/parent/fees'),
-        ),
-      if (visibility.health)
-        QuickActionItem(
-          label: 'Health',
-          icon: Icons.health_and_safety_outlined,
-          color: AppColors.information(context),
-          onTap: () => context.push('/parent/health'),
-        ),
-      if (visibility.transport)
-        QuickActionItem(
-          label: 'Transport',
-          icon: Icons.directions_bus_outlined,
-          color: AppColors.warning(context),
-          onTap: () => context.push('/parent/transport'),
-        ),
-      if (visibility.library)
-        QuickActionItem(
-          label: 'Library',
-          icon: Icons.library_books_outlined,
-          color: AppColors.primaryStrong(context),
-          onTap: () => context.push('/parent/library'),
-        ),
-      if (visibility.discipline)
-        QuickActionItem(
-          label: 'Discipline',
-          icon: Icons.gavel_outlined,
-          color: AppColors.danger(context),
-          onTap: () => context.push('/parent/discipline'),
-        ),
-      if (visibility.boarding)
-        QuickActionItem(
-          label: 'Boarding',
-          icon: Icons.bed_outlined,
-          color: AppColors.primary(context),
-          onTap: () => context.push('/parent/boarding'),
-        ),
-      if (visibility.messages)
-        QuickActionItem(
-          label: 'Messages',
-          icon: Icons.chat_bubble_outline,
-          color: AppColors.information(context),
-          onTap: () => context.push('/parent/messages'),
-        ),
-      if (visibility.profile)
-        QuickActionItem(
-          label: 'Profile',
-          icon: Icons.person_outline,
-          color: AppColors.textMuted(context),
-          onTap: () => context.push('/parent/profile'),
-        ),
-    ];
-  }
-
-  Widget _buildStudentTabs(
-    BuildContext context,
-    List<Student> students,
-    String selectedId,
-  ) {
-    return SizedBox(
-      height: 48,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: students.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final student = students[index];
-          final isSelected = student.id == selectedId;
-          return ChoiceChip(
-            label: Text(student.name.split(' ').first),
-            selected: isSelected,
-            onSelected: (selected) {
-              if (selected) {
-                context.read<SelectedStudentBloc>().add(SelectStudent(student));
-              }
+                        );
+                      },
+                    );
+                  },
+                ),
+              );
             },
-            selectedColor: AppColors.primary(context),
-            labelStyle: TextStyle(
-              color: isSelected ? Colors.white : AppColors.textPrimary(context),
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, Student student) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Viewing profile of',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textMuted(context),
-                ),
-              ),
-              Text(
-                student.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
+  // ---------------------------------------------------------------------
+  // App bar
+  // ---------------------------------------------------------------------
+
+  Widget _buildSliverAppBar(BuildContext context, String parentName) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final firstName = parentName.trim().isEmpty
+        ? 'there'
+        : parentName.trim().split(RegExp(r'\s+')).first;
+
+    return SliverAppBar(
+      floating: true,
+      backgroundColor: AppColors.background(context),
+      elevation: 0,
+      centerTitle: false,
+      title: Text(
+        'Good morning, $firstName',
+        style: TextStyle(
+          color: AppColors.textPrimary(context),
+          fontSize: 20,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.5,
         ),
-        Hero(
-          tag: 'student_avatar_${student.id}',
-          child: AvatarInitials(name: student.name, size: 48),
+      ),
+      actions: [
+        const NotificationBellButton(),
+        IconButton(
+          tooltip: themeProvider.themeMode == ThemeMode.dark
+              ? 'Use light theme'
+              : 'Use dark theme',
+          icon: Icon(
+            themeProvider.themeMode == ThemeMode.dark
+                ? Icons.light_mode_outlined
+                : Icons.dark_mode_outlined,
+          ),
+          onPressed: () => themeProvider.setThemeMode(
+            themeProvider.themeMode == ThemeMode.dark
+                ? ThemeMode.light
+                : ThemeMode.dark,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildStudentSummary(BuildContext context, Student student) {
-    return BlocBuilder<AcademicBloc, AcademicState>(
-      builder: (context, academicState) {
-        return BlocBuilder<FinanceBloc, FinanceState>(
-          builder: (context, financeState) {
-            double attendanceRate = 0;
-            String? attendanceTrend;
-            if (academicState is AcademicLoaded &&
-                academicState.attendanceRecords.isNotEmpty) {
-              // Strictly "present" only - late still counts as an absence
-              // here, distinct from the student dashboard's more lenient
-              // present-or-late reading of the same records. Preserved as
-              // its own MarkClassification mapping rather than reusing
-              // classifyStudentStatus, which would silently change this
-              // screen's existing behaviour.
-              final summary = AttendanceRateCalculator.summarize(
-                academicState.attendanceRecords.map(
-                  (r) => r.status == StudentStatus.present
-                      ? MarkClassification.present
-                      : MarkClassification.unauthorisedAbsent,
-                ),
-              );
-              attendanceRate = summary.ratePercent ?? 0;
-              attendanceTrend = attendanceRate >= 90 ? 'On track' : 'Watch';
-            }
+  // ---------------------------------------------------------------------
+  // Today's pulse
+  // ---------------------------------------------------------------------
 
-            double feeBalance = 0;
-            String? feeTrend;
-            if (financeState is FinanceLoaded) {
-              feeBalance = financeState.fees
-                  .where((f) => f.status != FeeStatus.paid)
-                  .fold<double>(0, (sum, f) => sum + f.amount);
-              feeTrend = feeBalance > 0 ? 'Unpaid' : 'Cleared';
-            }
-
-            return IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget _buildChildSwitcher(BuildContext context, Student student) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(20),
+      onTap: () => ChildSelectorSheet.show(context),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer(context),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border(context), width: 1.2),
+        ),
+        child: Row(
+          children: [
+            AvatarInitials(name: student.name, size: 48),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: DashboardStatCard(
-                      title: 'Attendance',
-                      value: attendanceRate,
-                      suffix: '%',
-                      icon: Icons.calendar_today,
-                      color: AppColors.success(context),
-                      trend: attendanceTrend,
-                      isPositiveTrend: attendanceRate >= 90,
+                  Text(
+                    student.name,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DashboardStatCard(
-                      title: 'Fee Balance (UGX)',
-                      value: feeBalance,
-                      icon: Icons.payments_outlined,
-                      color: feeBalance > 0
-                          ? AppColors.warning(context)
-                          : AppColors.success(context),
-                      trend: feeTrend,
-                      isPositiveTrend: feeBalance <= 0,
+                  const SizedBox(height: 3),
+                  Text(
+                    student.className.isEmpty
+                        ? 'Linked student'
+                        : student.className,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textMuted(context),
                     ),
                   ),
                 ],
               ),
-            );
-          },
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textMuted(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPulseSection(
+    BuildContext context,
+    Student student,
+    ParentModuleVisibility visibility,
+  ) {
+    final rows = <Widget>[
+      if (visibility.attendance) _buildAttendanceRow(context, student),
+      if (visibility.academics) _buildNextLessonRow(context),
+      if (visibility.academics) _buildHomeworkRow(context),
+      if (visibility.fees) _buildFeesRow(context, student),
+    ];
+
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Today's pulse",
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 10),
+        AppCard(
+          padding: const EdgeInsets.all(12),
+          color: AppColors.surfaceContainer(context),
+          showShadow: false,
+          child: Column(
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) => Wrap(
+                  children: [
+                    for (final row in rows)
+                      SizedBox(
+                        width: constraints.maxWidth / 2,
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: row,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const Divider(height: 12),
+              TextButton.icon(
+                onPressed: () =>
+                    context.go('/parent/learn', extra: AcademicsTab.timetable),
+                iconAlignment: IconAlignment.end,
+                icon: const Icon(Icons.chevron_right_rounded),
+                label: const Text('View full day'),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAttendanceRow(BuildContext context, Student student) {
+    return BlocBuilder<AcademicBloc, AcademicState>(
+      builder: (context, state) {
+        if (state is AcademicLoading || state is AcademicInitial) {
+          return _pulseSkeletonRow(Icons.check_circle_outline_rounded);
+        }
+
+        AttendanceRecord? today;
+        if (state is AcademicLoaded) {
+          final now = DateTime.now();
+          for (final record in state.attendanceRecords) {
+            if (record.studentId == student.id &&
+                record.date.year == now.year &&
+                record.date.month == now.month &&
+                record.date.day == now.day) {
+              today = record;
+              break;
+            }
+          }
+        }
+
+        if (today == null) {
+          return _buildPulseItem(
+            context,
+            icon: Icons.help_outline_rounded,
+            title: 'Attendance',
+            value: 'Not recorded',
+            subtitle: 'No record for today yet',
+          );
+        }
+
+        final (label, icon, statusColor) = switch (today.status) {
+          StudentStatus.present => (
+            'At school',
+            Icons.check_circle_outline_rounded,
+            AppColors.success(context),
+          ),
+          StudentStatus.absent => (
+            'Absent',
+            Icons.cancel_outlined,
+            AppColors.danger(context),
+          ),
+          StudentStatus.late => (
+            'Late',
+            Icons.watch_later_outlined,
+            AppColors.warning(context),
+          ),
+        };
+
+        // AttendanceRecord has no dedicated check-in timestamp field - `date`
+        // is the only time-bearing value on the record. Only show a "Since"
+        // subtitle when that DateTime actually carries a non-midnight time
+        // component, so a date-only record doesn't fabricate a 12:00 AM
+        // check-in time.
+        final hasTimeComponent = today.date.hour != 0 || today.date.minute != 0;
+        final subtitle = hasTimeComponent
+            ? 'Since ${DateFormat('h:mm a').format(today.date)}'
+            : (today.note.isNotEmpty ? today.note : 'Recorded today');
+
+        return _buildPulseItem(
+          context,
+          icon: icon,
+          title: 'Attendance',
+          value: label,
+          valueColor: statusColor,
+          subtitle: subtitle,
         );
       },
     );
   }
 
-  Widget _buildRecentActivity(BuildContext context, Student student) {
-    return BlocBuilder<AcademicBloc, AcademicState>(
+  Widget _buildNextLessonRow(BuildContext context) {
+    return BlocBuilder<ParentTimetableBloc, ParentTimetableState>(
       builder: (context, state) {
-        if (state is! AcademicLoaded ||
-            (state.attendanceRecords.isEmpty &&
-                state.academicRecords.isEmpty)) {
-          return AppCard(
-            child: Row(
-              children: [
-                Icon(
-                  Icons.history,
-                  color: AppColors.disabled(context),
-                  size: 24,
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    'No recent activity yet',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textMuted(context),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        if (state.isLoading) {
+          return _pulseSkeletonRow(Icons.schedule_rounded);
+        }
+
+        if (!state.hasPublishedTimetable) {
+          return _buildPulseItem(
+            context,
+            icon: Icons.schedule_rounded,
+            title: 'Next lesson',
+            value: '—',
+            subtitle: 'Timetable not published yet',
+            onTap: () =>
+                context.go('/parent/learn', extra: AcademicsTab.timetable),
           );
         }
 
-        final items = <Widget>[];
-
-        if (state.attendanceRecords.isNotEmpty) {
-          final latest = state.attendanceRecords.reduce(
-            (a, b) => a.date.isAfter(b.date) ? a : b,
-          );
-          final statusLabel = switch (latest.status) {
-            StudentStatus.present => 'was present',
-            StudentStatus.absent => 'was absent',
-            StudentStatus.late => 'arrived late',
-          };
-          items.add(
-            _buildActivityItem(
-              context,
-              icon: latest.status == StudentStatus.present
-                  ? Icons.check_circle_outline
-                  : Icons.event_busy_outlined,
-              iconColor: latest.status == StudentStatus.present
-                  ? AppColors.success(context)
-                  : AppColors.warning(context),
-              title: 'Attendance',
-              subtitle: '${student.name.split(' ').first} $statusLabel',
-              time: DateFormat('d MMM').format(latest.date),
-            ),
+        final next = nextLessonForNow(state.entries, DateTime.now());
+        if (next == null) {
+          return _buildPulseItem(
+            context,
+            icon: Icons.schedule_rounded,
+            title: 'Next lesson',
+            value: '—',
+            subtitle: 'No more lessons today',
+            onTap: () =>
+                context.go('/parent/learn', extra: AcademicsTab.timetable),
           );
         }
 
-        if (state.academicRecords.isNotEmpty) {
-          final record = state.academicRecords.first;
-          items.add(
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: _buildActivityItem(
-                context,
-                icon: Icons.assignment_outlined,
-                iconColor: AppColors.secondary(context),
-                title: 'Marks Posted',
-                subtitle: '${record.subject}: ${record.score.round()}%',
-                time: '${record.term} ${record.year}',
-              ),
-            ),
-          );
-        }
+        final subject = next.lesson.subjectName.isNotEmpty
+            ? next.lesson.subjectName
+            : next.slot.name;
 
-        return Column(children: items);
+        return _buildPulseItem(
+          context,
+          icon: Icons.schedule_rounded,
+          title: 'Next: $subject · ${next.slot.startTime}',
+          value: '',
+          subtitle: next.lesson.roomName?.isNotEmpty == true
+              ? next.lesson.roomName!
+              : next.slot.name,
+          onTap: () =>
+              context.go('/parent/learn', extra: AcademicsTab.timetable),
+          hideValue: true,
+        );
       },
     );
   }
 
-  Widget _buildActivityItem(
+  Widget _buildHomeworkRow(BuildContext context) {
+    return BlocBuilder<StudentHomeworkBloc, StudentHomeworkState>(
+      builder: (context, state) {
+        if (state is StudentHomeworkLoading ||
+            state is StudentHomeworkInitial) {
+          return _pulseSkeletonRow(Icons.assignment_outlined);
+        }
+
+        if (state is StudentHomeworkError) {
+          return _buildPulseItem(
+            context,
+            icon: Icons.assignment_outlined,
+            title: 'Homework',
+            value: '—',
+            subtitle: 'Could not load homework',
+            onTap: () =>
+                context.go('/parent/learn', extra: AcademicsTab.homework),
+          );
+        }
+
+        final list = state is StudentHomeworkLoaded
+            ? state.homeworkList
+            : <Homework>[];
+        final now = DateTime.now();
+        final weekFromNow = now.add(const Duration(days: 7));
+        final dueThisWeek = list
+            .where(
+              (h) => h.dueDate.isAfter(now) && h.dueDate.isBefore(weekFromNow),
+            )
+            .length;
+
+        return _buildPulseItem(
+          context,
+          icon: Icons.assignment_outlined,
+          title: 'Homework: $dueThisWeek',
+          titleSuffix: TextSpan(
+            text: ' due this week',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: dueThisWeek > 0
+                  ? AppColors.warning(context)
+                  : AppColors.grey500,
+            ),
+          ),
+          value: '',
+          subtitle: 'View and manage',
+          onTap: () =>
+              context.go('/parent/learn', extra: AcademicsTab.homework),
+          hideValue: true,
+        );
+      },
+    );
+  }
+
+  Widget _buildFeesRow(BuildContext context, Student student) {
+    return StreamBuilder<List<StudentBill>>(
+      stream: di.sl<StudentBillingRepository>().watchBills(
+        student.schoolId,
+        student.id,
+      ),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return _pulseSkeletonRow(Icons.account_balance_wallet_outlined);
+        }
+
+        final bills = snapshot.data!;
+        final outstanding = bills.where((b) => b.balanceUgx > 0).toList();
+
+        if (outstanding.isEmpty) {
+          final isAllPaid = bills.isNotEmpty;
+          return _buildPulseItem(
+            context,
+            icon: Icons.account_balance_wallet_outlined,
+            title: 'Fees',
+            value: bills.isEmpty ? 'No bills yet' : 'All paid',
+            valueColor: isAllPaid ? AppColors.success(context) : null,
+            subtitle: 'Term fees',
+            onTap: () => context.go('/parent/payments'),
+          );
+        }
+
+        final balance = outstanding.fold<int>(
+          0,
+          (sum, b) => sum + b.balanceUgx,
+        );
+        final formattedBalance = NumberFormat.currency(
+          symbol: '',
+          decimalDigits: 0,
+        ).format(balance).trim();
+
+        return _buildPulseItem(
+          context,
+          icon: Icons.account_balance_wallet_outlined,
+          title: 'Fees: UGX $formattedBalance',
+          titleSuffix: TextSpan(
+            text: ' due',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.danger(context),
+            ),
+          ),
+          value: '',
+          subtitle: 'Term fees',
+          onTap: () => context.go('/parent/payments'),
+          hideValue: true,
+        );
+      },
+    );
+  }
+
+  Widget _pulseSkeletonRow(IconData icon) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.grey100,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 20, color: AppColors.grey300),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Skeleton(height: 12, width: 100),
+              SizedBox(height: 6),
+              Skeleton(height: 10, width: 70),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPulseItem(
     BuildContext context, {
     required IconData icon,
-    required Color iconColor,
     required String title,
+    required String value,
     required String subtitle,
-    required String time,
+    VoidCallback? onTap,
+    bool hideValue = false,
+    InlineSpan? titleSuffix,
+    Color? valueColor,
   }) {
+    final content = Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainerHigh(context),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 20, color: AppColors.textPrimary(context)),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text.rich(
+                TextSpan(
+                  text: title,
+                  children: titleSuffix != null ? [titleSuffix] : null,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+              Text(
+                subtitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: AppColors.grey500),
+              ),
+            ],
+          ),
+        ),
+        if (!hideValue && value.isNotEmpty) ...[
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: valueColor ?? AppColors.textPrimary(context),
+              ),
+            ),
+          ),
+        ],
+        if (onTap != null)
+          const Icon(Icons.chevron_right_rounded, color: AppColors.grey300),
+      ],
+    );
+
+    if (onTap == null) return content;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: content,
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // Quick actions
+  // ---------------------------------------------------------------------
+
+  Widget _buildActionsSection(
+    BuildContext context,
+    ParentModuleVisibility visibility,
+  ) {
+    final actions = <Widget>[
+      if (visibility.messages)
+        _buildActionCard(
+          context,
+          icon: Icons.chat_bubble_outline_rounded,
+          label: 'Message teacher',
+          onTap: () => context.go('/parent/messages'),
+        ),
+      if (visibility.messages)
+        _buildActionCard(
+          context,
+          icon: Icons.report_gmailerrorred_outlined,
+          label: 'Report absence',
+          // No dedicated "report absence" flow exists yet - messaging
+          // the school is the closest real action.
+          onTap: () => context.go('/parent/messages'),
+        ),
+      if (visibility.fees)
+        _buildActionCard(
+          context,
+          icon: Icons.receipt_long_outlined,
+          label: 'Payment guide',
+          onTap: () => context.push('/parent/payments/how-to-pay'),
+        ),
+      if (visibility.academics)
+        _buildActionCard(
+          context,
+          icon: Icons.calendar_view_week_outlined,
+          label: 'View timetable',
+          onTap: () =>
+              context.go('/parent/learn', extra: AcademicsTab.timetable),
+        ),
+      if (visibility.health)
+        _buildActionCard(
+          context,
+          icon: Icons.health_and_safety_outlined,
+          label: 'Health visits',
+          onTap: () => context.push('/parent/health'),
+        ),
+      if (visibility.transport)
+        _buildActionCard(
+          context,
+          icon: Icons.directions_bus_outlined,
+          label: 'Transport routes',
+          onTap: () => context.push('/parent/transport'),
+        ),
+      if (visibility.security)
+        _buildActionCard(
+          context,
+          icon: Icons.door_front_door_outlined,
+          label: 'Gate activity',
+          onTap: () => context.push('/parent/security'),
+        ),
+      if (visibility.academics)
+        _buildActionCard(
+          context,
+          icon: Icons.calendar_month_outlined,
+          label: 'School calendar',
+          onTap: () => context.push('/parent/calendar'),
+        ),
+      if (visibility.library)
+        _buildActionCard(
+          context,
+          icon: Icons.library_books_outlined,
+          label: 'Library',
+          onTap: () => context.push('/parent/library'),
+        ),
+      if (visibility.appointments)
+        _buildActionCard(
+          context,
+          icon: Icons.event_available_outlined,
+          label: 'Appointments',
+          onTap: () => context.push('/parent/appointments'),
+        ),
+      if (visibility.discipline)
+        _buildActionCard(
+          context,
+          icon: Icons.gavel_outlined,
+          label: 'Discipline',
+          onTap: () => context.push('/parent/discipline'),
+        ),
+      if (visibility.boarding)
+        _buildActionCard(
+          context,
+          icon: Icons.night_shelter_outlined,
+          label: 'Boarding',
+          onTap: () => context.push('/parent/boarding'),
+        ),
+    ];
+
+    if (actions.isEmpty) return const SizedBox.shrink();
+
+    final rows = <Widget>[];
+    for (var i = 0; i < actions.length; i += 2) {
+      final hasSecond = i + 1 < actions.length;
+      rows.add(
+        Row(
+          children: [
+            Expanded(child: actions[i]),
+            if (hasSecond) ...[
+              const SizedBox(width: 12),
+              Expanded(child: actions[i + 1]),
+            ] else
+              const Spacer(),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'School services',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 16),
+        for (var i = 0; i < rows.length; i++) ...[
+          if (i > 0) const SizedBox(height: 12),
+          rows[i],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildActionCard(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      height: 62,
+      child: AppCard(
+        onTap: onTap,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        showShadow: false,
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: AppColors.textPrimary(context)),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 20,
+              color: AppColors.textMuted(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------
+  // This week
+  // ---------------------------------------------------------------------
+
+  Widget _buildWeekSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'THIS WEEK',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                color: AppColors.grey500,
+              ),
+            ),
+            TextButton(
+              onPressed: () => context.push('/parent/calendar'),
+              child: Text(
+                'Full Calendar',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary(context),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        BlocBuilder<AnnouncementBloc, AnnouncementState>(
+          builder: (context, announcementState) {
+            return BlocBuilder<SchoolCalendarBloc, SchoolCalendarState>(
+              builder: (context, calendarState) {
+                final loading =
+                    announcementState is AnnouncementLoading ||
+                    calendarState is SchoolCalendarLoading;
+
+                if (loading) {
+                  return Column(
+                    children: const [
+                      Skeleton(height: 64, borderRadius: 16),
+                      SizedBox(height: 12),
+                      Skeleton(height: 64, borderRadius: 16),
+                    ],
+                  );
+                }
+
+                final announcements = announcementState is AnnouncementLoaded
+                    ? announcementState.announcements
+                          .where(
+                            (a) => a.status == AnnouncementStatus.published,
+                          )
+                          .toList()
+                    : <AnnouncementEntity>[];
+                announcements.sort(
+                  (a, b) => (b.publishedAt ?? b.createdAt).compareTo(
+                    a.publishedAt ?? a.createdAt,
+                  ),
+                );
+
+                final events = calendarState is SchoolCalendarLoaded
+                    ? calendarState.events
+                          .where(
+                            (e) =>
+                                !e.archived &&
+                                e.startDate.isAfter(DateTime.now()),
+                          )
+                          .toList()
+                    : <CalendarEvent>[];
+                events.sort((a, b) => a.startDate.compareTo(b.startDate));
+
+                final topAnnouncements = announcements.take(3).toList();
+                final topEvents = events.take(3).toList();
+
+                if (topAnnouncements.isEmpty && topEvents.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'Nothing new this week.',
+                      style: TextStyle(fontSize: 13, color: AppColors.grey500),
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    for (final announcement in topAnnouncements) ...[
+                      _buildAnnouncementItem(context, announcement),
+                      const SizedBox(height: 12),
+                    ],
+                    for (final event in topEvents) ...[
+                      _buildEventItem(context, event),
+                      const SizedBox(height: 12),
+                    ],
+                  ],
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnnouncementItem(
+    BuildContext context,
+    AnnouncementEntity announcement,
+  ) {
+    final when = announcement.publishedAt ?? announcement.createdAt;
     return AppCard(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      showShadow: false,
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) =>
+              AnnouncementDetailScreen(announcementId: announcement.id),
+        ),
+      ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            width: 50,
+            padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+              color: AppColors.surfaceContainerHigh(context),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: iconColor, size: 24),
+            child: Icon(
+              Icons.campaign_outlined,
+              size: 20,
+              color: AppColors.textPrimary(context),
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -599,109 +1092,90 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  announcement.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  DateFormat('EEE d MMM').format(when),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.grey500,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Text(time, style: Theme.of(context).textTheme.labelSmall),
+          const Icon(Icons.chevron_right_rounded, color: AppColors.grey300),
         ],
       ),
     );
   }
-}
 
-class _HomeSkeleton extends StatelessWidget {
-  const _HomeSkeleton();
+  Widget _buildEventItem(BuildContext context, CalendarEvent event) {
+    final dateLabel =
+        '${DateFormat('EEE').format(event.startDate).toUpperCase()} '
+        '${event.startDate.day}';
+    final timeLabel = event.allDay
+        ? 'All Day Event'
+        : '${DateFormat('h:mm a').format(event.startDate)} - '
+              '${DateFormat('h:mm a').format(event.endDate)}';
 
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
+    return AppCard(
       padding: const EdgeInsets.all(16),
-      children: [
-        const SizedBox(height: 60), // Space for status bar/app bar
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Skeleton(height: 12, width: 100),
-                  const SizedBox(height: 8),
-                  const Skeleton(height: 24, width: 180),
-                ],
+      showShadow: false,
+      onTap: () => context.push('/parent/calendar'),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerHigh(context),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              dateLabel.replaceFirst(' ', '\n'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+                height: 1.2,
+                color: AppColors.textPrimary(context),
               ),
             ),
-            const Skeleton(height: 48, width: 48, borderRadius: 24),
-          ],
-        ),
-        const SizedBox(height: 24),
-        const Skeleton(height: 48),
-        const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(
-            4,
-            (index) => const Skeleton(height: 80, width: 70),
           ),
-        ),
-        const SizedBox(height: 32),
-        const Skeleton(height: 60),
-        const SizedBox(height: 16),
-        const Skeleton(height: 24, width: 150),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            const Expanded(child: Skeleton(height: 120)),
-            const SizedBox(width: 12),
-            const Expanded(child: Skeleton(height: 120)),
-          ],
-        ),
-        const SizedBox(height: 24),
-        const Skeleton(height: 24, width: 150),
-        const SizedBox(height: 12),
-        ...List.generate(
-          2,
-          (index) => const Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: Skeleton(height: 70),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  timeLabel,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.grey500,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          const Icon(Icons.chevron_right_rounded, color: AppColors.grey300),
+        ],
+      ),
     );
-  }
-}
-
-Color _getAlertColor(AlertSeverity severity, BuildContext context) {
-  switch (severity) {
-    case AlertSeverity.error:
-      return AppColors.danger(context);
-    case AlertSeverity.warning:
-      return AppColors.warning(context);
-    case AlertSeverity.success:
-      return AppColors.success(context);
-    case AlertSeverity.info:
-      return AppColors.information(context);
-  }
-}
-
-IconData _getAlertIcon(AlertSeverity severity) {
-  switch (severity) {
-    case AlertSeverity.error:
-      return Icons.error_outline;
-    case AlertSeverity.warning:
-      return Icons.warning_amber_rounded;
-    case AlertSeverity.success:
-      return Icons.check_circle_outline;
-    case AlertSeverity.info:
-      return Icons.info_outline;
   }
 }

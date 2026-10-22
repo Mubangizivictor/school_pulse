@@ -141,9 +141,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
               ),
             ),
             selected: isSelected,
-            selectedTileColor: AppColors.primary(
-              context,
-            ).withValues(alpha: 0.05),
+            selectedTileColor: AppColors.primary(context),
             onTap: () => setState(() => _selectedRole = role),
           );
         },
@@ -293,7 +291,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black,
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -304,7 +302,7 @@ class _RoleManagementScreenState extends State<RoleManagementScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.information(context).withValues(alpha: 0.1),
+              color: AppColors.information(context),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(

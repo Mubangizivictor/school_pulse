@@ -118,7 +118,7 @@ class _TopicExpansionTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.m),
       decoration: BoxDecoration(
-        color: AppColors.surface(context),
+        color: AppColors.surfaceContainer(context),
         borderRadius: AppRadius.medium,
         border: Border.all(color: AppColors.border(context)),
       ),
@@ -172,7 +172,7 @@ class _ObjectiveTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.m),
       decoration: BoxDecoration(
-        color: AppColors.surface(context),
+        color: AppColors.surfaceContainer(context),
         borderRadius: AppRadius.medium,
         border: Border.all(color: AppColors.border(context)),
       ),

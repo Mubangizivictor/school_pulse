@@ -67,21 +67,20 @@ void main() {
     ),
   );
 
-  testWidgets(
-    'syncs pending attendance for the current tenant on app resume',
-    (tester) async {
-      when(() => authBloc.state).thenReturn(const AuthAuthenticated(_user));
+  testWidgets('syncs pending attendance for the current tenant on app resume', (
+    tester,
+  ) async {
+    when(() => authBloc.state).thenReturn(const AuthAuthenticated(_user));
 
-      await tester.pumpWidget(buildSubject());
-      final state = tester.state(find.byType(AttendanceSyncLifecycleGate));
-      (state as WidgetsBindingObserver).didChangeAppLifecycleState(
-        AppLifecycleState.resumed,
-      );
-      await tester.pump();
+    await tester.pumpWidget(buildSubject());
+    final state = tester.state(find.byType(AttendanceSyncLifecycleGate));
+    (state as WidgetsBindingObserver).didChangeAppLifecycleState(
+      AppLifecycleState.resumed,
+    );
+    await tester.pump();
 
-      verify(() => repository.syncPendingAttendance('school-a')).called(1);
-    },
-  );
+    verify(() => repository.syncPendingAttendance('school-a')).called(1);
+  });
 
   testWidgets('does not sync when there is no authenticated user', (
     tester,

@@ -15,55 +15,53 @@ class ArchivedChatsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: colors.surface,
       appBar: AppBar(
         title: Text(
           'Archived',
           style: AppTypography.titleLarge.copyWith(
-            color: Colors.white,
+            color: colors.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: colors.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
       body: MessagingUserBuilder(
-        builder: (context, user) =>
-            BlocBuilder<MessagingBloc, MessagingState>(
-              bloc: context.messagingBloc,
-              builder: (context, state) {
-                final conversations = state.conversations;
-                if (conversations == null) {
-                  return const Center(child: SchoolPulseLoader());
-                }
-                final archived = conversations
-                    .where((c) => c.isArchived)
-                    .toList();
-                if (archived.isEmpty) return _buildEmptyState();
+        builder: (context, user) => BlocBuilder<MessagingBloc, MessagingState>(
+          bloc: context.messagingBloc,
+          builder: (context, state) {
+            final conversations = state.conversations;
+            if (conversations == null) {
+              return const Center(child: SchoolPulseLoader());
+            }
+            final archived = conversations.where((c) => c.isArchived).toList();
+            if (archived.isEmpty) return _buildEmptyState(context);
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: archived.length,
-                  itemBuilder: (context, index) {
-                    final chat = archived[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: ChatListTile(
-                        chat: chat,
-                        onTap: () => context.push('/messages/chat/${chat.id}'),
-                        // Long-press is the only way back out of the archive.
-                        onLongPress: () => _confirmUnarchive(context, chat),
-                      ),
-                    );
-                  },
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: archived.length,
+              itemBuilder: (context, index) {
+                final chat = archived[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ChatListTile(
+                    chat: chat,
+                    onTap: () => context.push('/messages/chat/${chat.id}'),
+                    // Long-press is the only way back out of the archive.
+                    onLongPress: () => _confirmUnarchive(context, chat),
+                  ),
                 );
               },
-            ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -71,7 +69,7 @@ class ArchivedChatsScreen extends StatelessWidget {
   void _confirmUnarchive(BuildContext context, ChatConversation chat) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -80,13 +78,15 @@ class ArchivedChatsScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(
+              leading: Icon(
                 Icons.unarchive_outlined,
-                color: Colors.white70,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              title: const Text(
+              title: Text(
                 'Unarchive',
-                style: TextStyle(color: Colors.white),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -96,13 +96,10 @@ class ArchivedChatsScreen extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const Icon(
-                Icons.delete_outline,
-                color: Colors.redAccent,
-              ),
+              leading: const Icon(Icons.delete_outline, color: Colors.black),
               title: const Text(
                 'Delete',
-                style: TextStyle(color: Colors.redAccent),
+                style: TextStyle(color: Colors.black),
               ),
               onTap: () {
                 Navigator.pop(sheetContext);
@@ -115,28 +112,28 @@ class ArchivedChatsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
             padding: const EdgeInsets.all(32),
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceDark,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHigh,
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.archive_outlined,
               size: 80,
-              color: AppColors.electricBlue.withValues(alpha: 0.3),
+              color: AppColors.electricBlue,
             ),
           ),
           const SizedBox(height: AppSpacing.xl),
           Text(
             'No archived chats',
             style: AppTypography.titleMedium.copyWith(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -146,7 +143,9 @@ class ArchivedChatsScreen extends StatelessWidget {
             child: Text(
               'These chats stay archived when new messages are received.',
               textAlign: TextAlign.center,
-              style: AppTypography.bodyMedium.copyWith(color: Colors.white60),
+              style: AppTypography.bodyMedium.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],

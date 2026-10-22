@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:provider/provider.dart';
-import 'package:school_pulse/core/theme_provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/student/presentation/bloc/students_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/students_state.dart';
 import 'package:school_pulse/features/student/domain/entities/student.dart';
-
-import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -24,50 +24,64 @@ class ProfileScreen extends StatelessWidget {
         }
         final parentName = state.user.name;
         final parentPhone = state.user.phoneNumber ?? '—';
+        final parentEmail = state.user.email.isNotEmpty
+            ? state.user.email
+            : '—';
 
         return Scaffold(
-          appBar: const StudentAppBar(title: 'Profile'),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Center(child: AvatarInitials(name: parentName, size: 80)),
-                const SizedBox(height: 16),
-                Text(
-                  parentName,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+          backgroundColor: AppColors.background(context),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              child: AppResponsiveContent(
+                child: Column(
+                  children: [
+                    _buildProfileHero(context, parentName, state.user.photoUrl),
+                    const SizedBox(height: 32),
+                    _sectionLabel(context, 'CONTACT DETAILS'),
+                    const SizedBox(height: 12),
+                    _buildInfoCard(context, [
+                      _InfoRow(
+                        icon: Icons.phone_outlined,
+                        label: 'Phone Number',
+                        value: parentPhone,
+                      ),
+                      _InfoRow(
+                        icon: Icons.email_outlined,
+                        label: 'Email Address',
+                        value: parentEmail,
+                      ),
+                    ]),
+                    const SizedBox(height: 32),
+                    _sectionLabel(context, 'CONNECTED STUDENTS'),
+                    const SizedBox(height: 12),
+                    BlocBuilder<StudentsBloc, StudentsState>(
+                      builder: (context, studentsState) {
+                        if (studentsState is! StudentsLoaded ||
+                            studentsState.students.isEmpty) {
+                          return EmptyState(
+                            icon: Icons.person_off_outlined,
+                            title: 'No linked students',
+                            message:
+                                'Children linked to your account will appear here.',
+                          );
+                        }
+                        return Column(
+                          children: studentsState.students
+                              .map(
+                                (student) =>
+                                    _buildStudentTile(context, student),
+                              )
+                              .toList(),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 32),
+                    _buildLogoutButton(context),
+                    const SizedBox(height: 12),
+                  ],
                 ),
-                Text(
-                  'Parent Account',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                _buildInfoCard(context, [
-                  _InfoRow(label: 'Phone Number', value: parentPhone),
-                  _InfoRow(label: 'Email Address', value: state.user.email),
-                ]),
-                const SizedBox(height: 24),
-                _buildThemeToggle(context),
-                const SizedBox(height: 24),
-                const SectionHeader(title: 'Connected Students'),
-                BlocBuilder<StudentsBloc, StudentsState>(
-                  builder: (context, studentsState) {
-                    if (studentsState is! StudentsLoaded) {
-                      return const SizedBox.shrink();
-                    }
-                    return Column(
-                      children: studentsState.students
-                          .map((student) => _buildStudentTile(context, student))
-                          .toList(),
-                    );
-                  },
-                ),
-                const SizedBox(height: 32),
-              ],
+              ),
             ),
           ),
         );
@@ -75,45 +89,141 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildThemeToggle(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildProfileHero(
+    BuildContext context,
+    String name,
+    String? photoUrl,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer(context),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border(context), width: 1.25),
+      ),
+      child: Column(
         children: [
-          const Text(
-            'Dark Mode',
-            style: TextStyle(fontWeight: FontWeight.w500),
+          _buildAvatar(context, name, photoUrl),
+          const SizedBox(height: 14),
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textPrimary(context),
+              letterSpacing: -0.3,
+            ),
           ),
-          Switch(
-            value: themeProvider.themeMode == ThemeMode.dark,
-            onChanged: (value) {
-              themeProvider.setThemeMode(
-                value ? ThemeMode.dark : ThemeMode.light,
-              );
-            },
+          const SizedBox(height: 3),
+          Text(
+            'Parent account',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textMuted(context),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoCard(BuildContext context, List<Widget> rows) {
+  Widget _buildAvatar(BuildContext context, String name, String? photoUrl) {
+    final initials = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .take(2)
+        .map((part) => part[0].toUpperCase())
+        .join();
+
+    return GestureDetector(
+      onTap: () => context.push('/parent/profile/edit'),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.border(context), width: 2),
+            ),
+            child: CircleAvatar(
+              radius: 44,
+              backgroundColor: AppColors.surfaceContainerHigh(context),
+              backgroundImage: photoUrl?.isNotEmpty == true
+                  ? NetworkImage(photoUrl!)
+                  : null,
+              child: photoUrl?.isNotEmpty == true
+                  ? null
+                  : Text(
+                      initials,
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary(context),
+                      ),
+                    ),
+            ),
+          ),
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.textPrimary(context),
+                border: Border.all(
+                  color: AppColors.background(context),
+                  width: 2,
+                ),
+              ),
+              child: Icon(
+                Icons.camera_alt_outlined,
+                size: 14,
+                color: AppColors.background(context),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionLabel(BuildContext context, String label) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.2,
+          color: AppColors.textMuted(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(BuildContext context, List<_InfoRow> rows) {
     return AppCard(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      showShadow: false,
+      color: AppColors.surfaceContainer(context),
       child: Column(
         children: rows.asMap().entries.map((entry) {
           final idx = entry.key;
           final row = entry.value;
           return Column(
             children: [
-              row,
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: row,
+              ),
               if (idx < rows.length - 1)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(height: 1),
-                ),
+                Divider(height: 1, color: AppColors.border(context)),
             ],
           );
         }).toList(),
@@ -123,11 +233,13 @@ class ProfileScreen extends StatelessWidget {
 
   Widget _buildStudentTile(BuildContext context, Student student) {
     return AppCard(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      showShadow: false,
+      color: AppColors.surfaceContainer(context),
       child: Row(
         children: [
-          AvatarInitials(name: student.name, size: 40),
+          AvatarInitials(name: student.name, size: 44),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -135,18 +247,81 @@ class ProfileScreen extends StatelessWidget {
               children: [
                 Text(
                   student.name,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary(context),
+                  ),
                 ),
+                const SizedBox(height: 2),
                 Text(
-                  student.className,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  student.className.isNotEmpty
+                      ? student.className
+                      : 'No class assigned',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textMuted(context),
+                  ),
                 ),
               ],
             ),
           ),
-          Text(
-            'ID: ${student.studentId}',
-            style: Theme.of(context).textTheme.labelSmall,
+          if (student.studentCode.isNotEmpty)
+            Text(
+              student.studentCode,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textMuted(context),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _confirmLogout(context),
+        icon: Icon(Icons.logout_rounded, color: AppColors.danger(context)),
+        label: Text(
+          'Logout',
+          style: TextStyle(
+            color: AppColors.danger(context),
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(52),
+          side: BorderSide(color: AppColors.danger(context)),
+        ),
+      ),
+    );
+  }
+
+  void _confirmLogout(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to log out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<AuthBloc>().add(LogoutPressed());
+              Navigator.pop(dialogContext);
+              context.go('/welcome');
+            },
+            child: Text(
+              'Logout',
+              style: TextStyle(color: AppColors.danger(context)),
+            ),
           ),
         ],
       ),
@@ -155,29 +330,42 @@ class ProfileScreen extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
 
-  const _InfoRow({required this.label, required this.value});
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        Icon(icon, size: 20, color: AppColors.textMuted(context)),
+        const SizedBox(width: 14),
         Text(
           label,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.outline,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textMuted(context),
           ),
         ),
-        const SizedBox(width: 16),
+        const Spacer(),
         Flexible(
           child: Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w500),
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
           ),
         ),
       ],

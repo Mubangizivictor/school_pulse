@@ -5,7 +5,46 @@ enum AttendanceStatus { present, absent, late, excused }
 
 enum AttendanceMethod { nfc, qr, manual }
 
-enum AttendanceSyncStatus { pending, synced, failed }
+/// The full offline-queue-item lifecycle for one locally-cached attendance
+/// mark. `pending`/`synced`/`failed` are the original three states this app
+/// shipped with; the rest close the Day 3 release-gate gap that there was no
+/// stale/revoked-queue-entry handling anywhere in attendance_hub.
+///
+///  queued -> syncing -> completed              (happy path)
+///                     -> retryableFailure -> syncing (backoff retry loop)
+///                     -> permanentlyBlocked     (revoked/stale/gone/403)
+///  completed | permanentlyBlocked -> evicted    (past the retention window)
+///
+/// `pending`/`synced`/`failed` are kept as aliases of `queued`/`completed`/
+/// `retryableFailure` respectively (see the `.legacy`/`.isPending` etc.
+/// helpers below) so every existing call site and persisted Isar row -
+/// `syncStatus` is stored by `.name` - keeps working unchanged.
+enum AttendanceSyncStatus {
+  pending,
+  synced,
+  failed,
+  queued,
+  syncing,
+  completed,
+  retryableFailure,
+  permanentlyBlocked,
+  evicted;
+
+  /// True for any state that has not yet reached a terminal outcome and is
+  /// still eligible to be picked up by a sync sweep.
+  bool get isPending =>
+      this == pending || this == queued || this == retryableFailure;
+
+  bool get isSyncing => this == syncing;
+
+  bool get isSuccessful => this == synced || this == completed;
+
+  /// A queue item that will never be retried again - the sync sweep must
+  /// skip these, and the UI must never render them as if they succeeded.
+  bool get isBlocked => this == permanentlyBlocked;
+
+  bool get isEvicted => this == evicted;
+}
 
 /// One person's attendance mark for one session on one day. `id` is always
 /// deterministic - see AttendanceRemoteDataSource.buildRecordId - so a
@@ -40,6 +79,17 @@ class AttendanceRecord extends Equatable {
   /// lesson_attendance/class_attendance_sessions/subject_enrollments.
   final String? roleAssignmentId;
 
+  /// Offline-queue lifecycle bookkeeping. `retryCount`/`nextRetryAt` drive
+  /// the same bounded-exponential-backoff shape as
+  /// `OfflineOperation.backoffFor` (teacher/domain/entities/offline_operation
+  /// .dart) - reused here rather than reinvented. `blockedReason` is set the
+  /// moment a record transitions to `permanentlyBlocked`, so the UI has a
+  /// human-readable explanation rather than a bare enum value.
+  final int retryCount;
+  final DateTime? nextRetryAt;
+  final String? lastError;
+  final String? blockedReason;
+
   const AttendanceRecord({
     required this.id,
     required this.schoolId,
@@ -60,6 +110,10 @@ class AttendanceRecord extends Equatable {
     this.correctedAt,
     this.correctionOf,
     this.roleAssignmentId,
+    this.retryCount = 0,
+    this.nextRetryAt,
+    this.lastError,
+    this.blockedReason,
   });
 
   AttendanceRecord copyWith({
@@ -67,6 +121,11 @@ class AttendanceRecord extends Equatable {
     AttendanceSyncStatus? syncStatus,
     DateTime? correctedAt,
     String? roleAssignmentId,
+    int? retryCount,
+    DateTime? nextRetryAt,
+    bool clearNextRetryAt = false,
+    String? lastError,
+    String? blockedReason,
   }) {
     return AttendanceRecord(
       id: id,
@@ -88,6 +147,10 @@ class AttendanceRecord extends Equatable {
       correctedAt: correctedAt ?? this.correctedAt,
       correctionOf: correctionOf,
       roleAssignmentId: roleAssignmentId ?? this.roleAssignmentId,
+      retryCount: retryCount ?? this.retryCount,
+      nextRetryAt: clearNextRetryAt ? null : (nextRetryAt ?? this.nextRetryAt),
+      lastError: lastError ?? this.lastError,
+      blockedReason: blockedReason ?? this.blockedReason,
     );
   }
 
@@ -112,5 +175,9 @@ class AttendanceRecord extends Equatable {
     correctedAt,
     correctionOf,
     roleAssignmentId,
+    retryCount,
+    nextRetryAt,
+    lastError,
+    blockedReason,
   ];
 }

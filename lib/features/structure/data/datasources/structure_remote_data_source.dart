@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../domain/entities/structure_entities.dart';
 import '../../domain/entities/feature_toggles.dart';
 import '../../domain/entities/institution_profile.dart';
@@ -21,6 +22,8 @@ abstract class StructureRemoteDataSource {
   Future<void> deleteLevel(String levelId);
   Future<void> archiveLevel(String levelId);
   Future<void> restoreLevel(String levelId);
+  Future<void> reorderLevels(List<EducationalLevel> orderedLevels);
+  Future<void> saveLevelsBatch(List<EducationalLevel> levels);
 
   Stream<List<AcademicYear>> watchAcademicYears(String schoolId);
   Future<void> saveAcademicYear(AcademicYear year);
@@ -38,25 +41,40 @@ abstract class StructureRemoteDataSource {
 
   Stream<List<SchoolClass>> watchClasses(String schoolId);
   Future<void> saveClass(SchoolClass schoolClass);
+  Future<void> saveClasses(List<SchoolClass> classes);
+  Future<void> reorderClasses(List<SchoolClass> orderedClasses);
   Future<void> deleteClass(String classId);
   Future<void> archiveClass(String classId);
   Future<void> restoreClass(String classId);
 
   Stream<List<ClassStream>> watchStreams(String schoolId);
   Future<void> saveStream(ClassStream stream);
+  Future<void> saveStreams(List<ClassStream> streams);
   Future<void> deleteStream(String streamId);
   Future<void> archiveStream(String streamId);
   Future<void> restoreStream(String streamId);
 
   Stream<List<Subject>> watchSubjects(String schoolId);
   Future<void> saveSubject(Subject subject);
+  Future<void> saveSubjects(List<Subject> subjects);
   Future<void> deleteSubject(String subjectId);
   Future<void> archiveSubject(String subjectId);
+  Future<void> reorderSubjects(List<Subject> orderedSubjects);
 
   Stream<List<Department>> watchDepartments(String schoolId);
   Future<void> saveDepartment(Department department);
+
+  /// Saves a department together with its subject-membership changes
+  /// (subjects being added and subjects being removed) as one atomic batch,
+  /// so a department is never left with a partially-updated subject list.
+  Future<void> saveDepartmentWithSubjects(
+    Department department,
+    List<Subject> addedSubjects,
+    List<Subject> removedSubjects,
+  );
   Future<void> deleteDepartment(String departmentId);
   Future<void> archiveDepartment(String departmentId);
+  Future<void> reorderDepartments(List<Department> orderedDepartments);
 
   Stream<List<StaffDesignation>> watchDesignations(String schoolId);
   Future<void> saveDesignation(StaffDesignation designation);
@@ -120,6 +138,14 @@ abstract class StructureRemoteDataSource {
 
   Stream<List<GradingSystemDef>> watchGradingSystems(String schoolId);
   Future<void> saveGradingSystem(GradingSystemDef system);
+
+  /// Saves a grading system and its complete band set in one atomic batch -
+  /// used by the two-stage builder's final "Save grading system" step, so a
+  /// system is never left half-saved with only some of its bands.
+  Future<void> saveGradingSystemWithBands(
+    GradingSystemDef system,
+    List<GradeBand> bands,
+  );
   Future<void> deleteGradingSystem(String systemId);
 
   Stream<List<GradeBand>> watchGradeBands(String schoolId);
@@ -180,8 +206,9 @@ abstract class StructureRemoteDataSource {
 
 class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   final FirebaseFirestore firestore;
+  final FirebaseAuth? auth;
 
-  StructureRemoteDataSourceImpl({required this.firestore});
+  StructureRemoteDataSourceImpl({required this.firestore, this.auth});
 
   CollectionReference<Map<String, dynamic>> get _levels =>
       firestore.collection('educational_levels');
@@ -245,8 +272,8 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       firestore
           .collection('schools')
           .doc(schoolId)
-          .collection('config')
-          .doc('feature_toggles');
+          .collection('settings')
+          .doc('features');
   DocumentReference<Map<String, dynamic>> _institutionProfileDoc(
     String schoolId,
   ) => firestore
@@ -306,6 +333,28 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Future<void> restoreLevel(String levelId) =>
       _levels.doc(levelId).update({'isActive': true, 'archivedAt': null});
 
+  @override
+  Future<void> reorderLevels(List<EducationalLevel> orderedLevels) async {
+    final batch = _levels.firestore.batch();
+    for (final level in orderedLevels) {
+      batch.update(_levels.doc(level.id), {'order': level.order});
+    }
+    await batch.commit();
+  }
+
+  @override
+  Future<void> saveLevelsBatch(List<EducationalLevel> levels) async {
+    final batch = _levels.firestore.batch();
+    for (final level in levels) {
+      batch.set(
+        _levels.doc(level.id),
+        _levelToMap(level),
+        SetOptions(merge: true),
+      );
+    }
+    await batch.commit();
+  }
+
   EducationalLevel _levelFromMap(String id, Map<String, dynamic> map) {
     return EducationalLevel(
       id: id,
@@ -341,23 +390,18 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
 
   @override
   Future<void> saveAcademicYear(AcademicYear year) async {
-    // A current year is a school-wide singleton. Keep the writes in one
-    // batch so listeners never observe a partially-updated current state.
-    // years selected at once.
     if (!year.isCurrent) {
-      await _years.doc(year.id).set(_yearToMap(year), SetOptions(merge: true));
+      final reference = _years.doc(year.id);
+      await firestore.runTransaction((transaction) async {
+        final existing = await transaction.get(reference);
+        transaction.set(reference, {
+          ..._yearToMap(year),
+          if (!existing.exists) 'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      });
       return;
     }
-    final current = await _years
-        .where('schoolId', isEqualTo: year.schoolId)
-        .where('isCurrent', isEqualTo: true)
-        .get();
-    final batch = firestore.batch();
-    for (final doc in current.docs) {
-      if (doc.id != year.id) batch.update(doc.reference, {'isCurrent': false});
-    }
-    batch.set(_years.doc(year.id), _yearToMap(year));
-    await batch.commit();
+    await _setCurrentYearTransaction(year.id, year.schoolId, year: year);
   }
 
   @override
@@ -365,21 +409,49 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
 
   @override
   Future<void> setCurrentAcademicYear(String yearId, String schoolId) async {
-    final target = await _years.doc(yearId).get();
-    if (!target.exists || target.data()?['schoolId'] != schoolId) {
+    await _setCurrentYearTransaction(yearId, schoolId);
+  }
+
+  Future<void> _setCurrentYearTransaction(
+    String yearId,
+    String schoolId, {
+    AcademicYear? year,
+  }) => firestore.runTransaction((transaction) async {
+    final target = _years.doc(yearId);
+    final targetSnapshot = await transaction.get(target);
+    if (year == null &&
+        (!targetSnapshot.exists ||
+            targetSnapshot.data()?['schoolId'] != schoolId)) {
       throw StateError('Academic year is not available for this school.');
     }
-    final existingCurrent = await _years
+    // The Flutter Firestore transaction API only supports document reads.
+    // The canonical current set is tenant-filtered and is committed together
+    // with the target, so observers do not receive a partial state.
+    final current = await _years
         .where('schoolId', isEqualTo: schoolId)
         .where('isCurrent', isEqualTo: true)
         .get();
-    final batch = firestore.batch();
-    for (final doc in existingCurrent.docs) {
-      batch.update(doc.reference, {'isCurrent': false});
+    for (final doc in current.docs) {
+      if (doc.id != yearId) {
+        transaction.update(doc.reference, {
+          'isCurrent': false,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
     }
-    batch.update(target.reference, {'isCurrent': true, 'isArchived': false});
-    await batch.commit();
-  }
+    if (year != null) {
+      transaction.set(target, {
+        ..._yearToMap(year),
+        if (!targetSnapshot.exists) 'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } else {
+      transaction.update(target, {
+        'isCurrent': true,
+        'isArchived': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+  });
 
   @override
   Future<void> archiveAcademicYear(String yearId) =>
@@ -410,6 +482,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'description': e.description,
     'isCurrent': e.isCurrent,
     'isArchived': e.isArchived,
+    'updatedAt': FieldValue.serverTimestamp(),
   };
 
   // Academic Terms
@@ -445,9 +518,9 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     String termId,
     String schoolId, {
     AcademicTerm? term,
-  }) async {
+  }) => firestore.runTransaction((transaction) async {
     final target = _terms.doc(termId);
-    final targetSnapshot = await target.get();
+    final targetSnapshot = await transaction.get(target);
     final targetData = targetSnapshot.data();
     if (term == null &&
         (!targetSnapshot.exists || targetData?['schoolId'] != schoolId)) {
@@ -456,12 +529,16 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     final yearId =
         term?.academicYearId ?? targetData!['academicYearId'] as String;
     final year = _years.doc(yearId);
-    final yearSnapshot = await year.get();
+    final yearSnapshot = await transaction.get(year);
     if (!yearSnapshot.exists || yearSnapshot.data()?['schoolId'] != schoolId) {
       throw StateError(
         'The selected academic year is not available for this school.',
       );
     }
+    // The Flutter Firestore transaction API only supports document reads.
+    // The canonical current-term/current-year sets are tenant-filtered and
+    // committed together with the target, so observers never see a partial
+    // "two current terms" or "current term under a non-current year" state.
     final currentTerms = await _terms
         .where('schoolId', isEqualTo: schoolId)
         .where('isCurrent', isEqualTo: true)
@@ -470,21 +547,27 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         .where('schoolId', isEqualTo: schoolId)
         .where('isCurrent', isEqualTo: true)
         .get();
-    final batch = firestore.batch();
     for (final doc in currentTerms.docs) {
-      if (doc.id != termId) batch.update(doc.reference, {'isCurrent': false});
+      if (doc.id != termId) {
+        transaction.update(doc.reference, {'isCurrent': false});
+      }
     }
     for (final doc in currentYears.docs) {
-      if (doc.id != yearId) batch.update(doc.reference, {'isCurrent': false});
+      if (doc.id != yearId) {
+        transaction.update(doc.reference, {'isCurrent': false});
+      }
     }
-    batch.update(year, {'isCurrent': true, 'isArchived': false});
+    transaction.update(year, {'isCurrent': true, 'isArchived': false});
     if (term == null) {
-      batch.update(target, {'isCurrent': true, 'isArchived': false});
+      transaction.update(target, {'isCurrent': true, 'isArchived': false});
     } else {
-      batch.set(target, _termToMap(term));
+      // merge:true - _termToMap deliberately omits isConfirmed (server-only
+      // field); a non-merge set here would otherwise silently reset an
+      // already-confirmed term back to unconfirmed every time it's made
+      // current via a full-entity save.
+      transaction.set(target, _termToMap(term), SetOptions(merge: true));
     }
-    await batch.commit();
-  }
+  });
 
   @override
   Future<void> archiveAcademicTerm(String termId) =>
@@ -509,9 +592,18 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         orElse: () => AcademicPeriodType.term,
       ),
       isArchived: map['isArchived'] ?? false,
+      isConfirmed: map['isConfirmed'] ?? false,
+      closureStartDate: (map['closureStartDate'] as Timestamp?)?.toDate(),
+      closureEndDate: (map['closureEndDate'] as Timestamp?)?.toDate(),
     );
   }
 
+  // Deliberately omits `isConfirmed` - confirmation is server-side only via
+  // the confirmAcademicCalendar callable (functions/academic_calendar_billing.js).
+  // firestore.rules blocks any client write that touches isConfirmed as
+  // defense-in-depth; this map simply never offers the field so a plain
+  // merge-write from this datasource can never accidentally trip that rule
+  // or silently flip a term to confirmed.
   Map<String, dynamic> _termToMap(AcademicTerm e) => {
     'schoolId': e.schoolId,
     'academicYearId': e.academicYearId,
@@ -522,6 +614,12 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'isCurrent': e.isCurrent,
     'periodType': e.periodType.name,
     'isArchived': e.isArchived,
+    'closureStartDate': e.closureStartDate == null
+        ? null
+        : Timestamp.fromDate(e.closureStartDate!),
+    'closureEndDate': e.closureEndDate == null
+        ? null
+        : Timestamp.fromDate(e.closureEndDate!),
   };
 
   // Classes
@@ -542,6 +640,35 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _classes.doc(schoolClass.id).set(_classToMap(schoolClass));
 
   @override
+  Future<void> saveClasses(List<SchoolClass> classes) async {
+    if (classes.isEmpty) return;
+    final schoolId = classes.first.schoolId;
+    if (classes.any((item) => item.schoolId != schoolId)) {
+      throw ArgumentError(
+        'All classes in a bulk write must belong to one school.',
+      );
+    }
+    final batch = firestore.batch();
+    for (final schoolClass in classes) {
+      batch.set(_classes.doc(schoolClass.id), {
+        ..._classToMap(schoolClass),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
+  @override
+  Future<void> reorderClasses(List<SchoolClass> orderedClasses) async {
+    final batch = firestore.batch();
+    for (final schoolClass in orderedClasses) {
+      batch.update(_classes.doc(schoolClass.id), {'order': schoolClass.order});
+    }
+    await batch.commit();
+  }
+
+  @override
   Future<void> deleteClass(String classId) => _classes.doc(classId).delete();
 
   @override
@@ -559,9 +686,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       name: map['name'] ?? '',
       code: map['code'] ?? '',
       levelId: map['levelId'] ?? '',
+      order: map['order'] ?? 0,
       capacity: map['capacity'] ?? 0,
       description: map['description'] ?? '',
       isActive: map['isActive'] ?? true,
+      campusId: map['campusId'] ?? '',
     );
   }
 
@@ -570,9 +699,12 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'name': e.name,
     'code': e.code,
     'levelId': e.levelId,
+    'order': e.order,
     'capacity': e.capacity,
     'description': e.description,
     'isActive': e.isActive,
+    'campusId': e.campusId,
+    'updatedAt': FieldValue.serverTimestamp(),
   };
 
   // Streams
@@ -591,6 +723,22 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   @override
   Future<void> saveStream(ClassStream stream) =>
       _streams.doc(stream.id).set(_streamToMap(stream));
+
+  @override
+  Future<void> saveStreams(List<ClassStream> streams) async {
+    if (streams.isEmpty) return;
+    final schoolId = streams.first.schoolId;
+    if (streams.any((item) => item.schoolId != schoolId)) {
+      throw ArgumentError(
+        'All streams in a bulk write must belong to one school.',
+      );
+    }
+    final batch = firestore.batch();
+    for (final stream in streams) {
+      batch.set(_streams.doc(stream.id), _streamToMap(stream));
+    }
+    await batch.commit();
+  }
 
   @override
   Future<void> deleteStream(String streamId) => _streams.doc(streamId).delete();
@@ -650,12 +798,42 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   }
 
   @override
+  Future<void> saveSubjects(List<Subject> subjects) async {
+    if (subjects.isEmpty) return;
+    final schoolId = subjects.first.schoolId;
+    if (schoolId.isEmpty || subjects.any((item) => item.schoolId != schoolId)) {
+      throw ArgumentError(
+        'All subjects in a bulk write must belong to one institution.',
+      );
+    }
+    final batch = firestore.batch();
+    for (final subject in subjects) {
+      batch.set(_subjects.doc(subject.id), {
+        ..._subjectToMap(subject),
+        'codeLower': subject.code.trim().toLowerCase(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
+  @override
   Future<void> deleteSubject(String subjectId) =>
       _subjects.doc(subjectId).delete();
 
   @override
   Future<void> archiveSubject(String subjectId) =>
       _subjects.doc(subjectId).update({'isActive': false});
+
+  @override
+  Future<void> reorderSubjects(List<Subject> orderedSubjects) async {
+    final batch = firestore.batch();
+    for (final subject in orderedSubjects) {
+      batch.update(_subjects.doc(subject.id), {'order': subject.order});
+    }
+    await batch.commit();
+  }
 
   Subject _subjectFromMap(String id, Map<String, dynamic> map) {
     return Subject(
@@ -675,6 +853,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       isActive: map['isActive'] ?? true,
       assignedLevelIds: List<String>.from(map['assignedLevelIds'] ?? const []),
       assignedClassIds: List<String>.from(map['assignedClassIds'] ?? const []),
+      order: map['order'] ?? 0,
     );
   }
 
@@ -692,6 +871,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'isActive': e.isActive,
     'assignedLevelIds': e.assignedLevelIds,
     'assignedClassIds': e.assignedClassIds,
+    'order': e.order,
   };
 
   // Departments
@@ -699,7 +879,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
   Stream<List<Department>> watchDepartments(String schoolId) {
     return _departments
         .where('schoolId', isEqualTo: schoolId)
-        .orderBy('name')
+        .orderBy('displayOrder')
         .snapshots()
         .map(
           (snap) =>
@@ -712,12 +892,46 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       _departments.doc(department.id).set(_departmentToMap(department));
 
   @override
+  Future<void> saveDepartmentWithSubjects(
+    Department department,
+    List<Subject> addedSubjects,
+    List<Subject> removedSubjects,
+  ) async {
+    final batch = firestore.batch();
+    batch.set(_departments.doc(department.id), _departmentToMap(department));
+    for (final subject in addedSubjects) {
+      batch.update(_subjects.doc(subject.id), {
+        'departmentId': department.id,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    for (final subject in removedSubjects) {
+      batch.update(_subjects.doc(subject.id), {
+        'departmentId': '',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    }
+    await batch.commit();
+  }
+
+  @override
   Future<void> deleteDepartment(String departmentId) =>
       _departments.doc(departmentId).delete();
 
   @override
   Future<void> archiveDepartment(String departmentId) =>
       _departments.doc(departmentId).update({'isActive': false});
+
+  @override
+  Future<void> reorderDepartments(List<Department> orderedDepartments) async {
+    final batch = firestore.batch();
+    for (final department in orderedDepartments) {
+      batch.update(_departments.doc(department.id), {
+        'displayOrder': department.displayOrder,
+      });
+    }
+    await batch.commit();
+  }
 
   Department _departmentFromMap(String id, Map<String, dynamic> map) {
     return Department(
@@ -727,6 +941,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
       code: map['code'] ?? '',
       description: map['description'] ?? '',
       headOfDepartmentStaffId: map['headOfDepartmentStaffId'] ?? '',
+      displayOrder: map['displayOrder'] ?? 0,
       isActive: map['isActive'] ?? true,
     );
   }
@@ -737,6 +952,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'code': e.code,
     'description': e.description,
     'headOfDepartmentStaffId': e.headOfDepartmentStaffId,
+    'displayOrder': e.displayOrder,
     'isActive': e.isActive,
   };
 
@@ -828,7 +1044,11 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
 
   @override
   Future<void> updateFeatureToggles(FeatureToggles toggles, String schoolId) =>
-      _featureTogglesDoc(schoolId).set(_togglesToMap(toggles));
+      _featureTogglesDoc(schoolId).set({
+        ..._togglesToMap(toggles),
+        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedBy': (auth ?? FirebaseAuth.instance).currentUser?.uid ?? '',
+      });
 
   FeatureToggles _togglesFromMap(Map<String, dynamic> map) {
     return FeatureToggles(
@@ -1197,6 +1417,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     gender: map['gender'] ?? '',
     wardenName: map['wardenName'] ?? '',
     wardenContact: map['wardenContact'] ?? '',
+    wardenStaffId: map['wardenStaffId'] as String?,
     capacity: map['capacity'] ?? 0,
     description: map['description'] ?? '',
     isActive: map['isActive'] ?? true,
@@ -1208,6 +1429,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'gender': e.gender,
     'wardenName': e.wardenName,
     'wardenContact': e.wardenContact,
+    'wardenStaffId': e.wardenStaffId,
     'capacity': e.capacity,
     'description': e.description,
     'isActive': e.isActive,
@@ -1500,6 +1722,32 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     await batch.commit();
   }
 
+  @override
+  Future<void> saveGradingSystemWithBands(
+    GradingSystemDef system,
+    List<GradeBand> bands,
+  ) async {
+    final batch = firestore.batch();
+    if (system.isDefault) {
+      final current = await _gradingSystems
+          .where('schoolId', isEqualTo: system.schoolId)
+          .get();
+      for (final doc in current.docs) {
+        final data = doc.data();
+        if (doc.id != system.id &&
+            data['isDefault'] == true &&
+            _sameApplicability(data, system)) {
+          batch.update(doc.reference, {'isDefault': false});
+        }
+      }
+    }
+    batch.set(_gradingSystems.doc(system.id), _gradingSystemToMap(system));
+    for (final band in bands) {
+      batch.set(_gradeBands.doc(band.id), _gradeBandToMap(band));
+    }
+    await batch.commit();
+  }
+
   bool _sameApplicability(Map<String, dynamic> data, GradingSystemDef system) {
     List<String> values(String key) => List<String>.from(data[key] ?? const []);
     bool sameList(List<String> a, List<String> b) =>
@@ -1534,6 +1782,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
         classIds: List<String>.from(map['classIds'] ?? const []),
         academicYearIds: List<String>.from(map['academicYearIds'] ?? const []),
         version: map['version'] ?? 1,
+        maximumMark: (map['maximumMark'] as num?)?.toDouble() ?? 0,
       );
 
   Map<String, dynamic> _gradingSystemToMap(GradingSystemDef e) => {
@@ -1554,6 +1803,7 @@ class StructureRemoteDataSourceImpl implements StructureRemoteDataSource {
     'classIds': e.classIds,
     'academicYearIds': e.academicYearIds,
     'version': e.version,
+    'maximumMark': e.maximumMark,
   };
 
   // Grade Bands

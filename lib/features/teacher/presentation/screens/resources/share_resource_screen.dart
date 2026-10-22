@@ -31,7 +31,9 @@ class _ShareResourceScreenState extends State<ShareResourceScreen> {
       return Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(title: const Text('Share Resource')),
-        body: const Center(child: Text('This resource is no longer available.')),
+        body: const Center(
+          child: Text('This resource is no longer available.'),
+        ),
       );
     }
 
@@ -54,15 +56,11 @@ class _ShareResourceScreenState extends State<ShareResourceScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.primary.withValues(alpha: 0.1),
+                        color: Theme.of(context).colorScheme.primary,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        resource.isLink
-                            ? Icons.link
-                            : Icons.insert_drive_file,
+                        resource.isLink ? Icons.link : Icons.insert_drive_file,
                         color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
@@ -90,7 +88,10 @@ class _ShareResourceScreenState extends State<ShareResourceScreen> {
               ),
               const SizedBox(height: AppSpacing.x3l),
 
-              const Text('Share With', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Share With',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: AppSpacing.l),
               AppCard(
                 padding: EdgeInsets.zero,
@@ -119,7 +120,8 @@ class _ShareResourceScreenState extends State<ShareResourceScreen> {
                       label: 'Class and guardians',
                       subtitle: 'Visible to students and parents',
                       selected:
-                          _audience == ClassResourceAudience.studentsAndGuardians,
+                          _audience ==
+                          ClassResourceAudience.studentsAndGuardians,
                       isLast: true,
                       onTap: () => setState(
                         () => _audience =
@@ -173,9 +175,7 @@ class _ShareOption extends StatelessWidget {
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Theme.of(
-                context,
-              ).colorScheme.primary.withValues(alpha: 0.1),
+              color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -193,7 +193,10 @@ class _ShareOption extends StatelessWidget {
             style: TextStyle(fontSize: 12, color: Theme.of(context).hintColor),
           ),
           trailing: selected
-              ? Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary)
+              ? Icon(
+                  Icons.check_circle,
+                  color: Theme.of(context).colorScheme.primary,
+                )
               : const Icon(Icons.radio_button_unchecked),
           onTap: onTap,
         ),
@@ -202,7 +205,7 @@ class _ShareOption extends StatelessWidget {
             height: 1,
             indent: 64,
             endIndent: 16,
-            color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
+            color: Theme.of(context).dividerColor,
           ),
       ],
     );

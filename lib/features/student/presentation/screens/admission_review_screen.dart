@@ -6,12 +6,16 @@ import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/structure/domain/entities/structure_entities.dart';
+import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 import '../../domain/entities/admission_application.dart';
 import '../../domain/entities/student_enums.dart';
+import '../../domain/services/admission_service.dart';
 import '../../domain/services/parent_linking_service.dart';
 import '../bloc/admission_bloc.dart';
 import '../bloc/admission_event.dart';
 import '../bloc/admission_state.dart';
+import '../enrollment_setup/screens/enrollment_setup_wizard_screen.dart';
 import 'admissions_list_screen.dart' show admissionStatusLabel;
 
 class AdmissionReviewScreen extends StatelessWidget {
@@ -163,6 +167,16 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
     );
   }
 
+  // Runs Steps 1-3 of admission (mints the admission number + student/QR
+  // codes, sets status to StudentStatus.admitted) directly via
+  // AdmissionService, then hands off to the Enrollment Setup Wizard for
+  // everything the old direct-EnrollStudentRequested flow used to skip
+  // (finance/boarding/clubs/parent-link/identity confirmation) before the
+  // wizard itself calls AdmissionService.enrollStudent to finish the
+  // status transition to active. Deliberately bypasses AdmissionBloc's
+  // EnrollStudentRequested handler - that handler still exists unmodified
+  // for any other caller, but it inlines admit+enroll as one step, which
+  // would activate the student before the wizard ever runs.
   Future<void> _enroll() async {
     final authState = context.read<AuthBloc>().state;
     if (authState is! AuthAuthenticated) return;
@@ -175,20 +189,55 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
 
     setState(() => _busy = true);
     final application = widget.application;
-    // Financial account setup (term/feeStructureId/totalBilled) is
-    // deliberately left unset here - AdmissionService only initializes
-    // billing when all three are supplied, so enrollment still succeeds
-    // without them; wiring a fee-structure picker into this screen is
-    // follow-up work for the billing/bursar flow.
-    context.read<AdmissionBloc>().add(
-      EnrollStudentRequested(
-        operatorUser: authState.user,
-        applicationId: application.id,
-        schoolId: application.schoolId,
-        schoolCode: schoolCode.trim(),
-        academicYear: application.academicYearId,
-        academicYearId: application.academicYearId,
-      ),
+    final admissionService = sl<AdmissionService>();
+
+    final admitResult = await admissionService.admitStudent(
+      application.id,
+      application.schoolId,
+      schoolCode.trim(),
+      application.academicYearId,
+      application.academicYearId,
+    );
+
+    if (!mounted) return;
+    setState(() => _busy = false);
+
+    await admitResult.fold(
+      (failure) async {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(failure.message),
+            backgroundColor: AppColors.danger(context),
+          ),
+        );
+      },
+      (studentId) async {
+        final studentResult = await admissionService.repository.getStudentById(
+          studentId,
+        );
+        final codes = studentResult.fold(
+          (failure) => null,
+          (student) => (
+            uniqueSystemId: student.qrReference ?? '',
+            studentCode: student.studentCode,
+          ),
+        );
+        if (!mounted || codes == null) return;
+
+        await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => EnrollmentSetupWizardScreen(
+              application: application,
+              studentId: studentId,
+              schoolCode: schoolCode.trim(),
+              uniqueSystemId: codes.uniqueSystemId,
+              studentCode: codes.studentCode,
+            ),
+          ),
+        );
+        if (mounted) Navigator.of(context).pop(true);
+      },
     );
   }
 
@@ -239,21 +288,79 @@ class _AdmissionReviewViewState extends State<_AdmissionReviewView> {
               ),
             ),
             const SizedBox(height: 16),
-            _InfoRow(
-              'Date of birth',
-              application.dateOfBirth.toLocal().toString().split(' ').first,
+            const SectionHeader(title: 'Application Details'),
+            const SizedBox(height: 8),
+            AppCard(
+              child: Column(
+                children: [
+                  _InfoRow(
+                    'Date of birth',
+                    application.dateOfBirth.toLocal().toString().split(' ')[0],
+                  ),
+                  Divider(color: AppColors.border(context)),
+                  _InfoRow('Gender', application.gender.name),
+                  Divider(color: AppColors.border(context)),
+                  StreamBuilder<List<SchoolClass>>(
+                    stream: sl<StructureRepository>().watchClasses(
+                      application.schoolId,
+                    ),
+                    builder: (context, snap) {
+                      final classes = snap.data ?? const <SchoolClass>[];
+                      final match = classes
+                          .where((c) => c.id == application.targetClassId)
+                          .toList();
+                      final label = match.isNotEmpty
+                          ? match.first.name
+                          : (classes.isEmpty ? 'Loading…' : 'Unknown class');
+                      return _InfoRow('Target class', label);
+                    },
+                  ),
+                  if (application.targetStreamId != null) ...[
+                    Divider(color: AppColors.border(context)),
+                    _InfoRow('Stream', application.targetStreamId!),
+                  ],
+                  Divider(color: AppColors.border(context)),
+                  StreamBuilder<List<AcademicYear>>(
+                    stream: sl<StructureRepository>().watchAcademicYears(
+                      application.schoolId,
+                    ),
+                    builder: (context, snap) {
+                      final years = snap.data ?? const <AcademicYear>[];
+                      final match = years
+                          .where((y) => y.id == application.academicYearId)
+                          .toList();
+                      final label = match.isNotEmpty
+                          ? match.first.name
+                          : (years.isEmpty ? 'Loading…' : 'Unknown year');
+                      return _InfoRow('Academic year', label);
+                    },
+                  ),
+                  if (application.previousSchool != null) ...[
+                    Divider(color: AppColors.border(context)),
+                    _InfoRow('Previous school', application.previousSchool!),
+                  ],
+                ],
+              ),
             ),
-            _InfoRow('Gender', application.gender.name),
-            _InfoRow('Target class', application.targetClassId),
-            if (application.targetStreamId != null)
-              _InfoRow('Stream', application.targetStreamId!),
-            _InfoRow('Academic year', application.academicYearId),
-            if (application.previousSchool != null)
-              _InfoRow('Previous school', application.previousSchool!),
-            _InfoRow('Parent / guardian', application.applicantParentName),
-            _InfoRow('Parent phone', application.applicantParentPhone),
-            if (application.reviewComments != null)
-              _InfoRow('Review comments', application.reviewComments!),
+            const SizedBox(height: 20),
+            const SectionHeader(title: 'Parent / Guardian'),
+            const SizedBox(height: 8),
+            AppCard(
+              child: Column(
+                children: [
+                  _InfoRow(
+                    'Parent / guardian',
+                    application.applicantParentName,
+                  ),
+                  Divider(color: AppColors.border(context)),
+                  _InfoRow('Parent phone', application.applicantParentPhone),
+                  if (application.reviewComments != null) ...[
+                    Divider(color: AppColors.border(context)),
+                    _InfoRow('Review comments', application.reviewComments!),
+                  ],
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
             if (application.status == AdmissionStatus.application ||
                 application.status == AdmissionStatus.review) ...[

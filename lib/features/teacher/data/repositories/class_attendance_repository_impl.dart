@@ -177,7 +177,7 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
     );
 
     if (!await networkInfo.isConnected) {
-      final draft = await _cachedDraft(sessionId);
+      final draft = await _cachedDraft(sessionId, schoolId: context.schoolId);
       return Right(draft ?? empty);
     }
 
@@ -189,12 +189,12 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
 
       // A local draft newer than the server copy wins, so work done offline
       // is not silently discarded by simply reconnecting.
-      final draft = await _cachedDraft(sessionId);
+      final draft = await _cachedDraft(sessionId, schoolId: context.schoolId);
       if (existing == null) return Right(draft ?? empty);
       if (draft != null && existing.isFreelyEditable) return Right(draft);
       return Right(existing);
     } catch (_) {
-      final draft = await _cachedDraft(sessionId);
+      final draft = await _cachedDraft(sessionId, schoolId: context.schoolId);
       return Right(draft ?? empty);
     }
   }
@@ -551,8 +551,11 @@ class ClassAttendanceRepositoryImpl implements ClassAttendanceRepository {
     };
   }
 
-  Future<ClassAttendanceSession?> _cachedDraft(String sessionId) async {
-    return localDataSource.getAttendanceDraft(sessionId);
+  Future<ClassAttendanceSession?> _cachedDraft(
+    String sessionId, {
+    required String schoolId,
+  }) async {
+    return localDataSource.getAttendanceDraft(sessionId, schoolId: schoolId);
   }
 
   Future<void> _cacheDraft(ClassAttendanceSession session) async {

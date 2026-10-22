@@ -254,6 +254,7 @@ class NotificationPushHandler {
   }
 
   Future<SchoolNotificationPolicy?> _schoolPolicy(String schoolId) async {
+    if (schoolId.isEmpty) return null;
     final result = await repository.getSchoolPolicy(schoolId);
     return result.fold((_) => null, (policy) => policy);
   }

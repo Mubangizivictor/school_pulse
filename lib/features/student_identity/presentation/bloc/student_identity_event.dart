@@ -114,3 +114,20 @@ class ReactivateNfcCardEvent extends StudentIdentityEvent {
   @override
   List<Object?> get props => [cardUid, studentId, schoolId];
 }
+
+/// Fired when a School ID or QR credential is previewed/printed. Fire-and-
+/// forget - never blocks navigation to the preview/print screen and never
+/// emits Loading/Error, matching EnrollmentAuditService's trust model.
+class RecordIdentityPreviewedEvent extends StudentIdentityEvent {
+  final String studentId;
+  final String schoolId;
+  final String kind; // 'school_id' | 'qr'
+  const RecordIdentityPreviewedEvent({
+    required this.studentId,
+    required this.schoolId,
+    required this.kind,
+  });
+
+  @override
+  List<Object?> get props => [studentId, schoolId, kind];
+}

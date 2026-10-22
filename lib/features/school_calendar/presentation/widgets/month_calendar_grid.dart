@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
 import '../../domain/entities/calendar_event.dart';
 import 'event_type_colors.dart';
 
@@ -36,6 +35,7 @@ class MonthCalendarGrid extends StatelessWidget {
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
     final leadingBlanks = (firstOfMonth.weekday - DateTime.monday) % 7;
     final today = DateTime.now();
+    final colors = Theme.of(context).colorScheme;
 
     final cells = <Widget>[];
     for (var i = 0; i < leadingBlanks; i++) {
@@ -54,44 +54,54 @@ class MonthCalendarGrid extends StatelessWidget {
           onTap: onDayTap == null ? null : () => onDayTap!(day),
           borderRadius: BorderRadius.circular(8),
           child: Container(
-            decoration: isToday
-                ? BoxDecoration(
-                    color: AppColors.primary(context).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  )
-                : null,
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '$d',
-                  style: TextStyle(
-                    color: isToday
-                        ? AppColors.primary(context)
-                        : AppColors.textPrimary(context),
-                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            // Square cells get ~45px at a 320px viewport, less than the 36px
+            // day circle + dot row needs; scale down rather than overflow.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    alignment: Alignment.center,
+                    decoration: isToday
+                        ? BoxDecoration(
+                            color: colors.onSurface,
+                            shape: BoxShape.circle,
+                          )
+                        : null,
+                    child: Text(
+                      '$d',
+                      style: TextStyle(
+                        color: isToday ? colors.surface : colors.onSurface,
+                        fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                if (dayEvents.isNotEmpty)
-                  Wrap(
-                    spacing: 2,
-                    children: dayEvents
-                        .take(3)
-                        .map(
-                          (e) => Container(
-                            width: 5,
-                            height: 5,
-                            decoration: BoxDecoration(
-                              color: calendarEventTypeColor(e.type),
-                              shape: BoxShape.circle,
+                  const SizedBox(height: 2),
+                  if (dayEvents.isNotEmpty)
+                    Wrap(
+                      spacing: 2,
+                      children: dayEvents
+                          .take(3)
+                          .map(
+                            (e) => Container(
+                              width: 5,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: calendarEventTypeColor(e.type),
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          ),
-                        )
-                        .toList(),
-                  ),
-              ],
+                          )
+                          .toList(),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -120,6 +130,7 @@ class MonthCalendarGrid extends StatelessWidget {
         const SizedBox(height: 4),
         GridView.count(
           crossAxisCount: 7,
+          childAspectRatio: 1.05,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           children: cells,

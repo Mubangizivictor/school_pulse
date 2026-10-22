@@ -12,6 +12,19 @@ class StudentIdentity extends Equatable {
   // just the placeholder slot so an identity record always has a status.
   final String nfcStatus;
 
+  // 'active' | 'replaced'. Tracks the QR credential's own lifecycle
+  // independently of nfcStatus - a card can be revoked while the QR stays
+  // active, or vice versa.
+  final String qrCredentialStatus;
+
+  // When this identity was first issued (server-set, never client-chosen).
+  // Null for identities issued before this field existed.
+  final DateTime? issuedAt;
+
+  // Last time the printable School ID (front/back card) was previewed or
+  // printed, recorded via the identity_school_id_previewed audit action.
+  final DateTime? lastPrintedAt;
+
   const StudentIdentity({
     required this.studentId,
     required this.schoolId,
@@ -19,7 +32,29 @@ class StudentIdentity extends Equatable {
     required this.schoolStudentId,
     required this.qrCodeData,
     this.nfcStatus = 'unassigned',
+    this.qrCredentialStatus = 'active',
+    this.issuedAt,
+    this.lastPrintedAt,
   });
+
+  StudentIdentity copyWith({
+    String? nfcStatus,
+    String? qrCredentialStatus,
+    DateTime? issuedAt,
+    DateTime? lastPrintedAt,
+  }) {
+    return StudentIdentity(
+      studentId: studentId,
+      schoolId: schoolId,
+      uniqueSystemId: uniqueSystemId,
+      schoolStudentId: schoolStudentId,
+      qrCodeData: qrCodeData,
+      nfcStatus: nfcStatus ?? this.nfcStatus,
+      qrCredentialStatus: qrCredentialStatus ?? this.qrCredentialStatus,
+      issuedAt: issuedAt ?? this.issuedAt,
+      lastPrintedAt: lastPrintedAt ?? this.lastPrintedAt,
+    );
+  }
 
   @override
   List<Object?> get props => [
@@ -29,5 +64,8 @@ class StudentIdentity extends Equatable {
     schoolStudentId,
     qrCodeData,
     nfcStatus,
+    qrCredentialStatus,
+    issuedAt,
+    lastPrintedAt,
   ];
 }

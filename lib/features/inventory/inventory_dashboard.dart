@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/core/utils.dart';
 import 'package:school_pulse/features/inventory/domain/entities/inventory_item.dart';
 import 'package:school_pulse/features/inventory/domain/entities/stock_movement.dart';
 import 'package:school_pulse/features/inventory/presentation/bloc/inventory_bloc.dart';
 import 'package:school_pulse/features/inventory/presentation/bloc/inventory_event.dart';
 import 'package:school_pulse/features/inventory/presentation/bloc/inventory_state.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import 'package:school_pulse/features/inventory/presentation/screens/procurement_screen.dart';
 import 'package:school_pulse/features/inventory/presentation/screens/medical_supply_requests_screen.dart';
 
@@ -20,10 +21,7 @@ class InventoryDashboardScreen extends StatelessWidget {
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Store & Inventory'),
-        actions: const [NotificationBellButton()],
-      ),
+      appBar: staffDashboardAppBar(context, roleLabel: 'Store & Inventory'),
       body: BlocBuilder<InventoryBloc, InventoryState>(
         builder: (context, state) {
           if (state is InventoryLoading || state is InventoryInitial) {
@@ -41,35 +39,39 @@ class InventoryDashboardScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  Text(
-                    'Stock Overview',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.1,
-                    children: [
-                      DashboardStatCard(
-                        title: 'Low Stock Items',
-                        value: state.items
-                            .where((i) => i.isLowStock)
-                            .length
-                            .toDouble(),
-                        icon: Icons.warning_amber_rounded,
-                        color: semanticColors.error,
-                      ),
-                      DashboardStatCard(
+                  StaffHeroSummaryCard(
+                    greetingNameFallback: 'there',
+                    kpis: [
+                      StaffKpiData(
                         title: 'Total Items',
-                        value: state.items.length.toDouble(),
+                        valueText: '${state.items.length}',
+                        subtitle: 'Tracked',
                         icon: Icons.inventory_2_outlined,
-                        color: semanticColors.info,
+                        color: AppColors.information(context),
+                      ),
+                      StaffKpiData(
+                        title: 'Low Stock',
+                        valueText:
+                            '${state.items.where((i) => i.isLowStock).length}',
+                        subtitle: 'Needs restock',
+                        icon: Icons.warning_amber_rounded,
+                        color: AppColors.danger(context),
+                      ),
+                      StaffKpiData(
+                        title: 'Restocked',
+                        valueText:
+                            '${state.movements.where((m) => m.type == StockMovementType.restock).length}',
+                        subtitle: 'Recent',
+                        icon: Icons.arrow_downward_rounded,
+                        color: AppColors.success(context),
+                      ),
+                      StaffKpiData(
+                        title: 'Issued',
+                        valueText:
+                            '${state.movements.where((m) => m.type != StockMovementType.restock).length}',
+                        subtitle: 'Recent',
+                        icon: Icons.arrow_upward_rounded,
+                        color: AppColors.warning(context),
                       ),
                     ],
                   ),
@@ -125,7 +127,7 @@ class InventoryDashboardScreen extends StatelessWidget {
                       _QuickAction(
                         label: 'Procurement',
                         icon: Icons.shopping_basket_outlined,
-                        color: Colors.deepPurple,
+                        color: Colors.black,
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -136,7 +138,7 @@ class InventoryDashboardScreen extends StatelessWidget {
                       _QuickAction(
                         label: 'Medical Requests',
                         icon: Icons.medical_services_outlined,
-                        color: Colors.teal,
+                        color: Colors.black,
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -467,10 +469,7 @@ class _InventoryItemTile extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(
               status == 'Restocked' ? Icons.arrow_downward : Icons.arrow_upward,
               color: color,
@@ -522,9 +521,9 @@ class _QuickAction extends StatelessWidget {
         width: (MediaQuery.of(context).size.width - 44) / 2,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
+          border: Border.all(color: color),
         ),
         child: Column(
           children: [

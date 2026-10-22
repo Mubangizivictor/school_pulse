@@ -84,7 +84,15 @@ abstract class PatronRepository {
     String? type,
   );
   Future<void> recordAttendance(BoardingAttendance attendance);
+
+  /// Caches [records] locally first (so a roll call is never lost to a
+  /// dropped connection - see `BoardingAttendanceLocalDataSource`), then
+  /// pushes to Firestore if currently online.
   Future<void> bulkRecordAttendance(List<BoardingAttendance> records);
+
+  /// Pushes any boarding attendance still queued offline for [schoolId].
+  /// No-op when there is nothing pending or the device is offline.
+  Future<void> syncPendingBoardingAttendance(String schoolId);
 
   // Leave Management
   Stream<List<LeaveRequest>> getLeaveRequests({String? status});

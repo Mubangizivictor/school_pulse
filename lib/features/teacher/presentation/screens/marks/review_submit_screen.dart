@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/teacher/domain/entities/subject_assessment.dart';
 import 'package:school_pulse/features/teacher/domain/policies/marks_entry_policy.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
@@ -21,16 +22,16 @@ class ReviewSubmitScreen extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.successMessage!),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.success(context),
             ),
           );
           context.go('/staff/marks');
           return;
         }
         if (state.errorMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.errorMessage!)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.errorMessage!)));
         }
       },
       builder: (context, state) {
@@ -50,7 +51,8 @@ class ReviewSubmitScreen extends StatelessWidget {
         final named = [
           for (final entry in entries)
             (
-              name: state.students
+              name:
+                  state.students
                       .where((s) => s.studentId == entry.studentId)
                       .firstOrNull
                       ?.name ??
@@ -119,7 +121,7 @@ class ReviewSubmitScreen extends StatelessWidget {
                         theme,
                         'Marks Pending',
                         '${review?.pending ?? 0}',
-                        valueColor: Colors.orange,
+                        valueColor: AppColors.warning(context),
                       ),
                       _buildSummaryRow(
                         theme,
@@ -160,22 +162,26 @@ class ReviewSubmitScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.red.withValues(alpha: 0.1),
+                            color: AppColors.danger(context),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Colors.red.withValues(alpha: 0.3),
+                              color: AppColors.danger(context),
                             ),
                           ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                              Icon(
+                                Icons.error_outline,
+                                color: AppColors.danger(context),
+                                size: 20,
+                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   _refusalMessage(review!.refusal!),
-                                  style: const TextStyle(
-                                    color: Colors.red,
+                                  style: TextStyle(
+                                    color: AppColors.danger(context),
                                     fontSize: 12,
                                   ),
                                 ),
@@ -187,7 +193,7 @@ class ReviewSubmitScreen extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: theme.dividerColor.withValues(alpha: 0.1),
+                            color: theme.dividerColor,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: theme.dividerColor),
                           ),
@@ -309,12 +315,18 @@ class ReviewSubmitScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Text('$rank.', style: TextStyle(color: theme.hintColor, fontSize: 12)),
+          Text(
+            '$rank.',
+            style: TextStyle(color: theme.hintColor, fontSize: 12),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               name,
-              style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 14),
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
+                fontSize: 14,
+              ),
             ),
           ),
           Text(

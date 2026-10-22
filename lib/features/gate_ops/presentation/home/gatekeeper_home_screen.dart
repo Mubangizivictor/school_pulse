@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
@@ -11,6 +12,7 @@ import 'package:school_pulse/features/gate_ops/domain/usecases/check_in_visitor.
 import 'package:school_pulse/features/gate_ops/domain/usecases/check_out_visitor.dart';
 import 'package:school_pulse/features/gate_ops/domain/usecases/watch_gates.dart';
 import 'package:school_pulse/features/gate_ops/domain/usecases/watch_visitors.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
 /// A focused, at-a-glance visitor desk for the gatekeeper role.
@@ -53,7 +55,8 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
           builder: (context, visitorsSnapshot) {
             final visitors = visitorsSnapshot.data ?? const <Visitor>[];
             return Scaffold(
-              backgroundColor: const Color(0xFFF5F7FB),
+              appBar: staffDashboardAppBar(context, roleLabel: 'Gate Keeper'),
+              backgroundColor: Colors.black,
               body: SafeArea(
                 child: RefreshIndicator(
                   onRefresh: () async {},
@@ -61,20 +64,38 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
                       SliverToBoxAdapter(
-                        child: _DeskHeader(
-                          officerName: auth.user.name,
-                          gateName: gates.isEmpty
-                              ? 'Your assigned gate'
-                              : gates.first.name,
-                          onAddVisitor: () =>
-                              _showCheckInSheet(auth.user, gates),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                          child: StaffHeroSummaryCard(
+                            greetingNameFallback: 'Officer',
+                            kpis: _buildKpis(context, visitors),
+                          ),
                         ),
                       ),
                       SliverPadding(
                         padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
-                            _SummaryStrip(visitors: visitors),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: () =>
+                                    _showCheckInSheet(auth.user, gates),
+                                icon: const Icon(
+                                  Icons.person_add_alt_1_rounded,
+                                ),
+                                label: const Text('Check in a visitor'),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  textStyle: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
                             const SizedBox(height: 24),
                             _buildDirectory(visitors, gates, auth.user),
                           ]),
@@ -121,7 +142,7 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
         const SizedBox(height: 5),
         const Text(
           'Find someone quickly, then check them out in one tap.',
-          style: TextStyle(color: Color(0xFF64748B)),
+          style: TextStyle(color: Colors.black),
         ),
         const SizedBox(height: 16),
         TextField(
@@ -225,7 +246,7 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
                           width: 42,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFCBD5E1),
+                            color: Colors.black,
                             borderRadius: BorderRadius.circular(20),
                           ),
                         ),
@@ -241,7 +262,7 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
                       const SizedBox(height: 6),
                       const Text(
                         'Capture only what the gate needs right now.',
-                        style: TextStyle(color: Color(0xFF64748B)),
+                        style: TextStyle(color: Colors.black),
                       ),
                       const SizedBox(height: 22),
                       TextFormField(
@@ -364,7 +385,7 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
                           padding: EdgeInsets.only(top: 8),
                           child: Text(
                             'Set up a gate before checking in visitors.',
-                            style: TextStyle(color: Color(0xFFB45309)),
+                            style: TextStyle(color: Colors.black),
                           ),
                         ),
                     ],
@@ -385,9 +406,7 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError
-            ? const Color(0xFFB42318)
-            : const Color(0xFF166534),
+        backgroundColor: isError ? Colors.black : Colors.black,
       ),
     );
   }
@@ -398,6 +417,56 @@ class _GatekeeperHomeScreenState extends State<GatekeeperHomeScreen> {
         time.month == now.month &&
         time.day == now.day;
   }
+
+  List<StaffKpiData> _buildKpis(BuildContext context, List<Visitor> visitors) {
+    final inside = visitors
+        .where((visitor) => visitor.status == VisitorStatus.checkedIn)
+        .length;
+    final today = visitors
+        .where((visitor) => _isToday(visitor.arrivalTime))
+        .length;
+    final overdue = visitors
+        .where(
+          (visitor) =>
+              visitor.status == VisitorStatus.checkedIn &&
+              DateTime.now().difference(visitor.arrivalTime).inHours >= 4,
+        )
+        .length;
+    final checkedOut = visitors
+        .where((visitor) => visitor.status == VisitorStatus.checkedOut)
+        .length;
+
+    return [
+      StaffKpiData(
+        title: 'Inside Now',
+        valueText: '$inside',
+        subtitle: 'Currently on campus',
+        icon: Icons.login_rounded,
+        color: AppColors.information(context),
+      ),
+      StaffKpiData(
+        title: "Today's Visitors",
+        valueText: '$today',
+        subtitle: 'Total arrivals',
+        icon: Icons.groups_2_outlined,
+        color: AppColors.success(context),
+      ),
+      StaffKpiData(
+        title: 'Needs Review',
+        valueText: '$overdue',
+        subtitle: 'Overstayed 4h+',
+        icon: Icons.schedule_outlined,
+        color: AppColors.warning(context),
+      ),
+      StaffKpiData(
+        title: 'Checked Out',
+        valueText: '$checkedOut',
+        subtitle: 'Completed visits',
+        icon: Icons.logout_rounded,
+        color: AppColors.danger(context),
+      ),
+    ];
+  }
 }
 
 enum _VisitorFilter {
@@ -407,211 +476,6 @@ enum _VisitorFilter {
 
   const _VisitorFilter(this.label);
   final String label;
-}
-
-class _DeskHeader extends StatelessWidget {
-  const _DeskHeader({
-    required this.officerName,
-    required this.gateName,
-    required this.onAddVisitor,
-  });
-  final String officerName;
-  final String gateName;
-  final VoidCallback onAddVisitor;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        colors: [Color(0xFF071A42), Color(0xFF173D7A)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: .14),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.shield_outlined, color: Colors.white),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'GATE DESK',
-                    style: TextStyle(
-                      color: Color(0xFFB8D4FF),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                  Text(
-                    gateName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            IconButton(
-              onPressed: () {},
-              tooltip: 'More options',
-              icon: const Icon(Icons.more_horiz_rounded, color: Colors.white),
-            ),
-          ],
-        ),
-        const SizedBox(height: 28),
-        Text(
-          'Good day, ${officerName.split(' ').first}',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 26,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Everything you need for a smooth entry point.',
-          style: TextStyle(color: Color(0xFFD9E7FF), fontSize: 14),
-        ),
-        const SizedBox(height: 22),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: onAddVisitor,
-            icon: const Icon(Icons.person_add_alt_1_rounded),
-            label: const Text('Check in a visitor'),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFFFA51F),
-              foregroundColor: const Color(0xFF17233E),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              textStyle: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _SummaryStrip extends StatelessWidget {
-  const _SummaryStrip({required this.visitors});
-  final List<Visitor> visitors;
-
-  @override
-  Widget build(BuildContext context) {
-    final inside = visitors
-        .where((visitor) => visitor.status == VisitorStatus.checkedIn)
-        .length;
-    final today = visitors.where((visitor) {
-      final now = DateTime.now();
-      return visitor.arrivalTime.year == now.year &&
-          visitor.arrivalTime.month == now.month &&
-          visitor.arrivalTime.day == now.day;
-    }).length;
-    final overdue = visitors
-        .where(
-          (visitor) =>
-              visitor.status == VisitorStatus.checkedIn &&
-              DateTime.now().difference(visitor.arrivalTime).inHours >= 4,
-        )
-        .length;
-    return Row(
-      children: [
-        _Metric(
-          value: '$inside',
-          label: 'Inside',
-          icon: Icons.login_rounded,
-          color: const Color(0xFF2563EB),
-        ),
-        const SizedBox(width: 10),
-        _Metric(
-          value: '$today',
-          label: 'Today',
-          icon: Icons.groups_2_outlined,
-          color: const Color(0xFF0F9F6E),
-        ),
-        const SizedBox(width: 10),
-        _Metric(
-          value: '$overdue',
-          label: 'Needs review',
-          icon: Icons.schedule_outlined,
-          color: const Color(0xFFB45309),
-        ),
-      ],
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.value,
-    required this.label,
-    required this.icon,
-    required this.color,
-  });
-  final String value;
-  final String label;
-  final IconData icon;
-  final Color color;
-  @override
-  Widget build(BuildContext context) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A0F172A),
-            blurRadius: 16,
-            offset: Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 19),
-          const SizedBox(height: 15),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF64748B),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 class _VisitorTile extends StatelessWidget {
@@ -626,17 +490,13 @@ class _VisitorTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE8EDF5)),
+        border: Border.all(color: Colors.black),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: inside
-                ? const Color(0xFFE7F0FF)
-                : const Color(0xFFF1F5F9),
-            foregroundColor: inside
-                ? const Color(0xFF2563EB)
-                : const Color(0xFF64748B),
+            backgroundColor: inside ? Colors.black : Colors.black,
+            foregroundColor: inside ? Colors.black : Colors.black,
             child: Text(
               visitor.fullName.isEmpty
                   ? '?'
@@ -661,10 +521,7 @@ class _VisitorTile extends StatelessWidget {
                   '${visitor.purpose}${visitor.hostName == null ? '' : ' · ${visitor.hostName}'}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.black, fontSize: 12),
                 ),
                 const SizedBox(height: 8),
                 Container(
@@ -673,17 +530,13 @@ class _VisitorTile extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: inside
-                        ? const Color(0xFFDCFCE7)
-                        : const Color(0xFFF1F5F9),
+                    color: inside ? Colors.black : Colors.black,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     inside ? 'IN · ${_time(visitor.arrivalTime)}' : 'OUT',
                     style: TextStyle(
-                      color: inside
-                          ? const Color(0xFF166534)
-                          : const Color(0xFF64748B),
+                      color: inside ? Colors.black : Colors.black,
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                     ),
@@ -696,7 +549,7 @@ class _VisitorTile extends StatelessWidget {
             IconButton(
               onPressed: onCheckOut,
               tooltip: 'Check out',
-              icon: const Icon(Icons.logout_rounded, color: Color(0xFFB45309)),
+              icon: const Icon(Icons.logout_rounded, color: Colors.black),
             ),
         ],
       ),
@@ -719,7 +572,7 @@ class _EmptyVisitors extends StatelessWidget {
     decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: const Color(0xFFE8EDF5)),
+      border: Border.all(color: Colors.black),
     ),
     child: Column(
       children: [
@@ -727,13 +580,10 @@ class _EmptyVisitors extends StatelessWidget {
           width: 52,
           height: 52,
           decoration: const BoxDecoration(
-            color: Color(0xFFEAF1FF),
+            color: Colors.black,
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.person_search_outlined,
-            color: Color(0xFF2563EB),
-          ),
+          child: const Icon(Icons.person_search_outlined, color: Colors.black),
         ),
         const SizedBox(height: 15),
         const Text(
@@ -744,7 +594,7 @@ class _EmptyVisitors extends StatelessWidget {
         const Text(
           'Use the check-in action when someone arrives.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Color(0xFF64748B)),
+          style: TextStyle(color: Colors.black),
         ),
         const SizedBox(height: 12),
         TextButton.icon(

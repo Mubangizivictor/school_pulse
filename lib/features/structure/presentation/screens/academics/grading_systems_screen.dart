@@ -77,7 +77,7 @@ class _GradingSystemsScreenState extends State<GradingSystemsScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: DropdownButtonFormField<String>(
-                  value: _filter,
+                  initialValue: _filter,
                   decoration: const InputDecoration(labelText: 'Filter'),
                   items: ['All', 'Active', 'Inactive', 'Default', ..._types]
                       .map((x) => DropdownMenuItem(value: x, child: Text(x)))
@@ -377,7 +377,7 @@ class _FormState extends State<_Form> {
       _incomplete = widget.existing?.allowIncomplete ?? false;
   late List<String> _levels = [...?widget.existing?.levelIds],
       _classes = [...?widget.existing?.classIds];
-  late List<GradeBand> _bands = [...widget.initialBands];
+  late final List<GradeBand> _bands = [...widget.initialBands];
   @override
   void dispose() {
     _name.dispose();
@@ -414,7 +414,7 @@ class _FormState extends State<_Form> {
               const SizedBox(height: 16),
               _label('Type *'),
               DropdownButtonFormField(
-                value: _type,
+                initialValue: _type,
                 decoration: const InputDecoration(
                   hintText: 'Select grading system type',
                 ),
@@ -481,19 +481,18 @@ class _FormState extends State<_Form> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _dropdown(
-                      'Decimal Places',
-                      '$_decimals',
-                      ['0', '1', '2'],
-                      (v) => setState(() => _decimals = int.parse(v)),
-                    ),
+                    child: _dropdown('Decimal Places', '$_decimals', [
+                      '0',
+                      '1',
+                      '2',
+                    ], (v) => setState(() => _decimals = int.parse(v))),
                   ),
                 ],
               ),
               _section('APPLICABILITY'),
               _label('Applies To'),
               DropdownButtonFormField(
-                value: _scope,
+                initialValue: _scope,
                 items: const [
                   DropdownMenuItem(
                     value: 'school',
@@ -611,7 +610,7 @@ class _FormState extends State<_Form> {
     children: [
       _label(label),
       DropdownButtonFormField(
-        value: value,
+        initialValue: value,
         items: values
             .map((x) => DropdownMenuItem(value: x, child: Text(x)))
             .toList(),
@@ -633,35 +632,49 @@ class _FormState extends State<_Form> {
     var selected = [...(_scope == 'levels' ? _levels : _classes)];
     await showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (c) => StatefulBuilder(
         builder: (c, set) => SafeArea(
-          child: SizedBox(
-            height: 500,
-            child: Column(
-              children: [
-                const ListTile(title: Text('Select applicability')),
-                Expanded(
-                  child: ListView(
-                    children: opts
-                        .map(
-                          (x) => CheckboxListTile(
-                            value: selected.contains(x.$1),
-                            title: Text(x.$2),
-                            onChanged: (v) => set(
-                              () => v!
-                                  ? selected.add(x.$1)
-                                  : selected.remove(x.$1),
+          child: Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(c).bottom),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(c).height * 0.85,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const ListTile(title: Text('Select applicability')),
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      children: opts
+                          .map(
+                            (x) => CheckboxListTile(
+                              value: selected.contains(x.$1),
+                              title: Text(x.$2),
+                              onChanged: (v) => set(
+                                () => v!
+                                    ? selected.add(x.$1)
+                                    : selected.remove(x.$1),
+                              ),
                             ),
-                          ),
-                        )
-                        .toList(),
+                          )
+                          .toList(),
+                    ),
                   ),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(c),
-                  child: const Text('Apply'),
-                ),
-              ],
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () => Navigator.pop(c),
+                        child: const Text('Apply'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -752,7 +765,7 @@ class _FormState extends State<_Form> {
     );
     final bloc = context.read<StructureBloc>();
     bloc.add(SaveGradingSystemRequested(s));
-    for (final b in _bands)
+    for (final b in _bands) {
       bloc.add(
         SaveGradeBandRequested(
           b.copyWith(
@@ -762,6 +775,7 @@ class _FormState extends State<_Form> {
           ),
         ),
       );
+    }
     di.sl<AuditRepository>().logAction(
       schoolId: widget.schoolId,
       title: widget.existing == null

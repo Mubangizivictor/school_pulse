@@ -126,7 +126,7 @@ class DirectorDrawer extends StatelessWidget {
                     width: 8,
                     height: 8,
                     decoration: const BoxDecoration(
-                      color: Colors.grey,
+                      color: Colors.black,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -217,7 +217,7 @@ class _DrawerItem extends StatelessWidget {
     return ListTile(
       dense: true,
       selected: isSelected,
-      selectedTileColor: colors.primary.withValues(alpha: 0.08),
+      selectedTileColor: colors.primary,
       leading: Icon(
         icon,
         size: 20,

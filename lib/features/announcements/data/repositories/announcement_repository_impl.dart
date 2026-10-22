@@ -13,10 +13,14 @@ class AnnouncementRepositoryImpl implements AnnouncementRepository {
 
   @override
   Future<Either<Failure, List<AnnouncementEntity>>> getAnnouncements(
-    String schoolId,
-  ) async {
+    String schoolId, {
+    bool publishedOnly = false,
+  }) async {
     try {
-      final announcements = await remoteDataSource.getAnnouncements(schoolId);
+      final announcements = await remoteDataSource.getAnnouncements(
+        schoolId,
+        publishedOnly: publishedOnly,
+      );
       return Right(announcements);
     } catch (e, st) {
       debugPrint('AnnouncementRepositoryImpl error: $e\n$st');

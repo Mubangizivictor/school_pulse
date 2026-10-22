@@ -5,6 +5,7 @@ import 'package:school_pulse/core/network/network_info.dart';
 import 'package:school_pulse/core/permissions/permission.dart';
 
 import '../../domain/entities/active_responsibility_context.dart';
+import '../../domain/entities/class_subject.dart';
 import '../../domain/entities/subject_assessment.dart';
 import '../../domain/entities/subject_audit_log.dart';
 import '../../domain/policies/marks_entry_policy.dart';
@@ -29,23 +30,50 @@ class MarksRepositoryImpl implements MarksRepository {
   });
 
   @override
-  Future<Either<Failure, List<SubjectAssessment>>> getAssessments({
+  Future<Either<Failure, List<ClassSubject>>> getClassSubjects({
     required ActiveResponsibilityContext context,
-    bool forceRefresh = false,
   }) async {
-    if (!context.can(Permission.subjectMarksView)) {
+    final classId = context.classId;
+    if (classId == null) {
       return const Left(
-        PermissionDeniedFailure(
-          'You do not have permission to view marks for this subject.',
-        ),
+        ValidationFailure('This responsibility is not tied to a class.'),
       );
     }
-    final subjectId = context.subjectId;
+    try {
+      final subjects = await remoteDataSource.getClassSubjects(
+        schoolId: context.schoolId,
+        classId: classId,
+        academicYearId: context.academicYearId,
+      );
+      return Right(subjects);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<SubjectAssessment>>> getAssessments({
+    required ActiveResponsibilityContext context,
+    String? subjectId,
+    bool forceRefresh = false,
+  }) async {
+    final resolvedSubjectId = subjectId ?? context.subjectId;
     final classId = context.classId;
-    if (subjectId == null || classId == null) {
+    if (resolvedSubjectId == null || classId == null) {
       return const Left(
         ValidationFailure(
           'This responsibility is not tied to a subject and class.',
+        ),
+      );
+    }
+    if (!context.can(
+      Permission.subjectMarksView,
+      subjectId: resolvedSubjectId,
+      classId: classId,
+    )) {
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to view marks for this subject.',
         ),
       );
     }
@@ -53,7 +81,7 @@ class MarksRepositoryImpl implements MarksRepository {
     try {
       final assessments = await remoteDataSource.getAssessments(
         schoolId: context.schoolId,
-        subjectId: subjectId,
+        subjectId: resolvedSubjectId,
         classId: classId,
         academicYearId: context.academicYearId,
         termId: context.termId.isEmpty ? null : context.termId,
@@ -65,6 +93,64 @@ class MarksRepositoryImpl implements MarksRepository {
             .where((a) => a.status != AssessmentAvailability.draft)
             .toList(),
       );
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, SubjectAssessment>> createAssessment({
+    required ActiveResponsibilityContext context,
+    String? subjectId,
+    required String title,
+    required String assessmentType,
+    required double maximumMark,
+  }) async {
+    final resolvedSubjectId = subjectId ?? context.subjectId;
+    final classId = context.classId;
+    if (resolvedSubjectId == null || classId == null) {
+      return const Left(
+        ValidationFailure(
+          'This responsibility is not tied to a subject and class.',
+        ),
+      );
+    }
+    if (!context.can(
+      Permission.subjectAssessmentCreate,
+      subjectId: resolvedSubjectId,
+      classId: classId,
+    )) {
+      return const Left(
+        PermissionDeniedFailure(
+          'You do not have permission to create assessments for this subject.',
+        ),
+      );
+    }
+    if (title.trim().isEmpty) {
+      return const Left(ValidationFailure('Give the assessment a title.'));
+    }
+    if (maximumMark <= 0) {
+      return const Left(
+        ValidationFailure('The maximum mark must be greater than zero.'),
+      );
+    }
+
+    try {
+      final assessment = await remoteDataSource.createAssessment(
+        schoolId: context.schoolId,
+        campusId: context.campusId,
+        subjectId: resolvedSubjectId,
+        classId: classId,
+        streamId: context.streamId,
+        academicYearId: context.academicYearId,
+        termId: context.termId,
+        title: title.trim(),
+        assessmentType: assessmentType,
+        maximumMark: maximumMark,
+        createdByStaffId: context.staffId,
+        roleAssignmentId: context.roleAssignmentId,
+      );
+      return Right(assessment);
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

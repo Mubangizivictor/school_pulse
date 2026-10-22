@@ -108,6 +108,9 @@ class AcademicTermIsar {
   late bool isCurrent;
   late String periodType;
   late bool isArchived;
+  bool isConfirmed = false;
+  DateTime? closureStartDate;
+  DateTime? closureEndDate;
 
   AcademicTermIsar();
 
@@ -122,7 +125,10 @@ class AcademicTermIsar {
       ..endDate = e.endDate
       ..isCurrent = e.isCurrent
       ..periodType = e.periodType.name
-      ..isArchived = e.isArchived;
+      ..isArchived = e.isArchived
+      ..isConfirmed = e.isConfirmed
+      ..closureStartDate = e.closureStartDate
+      ..closureEndDate = e.closureEndDate;
   }
 
   AcademicTerm toEntity() {
@@ -140,6 +146,9 @@ class AcademicTermIsar {
         orElse: () => AcademicPeriodType.term,
       ),
       isArchived: isArchived,
+      closureStartDate: closureStartDate,
+      closureEndDate: closureEndDate,
+      isConfirmed: isConfirmed,
     );
   }
 }
@@ -158,6 +167,7 @@ class SchoolClassIsar {
   late int capacity;
   late String description;
   late bool isActive;
+  String campusId = '';
 
   SchoolClassIsar();
 
@@ -170,7 +180,8 @@ class SchoolClassIsar {
       ..levelId = e.levelId
       ..capacity = e.capacity
       ..description = e.description
-      ..isActive = e.isActive;
+      ..isActive = e.isActive
+      ..campusId = e.campusId;
   }
 
   SchoolClass toEntity() {
@@ -183,6 +194,7 @@ class SchoolClassIsar {
       capacity: capacity,
       description: description,
       isActive: isActive,
+      campusId: campusId,
     );
   }
 }
@@ -931,6 +943,7 @@ class GradingSystemDefIsar {
   List<String> classIds = const [];
   List<String> academicYearIds = const [];
   late int version;
+  late double maximumMark;
 
   GradingSystemDefIsar();
 
@@ -953,7 +966,8 @@ class GradingSystemDefIsar {
       ..levelIds = e.levelIds
       ..classIds = e.classIds
       ..academicYearIds = e.academicYearIds
-      ..version = e.version;
+      ..version = e.version
+      ..maximumMark = e.maximumMark;
   }
 
   GradingSystemDef toEntity() {
@@ -976,6 +990,7 @@ class GradingSystemDefIsar {
       classIds: classIds,
       academicYearIds: academicYearIds,
       version: version,
+      maximumMark: maximumMark,
     );
   }
 }

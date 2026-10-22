@@ -188,6 +188,14 @@ class NotificationAuthorization {
         }
         return isStaff(user);
 
+      // Confidential: never openable by a parent or student. Staff-only here
+      // is a UX guard, not the security boundary - Firestore rules'
+      // hasExamRole()/hasExamPrintRole() are what actually gate the
+      // underlying question/paper documents (see notification_authorization
+      // header comment).
+      case NotificationDestinationKind.examWorkspace:
+        return isStaff(user);
+
       // School-wide content carries no personal data.
       case NotificationDestinationKind.event:
       case NotificationDestinationKind.announcement:

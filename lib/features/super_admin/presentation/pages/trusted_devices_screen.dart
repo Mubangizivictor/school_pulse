@@ -73,10 +73,10 @@ class _DeviceCard extends StatelessWidget {
       context,
       title: 'Remove this device?',
       message:
-          '"${session.deviceName}" will be removed from your trusted '
-          'device list. If it is still signed in, its session is not '
-          'force-revoked (this app has no server-side session kill '
-          'switch), but it will no longer appear here as trusted.',
+          '"${session.deviceName}" will be revoked from your registry via a '
+          'secured owner action: it is dropped from the trusted device list, '
+          'its owner push tokens are disabled, and the change is written to '
+          'the platform audit log.',
       confirmLabel: 'Remove',
       isDestructive: true,
     );

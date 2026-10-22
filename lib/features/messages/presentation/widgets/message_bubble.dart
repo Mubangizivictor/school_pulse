@@ -13,8 +13,21 @@ import 'package:url_launcher/url_launcher.dart';
 /// chat doesn't need a full emoji keyboard.
 const List<String> kQuickReactions = ['❤️', '👍', '🔥', '😂', '😮', '🙏'];
 
+String _initials(String name) {
+  final words = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((word) => word.isNotEmpty);
+  final initials = words.take(2).map((word) => word[0]).join();
+  return initials.isEmpty ? '?' : initials.toUpperCase();
+}
+
 class MessageBubble extends StatelessWidget {
   final ChatMessage message;
+
+  /// The current profile photo resolved from the conversation participant.
+  /// This fills in older messages written before sender avatars were stored.
+  final String? senderAvatarUrl;
 
   /// Group and channel threads label each bubble with its sender; a 1:1 chat
   /// doesn't need to.
@@ -53,6 +66,7 @@ class MessageBubble extends StatelessWidget {
   const MessageBubble({
     super.key,
     required this.message,
+    this.senderAvatarUrl,
     this.isGroup = true,
     this.onSelect,
     this.onToggleSelected,
@@ -74,175 +88,224 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Keep the two message streams locked to opposite edges. This is explicit
+    // rather than relying on Column cross-axis sizing, which caused short
+    // bubbles to appear centred on some iOS layouts. Per the chat convention
+    // used here, sent messages are on the left and received messages on the
+    // right.
+    final bubbleAlignment = message.isMe
+        ? Alignment.centerLeft
+        : Alignment.centerRight;
+    final bubbleCrossAxisAlignment = message.isMe
+        ? CrossAxisAlignment.start
+        : CrossAxisAlignment.end;
 
     return Container(
       padding: const EdgeInsets.only(bottom: AppSpacing.m),
       // A selected row is tinted edge to edge, the way a list selection reads.
-      color: isSelected ? AppColors.electricBlue.withValues(alpha: 0.12) : null,
+      color: isSelected
+          ? (isDark ? AppColors.grey850 : AppColors.grey100)
+          : null,
       child: Column(
-        crossAxisAlignment: message.isMe
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
         children: [
-          if (!message.isMe && isGroup)
-            Padding(
-              padding: const EdgeInsets.only(left: 4, bottom: 4),
-              child: Text(
-                message.senderName,
-                style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.electricBlue,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          GestureDetector(
-            onTap: selectionMode ? onToggleSelected : null,
-            onLongPress: message.isDeleted || selectionMode
-                ? null
-                : () => _showMessageActions(context),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.75,
-              ),
-              decoration: BoxDecoration(
-                color: message.isMe
-                    ? AppColors.electricBlue
-                    : (isDark
-                          ? AppColors.surfaceContainerHigh(context)
-                          : Colors.grey[200]),
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(message.isMe ? 16 : 4),
-                  bottomRight: Radius.circular(message.isMe ? 4 : 16),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (message.replyToId != null) _buildQuote(context, isDark),
-                  if (!message.isDeleted) _buildAttachment(context, isDark),
-                  if (message.isDeleted)
+          if (!message.isMe)
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 4, bottom: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircleAvatar(
+                      radius: 14,
+                      backgroundColor: isDark
+                          ? AppColors.grey850
+                          : AppColors.grey100,
+                      backgroundImage: senderAvatarUrl?.isNotEmpty == true
+                          ? NetworkImage(senderAvatarUrl!)
+                          : null,
+                      child: senderAvatarUrl?.isNotEmpty == true
+                          ? null
+                          : Text(
+                              _initials(message.senderName),
+                              style: AppTypography.labelSmall.copyWith(
+                                color: isDark ? Colors.white : Colors.black,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                    ),
+                    const SizedBox(width: 7),
                     Text(
-                      'This message was deleted',
-                      style: TextStyle(
-                        fontStyle: FontStyle.italic,
-                        color: message.isMe
-                            ? Colors.white70
-                            : AppColors.textMuted(context),
-                      ),
-                    )
-                  else if (message.content.isNotEmpty)
-                    Text(
-                      message.content,
-                      textScaler: TextScaler.linear(textScale),
-                      style: TextStyle(
-                        color: message.isMe
-                            ? Colors.white
-                            : (isDark ? Colors.white : Colors.black87),
+                      message.senderName,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textMuted(context),
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (message.isStarred) ...[
-                        Icon(
-                          Icons.star,
-                          size: 10,
-                          color: message.isMe
-                              ? Colors.white70
-                              : AppColors.goldenYellow,
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      if (message.isPinned) ...[
-                        Icon(
-                          Icons.push_pin,
-                          size: 10,
-                          color: message.isMe
-                              ? Colors.white70
-                              : AppColors.textMuted(context),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      if (message.editedAt != null) ...[
-                        Text(
-                          'edited',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontStyle: FontStyle.italic,
-                            color: message.isMe
-                                ? Colors.white70
-                                : AppColors.textMuted(context),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-                      Text(
-                        DateFormat('HH:mm').format(message.timestamp),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: message.isMe
-                              ? Colors.white70
-                              : AppColors.textMuted(context),
-                        ),
-                      ),
-                      if (message.isMe) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          message.isRead ? Icons.done_all : Icons.done,
-                          size: 12,
-                          color: Colors.white70,
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
+          Align(
+            alignment: bubbleAlignment,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: bubbleCrossAxisAlignment,
+              children: [
+                GestureDetector(
+                  onTap: selectionMode ? onToggleSelected : null,
+                  onLongPress: message.isDeleted || selectionMode
+                      ? null
+                      : () => _showMessageActions(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.78,
+                    ),
+                    decoration: BoxDecoration(
+                      // Both modes maintain contrast: the sent surface flips
+                      // black/white, while received messages stay a distinct
+                      // neutral surface with a visible border.
+                      color: message.isMe
+                          ? (isDark ? Colors.white : Colors.black)
+                          : (isDark ? AppColors.grey850 : AppColors.grey50),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: message.isMe
+                            ? (isDark ? Colors.white : Colors.black)
+                            : (isDark
+                                  ? AppColors.borderDark
+                                  : AppColors.grey200),
+                        width: 1.25,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (message.replyToId != null)
+                          _buildQuote(context, isDark),
+                        if (!message.isDeleted)
+                          _buildAttachment(context, isDark),
+                        if (message.isDeleted)
+                          Text(
+                            'This message was deleted',
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              fontSize: 13,
+                              color: message.isMe
+                                  ? (isDark ? Colors.black : Colors.white)
+                                  : AppColors.textMuted(context),
+                            ),
+                          )
+                        else if (message.content.isNotEmpty)
+                          Text(
+                            message.content,
+                            textScaler: TextScaler.linear(textScale),
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: message.isMe
+                                  ? (isDark ? Colors.black : Colors.white)
+                                  : (isDark ? Colors.white : Colors.black),
+                              height: 1.4,
+                            ),
+                          ),
+                        const SizedBox(height: 6),
+                        _buildMetadataRow(context, isDark),
+                      ],
+                    ),
+                  ),
+                ),
+                if (message.reactions.isNotEmpty)
+                  _buildReactions(context, isDark),
+              ],
+            ),
           ),
-          if (message.reactions.isNotEmpty) _buildReactions(context, isDark),
         ],
       ),
     );
   }
 
-  Widget _buildQuote(BuildContext context, bool isDark) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: message.isMe
-            ? Colors.white.withValues(alpha: 0.15)
-            : Colors.black.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(8),
-        border: Border(
-          left: BorderSide(
-            color: message.isMe ? Colors.white : AppColors.electricBlue,
-            width: 3,
+  Widget _buildMetadataRow(BuildContext context, bool isDark) {
+    final onSentBubble = isDark ? Colors.black : Colors.white;
+    final onReceivedBubble = isDark ? Colors.white : Colors.black;
+    final color = message.isMe ? onSentBubble : onReceivedBubble;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (message.isStarred) ...[
+          Icon(Icons.star, size: 10, color: color),
+          const SizedBox(width: 4),
+        ],
+        if (message.isPinned) ...[
+          Icon(Icons.push_pin, size: 10, color: color),
+          const SizedBox(width: 4),
+        ],
+        if (message.editedAt != null) ...[
+          Text(
+            'edited',
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
+        Text(
+          '${DateFormat('HH:mm').format(message.timestamp)} · '
+          '${message.isSending ? 'Sending' : (message.isRead ? 'Read' : 'Delivered')}',
+          style: TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            color: color,
           ),
         ),
+        if (message.isMe) ...[
+          const SizedBox(width: 4),
+          Icon(
+            message.isRead ? Icons.done_all : Icons.done,
+            size: 12,
+            color: onSentBubble,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildQuote(BuildContext context, bool isDark) {
+    final onBubble = message.isMe
+        ? (isDark ? Colors.black : Colors.white)
+        : (isDark ? Colors.white : Colors.black);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: message.isMe
+            ? (isDark ? AppColors.grey100 : AppColors.grey900)
+            : (isDark ? AppColors.grey900 : AppColors.grey100),
+        border: Border(left: BorderSide(color: onBubble, width: 3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            message.replyToSender ?? '',
+            message.replyToSender?.toUpperCase() ?? '',
             style: AppTypography.labelSmall.copyWith(
-              fontWeight: FontWeight.bold,
-              color: message.isMe ? Colors.white : AppColors.electricBlue,
+              fontWeight: FontWeight.w900,
+              fontSize: 10,
+              color: onBubble,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             message.replyToContent ?? '',
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTypography.bodySmall.copyWith(
-              color: message.isMe
-                  ? Colors.white70
-                  : AppColors.textMuted(context),
+              color: onBubble.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -286,19 +349,25 @@ class MessageBubble extends StatelessWidget {
     }
   }
 
-  Color _accent() => message.isMe ? Colors.white : AppColors.electricBlue;
+  Color _accent(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return message.isMe
+        ? (isDark ? Colors.black : Colors.white)
+        : (isDark ? Colors.white : Colors.black);
+  }
 
-  Color _onBubble(BuildContext context) =>
-      message.isMe ? Colors.white : AppColors.textPrimary(context);
+  Color _onBubble(BuildContext context) => _accent(context);
 
-  /// Panel behind a card inside the bubble - lighter on the sender's blue,
-  /// darker on the recipient's grey.
-  BoxDecoration _cardDecoration() => BoxDecoration(
-    color: message.isMe
-        ? Colors.white.withValues(alpha: 0.15)
-        : Colors.black.withValues(alpha: 0.05),
-    borderRadius: BorderRadius.circular(10),
-  );
+  /// Panel behind a card inside the bubble
+  BoxDecoration _cardDecoration(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BoxDecoration(
+      color: message.isMe
+          ? (isDark ? AppColors.grey100 : AppColors.grey900)
+          : (isDark ? AppColors.grey900 : AppColors.grey100),
+      border: Border.all(color: _accent(context).withValues(alpha: 0.2)),
+    );
+  }
 
   Widget _buildFileRow(BuildContext context) {
     return Padding(
@@ -309,11 +378,15 @@ class MessageBubble extends StatelessWidget {
             : () => _openUrl(context, message.mediaUrl!),
         child: Container(
           padding: const EdgeInsets.all(8),
-          decoration: _cardDecoration(),
+          decoration: _cardDecoration(context),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(_fileIcon(message.fileName), size: 24, color: _accent()),
+              Icon(
+                _fileIcon(message.fileName),
+                size: 24,
+                color: _accent(context),
+              ),
               const SizedBox(width: 8),
               Flexible(
                 child: Column(
@@ -335,7 +408,7 @@ class MessageBubble extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           color: message.isMe
-                              ? Colors.white70
+                              ? Colors.white
                               : AppColors.textMuted(context),
                         ),
                       ),
@@ -343,7 +416,11 @@ class MessageBubble extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.file_download_outlined, size: 18, color: _accent()),
+              Icon(
+                Icons.file_download_outlined,
+                size: 18,
+                color: _accent(context),
+              ),
             ],
           ),
         ),
@@ -393,10 +470,10 @@ class MessageBubble extends StatelessWidget {
         child: Container(
           width: 220,
           padding: const EdgeInsets.all(10),
-          decoration: _cardDecoration(),
+          decoration: _cardDecoration(context),
           child: Row(
             children: [
-              Icon(Icons.location_on, color: _accent()),
+              Icon(Icons.location_on, color: _accent(context)),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -415,7 +492,7 @@ class MessageBubble extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         color: message.isMe
-                            ? Colors.white70
+                            ? Colors.white
                             : AppColors.textMuted(context),
                       ),
                     ),
@@ -423,7 +500,7 @@ class MessageBubble extends StatelessWidget {
                       'Tap to open in Maps',
                       style: TextStyle(
                         fontSize: 11,
-                        color: _accent(),
+                        color: _accent(context),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -447,15 +524,17 @@ class MessageBubble extends StatelessWidget {
         child: Container(
           width: 220,
           padding: const EdgeInsets.all(10),
-          decoration: _cardDecoration(),
+          decoration: _cardDecoration(context),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: message.isMe
-                    ? Colors.white.withValues(alpha: 0.25)
-                    : AppColors.electricBlue.withValues(alpha: 0.15),
-                child: Icon(Icons.person, size: 20, color: _accent()),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: message.isMe ? Colors.white : Colors.black,
+                  border: Border.all(color: _accent(context), width: 1),
+                ),
+                child: Icon(Icons.person, size: 20, color: _accent(context)),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -477,7 +556,7 @@ class MessageBubble extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         color: message.isMe
-                            ? Colors.white70
+                            ? Colors.white
                             : AppColors.textMuted(context),
                       ),
                     ),
@@ -486,7 +565,7 @@ class MessageBubble extends StatelessWidget {
                         'Tap to message',
                         style: TextStyle(
                           fontSize: 11,
-                          color: _accent(),
+                          color: _accent(context),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -508,11 +587,11 @@ class MessageBubble extends StatelessWidget {
       child: Container(
         width: 220,
         padding: const EdgeInsets.all(10),
-        decoration: _cardDecoration(),
+        decoration: _cardDecoration(context),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.event, color: _accent()),
+            Icon(Icons.event, color: _accent(context)),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -531,7 +610,7 @@ class MessageBubble extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       color: message.isMe
-                          ? Colors.white70
+                          ? Colors.white
                           : AppColors.textMuted(context),
                     ),
                   ),
@@ -543,7 +622,7 @@ class MessageBubble extends StatelessWidget {
                           Icon(
                             Icons.place_outlined,
                             size: 12,
-                            color: _accent(),
+                            color: _accent(context),
                           ),
                           const SizedBox(width: 2),
                           Flexible(
@@ -554,7 +633,7 @@ class MessageBubble extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 11,
                                 color: message.isMe
-                                    ? Colors.white70
+                                    ? Colors.white
                                     : AppColors.textMuted(context),
                               ),
                             ),
@@ -599,7 +678,7 @@ class MessageBubble extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 color: message.isMe
-                    ? Colors.white70
+                    ? Colors.white
                     : AppColors.textMuted(context),
               ),
             ),
@@ -617,6 +696,7 @@ class MessageBubble extends StatelessWidget {
     int total,
   ) {
     final chosen = message.myPollVote == index;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Bar fills proportionally once anyone has voted.
     final share = total == 0 ? 0.0 : votes / total;
 
@@ -626,7 +706,7 @@ class MessageBubble extends StatelessWidget {
         onTap: onVote == null ? null : () => onVote!(index),
         child: Stack(
           children: [
-            Container(height: 34, decoration: _cardDecoration()),
+            Container(height: 34, decoration: _cardDecoration(context)),
             // The filled portion, drawn over the track.
             FractionallySizedBox(
               widthFactor: share,
@@ -634,9 +714,9 @@ class MessageBubble extends StatelessWidget {
                 height: 34,
                 decoration: BoxDecoration(
                   color: message.isMe
-                      ? Colors.white.withValues(alpha: 0.3)
-                      : AppColors.electricBlue.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
+                      ? Colors.white
+                      : (isDark ? Colors.white : Colors.black),
+                  borderRadius: BorderRadius.zero,
                 ),
               ),
             ),
@@ -651,7 +731,7 @@ class MessageBubble extends StatelessWidget {
                           ? Icons.check_circle
                           : Icons.radio_button_unchecked,
                       size: 14,
-                      color: _accent(),
+                      color: _accent(context),
                     ),
                     const SizedBox(width: 6),
                     Expanded(
@@ -673,7 +753,7 @@ class MessageBubble extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         color: message.isMe
-                            ? Colors.white70
+                            ? Colors.white
                             : AppColors.textMuted(context),
                       ),
                     ),
@@ -709,8 +789,10 @@ class MessageBubble extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 6),
       child: GestureDetector(
         onTap: () => _openImage(context),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: _accent(context), width: 1),
+          ),
           child: Image.network(
             message.mediaUrl!,
             width: 220,
@@ -726,7 +808,7 @@ class MessageBubble extends StatelessWidget {
               width: 220,
               height: 160,
               child: Center(
-                child: Icon(Icons.broken_image_outlined, color: Colors.white54),
+                child: Icon(Icons.broken_image_outlined, color: Colors.white),
               ),
             ),
           ),
@@ -772,19 +854,22 @@ class MessageBubble extends StatelessWidget {
           return GestureDetector(
             onTap: onReact == null ? null : () => onReact!(entry.key),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceDark : Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                color: isDark ? AppColors.bgDark : Colors.white,
                 border: Border.all(
                   color: mine
-                      ? AppColors.electricBlue
-                      : Colors.grey.withValues(alpha: 0.3),
+                      ? (isDark ? Colors.white : Colors.black)
+                      : AppColors.grey300,
+                  width: mine ? 2 : 1,
                 ),
               ),
               child: Text(
                 '${entry.key} ${entry.value}',
-                style: const TextStyle(fontSize: 11),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           );
@@ -871,17 +956,25 @@ class _VoiceNoteBubbleState extends State<VoiceNoteBubble> {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = widget.onDark ? Colors.white : AppColors.electricBlue;
-    final muted = widget.onDark ? Colors.white70 : AppColors.textMuted(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final foreground = widget.onDark
+        ? Colors.black
+        : (isDark ? Colors.white : Colors.black);
+    final muted = widget.onDark
+        ? AppColors.grey700
+        : AppColors.textMuted(context);
 
     return Container(
       width: 220,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: widget.onDark
-            ? Colors.white.withValues(alpha: 0.15)
-            : Colors.black.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(10),
+            ? Colors.white
+            : (isDark ? AppColors.grey900 : AppColors.grey50),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.black,
+          width: 1,
+        ),
       ),
       child: StreamBuilder<PlayerState>(
         stream: _player.playerStateStream,
@@ -920,7 +1013,7 @@ class _VoiceNoteBubbleState extends State<VoiceNoteBubble> {
                         LinearProgressIndicator(
                           value: progress,
                           minHeight: 3,
-                          backgroundColor: muted.withValues(alpha: 0.3),
+                          backgroundColor: muted,
                           valueColor: AlwaysStoppedAnimation(foreground),
                         ),
                         const SizedBox(height: 4),
@@ -984,8 +1077,10 @@ class MessageActionsMenu extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(AppSpacing.m),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: isDark ? AppColors.bgDark : Colors.white,
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.black,
+        ),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -1005,12 +1100,14 @@ class MessageActionsMenu extends StatelessWidget {
                             onReact!(emoji);
                           },
                     child: Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
                         color: mine
-                            ? AppColors.electricBlue.withValues(alpha: 0.2)
+                            ? (isDark ? Colors.white : Colors.black)
                             : null,
+                        border: mine
+                            ? null
+                            : Border.all(color: AppColors.grey300),
                       ),
                       child: Text(emoji, style: const TextStyle(fontSize: 24)),
                     ),
@@ -1018,19 +1115,19 @@ class MessageActionsMenu extends StatelessWidget {
                 }).toList(),
               ),
             ),
-            const Divider(height: 1),
+            const Divider(height: 1, thickness: 1),
             if (onReply != null)
-              _ActionItem(icon: Icons.reply, label: 'Reply', onTap: onReply!),
+              _ActionItem(icon: Icons.reply, label: 'REPLY', onTap: onReply!),
             if (onForward != null)
               _ActionItem(
                 icon: Icons.forward,
-                label: 'Forward',
+                label: 'FORWARD',
                 onTap: onForward!,
               ),
             if (onStar != null)
               _ActionItem(
                 icon: message.isStarred ? Icons.star : Icons.star_border,
-                label: message.isStarred ? 'Unstar' : 'Star',
+                label: message.isStarred ? 'UNSTAR' : 'STAR',
                 onTap: onStar!,
               ),
             if (onPin != null)
@@ -1038,34 +1135,39 @@ class MessageActionsMenu extends StatelessWidget {
                 icon: message.isPinned
                     ? Icons.push_pin
                     : Icons.push_pin_outlined,
-                label: message.isPinned ? 'Unpin' : 'Pin',
+                label: message.isPinned ? 'UNPIN' : 'PIN',
                 onTap: onPin!,
               ),
             if (onCopy != null)
-              _ActionItem(icon: Icons.copy, label: 'Copy', onTap: onCopy!),
+              _ActionItem(icon: Icons.copy, label: 'COPY', onTap: onCopy!),
             if (onEdit != null)
               _ActionItem(
                 icon: Icons.edit_outlined,
-                label: 'Edit',
+                label: 'EDIT',
                 onTap: onEdit!,
               ),
             if (onDelete != null)
               _ActionItem(
                 icon: Icons.delete_outline,
-                label: 'Delete',
-                color: Colors.red,
+                label: 'DELETE',
                 onTap: onDelete!,
               ),
             if (onSelect != null)
               _ActionItem(
                 icon: Icons.check_circle_outline,
-                label: 'Select',
+                label: 'SELECT',
                 onTap: onSelect!,
               ),
             const SizedBox(height: 8),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(
+                'CANCEL',
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
             ),
             const SizedBox(height: 8),
           ],
@@ -1078,21 +1180,32 @@ class MessageActionsMenu extends StatelessWidget {
 class _ActionItem extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color? color;
   final VoidCallback onTap;
 
   const _ActionItem({
     required this.icon,
     required this.label,
-    this.color,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(label, style: TextStyle(color: color)),
+      leading: Icon(
+        icon,
+        color: isDark ? Colors.white : Colors.black,
+        size: 20,
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: isDark ? Colors.white : Colors.black,
+          fontWeight: FontWeight.w900,
+          fontSize: 13,
+          letterSpacing: 1.1,
+        ),
+      ),
       onTap: () {
         Navigator.pop(context);
         onTap();

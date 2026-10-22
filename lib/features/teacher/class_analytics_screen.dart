@@ -49,7 +49,7 @@ class _ClassAnalyticsScreenState extends State<ClassAnalyticsScreen> {
           if (state is TeacherError) {
             return Center(
               child: Text(
-                state.message,
+                'Could not load class analytics. Pull down to retry.',
                 style: TextStyle(color: AppColors.textPrimary(context)),
               ),
             );

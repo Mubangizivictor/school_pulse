@@ -4,52 +4,49 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/data/repositories/audit_repository.dart';
 import 'package:school_pulse/features/admin/presentation/add_staff_wizard/models/add_staff_draft.dart';
+import 'package:school_pulse/features/admin/presentation/add_staff_wizard/models/responsibility_catalog.dart';
 import 'package:school_pulse/features/auth/domain/usecases/create_staff_account.dart';
+import 'package:school_pulse/features/auth/domain/usecases/create_staff_invitation.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 
-/// Internal wizard steps, in order. The wizard begins directly with the
-/// new-staff form; importing and rehiring are not available in this flow.
-enum WizardStep {
-  personalInfo,
-  contactInfo,
-  employmentInfo,
-  selectRoles,
-  configureRole,
-  rolesSummary,
-  accessPreview,
-  loginSecurity,
-  documents,
-  reviewConfirm,
-  success,
+/// The five visible wizard stages, matching the reference design's stepper:
+/// Profile -> Work -> Roles -> Access -> Review. `success` is a sixth,
+/// unlabeled state reached only after a successful submit from `review`.
+enum WizardStage { profile, work, roles, access, review, success }
+
+const List<WizardStage> kWizardStages = [
+  WizardStage.profile,
+  WizardStage.work,
+  WizardStage.roles,
+  WizardStage.access,
+  WizardStage.review,
+];
+
+const List<String> kWizardStageLabels = [
+  'Profile',
+  'Work',
+  'Roles',
+  'Access',
+  'Review',
+];
+
+int stageIndexFor(WizardStage stage) {
+  final i = kWizardStages.indexOf(stage);
+  return i == -1 ? 0 : i;
 }
 
-/// Maps a WizardStep to its "Step N of 10" label, matching the reference
-/// design (Select Method and Success aren't counted).
-int stepNumberFor(WizardStep step) {
-  const numbered = [
-    WizardStep.personalInfo,
-    WizardStep.contactInfo,
-    WizardStep.employmentInfo,
-    WizardStep.selectRoles,
-    WizardStep.configureRole,
-    WizardStep.rolesSummary,
-    WizardStep.accessPreview,
-    WizardStep.loginSecurity,
-    WizardStep.documents,
-    WizardStep.reviewConfirm,
-  ];
-  final i = numbered.indexOf(step);
-  return i == -1 ? 1 : i + 1;
-}
+/// Sub-position within the Roles stage, which - like the reference design's
+/// "Role 1 of 2" screen - internally holds three screens: pick roles,
+/// configure each selected role one at a time, then a summary.
+enum RolesSubStep { select, configure, summary }
 
-const int kWizardTotalSteps = 10;
-
-/// Holds the Add Staff wizard's accumulating draft, current step, and the
+/// Holds the Add Staff wizard's accumulating draft, current stage, and the
 /// submit() call that actually creates the account. A plain ChangeNotifier
 /// (not bloc) to match the imperative StatefulWidget+Either.fold convention
 /// already used for staff creation in user_management_page.dart.
@@ -65,19 +62,29 @@ class AddStaffWizardController extends ChangeNotifier {
   });
 
   final AddStaffDraft draft = AddStaffDraft();
-  WizardStep _step = WizardStep.personalInfo;
-  WizardStep get step => _step;
+  WizardStage _stage = WizardStage.profile;
+  WizardStage get stage => _stage;
 
-  /// When configuring roles one at a time (Step 6), this is the role
-  /// currently being configured.
+  RolesSubStep _rolesSubStep = RolesSubStep.select;
+  RolesSubStep get rolesSubStep => _rolesSubStep;
+
+  /// When configuring roles one at a time within the Roles stage, this is
+  /// the role currently being configured.
   int _configureRoleIndex = 0;
   int get configureRoleIndex => _configureRoleIndex;
 
   bool submitting = false;
   String? submitError;
+  // Deprecated: no plaintext password is ever generated or returned by
+  // createStaffAccount - kept only so any external reference doesn't break
+  // the build. Always null after submit(); not read by the success screen.
   String? resultTempPassword;
   String? resultStaffCode;
   String? resultUid;
+
+  bool invitationSending = false;
+  String? invitationError;
+  String? invitationStatus;
 
   List<UserRole> get rolesNeedingConfig => draft.selectedRoles
       .where(
@@ -107,112 +114,167 @@ class AddStaffWizardController extends ChangeNotifier {
     UserRole.hrOfficer,
   };
 
-  void goTo(WizardStep step) {
-    _step = step;
+  /// Toggles a catalogue responsibility, enforcing the same incompatible-
+  /// pair exclusivity the old flat role list applied to Matron/Patron, and
+  /// keeping selectedRoles/roleConfigs in sync for any responsibility with a
+  /// mappedRole so the existing scope-configuration sub-step keeps firing.
+  void toggleResponsibility(String responsibilityId) {
+    final entry = responsibilityById[responsibilityId];
+    if (entry == null) return;
+    final selected = draft.selectedResponsibilityIds.contains(responsibilityId);
+    if (selected) {
+      draft.selectedResponsibilityIds.remove(responsibilityId);
+      if (entry.mappedRole != null &&
+          !_otherResponsibilityMapsToRole(
+            responsibilityId,
+            entry.mappedRole!,
+          )) {
+        draft.selectedRoles.remove(entry.mappedRole);
+        draft.roleConfigs.remove(entry.mappedRole);
+      }
+    } else {
+      for (final conflictId in incompatibleResponsibilitiesFor(
+        responsibilityId,
+      )) {
+        draft.selectedResponsibilityIds.remove(conflictId);
+        final conflictEntry = responsibilityById[conflictId];
+        if (conflictEntry?.mappedRole != null &&
+            !_otherResponsibilityMapsToRole(
+              conflictId,
+              conflictEntry!.mappedRole!,
+            )) {
+          draft.selectedRoles.remove(conflictEntry.mappedRole);
+          draft.roleConfigs.remove(conflictEntry.mappedRole);
+        }
+      }
+      draft.selectedResponsibilityIds.add(responsibilityId);
+      if (entry.mappedRole != null) {
+        draft.selectedRoles.add(entry.mappedRole!);
+      }
+    }
+    notifyDraftChanged();
+  }
+
+  bool _otherResponsibilityMapsToRole(String excludingId, UserRole role) {
+    return draft.selectedResponsibilityIds.any(
+      (id) => id != excludingId && responsibilityById[id]?.mappedRole == role,
+    );
+  }
+
+  void clearAllResponsibilities() {
+    draft.selectedResponsibilityIds.clear();
+    draft.selectedRoles.clear();
+    draft.roleConfigs.clear();
+    notifyDraftChanged();
+  }
+
+  void goToStage(WizardStage stage) {
+    _stage = stage;
+    if (stage == WizardStage.roles) _rolesSubStep = RolesSubStep.select;
     notifyListeners();
     _persistDraft();
   }
 
   void next() {
-    switch (_step) {
-      case WizardStep.personalInfo:
-        _step = WizardStep.contactInfo;
+    switch (_stage) {
+      case WizardStage.profile:
+        _stage = WizardStage.work;
         break;
-      case WizardStep.contactInfo:
-        _step = WizardStep.employmentInfo;
+      case WizardStage.work:
+        _stage = WizardStage.roles;
+        _rolesSubStep = RolesSubStep.select;
         break;
-      case WizardStep.employmentInfo:
-        _step = WizardStep.selectRoles;
+      case WizardStage.roles:
+        _rolesNext();
         break;
-      case WizardStep.selectRoles:
+      case WizardStage.access:
+        _stage = WizardStage.review;
+        break;
+      case WizardStage.review:
+        _stage = WizardStage.success;
+        break;
+      case WizardStage.success:
+        break;
+    }
+    notifyListeners();
+    _persistDraft();
+  }
+
+  void _rolesNext() {
+    switch (_rolesSubStep) {
+      case RolesSubStep.select:
         _configureRoleIndex = 0;
-        _step = rolesNeedingConfig.isNotEmpty
-            ? WizardStep.configureRole
-            : WizardStep.rolesSummary;
+        _rolesSubStep = rolesNeedingConfig.isNotEmpty
+            ? RolesSubStep.configure
+            : RolesSubStep.summary;
         break;
-      case WizardStep.configureRole:
+      case RolesSubStep.configure:
         if (_configureRoleIndex < rolesNeedingConfig.length - 1) {
           _configureRoleIndex++;
         } else {
-          _step = WizardStep.rolesSummary;
+          _rolesSubStep = RolesSubStep.summary;
         }
         break;
-      case WizardStep.rolesSummary:
-        _step = WizardStep.accessPreview;
-        break;
-      case WizardStep.accessPreview:
-        _step = WizardStep.loginSecurity;
-        break;
-      case WizardStep.loginSecurity:
-        _step = WizardStep.documents;
-        break;
-      case WizardStep.documents:
-        _step = WizardStep.reviewConfirm;
-        break;
-      case WizardStep.reviewConfirm:
-        _step = WizardStep.success;
-        break;
-      case WizardStep.success:
+      case RolesSubStep.summary:
+        _stage = WizardStage.access;
         break;
     }
-    notifyListeners();
-    _persistDraft();
   }
 
   void back() {
-    switch (_step) {
-      case WizardStep.personalInfo:
+    switch (_stage) {
+      case WizardStage.profile:
         break;
-      case WizardStep.contactInfo:
-        _step = WizardStep.personalInfo;
+      case WizardStage.work:
+        _stage = WizardStage.profile;
         break;
-      case WizardStep.employmentInfo:
-        _step = WizardStep.contactInfo;
+      case WizardStage.roles:
+        _rolesBack();
         break;
-      case WizardStep.selectRoles:
-        _step = WizardStep.employmentInfo;
+      case WizardStage.access:
+        _stage = WizardStage.roles;
+        _rolesSubStep = RolesSubStep.summary;
         break;
-      case WizardStep.configureRole:
-        if (_configureRoleIndex > 0) {
-          _configureRoleIndex--;
-        } else {
-          _step = WizardStep.selectRoles;
-        }
+      case WizardStage.review:
+        _stage = WizardStage.access;
         break;
-      case WizardStep.rolesSummary:
-        _step = rolesNeedingConfig.isNotEmpty
-            ? WizardStep.configureRole
-            : WizardStep.selectRoles;
-        if (_step == WizardStep.configureRole) {
-          _configureRoleIndex = rolesNeedingConfig.length - 1;
-        }
-        break;
-      case WizardStep.accessPreview:
-        _step = WizardStep.rolesSummary;
-        break;
-      case WizardStep.loginSecurity:
-        _step = WizardStep.accessPreview;
-        break;
-      case WizardStep.documents:
-        _step = WizardStep.loginSecurity;
-        break;
-      case WizardStep.reviewConfirm:
-        _step = WizardStep.documents;
-        break;
-      case WizardStep.success:
+      case WizardStage.success:
         break;
     }
     notifyListeners();
     _persistDraft();
   }
 
-  /// Jump back into Step 6 to edit a specific role's config, from the Roles
-  /// Summary screen's "Edit" links.
+  void _rolesBack() {
+    switch (_rolesSubStep) {
+      case RolesSubStep.select:
+        _stage = WizardStage.work;
+        break;
+      case RolesSubStep.configure:
+        if (_configureRoleIndex > 0) {
+          _configureRoleIndex--;
+        } else {
+          _rolesSubStep = RolesSubStep.select;
+        }
+        break;
+      case RolesSubStep.summary:
+        if (rolesNeedingConfig.isNotEmpty) {
+          _rolesSubStep = RolesSubStep.configure;
+          _configureRoleIndex = rolesNeedingConfig.length - 1;
+        } else {
+          _rolesSubStep = RolesSubStep.select;
+        }
+        break;
+    }
+  }
+
+  /// Jump back into role configuration to edit a specific role, from the
+  /// Roles Summary screen's "Edit" links.
   void editRole(UserRole role) {
     final idx = rolesNeedingConfig.indexOf(role);
     if (idx == -1) return;
     _configureRoleIndex = idx;
-    _step = WizardStep.configureRole;
+    _rolesSubStep = RolesSubStep.configure;
     notifyListeners();
   }
 
@@ -260,17 +322,24 @@ class AddStaffWizardController extends ChangeNotifier {
         ..alternatePhone = restored.alternatePhone
         ..address = restored.address
         ..nationality = restored.nationality
+        ..emergencyContactName = restored.emergencyContactName
+        ..emergencyContactRelationship = restored.emergencyContactRelationship
+        ..emergencyContactPhone = restored.emergencyContactPhone
+        ..emergencyContactAlternatePhone =
+            restored.emergencyContactAlternatePhone
+        ..idempotencyKey = restored.idempotencyKey
         ..employmentType = restored.employmentType
-        ..department = restored.department
         ..departmentId = restored.departmentId
-        ..designation = restored.designation
         ..designationId = restored.designationId
         ..campusId = restored.campusId
         ..dateJoined = restored.dateJoined
+        ..compensationSetUpNow = restored.compensationSetUpNow
+        ..selectedPayComponentIds = restored.selectedPayComponentIds
         ..selectedRoles = restored.selectedRoles
         ..roleConfigs = restored.roleConfigs
-        ..forcePasswordChange = restored.forcePasswordChange
-        ..sendLoginDetailsViaEmail = restored.sendLoginDetailsViaEmail;
+        ..selectedResponsibilityIds = restored.selectedResponsibilityIds
+        ..signInMethod = restored.signInMethod
+        ..invitationEmailOverride = restored.invitationEmailOverride;
       notifyListeners();
       return true;
     } catch (_) {
@@ -297,7 +366,35 @@ class AddStaffWizardController extends ChangeNotifier {
       adminRoles.contains(UserRole.headTeacher) ||
       adminRoles.contains(UserRole.schoolAdmin);
 
+  /// Mirrors the Cloud Function's own precondition so an incomplete
+  /// Class/Subject Teacher configuration is caught here, before spending a
+  /// round trip on a request the server would reject anyway. Null means the
+  /// draft is complete enough to submit.
+  String? get assignmentValidationError {
+    if (draft.selectedRoles.contains(UserRole.classTeacher)) {
+      final config = draft.roleConfigs[UserRole.classTeacher];
+      if (config == null ||
+          (config.className == null || config.className!.isEmpty)) {
+        return 'Select a class for the Class Teacher role before continuing.';
+      }
+    }
+    if (draft.selectedRoles.contains(UserRole.subjectTeacher)) {
+      final config = draft.roleConfigs[UserRole.subjectTeacher];
+      if (config == null || config.subjectAssignments.isEmpty) {
+        return 'Add at least one subject and class for the Subject Teacher role before continuing.';
+      }
+    }
+    return null;
+  }
+
   Future<Either<Failure, String>> submit() async {
+    final validationError = assignmentValidationError;
+    if (validationError != null) {
+      submitError = validationError;
+      notifyListeners();
+      return Left(ValidationFailure(validationError));
+    }
+
     submitting = true;
     submitError = null;
     notifyListeners();
@@ -311,8 +408,7 @@ class AddStaffWizardController extends ChangeNotifier {
         name: draft.fullName,
         schoolId: schoolId,
         roles: draft.selectedRoles.toList(),
-        password:
-            '', // server always generates its own; see AuthRemoteDataSource.
+        signInMethod: draft.signInMethod.name,
         assignedClass: classTeacherConfig?.className,
         subjects: subjectTeacherConfig?.subjectAssignments,
         academicYearId: currentAcademicYearId,
@@ -321,6 +417,27 @@ class AddStaffWizardController extends ChangeNotifier {
         campusId: draft.campusId,
         employmentType: draft.employmentType,
         dateJoined: draft.dateJoined,
+        idempotencyKey: draft.idempotencyKey ??= const Uuid().v4(),
+        sendLoginDetailsViaEmail:
+            draft.signInMethod == StaffSignInMethod.invite,
+        staffData: {
+          'gender': draft.gender,
+          'phoneNumber': draft.phoneNumber,
+          'alternatePhone': draft.alternatePhone,
+          'address': draft.address,
+          'nationality': draft.nationality,
+          'selectedPayComponentIds': draft.selectedPayComponentIds.toList(),
+          if (draft.emergencyContactName.trim().isNotEmpty)
+            'emergencyContact': {
+              'name': draft.emergencyContactName.trim(),
+              'relationship': draft.emergencyContactRelationship.trim(),
+              'phone': draft.emergencyContactPhone.trim(),
+              'alternatePhone': draft.emergencyContactAlternatePhone.trim(),
+            },
+        },
+        roleConfigs: draft.roleConfigs.map(
+          (key, value) => MapEntry(key.name, value.toJson()),
+        ),
       ),
     );
 
@@ -333,13 +450,35 @@ class AddStaffWizardController extends ChangeNotifier {
       return result;
     }
 
-    final tempPassword = result.fold((_) => null, (p) => p);
-    resultTempPassword = tempPassword;
+    // result's payload is the staffCode (no plaintext password is ever
+    // generated) - resultStaffCode/resultUid come from the authoritative
+    // Firestore lookup below instead, so the callable's return value here
+    // isn't otherwise needed.
     resultStaffCode = await _lookupStaffCodeAndUid();
     await clearDraft();
 
     notifyListeners();
     return result;
+  }
+
+  /// Resends (or sends for the first time, for a staff member created with
+  /// signInMethod noLogin) a verified sign-in invitation. Server enforces
+  /// the resend cooldown and tenant/permission checks; a cooldown failure
+  /// surfaces via [invitationError].
+  Future<void> resendInvitation() async {
+    final uid = resultUid;
+    if (uid == null) return;
+    invitationSending = true;
+    invitationError = null;
+    notifyListeners();
+
+    final result = await di.sl<CreateStaffInvitation>()(uid);
+    invitationSending = false;
+    result.fold(
+      (f) => invitationError = f.message,
+      (_) => invitationStatus = 'sent',
+    );
+    notifyListeners();
   }
 
   /// The Cloud Function response only surfaces the temp password through
@@ -366,14 +505,26 @@ class AddStaffWizardController extends ChangeNotifier {
   }
 
   Future<void> logAudit() async {
-    await di.sl<AuditRepository>().logAction(
-      schoolId: schoolId,
-      title: 'Staff Account Created',
-      description:
-          '${draft.fullName} was added as ${draft.selectedRoles.map(UserRoleDisplay.name).join(', ')}.',
-      iconName: 'person_add',
-      colorHex: 'FF2196F3',
-      userId: adminUid,
-    );
+    try {
+      final responsibilityTitles = draft.selectedResponsibilityIds
+          .map((id) => responsibilityById[id]?.title)
+          .whereType<String>()
+          .toList();
+      final summary = responsibilityTitles.isNotEmpty
+          ? responsibilityTitles.join(', ')
+          : draft.selectedRoles.map(UserRoleDisplay.name).join(', ');
+      await di.sl<AuditRepository>().logAction(
+        schoolId: schoolId,
+        title: 'Staff Account Created',
+        description: '${draft.fullName} was added as $summary.',
+        iconName: 'person_add',
+        colorHex: 'FF2196F3',
+        userId: adminUid,
+      );
+    } catch (error, stackTrace) {
+      // Creation is already committed; retain diagnostics without exposing
+      // Firebase internals to the administrator or turning success into fail.
+      debugPrint('Staff enrolment audit failed: $error\n$stackTrace');
+    }
   }
 }

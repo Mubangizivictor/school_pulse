@@ -90,7 +90,7 @@ class InstitutionSwitcherSheet extends StatelessWidget {
                           trailing: isActive
                               ? const Icon(
                                   Icons.check_circle,
-                                  color: Colors.green,
+                                  color: Colors.black,
                                 )
                               : null,
                           // A client-side membership list is not sufficient

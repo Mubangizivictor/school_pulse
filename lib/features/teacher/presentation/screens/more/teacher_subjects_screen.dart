@@ -66,7 +66,7 @@ class _SubjectCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
+              color: iconColor,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(Icons.menu_book_rounded, color: iconColor, size: 24),

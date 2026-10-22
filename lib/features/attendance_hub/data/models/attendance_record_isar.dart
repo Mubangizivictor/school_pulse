@@ -42,6 +42,12 @@ class AttendanceRecordIsar {
   String? correctionOf;
   String? roleAssignmentId;
 
+  // Offline-queue lifecycle bookkeeping - see AttendanceSyncStatus doc.
+  int retryCount = 0;
+  DateTime? nextRetryAt;
+  String? lastError;
+  String? blockedReason;
+
   AttendanceRecordIsar();
 
   factory AttendanceRecordIsar.fromEntity(
@@ -67,7 +73,11 @@ class AttendanceRecordIsar {
       ..createdAt = entity.createdAt
       ..correctedAt = entity.correctedAt
       ..correctionOf = entity.correctionOf
-      ..roleAssignmentId = entity.roleAssignmentId;
+      ..roleAssignmentId = entity.roleAssignmentId
+      ..retryCount = entity.retryCount
+      ..nextRetryAt = entity.nextRetryAt
+      ..lastError = entity.lastError
+      ..blockedReason = entity.blockedReason;
   }
 
   AttendanceRecord toEntity() {
@@ -103,6 +113,10 @@ class AttendanceRecordIsar {
       correctedAt: correctedAt,
       correctionOf: correctionOf,
       roleAssignmentId: roleAssignmentId,
+      retryCount: retryCount,
+      nextRetryAt: nextRetryAt,
+      lastError: lastError,
+      blockedReason: blockedReason,
     );
   }
 }

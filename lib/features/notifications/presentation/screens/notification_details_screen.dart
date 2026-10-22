@@ -102,7 +102,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
     final categoryIcon = _getCategoryIcon(notification.category);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -162,12 +162,12 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white12,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
                     'General',
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(color: Colors.white),
                   ),
                 ),
               ],
@@ -175,17 +175,13 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Icon(
-                  Icons.calendar_today,
-                  color: Colors.white60,
-                  size: 16,
-                ),
+                const Icon(Icons.calendar_today, color: Colors.white, size: 16),
                 const SizedBox(width: 8),
                 Text(
                   DateFormat(
                     'dd MMM yyyy • h:mm a',
                   ).format(notification.timestamp),
-                  style: const TextStyle(color: Colors.white60),
+                  style: const TextStyle(color: Colors.white),
                 ),
               ],
             ),
@@ -214,10 +210,10 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  color: Colors.white12,
+                  color: Colors.white,
                 ),
                 child: const Center(
-                  child: Icon(Icons.image, color: Colors.white24, size: 64),
+                  child: Icon(Icons.image, color: Colors.white, size: 64),
                 ),
               ),
             const SizedBox(height: 24),
@@ -278,13 +274,13 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF10B981).withValues(alpha: 0.12),
+          color: Colors.black,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF10B981)),
+          border: Border.all(color: Colors.black),
         ),
         child: Row(
           children: [
-            const Icon(Icons.verified, color: Color(0xFF10B981)),
+            const Icon(Icons.verified, color: Colors.black),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -293,13 +289,13 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
                   const Text(
                     'Acknowledged',
                     style: TextStyle(
-                      color: Color(0xFF10B981),
+                      color: Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
                     DateFormat('dd MMM yyyy • h:mm a').format(acknowledgedAt),
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ],
               ),
@@ -313,21 +309,21 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFE11D48).withValues(alpha: 0.12),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE11D48)),
+        border: Border.all(color: Colors.black),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Row(
             children: [
-              Icon(Icons.priority_high, color: Color(0xFFE11D48)),
+              Icon(Icons.priority_high, color: Colors.black),
               SizedBox(width: 8),
               Text(
                 'Confirmation required',
                 style: TextStyle(
-                  color: Color(0xFFE11D48),
+                  color: Colors.black,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -336,7 +332,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
           const SizedBox(height: 8),
           const Text(
             'Please confirm you have read and understood this notice.',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
+            style: TextStyle(color: Colors.white, fontSize: 13),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -346,7 +342,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
               icon: const Icon(Icons.check_circle_outline, size: 18),
               label: const Text('Acknowledge'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE11D48),
+                backgroundColor: Colors.black,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 12),
               ),
@@ -410,7 +406,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
             child: ElevatedButton(
               onPressed: _busy ? null : () => _openAction(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: themeColor.withValues(alpha: 0.15),
+                backgroundColor: themeColor,
                 foregroundColor: themeColor,
                 elevation: 0,
                 alignment: Alignment.centerLeft,
@@ -469,7 +465,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
   void _showMoreMenu() {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: const Color(0xFF1E293B),
+      backgroundColor: Colors.black,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -478,10 +474,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(
-                Icons.mark_email_unread,
-                color: Colors.white70,
-              ),
+              leading: const Icon(Icons.mark_email_unread, color: Colors.white),
               title: const Text(
                 'Mark as unread',
                 style: TextStyle(color: Colors.white),
@@ -494,7 +487,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
             ListTile(
               leading: Icon(
                 notification.isArchived ? Icons.unarchive : Icons.archive,
-                color: Colors.white70,
+                color: Colors.white,
               ),
               title: Text(
                 notification.isArchived ? 'Unarchive' : 'Archive',
@@ -509,13 +502,10 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
             // the same rule the security rules enforce server-side.
             if (!notification.needsAcknowledgement)
               ListTile(
-                leading: const Icon(
-                  Icons.delete_outline,
-                  color: Color(0xFFE11D48),
-                ),
+                leading: const Icon(Icons.delete_outline, color: Colors.black),
                 title: const Text(
                   'Delete',
-                  style: TextStyle(color: Color(0xFFE11D48)),
+                  style: TextStyle(color: Colors.black),
                 ),
                 onTap: () {
                   Navigator.pop(sheetContext);
@@ -613,14 +603,14 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: Colors.black,
         title: const Text(
           'Delete notification?',
           style: TextStyle(color: Colors.white),
         ),
         content: const Text(
           'This removes it from your notification centre.',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Colors.white),
         ),
         actions: [
           TextButton(
@@ -629,10 +619,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Color(0xFFE11D48)),
-            ),
+            child: const Text('Delete', style: TextStyle(color: Colors.black)),
           ),
         ],
       ),
@@ -667,8 +654,8 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
       children: [
         const CircleAvatar(
           radius: 20,
-          backgroundColor: Colors.white24,
-          child: Icon(Icons.business, color: Colors.white70),
+          backgroundColor: Colors.white,
+          child: Icon(Icons.business, color: Colors.white),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -677,7 +664,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
             children: [
               const Text(
                 'Sent by',
-                style: TextStyle(color: Colors.white60, fontSize: 12),
+                style: TextStyle(color: Colors.white, fontSize: 12),
               ),
               Text(
                 notification.senderName,
@@ -688,7 +675,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
               ),
               Text(
                 notification.senderRole,
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
             ],
           ),
@@ -701,7 +688,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
           ElevatedButton(
             onPressed: _busy ? null : _contactSender,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white12,
+              backgroundColor: Colors.white,
               foregroundColor: Colors.white,
               elevation: 0,
               minimumSize: const Size(80, 32),
@@ -783,7 +770,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
             children: [
               Text(
                 label,
-                style: const TextStyle(color: Colors.white60, fontSize: 12),
+                style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
               Text(
                 value,
@@ -814,18 +801,16 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
         padding: const EdgeInsets.all(12),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
+          color: Colors.black,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white12),
+          border: Border.all(color: Colors.white),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _getAttachmentColor(
-                  attachment.type,
-                ).withValues(alpha: 0.2),
+                color: _getAttachmentColor(attachment.type),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -848,13 +833,13 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
                   ),
                   Text(
                     '${attachment.size} • ${attachment.type}',
-                    style: const TextStyle(color: Colors.white60, fontSize: 12),
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ],
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.download, color: Colors.white70),
+              icon: const Icon(Icons.download, color: Colors.white),
               onPressed: () => _openAttachment(attachment),
             ),
           ],
@@ -866,16 +851,16 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
   Color _getAttachmentColor(String type) {
     switch (type.toUpperCase()) {
       case 'PDF':
-        return Colors.red;
+        return Colors.black;
       case 'XLSX':
       case 'XLS':
-        return Colors.green;
+        return Colors.black;
       case 'JPG':
       case 'PNG':
       case 'JPEG':
-        return Colors.blue;
+        return Colors.black;
       default:
-        return Colors.purple;
+        return Colors.black;
     }
   }
 
@@ -951,7 +936,7 @@ class _NotificationDetailsScreenState extends State<NotificationDetailsScreen> {
             const SizedBox(height: 4),
             Text(
               label,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ],
         ),

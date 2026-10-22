@@ -8,7 +8,6 @@ import '../entities/academic_intervention.dart';
 import '../entities/class_observation.dart';
 import '../entities/homework_record.dart';
 import '../entities/assessment_moderation.dart';
-import '../entities/report_card_approval.dart';
 import '../entities/today_operations.dart';
 
 abstract class DeanRepository {
@@ -47,21 +46,15 @@ abstract class DeanRepository {
   });
 
   // Assessment & Marks QA
-  Future<Either<Failure, void>> approveAssessmentMarks(String assessmentId);
-  Future<Either<Failure, void>> rejectAssessmentMarks(
-    String assessmentId,
-    String reason,
-  );
-  Future<Either<Failure, List<AssessmentModeration>>>
-  getPendingModerationAssessments();
-
-  // Report Card Approval
-  Future<Either<Failure, void>> approveReportCards(List<String> reportCardIds);
-  Future<Either<Failure, void>> rejectReportCards(
-    List<String> reportCardIds,
-    String reason,
-  );
-  Future<Either<Failure, List<ReportCardApproval>>> getPendingReportApprovals();
+  Future<Either<Failure, void>> approveAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+  });
+  Future<Either<Failure, void>> rejectAssessmentMarks({
+    required String schoolId,
+    required String assessmentId,
+    required String reason,
+  });
 
   // Performance Analytics
   Future<Either<Failure, Map<String, dynamic>>> getPerformanceAnalytics({
@@ -98,7 +91,18 @@ abstract class DeanRepository {
   getMissedLessons();
 
   // Assessments Overview
-  Future<Either<Failure, List<AssessmentModeration>>> getAssessmentsOverview();
+  Future<Either<Failure, List<AssessmentModeration>>> getAssessmentsOverview({
+    required String schoolId,
+  });
+  Future<Either<Failure, void>> createAssessment({
+    required String schoolId,
+    String? campusId,
+    required String title,
+    required String subjectId,
+    required String classId,
+    required String type,
+    required double maximumMark,
+  });
 
   // Student Academic Profile
   Future<Either<Failure, Map<String, dynamic>>> getStudentAcademicProfile(

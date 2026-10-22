@@ -50,60 +50,62 @@ class _ResourceCategoriesScreenState extends State<ResourceCategoriesScreen> {
                   counts[r.kind] = (counts[r.kind] ?? 0) + 1;
                 }
 
-                final categories = [
-                  (
-                    icon: Icons.grid_view_outlined,
-                    label: 'All Resources',
-                    count: state.files.length,
-                    color: Colors.blue,
-                    kind: null,
-                  ),
-                  (
-                    icon: Icons.description_outlined,
-                    label: 'Documents',
-                    count: counts[ClassResourceKind.document] ?? 0,
-                    color: Colors.red,
-                    kind: ClassResourceKind.document,
-                  ),
-                  (
-                    icon: Icons.play_circle_outline,
-                    label: 'Videos',
-                    count: counts[ClassResourceKind.video] ?? 0,
-                    color: Colors.purple,
-                    kind: ClassResourceKind.video,
-                  ),
-                  (
-                    icon: Icons.image_outlined,
-                    label: 'Images',
-                    count: counts[ClassResourceKind.image] ?? 0,
-                    color: Colors.green,
-                    kind: ClassResourceKind.image,
-                  ),
-                  (
-                    icon: Icons.link_outlined,
-                    label: 'Links',
-                    count: counts[ClassResourceKind.link] ?? 0,
-                    color: Colors.orange,
-                    kind: ClassResourceKind.link,
-                  ),
-                  (
-                    icon: Icons.audiotrack_outlined,
-                    label: 'Audio',
-                    count: counts[ClassResourceKind.audio] ?? 0,
-                    color: Colors.teal,
-                    kind: ClassResourceKind.audio,
-                  ),
-                  (
-                    icon: Icons.more_horiz_outlined,
-                    label: 'Others',
-                    count: counts[ClassResourceKind.other] ?? 0,
-                    color: Colors.grey,
-                    kind: ClassResourceKind.other,
-                  ),
-                ].where(
-                  (c) => _query.isEmpty ||
-                      c.label.toLowerCase().contains(_query.toLowerCase()),
-                );
+                final categories =
+                    [
+                      (
+                        icon: Icons.grid_view_outlined,
+                        label: 'All Resources',
+                        count: state.files.length,
+                        color: Colors.black,
+                        kind: null,
+                      ),
+                      (
+                        icon: Icons.description_outlined,
+                        label: 'Documents',
+                        count: counts[ClassResourceKind.document] ?? 0,
+                        color: Colors.black,
+                        kind: ClassResourceKind.document,
+                      ),
+                      (
+                        icon: Icons.play_circle_outline,
+                        label: 'Videos',
+                        count: counts[ClassResourceKind.video] ?? 0,
+                        color: Colors.black,
+                        kind: ClassResourceKind.video,
+                      ),
+                      (
+                        icon: Icons.image_outlined,
+                        label: 'Images',
+                        count: counts[ClassResourceKind.image] ?? 0,
+                        color: Colors.black,
+                        kind: ClassResourceKind.image,
+                      ),
+                      (
+                        icon: Icons.link_outlined,
+                        label: 'Links',
+                        count: counts[ClassResourceKind.link] ?? 0,
+                        color: Colors.black,
+                        kind: ClassResourceKind.link,
+                      ),
+                      (
+                        icon: Icons.audiotrack_outlined,
+                        label: 'Audio',
+                        count: counts[ClassResourceKind.audio] ?? 0,
+                        color: Colors.black,
+                        kind: ClassResourceKind.audio,
+                      ),
+                      (
+                        icon: Icons.more_horiz_outlined,
+                        label: 'Others',
+                        count: counts[ClassResourceKind.other] ?? 0,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        kind: ClassResourceKind.other,
+                      ),
+                    ].where(
+                      (c) =>
+                          _query.isEmpty ||
+                          c.label.toLowerCase().contains(_query.toLowerCase()),
+                    );
 
                 return ListView(
                   padding: const EdgeInsets.symmetric(
@@ -155,7 +157,7 @@ class _CategoryItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color),

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../core/utils.dart';
-import '../../design_system/app_components.dart';
-import '../../design_system/app_theme.dart';
-import '../student/presentation/bloc/selected_student_bloc.dart';
-import '../student/presentation/bloc/selected_student_state.dart';
-import '../discipline/presentation/bloc/discipline_bloc.dart';
-import '../discipline/presentation/bloc/discipline_event.dart';
-import '../discipline/presentation/bloc/discipline_state.dart';
-import '../discipline/domain/entities/discipline_incident.dart';
-import '../matron/domain/entities/boarding_entities.dart';
-import 'widgets/student_app_bar.dart';
+import 'package:school_pulse/core/utils.dart';
+import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
+import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
+import 'package:school_pulse/features/discipline/presentation/bloc/discipline_bloc.dart';
+import 'package:school_pulse/features/discipline/presentation/bloc/discipline_event.dart';
+import 'package:school_pulse/features/discipline/presentation/bloc/discipline_state.dart';
+import 'package:school_pulse/features/discipline/domain/entities/discipline_incident.dart';
+import 'package:school_pulse/features/matron/domain/entities/boarding_entities.dart';
+import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
 
 class DisciplineScreen extends StatefulWidget {
   const DisciplineScreen({super.key});

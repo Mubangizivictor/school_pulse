@@ -38,7 +38,7 @@ class CustomFieldsScreen extends StatelessWidget {
                     final field = state.customFields[index];
                     return StructureListRow(
                       icon: Icons.dynamic_form_outlined,
-                      color: Colors.deepPurple,
+                      color: Colors.black,
                       title: field.fieldName,
                       subtitle:
                           '${field.appliesTo} - ${field.fieldType}${field.isRequired ? ' - Required' : ''}',

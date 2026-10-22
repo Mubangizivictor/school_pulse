@@ -3,19 +3,46 @@ import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 
 import '../entities/active_responsibility_context.dart';
+import '../entities/class_subject.dart';
 import '../entities/subject_assessment.dart';
 import '../policies/marks_entry_policy.dart';
 
 /// Marks for the active subject and class.
 ///
-/// Assessments come from the Assessment Engine; this repository never
-/// invents one, and never changes an assessment's status - opening,
-/// approving and locking belong to the academic office.
+/// Assessments come from the Assessment Engine. A teacher may create one
+/// for their own subject and class via `createAssessment`, but this
+/// repository otherwise never changes an assessment's status - approving
+/// and locking belong to the academic office.
 abstract class MarksRepository {
+  /// Every subject the curriculum teaches in the context's class - what a
+  /// Class Teacher picks from before entering marks for a subject that is
+  /// not their own. A Subject Teacher's screen never calls this; its one
+  /// subject already comes from the context.
+  Future<Either<Failure, List<ClassSubject>>> getClassSubjects({
+    required ActiveResponsibilityContext context,
+  });
+
   /// Assessments a teacher may work on for the active responsibility.
+  ///
+  /// [subjectId] overrides `context.subjectId` - needed for a Class Teacher,
+  /// whose context is not tied to one subject, so the screen must say which
+  /// of the class's subjects it means. A Subject Teacher's context already
+  /// names its one subject and never needs to pass this.
   Future<Either<Failure, List<SubjectAssessment>>> getAssessments({
     required ActiveResponsibilityContext context,
+    String? subjectId,
     bool forceRefresh = false,
+  });
+
+  /// Creates a new assessment for the active responsibility's class, open
+  /// for entry immediately so the teacher can start marking. Requires
+  /// `subject.assessment.create`. See [getAssessments] for [subjectId].
+  Future<Either<Failure, SubjectAssessment>> createAssessment({
+    required ActiveResponsibilityContext context,
+    String? subjectId,
+    required String title,
+    required String assessmentType,
+    required double maximumMark,
   });
 
   /// Existing marks for one component, keyed by student.

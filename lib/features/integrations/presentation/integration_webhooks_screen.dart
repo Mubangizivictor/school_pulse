@@ -12,8 +12,7 @@ class IntegrationWebhooksScreen extends StatefulWidget {
       _IntegrationWebhooksScreenState();
 }
 
-class _IntegrationWebhooksScreenState
-    extends State<IntegrationWebhooksScreen> {
+class _IntegrationWebhooksScreenState extends State<IntegrationWebhooksScreen> {
   final _service = IntegrationCenterService();
   List<Map<String, dynamic>> _webhooks = const [];
   bool _loading = true;
@@ -228,8 +227,8 @@ class _IntegrationWebhooksScreenState
                             leading: Icon(
                               Icons.webhook_outlined,
                               color: webhook['status'] == 'active'
-                                  ? Colors.green
-                                  : Colors.grey,
+                                  ? Colors.black
+                                  : Colors.black,
                             ),
                             title: Text(
                               webhook['url'] as String? ?? '',
@@ -251,9 +250,8 @@ class _IntegrationWebhooksScreenState
                                   ),
                                   backgroundColor:
                                       (webhook['status'] == 'active'
-                                              ? Colors.green
-                                              : Colors.grey)
-                                          .withValues(alpha: .12),
+                                      ? Colors.black
+                                      : Colors.black),
                                 ),
                               ],
                             ),

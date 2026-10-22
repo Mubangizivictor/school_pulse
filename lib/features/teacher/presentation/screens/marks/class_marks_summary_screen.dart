@@ -76,9 +76,7 @@ class ClassMarksSummaryScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.surfaceElevated(context),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.border(context).withValues(alpha: 0.5),
-                    ),
+                    border: Border.all(color: AppColors.border(context)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -178,15 +176,16 @@ class ClassMarksSummaryScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surfaceElevated(context),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.border(context).withValues(alpha: 0.5),
-          ),
+          border: Border.all(color: AppColors.border(context)),
         ),
         child: Column(
           children: [
             Text(
               label,
-              style: TextStyle(color: AppColors.textMuted(context), fontSize: 10),
+              style: TextStyle(
+                color: AppColors.textMuted(context),
+                fontSize: 10,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
@@ -220,17 +219,26 @@ class ClassMarksSummaryScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          CircleAvatar(radius: 14, backgroundColor: AppColors.disabled(context)),
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: AppColors.disabled(context),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               name,
-              style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontSize: 14,
+              ),
             ),
           ),
           Text(
             '${score.toStringAsFixed(0)}/${maxMark.toStringAsFixed(0)}',
-            style: TextStyle(color: AppColors.textPrimary(context), fontSize: 14),
+            style: TextStyle(
+              color: AppColors.textPrimary(context),
+              fontSize: 14,
+            ),
           ),
           const SizedBox(width: 24),
           Text(

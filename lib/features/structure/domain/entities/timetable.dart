@@ -1,15 +1,27 @@
 import 'package:equatable/equatable.dart';
 
-/// Lifecycle of a class/stream timetable. Only [active] is what students,
-/// teachers, and printouts read; [draft] can be edited freely and validated
-/// as many times as needed before publishing.
+/// Lifecycle of a class/stream timetable: Draft -> Validated -> Published ->
+/// Superseded/Archived. Only [published] is what students, teachers, and
+/// printouts read. [validated] means the conflict scan has passed but the
+/// admin has not yet published; a draft can be edited freely and
+/// re-validated as many times as needed. [superseded] marks a previously
+/// published timetable that a newer version has replaced (kept for audit
+/// history, never deleted); [archived] is a manual retirement of a
+/// draft/validated timetable that was never published.
+///
+/// `active` is the legacy name for [published] - older documents may still
+/// have `status: 'active'` on disk; [fromId] maps it forward so no data
+/// migration was needed when this enum grew from 3 to 5 states.
 enum TimetableStatus {
   draft,
-  active,
+  validated,
+  published,
+  superseded,
   archived;
 
   static TimetableStatus fromId(String? id) {
     if (id == null) return TimetableStatus.draft;
+    if (id == 'active') return TimetableStatus.published;
     for (final s in TimetableStatus.values) {
       if (s.name == id) return s;
     }
@@ -20,7 +32,9 @@ enum TimetableStatus {
 extension TimetableStatusDisplay on TimetableStatus {
   String get label => switch (this) {
     TimetableStatus.draft => 'Draft',
-    TimetableStatus.active => 'Active',
+    TimetableStatus.validated => 'Validated',
+    TimetableStatus.published => 'Published',
+    TimetableStatus.superseded => 'Superseded',
     TimetableStatus.archived => 'Archived',
   };
 }
@@ -51,8 +65,20 @@ class Timetable extends Equatable {
   final TimetableStatus status;
 
   /// Monotonically increasing per target; bumped whenever a draft that
-  /// supersedes a previously active/archived timetable is published.
+  /// supersedes a previously published/archived timetable is published.
   final int version;
+
+  /// The id of the previously published [Timetable] for the same
+  /// [targetKey] that this one supersedes, if any. Empty for a target's
+  /// first-ever published timetable. Publishing never overwrites that row -
+  /// it is stamped `superseded` and kept for audit/history.
+  final String revisionOf;
+
+  /// The date this timetable's schedule takes effect. For a target's first
+  /// publish this is normally the same as [publishedAt]'s date; for a
+  /// revision it may be a future date so a currently-published timetable
+  /// keeps governing lessons/attendance until then.
+  final DateTime? effectiveFrom;
 
   /// Snapshot of the period/break structure this timetable was built
   /// against, so historical timetables stay readable even if the school's
@@ -64,8 +90,12 @@ class Timetable extends Equatable {
   final String createdBy;
   final DateTime? updatedAt;
   final String? updatedBy;
+  final DateTime? validatedAt;
+  final String? validatedBy;
   final DateTime? publishedAt;
   final String? publishedBy;
+  final DateTime? supersededAt;
+  final String? supersededBy;
   final DateTime? archivedAt;
   final String? archivedBy;
 
@@ -80,13 +110,19 @@ class Timetable extends Equatable {
     this.description = '',
     this.status = TimetableStatus.draft,
     this.version = 1,
+    this.revisionOf = '',
+    this.effectiveFrom,
     this.configSnapshotId = '',
     required this.createdAt,
     this.createdBy = '',
     this.updatedAt,
     this.updatedBy,
+    this.validatedAt,
+    this.validatedBy,
     this.publishedAt,
     this.publishedBy,
+    this.supersededAt,
+    this.supersededBy,
     this.archivedAt,
     this.archivedBy,
   });
@@ -110,13 +146,19 @@ class Timetable extends Equatable {
     String? description,
     TimetableStatus? status,
     int? version,
+    String? revisionOf,
+    DateTime? effectiveFrom,
     String? configSnapshotId,
     DateTime? createdAt,
     String? createdBy,
     DateTime? updatedAt,
     String? updatedBy,
+    DateTime? validatedAt,
+    String? validatedBy,
     DateTime? publishedAt,
     String? publishedBy,
+    DateTime? supersededAt,
+    String? supersededBy,
     DateTime? archivedAt,
     String? archivedBy,
   }) {
@@ -131,13 +173,19 @@ class Timetable extends Equatable {
       description: description ?? this.description,
       status: status ?? this.status,
       version: version ?? this.version,
+      revisionOf: revisionOf ?? this.revisionOf,
+      effectiveFrom: effectiveFrom ?? this.effectiveFrom,
       configSnapshotId: configSnapshotId ?? this.configSnapshotId,
       createdAt: createdAt ?? this.createdAt,
       createdBy: createdBy ?? this.createdBy,
       updatedAt: updatedAt ?? this.updatedAt,
       updatedBy: updatedBy ?? this.updatedBy,
+      validatedAt: validatedAt ?? this.validatedAt,
+      validatedBy: validatedBy ?? this.validatedBy,
       publishedAt: publishedAt ?? this.publishedAt,
       publishedBy: publishedBy ?? this.publishedBy,
+      supersededAt: supersededAt ?? this.supersededAt,
+      supersededBy: supersededBy ?? this.supersededBy,
       archivedAt: archivedAt ?? this.archivedAt,
       archivedBy: archivedBy ?? this.archivedBy,
     );
@@ -155,15 +203,56 @@ class Timetable extends Equatable {
     description,
     status,
     version,
+    revisionOf,
+    effectiveFrom,
     configSnapshotId,
     createdAt,
     createdBy,
     updatedAt,
     updatedBy,
+    validatedAt,
+    validatedBy,
     publishedAt,
     publishedBy,
+    supersededAt,
+    supersededBy,
     archivedAt,
     archivedBy,
+  ];
+}
+
+/// One immutable audit-trail row for a [Timetable]: who did what and when.
+/// Appended, never edited or deleted - `Timetable`'s own
+/// created/updated/validated/published/superseded/archived stamps only ever
+/// hold the *latest* actor for each transition; this is the full history.
+class TimetableAuditEntry extends Equatable {
+  final String id;
+  final String schoolId;
+  final String timetableId;
+  final String action;
+  final String actorId;
+  final DateTime at;
+  final String notes;
+
+  const TimetableAuditEntry({
+    required this.id,
+    required this.schoolId,
+    required this.timetableId,
+    required this.action,
+    required this.actorId,
+    required this.at,
+    this.notes = '',
+  });
+
+  @override
+  List<Object?> get props => [
+    id,
+    schoolId,
+    timetableId,
+    action,
+    actorId,
+    at,
+    notes,
   ];
 }
 

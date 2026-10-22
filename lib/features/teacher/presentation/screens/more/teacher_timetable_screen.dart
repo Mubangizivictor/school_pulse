@@ -1,17 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/teacher_timetable/teacher_timetable_bloc.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
-class TeacherTimetableScreen extends StatefulWidget {
+class TeacherTimetableScreen extends StatelessWidget {
   const TeacherTimetableScreen({super.key});
 
   @override
-  State<TeacherTimetableScreen> createState() => _TeacherTimetableScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) {
+        final bloc = di.sl<TeacherTimetableBloc>();
+        final authState = context.read<AuthBloc>().state;
+        if (authState is AuthAuthenticated) {
+          bloc.add(
+            TeacherTimetableRequested(
+              schoolId: authState.user.schoolId,
+              teacherId: authState.user.id,
+            ),
+          );
+        }
+        return bloc;
+      },
+      child: const _TeacherTimetableView(),
+    );
+  }
 }
 
-class _TeacherTimetableScreenState extends State<TeacherTimetableScreen>
+class _TeacherTimetableView extends StatefulWidget {
+  const _TeacherTimetableView();
+
+  @override
+  State<_TeacherTimetableView> createState() => _TeacherTimetableViewState();
+}
+
+class _TeacherTimetableViewState extends State<_TeacherTimetableView>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  String? _selectedDay;
+
+  static const _weekdayOrder = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
+  ];
 
   @override
   void initState() {
@@ -39,17 +80,62 @@ class _TeacherTimetableScreenState extends State<TeacherTimetableScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildMyTimetable(),
-          const Center(child: Text('Full School Timetable')),
-        ],
+      body: BlocBuilder<TeacherTimetableBloc, TeacherTimetableState>(
+        builder: (context, state) {
+          if (state.isLoading) {
+            return const SchoolPulseLoader();
+          }
+
+          if (state.errorMessage != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  state.errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Theme.of(context).hintColor),
+                ),
+              ),
+            );
+          }
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _buildTimetable(context, state, state.myEntries, mine: true),
+              _buildTimetable(context, state, state.allEntries, mine: false),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildMyTimetable() {
+  Widget _buildTimetable(
+    BuildContext context,
+    TeacherTimetableState state,
+    List<TeacherTimetableEntry> entries, {
+    required bool mine,
+  }) {
+    if (entries.isEmpty) {
+      return Center(
+        child: Text(
+          mine
+              ? 'You have no lessons scheduled.'
+              : 'No timetable has been published for this school yet.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Theme.of(context).hintColor),
+        ),
+      );
+    }
+
+    final days = state.daysOf(entries)
+      ..sort(
+        (a, b) => _weekdayOrder.indexOf(a).compareTo(_weekdayOrder.indexOf(b)),
+      );
+    final selected = _selectedDay ?? days.first;
+    final forDay = state.entriesFor(entries, selected);
+
     return Column(
       children: [
         const SizedBox(height: 16),
@@ -57,14 +143,14 @@ class _TeacherTimetableScreenState extends State<TeacherTimetableScreen>
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
-            children: ['MON', 'TUE', 'WED', 'THU', 'FRI'].map((day) {
-              final isSelected = day == 'MON';
+            children: days.map((day) {
+              final isSelected = day == selected;
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: ChoiceChip(
-                  label: Text(day),
+                  label: Text(day.substring(0, 3).toUpperCase()),
                   selected: isSelected,
-                  onSelected: (_) {},
+                  onSelected: (_) => setState(() => _selectedDay = day),
                   selectedColor: AppColors.primary(context),
                   backgroundColor: AppColors.surfaceElevated(context),
                   shape: RoundedRectangleBorder(
@@ -77,9 +163,7 @@ class _TeacherTimetableScreenState extends State<TeacherTimetableScreen>
                   ),
                   labelStyle: TextStyle(
                     color: isSelected
-                        ? (Theme.of(context).brightness == Brightness.dark
-                              ? Colors.black
-                              : Colors.white)
+                        ? Theme.of(context).colorScheme.onPrimary
                         : AppColors.textSecondary(context),
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
@@ -91,62 +175,29 @@ class _TeacherTimetableScreenState extends State<TeacherTimetableScreen>
         ),
         const SizedBox(height: 16),
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: const [
-              _TimetableSlot(
-                period: 1,
-                time: '08:00 - 09:00',
-                subject: 'Mathematics',
-                className: 'P3 East',
-                room: 'Room 12',
-              ),
-              _TimetableSlot(
-                period: 2,
-                time: '09:00 - 10:00',
-                subject: 'Mathematics',
-                className: 'P6 West',
-                room: 'Room 18',
-              ),
-              _TimetableSlot(
-                period: 3,
-                time: '10:00 - 10:30',
-                subject: 'Break',
-                className: '',
-                room: '',
-                isBreak: true,
-              ),
-              _TimetableSlot(
-                period: 4,
-                time: '10:30 - 11:30',
-                subject: 'Additional Mathematics',
-                className: 'S1 East',
-                room: 'Room 15',
-              ),
-              _TimetableSlot(
-                period: 0,
-                time: '11:30 - 12:30',
-                subject: 'Lunch Break',
-                className: '',
-                room: '',
-                isBreak: true,
-              ),
-              _TimetableSlot(
-                period: 5,
-                time: '12:30 - 13:40',
-                subject: 'Mathematics',
-                className: 'P3 East',
-                room: 'Room 12',
-              ),
-              _TimetableSlot(
-                period: 6,
-                time: '13:40 - 14:40',
-                subject: 'Mathematics',
-                className: 'P6 West',
-                room: 'Room 18',
-              ),
-            ],
-          ),
+          child: forDay.isEmpty
+              ? Center(
+                  child: Text(
+                    'No lessons on $selected.',
+                    style: TextStyle(color: Theme.of(context).hintColor),
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: [
+                    for (final entry in forDay)
+                      _TimetableSlot(
+                        time: '${entry.slot.startTime} - ${entry.slot.endTime}',
+                        subject: entry.lesson.subjectName.isNotEmpty
+                            ? entry.lesson.subjectName
+                            : entry.slot.name,
+                        className: mine
+                            ? entry.lesson.classLabel
+                            : '${entry.lesson.classLabel} • ${entry.lesson.teacherName}',
+                        room: entry.lesson.roomName ?? '',
+                      ),
+                  ],
+                ),
         ),
       ],
     );
@@ -154,78 +205,25 @@ class _TeacherTimetableScreenState extends State<TeacherTimetableScreen>
 }
 
 class _TimetableSlot extends StatelessWidget {
-  final int period;
   final String time;
   final String subject;
   final String className;
   final String room;
-  final bool isBreak;
 
   const _TimetableSlot({
-    required this.period,
     required this.time,
     required this.subject,
     required this.className,
     required this.room,
-    this.isBreak = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (isBreak) {
-      return Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-        decoration: BoxDecoration(
-          color: AppColors.primary(context).withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: AppColors.primary(context).withValues(alpha: 0.1),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.restaurant_rounded,
-              size: 16,
-              color: AppColors.textMuted(context),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '$subject ($time)',
-              style: TextStyle(
-                color: AppColors.textSecondary(context),
-                fontWeight: FontWeight.w500,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     return AppCard(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.primary(context).withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '$period',
-              style: TextStyle(
-                color: AppColors.primary(context),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -244,13 +242,14 @@ class _TimetableSlot extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            room,
-            style: TextStyle(
-              color: AppColors.primary(context),
-              fontWeight: FontWeight.w600,
+          if (room.isNotEmpty)
+            Text(
+              room,
+              style: TextStyle(
+                color: AppColors.primary(context),
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
         ],
       ),
     );

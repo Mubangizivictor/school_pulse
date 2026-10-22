@@ -229,7 +229,7 @@ class _InfoTile extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(AppSpacing.m),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
+            color: color,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, color: color, size: 22),

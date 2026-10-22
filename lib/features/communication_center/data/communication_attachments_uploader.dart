@@ -57,7 +57,7 @@ class CommunicationAttachmentsUploader {
         '${DateTime.now().millisecondsSinceEpoch}_$fileName',
       );
       await ref.putFile(file);
-      return ref.getDownloadURL();
+      return await ref.getDownloadURL();
     } catch (_) {
       return null;
     }

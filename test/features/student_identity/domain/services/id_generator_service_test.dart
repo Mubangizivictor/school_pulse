@@ -12,13 +12,13 @@ void main() {
     expect(a, isNot(equals(b)));
   });
 
-  test('generateSchoolStudentId formats prefix-year-paddedSequence', () {
+  test('generateSchoolStudentId formats prefix-S-year-paddedSequence', () {
     final id = generator.generateSchoolStudentId(
       schoolPrefix: 'MH',
       year: 2026,
       sequenceNumber: 7,
     );
 
-    expect(id, 'MH-2026-000007');
+    expect(id, 'MH-S-2026-000007');
   });
 }

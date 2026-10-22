@@ -88,7 +88,7 @@ class MessageRequestsScreen extends StatelessWidget {
               Icon(
                 Icons.mark_email_read_outlined,
                 size: 80,
-                color: AppColors.textMuted(context).withValues(alpha: 0.3),
+                color: AppColors.textMuted(context),
               ),
               const SizedBox(height: 16),
               Text(
@@ -125,7 +125,7 @@ class MessageRequestsScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
+                color: Colors.black,
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -139,9 +139,7 @@ class MessageRequestsScreen extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       radius: 24,
-                      backgroundColor: AppColors.electricBlue.withValues(
-                        alpha: 0.1,
-                      ),
+                      backgroundColor: AppColors.electricBlue,
                       child: const Icon(
                         Icons.person,
                         color: AppColors.electricBlue,
@@ -188,8 +186,8 @@ class MessageRequestsScreen extends StatelessWidget {
                           ConversationLeaveRequested(request.id),
                         ),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
+                          foregroundColor: Colors.black,
+                          side: const BorderSide(color: Colors.black),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),

@@ -16,6 +16,13 @@ class Student extends Equatable {
   final String academicYearId;
   final String? previousSchool;
   final StudentStatus status;
+  final String? religion;
+  final String? nationality;
+
+  // Free-text bus route / pickup point, captured on the Enrollment Setup
+  // Wizard's Transport step. Deliberately not a structure-module entity -
+  // see enrollment wizard build notes.
+  final String? transportInfo;
 
   // Detailed Information
   final MedicalInfo? medicalInfo;
@@ -33,6 +40,11 @@ class Student extends Equatable {
   final String? dormLeadershipDormId;
   final String? dormLeadershipDormName;
 
+  // Day/boarding classification, set during the Enrollment Setup Wizard's
+  // Admission step. Null for students enrolled before this field existed
+  // or where it was never captured.
+  final StudentBoardingType? boardingType;
+
   const Student({
     required this.id,
     required this.schoolId,
@@ -48,6 +60,9 @@ class Student extends Equatable {
     required this.academicYearId,
     this.previousSchool,
     required this.status,
+    this.religion,
+    this.nationality,
+    this.transportInfo,
     this.medicalInfo,
     this.emergencyContacts = const [],
     this.parentIds = const [],
@@ -57,6 +72,7 @@ class Student extends Equatable {
     this.dormLeadershipRole,
     this.dormLeadershipDormId,
     this.dormLeadershipDormName,
+    this.boardingType,
   });
 
   factory Student.empty([String id = '']) {
@@ -95,6 +111,9 @@ class Student extends Equatable {
     academicYearId,
     previousSchool,
     status,
+    religion,
+    nationality,
+    transportInfo,
     medicalInfo,
     emergencyContacts,
     parentIds,
@@ -104,6 +123,7 @@ class Student extends Equatable {
     dormLeadershipRole,
     dormLeadershipDormId,
     dormLeadershipDormName,
+    boardingType,
   ];
 
   Student copyWith({
@@ -113,11 +133,15 @@ class Student extends Equatable {
     String? streamId,
     String? academicYearId,
     StudentStatus? status,
+    String? religion,
+    String? nationality,
+    String? transportInfo,
     MedicalInfo? medicalInfo,
     List<EmergencyContact>? emergencyContacts,
     List<String>? parentIds,
     Map<String, String>? documents,
     String? campusId,
+    StudentBoardingType? boardingType,
   }) {
     return Student(
       id: id,
@@ -134,12 +158,19 @@ class Student extends Equatable {
       academicYearId: academicYearId ?? this.academicYearId,
       previousSchool: previousSchool,
       status: status ?? this.status,
+      religion: religion ?? this.religion,
+      nationality: nationality ?? this.nationality,
+      transportInfo: transportInfo ?? this.transportInfo,
       medicalInfo: medicalInfo ?? this.medicalInfo,
       emergencyContacts: emergencyContacts ?? this.emergencyContacts,
       parentIds: parentIds ?? this.parentIds,
       documents: documents ?? this.documents,
       campusId: campusId ?? this.campusId,
       level: level,
+      dormLeadershipRole: dormLeadershipRole,
+      dormLeadershipDormId: dormLeadershipDormId,
+      dormLeadershipDormName: dormLeadershipDormName,
+      boardingType: boardingType ?? this.boardingType,
     );
   }
 }

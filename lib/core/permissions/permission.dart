@@ -124,6 +124,8 @@ class Permission {
   static const attendanceClassScan = 'attendance.class.scan';
   static const attendanceSubjectScan = 'attendance.subject.scan';
   static const attendanceStaffScan = 'attendance.staff.scan';
+  static const attendanceStaffExport = 'attendance.staff.export';
+  static const attendanceStaffCorrect = 'attendance.staff.correct';
   static const attendanceBoardingScan = 'attendance.boarding.scan';
   static const attendanceGateScan = 'attendance.gate.scan';
   static const attendanceMealsScan = 'attendance.meals.scan';
@@ -213,6 +215,23 @@ class Permission {
   static const admissionApplicationCreate = 'admission.application.create';
   static const admissionApplicationReview = 'admission.application.review';
   static const admissionEnroll = 'admission.enroll';
+
+  // Enrollment Setup Wizard (post-approval placement/finance/boarding/
+  // clubs/parent-link/identity confirmation before a student goes active).
+  // Deliberately split from admissionEnroll: that permission gates
+  // triggering the underlying AdmissionService.enrollStudent status
+  // transition, while these gate each wizard step's own side-effecting
+  // write so a role can be trusted with e.g. academic placement without
+  // also being trusted to grant bursaries or link parents.
+  static const enrollmentManage = 'enrollment.manage';
+  static const enrollmentAcademicAssign = 'enrollment.academic_assign';
+  static const enrollmentFinanceSetup = 'enrollment.finance_setup';
+  static const enrollmentBursaryAssign = 'enrollment.bursary_assign';
+  static const enrollmentBoardingAssign = 'enrollment.boarding_assign';
+  static const enrollmentParentLink = 'enrollment.parent_link';
+  static const enrollmentIdentityManage = 'enrollment.identity_manage';
+  static const enrollmentCardGenerate = 'enrollment.card_generate';
+  static const enrollmentActivate = 'enrollment.activate';
 
   // Student data-visibility scoping
   static const studentBasicRead = 'student.basic.read';
@@ -342,6 +361,18 @@ class Permission {
   static const classReportShare = 'class.report.share';
   static const classReportExport = 'class.report.export';
 
+  /// Dean-of-Studies-stage report-card review: return with a reason, or
+  /// sign and forward to the Headteacher. Distinct from [classReportSubmit]
+  /// - a Class Teacher submits their own class's reports, a Dean acts on
+  /// any report reaching their queue.
+  static const classReportApproveDean = 'class.report.approve.dean';
+
+  /// Headteacher-stage report-card review: return with a reason, or sign to
+  /// academically finalize. The terminal academic decision - never confused
+  /// with financial release, which is the Bursar's separate concern.
+  static const classReportApproveHeadteacher =
+      'class.report.approve.headteacher';
+
   static const classTaskManage = 'class.task.manage';
   static const classTaskCollaborate = 'class.task.collaborate';
 
@@ -452,6 +483,8 @@ class Permission {
     ('Attendance', attendanceClassScan),
     ('Attendance', attendanceSubjectScan),
     ('Attendance', attendanceStaffScan),
+    ('Attendance', attendanceStaffExport),
+    ('Attendance', attendanceStaffCorrect),
     ('Attendance', attendanceBoardingScan),
     ('Attendance', attendanceGateScan),
     ('Attendance', attendanceMealsScan),
@@ -500,6 +533,16 @@ class Permission {
     ('Admissions', admissionApplicationCreate),
     ('Admissions', admissionApplicationReview),
     ('Admissions', admissionEnroll),
+
+    ('Enrollment Setup Wizard', enrollmentManage),
+    ('Enrollment Setup Wizard', enrollmentAcademicAssign),
+    ('Enrollment Setup Wizard', enrollmentFinanceSetup),
+    ('Enrollment Setup Wizard', enrollmentBursaryAssign),
+    ('Enrollment Setup Wizard', enrollmentBoardingAssign),
+    ('Enrollment Setup Wizard', enrollmentParentLink),
+    ('Enrollment Setup Wizard', enrollmentIdentityManage),
+    ('Enrollment Setup Wizard', enrollmentCardGenerate),
+    ('Enrollment Setup Wizard', enrollmentActivate),
 
     ('Student Data', studentBasicRead),
     ('Student Data', studentFullRead),
@@ -601,6 +644,15 @@ class Permission {
     ('Class Teacher Panel', classResourceDelete),
     ('Class Teacher Panel', classTimetableView),
     ('Class Teacher Panel', classTeacherMultiAssignOverride),
+    // A Class Teacher may be granted marks entry for their own class across
+    // every subject, not only one they personally teach as a Subject
+    // Teacher - the same permission strings the Subject Teacher Panel uses,
+    // scoped by this assignment's classId rather than a subjectId.
+    ('Class Teacher Panel', subjectAssessmentCreate),
+    ('Class Teacher Panel', subjectMarksView),
+    ('Class Teacher Panel', subjectMarksEnter),
+    ('Class Teacher Panel', subjectMarksEdit),
+    ('Class Teacher Panel', subjectMarksSubmit),
 
     ('School Calendar', calendarManage),
     ('Announcements', announcementManage),

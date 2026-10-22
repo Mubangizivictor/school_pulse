@@ -149,12 +149,12 @@ class _CateringStudentLookupScreenState
               if (_loadingView) const Center(child: SchoolPulseLoader()),
               if (_error != null)
                 Card(
-                  color: Colors.red.shade50,
+                  color: Colors.black,
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
                       _error!,
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(color: Colors.black),
                     ),
                   ),
                 ),
@@ -196,9 +196,7 @@ class _CateringViewCard extends StatelessWidget {
             const SizedBox(height: 12),
             Chip(
               label: Text(view.eligible ? 'Meal Authorized' : 'Not Authorized'),
-              backgroundColor: view.eligible
-                  ? Colors.green.shade100
-                  : Colors.red.shade100,
+              backgroundColor: view.eligible ? Colors.black : Colors.black,
             ),
             const SizedBox(height: 8),
             Text(view.message),

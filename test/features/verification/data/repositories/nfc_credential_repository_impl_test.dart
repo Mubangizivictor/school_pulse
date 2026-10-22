@@ -394,109 +394,25 @@ void main() {
     );
   });
 
-  group('cross-device sync (Firestore push)', () {
+  // Direct Firestore pushes from assign/replace/revoke/reactivate were
+  // removed once Firestore rules were tightened to deny client writes to
+  // schools/{schoolId}/credentials and revoked_credentials entirely (see
+  // firestore.rules) - every mutation now goes through a Cloud Function
+  // (assignNfcCredential/replaceNfcCredential/revokeNfcCredential/
+  // reactivateNfcCredential in functions/student_credentials.js), which is
+  // the actual cross-device sync mechanism now. These tests confirm the
+  // repository no longer attempts the writes rules would reject, and that
+  // the local Isar cache still updates as a read-side mirror regardless.
+  group('cross-device sync (no direct Firestore writes)', () {
     setUp(() {
       when(() => networkInfo.isConnected).thenAnswer((_) async => true);
     });
 
     test(
-      'assign pushes the active mapping to schools/{schoolId}/credentials',
+      'assign never writes directly to schools/{schoolId}/credentials '
+      '(no studentId/functions supplied, so no server call is attempted '
+      'either) - only the local cache is updated',
       () async {
-        when(
-          () => localDataSource.findCredential(cardUid, schoolId),
-        ).thenAnswer((_) async => null);
-
-        await repository.assign(
-          credentialValue: cardUid,
-          identityId: 'SP-STUDENT-1',
-          identityType: 'student',
-          schoolId: schoolId,
-        );
-
-        final doc = await firestore
-            .collection('schools')
-            .doc(schoolId)
-            .collection('credentials')
-            .doc(cardUid)
-            .get();
-        expect(doc.exists, true);
-        expect(doc.data()!['identityId'], 'SP-STUDENT-1');
-        expect(doc.data()!['status'], 'active');
-      },
-    );
-
-    test(
-      'revoke pushes a denylist entry to schools/{schoolId}/revoked_credentials',
-      () async {
-        when(
-          () => localDataSource.findCredential(cardUid, schoolId),
-        ).thenAnswer((_) async => null);
-
-        await repository.revoke(
-          credentialValue: cardUid,
-          schoolId: schoolId,
-          reason: 'lost',
-        );
-
-        final doc = await firestore
-            .collection('schools')
-            .doc(schoolId)
-            .collection('revoked_credentials')
-            .doc(cardUid)
-            .get();
-        expect(doc.exists, true);
-        expect(doc.data()!['reason'], 'lost');
-      },
-    );
-
-    test(
-      'reassigning a previously-revoked card removes it from the remote denylist too',
-      () async {
-        await firestore
-            .collection('schools')
-            .doc(schoolId)
-            .collection('revoked_credentials')
-            .doc(cardUid)
-            .set({
-              'credentialValue': cardUid,
-              'schoolId': schoolId,
-              'reason': 'lost',
-            });
-        when(
-          () => localDataSource.findCredential(cardUid, schoolId),
-        ).thenAnswer(
-          (_) async => CachedCredential(
-            credentialValue: cardUid,
-            credentialType: 'nfc',
-            identityId: 'SP-STUDENT-OLD',
-            identityType: 'student',
-            schoolId: schoolId,
-            status: 'revoked',
-            updatedAt: DateTime(2026),
-          ),
-        );
-
-        await repository.assign(
-          credentialValue: cardUid,
-          identityId: 'SP-STUDENT-NEW',
-          identityType: 'student',
-          schoolId: schoolId,
-        );
-
-        final doc = await firestore
-            .collection('schools')
-            .doc(schoolId)
-            .collection('revoked_credentials')
-            .doc(cardUid)
-            .get();
-        expect(doc.exists, false);
-      },
-    );
-
-    test(
-      'does not push anything when offline - the local write still succeeds',
-      () async {
-        when(() => networkInfo.isConnected).thenAnswer((_) async => false);
         when(
           () => localDataSource.findCredential(cardUid, schoolId),
         ).thenAnswer((_) async => null);
@@ -509,10 +425,36 @@ void main() {
         );
 
         expect(result.isRight(), true);
+        verify(() => localDataSource.cacheCredential(any())).called(1);
         final doc = await firestore
             .collection('schools')
             .doc(schoolId)
             .collection('credentials')
+            .doc(cardUid)
+            .get();
+        expect(doc.exists, false);
+      },
+    );
+
+    test(
+      'revoke never writes directly to schools/{schoolId}/revoked_credentials',
+      () async {
+        when(
+          () => localDataSource.findCredential(cardUid, schoolId),
+        ).thenAnswer((_) async => null);
+
+        final result = await repository.revoke(
+          credentialValue: cardUid,
+          schoolId: schoolId,
+          reason: 'lost',
+        );
+
+        expect(result.isRight(), true);
+        verify(() => localDataSource.saveRevocation(any())).called(1);
+        final doc = await firestore
+            .collection('schools')
+            .doc(schoolId)
+            .collection('revoked_credentials')
             .doc(cardUid)
             .get();
         expect(doc.exists, false);

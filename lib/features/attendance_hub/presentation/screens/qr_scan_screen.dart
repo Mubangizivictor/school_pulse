@@ -353,7 +353,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
             MobileScanner(
               controller: _controller,
               onDetect: _onDetect,
-              errorBuilder: (context, error, child) => Center(
+              errorBuilder: (context, error) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.xl),
                   child: Column(
@@ -390,7 +390,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
             ),
             if (_state == _ScanState.resolving)
               Container(
-                color: Colors.black54,
+                color: Colors.black,
                 child: const Center(child: SchoolPulseLoader()),
               ),
             Positioned(
@@ -402,7 +402,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
-                  backgroundColor: Colors.black54,
+                  backgroundColor: Colors.black,
                 ),
               ),
             ),

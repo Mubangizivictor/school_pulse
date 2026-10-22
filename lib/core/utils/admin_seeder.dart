@@ -798,6 +798,17 @@ class AdminSeeder {
     Permission.classResourceUpload,
     Permission.classResourceShare,
     Permission.classTimetableView,
+    // A Class Teacher may enter marks for any subject taught in their own
+    // class - not just one they personally teach - so report cards are
+    // never blocked on a Subject Teacher who is away or never assigned.
+    // The scope stays class-only: `permissionScope.classId` is set to
+    // this assignment's class and `subjectId` is left null (any subject),
+    // never school-wide.
+    Permission.subjectAssessmentCreate,
+    Permission.subjectMarksView,
+    Permission.subjectMarksEnter,
+    Permission.subjectMarksEdit,
+    Permission.subjectMarksSubmit,
   };
 
   /// Deliberately narrower than the class grant, and deliberately without

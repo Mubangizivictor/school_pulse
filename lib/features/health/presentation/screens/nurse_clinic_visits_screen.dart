@@ -1,178 +1,418 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:intl/intl.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/health/domain/entities/clinic_visit.dart';
+import 'package:school_pulse/features/health/domain/entities/medical_inventory.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_bloc.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_event.dart';
 import 'package:school_pulse/features/health/presentation/bloc/health_state.dart';
-import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/nurse/presentation/clinic_ui.dart';
 
 class NurseClinicVisitsScreen extends StatefulWidget {
   const NurseClinicVisitsScreen({super.key});
-
   @override
   State<NurseClinicVisitsScreen> createState() =>
       _NurseClinicVisitsScreenState();
 }
 
 class _NurseClinicVisitsScreenState extends State<NurseClinicVisitsScreen> {
+  String _query = '';
+  bool _followUpOnly = false;
+  String get _schoolId {
+    final a = context.read<AuthBloc>().state;
+    return a is AuthAuthenticated ? a.user.schoolId : '';
+  }
+
   @override
   void initState() {
     super.initState();
-    _loadVisits();
-  }
-
-  void _loadVisits() {
-    final authState = context.read<AuthBloc>().state;
-    if (authState is AuthAuthenticated) {
-      context.read<HealthBloc>().add(
-        FetchClinicVisits(schoolId: authState.user.schoolId),
-      );
+    if (_schoolId.isNotEmpty) {
+      context.read<HealthBloc>().add(FetchClinicVisits(schoolId: _schoolId));
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF070914),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Clinic Visits',
-          style: AppTypography.titleLarge.copyWith(color: Colors.white),
-        ),
-      ),
-      body: BlocBuilder<HealthBloc, HealthState>(
-        builder: (context, state) {
-          if (state is HealthLoading) {
-            return const Center(child: SchoolPulseLoader());
-          }
-
-          if (state is ClinicVisitsLoaded) {
-            if (state.visits.isEmpty) {
-              return const EmptyState(
-                icon: Icons.medical_services_outlined,
-                title: 'No visits recorded',
-                message: 'Records of clinic visits will appear here.',
-              );
-            }
-
-            return ListView.builder(
-              padding: const EdgeInsets.all(20),
-              itemCount: state.visits.length,
-              itemBuilder: (context, index) {
-                final visit = state.visits[index];
-                return _buildVisitCard(context, visit);
-              },
-            );
-          }
-
-          return const SizedBox.shrink();
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push(
-          '/staff/nurse/lookup',
-        ), // Redirect to student lookup for new visit
-        label: const Text('New Visit'),
-        icon: const Icon(Icons.add),
-        backgroundColor: const Color(0xFFF04400),
-      ),
-    );
-  }
-
-  Widget _buildVisitCard(BuildContext context, ClinicVisit visit) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF151929),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF1E293B), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Student ID: ${visit.studentId.substring(0, 8)}',
-                style: AppTypography.labelSmall.copyWith(
-                  color: const Color(0xFF64748B),
-                ),
+  Widget build(BuildContext context) => ClinicPage(
+    floatingActionButton: FloatingActionButton(
+      backgroundColor: ClinicUi.black,
+      foregroundColor: Colors.white,
+      onPressed: () => context.push('/staff/nurse/lookup'),
+      child: const Icon(Icons.add),
+    ),
+    child: BlocBuilder<HealthBloc, HealthState>(
+      builder: (_, state) {
+        final all = state is ClinicVisitsLoaded
+            ? state.visits
+            : const <ClinicVisit>[];
+        final visits = all
+            .where(
+              (v) =>
+                  (!_followUpOnly || v.followUpRequired) &&
+                  (_query.isEmpty ||
+                      v.studentId.toLowerCase().contains(
+                        _query.toLowerCase(),
+                      ) ||
+                      v.reason.toLowerCase().contains(_query.toLowerCase())),
+            )
+            .toList();
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Clinic visits',
+                      style: TextStyle(
+                        fontSize: 23,
+                        fontWeight: FontWeight.w700,
+                        color: ClinicUi.foreground(context),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () =>
+                        setState(() => _followUpOnly = !_followUpOnly),
+                    icon: Icon(
+                      Icons.filter_alt_outlined,
+                      color: _followUpOnly
+                          ? ClinicUi.red
+                          : ClinicUi.foreground(context),
+                    ),
+                  ),
+                ],
               ),
-              Text(
-                'Today, 10:30 AM', // In a real app, format visit.dateTime
-                style: AppTypography.labelSmall.copyWith(
-                  color: const Color(0xFF64748B),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            visit.reason,
-            style: AppTypography.titleMedium.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
             ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _buildBadge(
-                visit.outcome.name.splitCamelCase(),
-                const Color(0xFF3B82F6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      onChanged: (v) => setState(() => _query = v),
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        hintText: 'Search visits',
+                        filled: true,
+                        fillColor: ClinicUi.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton(
+                    onPressed: () =>
+                        setState(() => _followUpOnly = !_followUpOnly),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(64, 48),
+                      side: const BorderSide(color: ClinicUi.line),
+                    ),
+                    child: const Text('Filter'),
+                  ),
+                ],
               ),
-              if (visit.temperature != null) ...[
-                const SizedBox(width: 8),
-                _buildBadge('${visit.temperature}°C', const Color(0xFF10B981)),
-              ],
-            ],
-          ),
-        ],
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 18, 16, 7),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Today',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+            Expanded(
+              child: state is HealthLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: ClinicUi.black),
+                    )
+                  : visits.isEmpty
+                  ? const ClinicEmptyState(
+                      title: 'No matching visits',
+                      message:
+                          'Try another search or record a new clinic visit.',
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 88),
+                      itemCount: visits.length,
+                      separatorBuilder: (_, index) => const SizedBox(height: 8),
+                      itemBuilder: (_, i) => _VisitCard(visit: visits[i]),
+                    ),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
+
+class _VisitCard extends StatelessWidget {
+  const _VisitCard({required this.visit});
+  final ClinicVisit visit;
+
+  void _openDispense(BuildContext context) {
+    final schoolId = () {
+      final a = context.read<AuthBloc>().state;
+      return a is AuthAuthenticated ? a.user.schoolId : '';
+    }();
+    if (schoolId.isEmpty) return;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: ClinicUi.background(context),
+      builder: (_) => BlocProvider.value(
+        value: context.read<HealthBloc>(),
+        child: DispenseMedicineSheet(visit: visit, schoolId: schoolId),
       ),
     );
   }
 
-  Widget _buildBadge(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        text,
-        style: AppTypography.labelSmall.copyWith(
-          color: color,
-          fontWeight: FontWeight.w600,
+  @override
+  Widget build(BuildContext context) {
+    final needsReview = visit.followUpRequired;
+    return InkWell(
+      onTap: () => context.push('/staff/nurse/profile/${visit.studentId}'),
+      borderRadius: BorderRadius.circular(9),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: ClinicUi.outlinedCard(context),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 58,
+              child: Text(
+                DateFormat('h:mm a').format(visit.dateTime),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Icon(
+              needsReview ? Icons.radio_button_checked : Icons.check_circle,
+              size: 17,
+              color: needsReview ? ClinicUi.red : ClinicUi.green,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          visit.studentId,
+                          style: TextStyle(
+                            color: ClinicUi.foreground(context),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      ClinicUi.pill(
+                        needsReview ? 'Follow-up' : 'Completed',
+                        color: needsReview ? ClinicUi.red : ClinicUi.green,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Reason for visit',
+                    style: const TextStyle(fontSize: 10, color: ClinicUi.muted),
+                  ),
+                  Text(
+                    visit.reason,
+                    style: TextStyle(
+                      color: ClinicUi.foreground(context),
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    visit.followUpRequired
+                        ? 'Follow-up required'
+                        : 'Routine clinical note',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: needsReview ? ClinicUi.red : ClinicUi.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: ClinicUi.muted),
+              onSelected: (v) {
+                if (v == 'profile') {
+                  context.push('/staff/nurse/profile/${visit.studentId}');
+                } else if (v == 'dispense') {
+                  _openDispense(context);
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'profile', child: Text('Open profile')),
+                PopupMenuItem(
+                  value: 'dispense',
+                  child: Text('Dispense medicine'),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-extension StringExtension on String {
-  String splitCamelCase() {
-    return replaceAllMapped(
-      RegExp(r'([a-z])([A-Z])'),
-      (Match m) => '${m[1]} ${m[2]}',
-    ).capitalize();
+/// Dispenses a medicine or supply against [visit] through the
+/// `dispenseMedicalItem` callable (server-authoritative: atomic decrement,
+/// no-negative guard, learner check, movement + audit rows). The visit's own
+/// studentId is sent, so the server rejects a mismatch.
+class DispenseMedicineSheet extends StatefulWidget {
+  const DispenseMedicineSheet({
+    required this.visit,
+    required this.schoolId,
+    super.key,
+  });
+  final ClinicVisit visit;
+  final String schoolId;
+
+  @override
+  State<DispenseMedicineSheet> createState() => _DispenseMedicineSheetState();
+}
+
+class _DispenseMedicineSheetState extends State<DispenseMedicineSheet> {
+  MedicalInventoryItem? _item;
+  final _qty = TextEditingController(text: '1');
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    context.read<HealthBloc>().add(FetchInventory(widget.schoolId));
   }
 
-  String capitalize() {
-    if (isEmpty) return this;
-    return this[0].toUpperCase() + substring(1);
+  @override
+  void dispose() {
+    _qty.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final item = _item;
+    final qty = int.tryParse(_qty.text.trim()) ?? 0;
+    if (item == null || qty <= 0) return;
+    setState(() => _submitting = true);
+    context.read<HealthBloc>().add(
+      DispenseMedicalItemEvent(
+        itemId: item.id,
+        visitId: widget.visit.id,
+        studentId: widget.visit.studentId,
+        quantity: qty,
+        schoolId: widget.schoolId,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return BlocListener<HealthBloc, HealthState>(
+      listenWhen: (_, s) =>
+          s is HealthActionSuccess || s is HealthError || s is InventoryLoaded,
+      listener: (context, state) {
+        if (state is HealthActionSuccess && _submitting) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Item dispensed')));
+        } else if (state is HealthError && _submitting) {
+          setState(() => _submitting = false);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.message)));
+        }
+      },
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Dispense for ${widget.visit.studentId}',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: ClinicUi.foreground(context),
+              ),
+            ),
+            const SizedBox(height: 14),
+            BlocBuilder<HealthBloc, HealthState>(
+              buildWhen: (_, s) => s is InventoryLoaded || s is HealthLoading,
+              builder: (_, state) {
+                if (state is! InventoryLoaded) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(
+                      child: CircularProgressIndicator(color: ClinicUi.black),
+                    ),
+                  );
+                }
+                final items = state.items;
+                if (items.isEmpty) {
+                  return const ClinicEmptyState(
+                    title: 'No stock',
+                    message: 'There are no inventory items to dispense.',
+                  );
+                }
+                _item ??= items.first;
+                return DropdownButtonFormField<MedicalInventoryItem>(
+                  initialValue: _item,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Item'),
+                  items: [
+                    for (final it in items)
+                      DropdownMenuItem(
+                        value: it,
+                        child: Text(
+                          '${it.name} · ${it.quantity} ${it.unit} in stock',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => _item = v),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _qty,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Quantity'),
+            ),
+            const SizedBox(height: 18),
+            FilledButton(
+              onPressed: _submitting ? null : _submit,
+              style: FilledButton.styleFrom(
+                backgroundColor: ClinicUi.black,
+                minimumSize: const Size(0, 48),
+              ),
+              child: Text(_submitting ? 'Dispensing…' : 'Dispense'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

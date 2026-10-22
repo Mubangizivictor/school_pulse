@@ -5,10 +5,12 @@ import '../../domain/entities/class_attendance.dart';
 import '../../domain/entities/class_behaviour.dart';
 import '../../domain/entities/class_dashboard_summary.dart';
 import '../../domain/entities/class_homework.dart';
+import '../../domain/entities/class_performance.dart';
 import '../../domain/entities/class_report_entry.dart';
 import '../../domain/entities/class_task.dart';
 import '../../domain/entities/class_student_summary.dart';
 import '../../domain/entities/lesson.dart';
+import '../../domain/entities/student_leave_application.dart';
 
 /// The Class Teacher panel's reads and writes against Firestore.
 ///
@@ -44,6 +46,16 @@ abstract class ClassTeacherRemoteDataSource {
     required String classId,
     required String academicYearId,
     String? streamId,
+  });
+
+  /// One student's leave applications, newest departure first.
+  ///
+  /// Reads the boarding leave queue the Patron/Matron module owns rather than
+  /// keeping a second copy: a class teacher raising leave and a patron
+  /// approving it are looking at the same row.
+  Future<List<StudentLeaveApplication>> getStudentLeaveApplications({
+    required String schoolId,
+    required String studentId,
   });
 
   /// Today's class register as the Attendance engine holds it. Null when no
@@ -96,6 +108,17 @@ abstract class ClassTeacherRemoteDataSource {
     required String academicYearId,
     required String termId,
     String? streamId,
+  });
+
+  /// One student's individual approved marks in one subject - the rows
+  /// [getApprovedClassMarks] collapses into a subject average, resolved
+  /// against the assessment each mark belongs to for its display name.
+  Future<List<StudentAssessmentResult>> getStudentAssessmentResults({
+    required String schoolId,
+    required String studentId,
+    required String subjectId,
+    required String academicYearId,
+    required String termId,
   });
 
   /// Announcements posted to this class, newest first.
@@ -261,6 +284,9 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
   CollectionReference<Map<String, dynamic>> _announcements(String schoolId) =>
       _school(schoolId).collection('class_announcements');
 
+  CollectionReference<Map<String, dynamic>> _assessments(String schoolId) =>
+      _school(schoolId).collection('subject_assessments');
+
   Query<Map<String, dynamic>> _rosterQuery({
     required String schoolId,
     required String classId,
@@ -366,6 +392,54 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     }
 
     return _studentFromDoc(doc.id, schoolId, classId, academicYearId, data);
+  }
+
+  @override
+  Future<List<StudentLeaveApplication>> getStudentLeaveApplications({
+    required String schoolId,
+    required String studentId,
+  }) async {
+    final snapshot = await firestore
+        .collection('boarding_leave_requests')
+        .where('schoolId', isEqualTo: schoolId)
+        .where('studentId', isEqualTo: studentId)
+        .get();
+
+    final applications = snapshot.docs.map((doc) {
+      final data = doc.data();
+      return StudentLeaveApplication(
+        id: doc.id,
+        studentId: data['studentId'] as String? ?? studentId,
+        studentName: data['studentName'] as String? ?? 'Student',
+        reason: data['reason'] as String? ?? '',
+        destination: data['destination'] as String?,
+        departureDate: _dateFrom(data['departureDate']) ?? DateTime.now(),
+        expectedReturnDate:
+            _dateFrom(data['expectedReturnDate']) ??
+            _dateFrom(data['departureDate']) ??
+            DateTime.now(),
+        actualReturnDate: _dateFrom(data['actualReturnDate']),
+        status: StudentLeaveStatus.fromRaw(data['status'] as String?),
+        approvedByName:
+            data['approvedByName'] as String? ?? data['approvedBy'] as String?,
+        raisedByClassTeacher: data['source'] == 'class_teacher',
+        requestedByName: data['requestedByName'] as String?,
+        createdAt: _dateFrom(data['createdAt']),
+      );
+    }).toList();
+
+    // Newest departure first. Sorted here rather than in the query so the
+    // read needs no composite index beyond the schoolId/studentId equality
+    // pair, and so a row with a malformed date still appears.
+    applications.sort((a, b) => b.departureDate.compareTo(a.departureDate));
+    return applications;
+  }
+
+  DateTime? _dateFrom(Object? value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
   @override
@@ -547,7 +621,7 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       'termId': entry.termId,
       'studentId': entry.studentId,
       'studentName': entry.studentName,
-      'status': entry.status.name,
+      'status': entry.status.storageId,
       'competencies': entry.competencies
           .map(
             (c) => {
@@ -684,6 +758,7 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
       updatedAt: _toDate(data['updatedAt']),
       submittedAt: _toDate(data['submittedAt']),
       roleAssignmentId: data['roleAssignmentId'] as String? ?? '',
+      reportCardId: data['reportCardId'] as String?,
     );
   }
 
@@ -733,6 +808,76 @@ class ClassTeacherRemoteDataSourceImpl implements ClassTeacherRemoteDataSource {
     }
 
     return rows;
+  }
+
+  @override
+  Future<List<StudentAssessmentResult>> getStudentAssessmentResults({
+    required String schoolId,
+    required String studentId,
+    required String subjectId,
+    required String academicYearId,
+    required String termId,
+  }) async {
+    final snapshot = await _school(schoolId)
+        .collection('student_marks')
+        .where('studentId', isEqualTo: studentId)
+        .where('subjectId', isEqualTo: subjectId)
+        .where('academicYearId', isEqualTo: academicYearId)
+        .where('termId', isEqualTo: termId)
+        .where('markStatus', isEqualTo: 'approved')
+        .get();
+
+    if (snapshot.docs.isEmpty) return const [];
+
+    // Assessment titles/dates live on the parent assessment, not the mark -
+    // resolved by id rather than duplicated onto every mark document.
+    final assessmentIds = snapshot.docs
+        .map((d) => d.data()['assessmentId'] as String? ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    final assessmentDocs = await Future.wait(
+      assessmentIds.map((id) => _assessments(schoolId).doc(id).get()),
+    );
+    final assessmentById = {
+      for (final doc in assessmentDocs)
+        if (doc.exists) doc.id: doc.data()!,
+    };
+
+    final results = <StudentAssessmentResult>[];
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final score = (data['score'] as num?)?.toDouble();
+      final maximumMark = (data['maximumMark'] as num?)?.toDouble();
+      if (score == null || maximumMark == null) continue;
+
+      final assessmentId = data['assessmentId'] as String? ?? '';
+      final assessment = assessmentById[assessmentId];
+
+      results.add(
+        StudentAssessmentResult(
+          assessmentId: assessmentId,
+          componentId: data['componentId'] as String? ?? '',
+          assessmentTitle: assessment?['title'] as String? ?? '',
+          componentName:
+              assessment?['assessmentTypeName'] as String? ??
+              data['componentId'] as String? ??
+              '',
+          score: score,
+          maximumMark: maximumMark,
+          assessmentDate: _toDate(assessment?['assessmentDate']),
+        ),
+      );
+    }
+
+    results.sort((a, b) {
+      final aDate = a.assessmentDate;
+      final bDate = b.assessmentDate;
+      if (aDate == null || bDate == null) return 0;
+      return bDate.compareTo(aDate);
+    });
+
+    return results;
   }
 
   @override

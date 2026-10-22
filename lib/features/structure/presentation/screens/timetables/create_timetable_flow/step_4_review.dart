@@ -49,12 +49,9 @@ class Step4Review extends StatelessWidget {
               _ReviewCard(
                 title: 'Basic Information',
                 rows: {
-                  'Class': [
-                    className ?? '-',
-                    if (streamName != null) streamName,
-                  ].join(' - '),
+                  'Class': [className ?? '-', ?streamName].join(' - '),
                   'Academic Year': yearName ?? '-',
-                  if (termName != null) 'Term': termName,
+                  'Term': ?termName,
                   'Timetable Name': draft.name,
                 },
               ),
@@ -77,7 +74,7 @@ class Step4Review extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: colors.primaryContainer.withValues(alpha: .3),
+                  color: colors.primaryContainer,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -137,7 +134,7 @@ class _ReviewCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outline.withValues(alpha: .18)),
+        border: Border.all(color: colors.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,11 +154,16 @@ class _ReviewCard extends StatelessWidget {
                       color: colors.onSurfaceVariant,
                     ),
                   ),
-                  Text(
-                    e.value,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      e.value,
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],

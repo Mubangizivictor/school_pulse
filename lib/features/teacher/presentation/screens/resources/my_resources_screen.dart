@@ -85,8 +85,7 @@ class _MyResourcesScreenState extends State<MyResourcesScreen> {
                 _FilterChip(
                   label: 'Links',
                   isSelected: _filter == ClassResourceKind.link,
-                  onTap: () =>
-                      setState(() => _filter = ClassResourceKind.link),
+                  onTap: () => setState(() => _filter = ClassResourceKind.link),
                 ),
               ],
             ),
@@ -99,11 +98,15 @@ class _MyResourcesScreenState extends State<MyResourcesScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final items = state.files.where((r) {
-                  if (_filter != null && r.kind != _filter) return false;
-                  if (_query.isEmpty) return true;
-                  return r.name.toLowerCase().contains(_query.toLowerCase());
-                }).toList()..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
+                final items =
+                    state.files.where((r) {
+                        if (_filter != null && r.kind != _filter) return false;
+                        if (_query.isEmpty) return true;
+                        return r.name.toLowerCase().contains(
+                          _query.toLowerCase(),
+                        );
+                      }).toList()
+                      ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
 
                 if (items.isEmpty) {
                   return Center(
@@ -142,7 +145,8 @@ class _MyResourcesScreenState extends State<MyResourcesScreen> {
         child: Wrap(
           children: [
             for (final kind in ClassResourceKind.values)
-              if (kind != ClassResourceKind.folder && kind != ClassResourceKind.other)
+              if (kind != ClassResourceKind.folder &&
+                  kind != ClassResourceKind.other)
                 ListTile(
                   title: Text(kind.name),
                   onTap: () {
@@ -190,7 +194,7 @@ class _FilterChip extends StatelessWidget {
           label,
           style: TextStyle(
             color: isSelected
-                ? Colors.white
+                ? Theme.of(context).colorScheme.onPrimary
                 : Theme.of(context).colorScheme.onSurface,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
             fontSize: 13,
@@ -218,7 +222,7 @@ class _ResourceItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconData.$2.withValues(alpha: 0.1),
+              color: iconData.$2,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(iconData.$1, color: iconData.$2),
@@ -253,21 +257,31 @@ class _ResourceItem extends StatelessWidget {
 
   static String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
   static (IconData, Color) _iconFor(ClassResourceKind kind) => switch (kind) {
-    ClassResourceKind.document => (Icons.picture_as_pdf, Colors.red),
-    ClassResourceKind.spreadsheet => (Icons.grid_on, Colors.green),
-    ClassResourceKind.presentation => (Icons.slideshow, Colors.orange),
-    ClassResourceKind.image => (Icons.image, Colors.green),
-    ClassResourceKind.audio => (Icons.audiotrack, Colors.teal),
-    ClassResourceKind.video => (Icons.videocam, Colors.purple),
-    ClassResourceKind.link => (Icons.link, Colors.blue),
-    ClassResourceKind.folder => (Icons.folder, Colors.amber),
-    ClassResourceKind.other => (Icons.insert_drive_file, Colors.grey),
+    ClassResourceKind.document => (Icons.picture_as_pdf, Colors.black),
+    ClassResourceKind.spreadsheet => (Icons.grid_on, Colors.black),
+    ClassResourceKind.presentation => (Icons.slideshow, Colors.black),
+    ClassResourceKind.image => (Icons.image, Colors.black),
+    ClassResourceKind.audio => (Icons.audiotrack, Colors.black),
+    ClassResourceKind.video => (Icons.videocam, Colors.black),
+    ClassResourceKind.link => (Icons.link, Colors.black),
+    ClassResourceKind.folder => (Icons.folder, Colors.black),
+    ClassResourceKind.other => (Icons.insert_drive_file, Colors.black),
   };
 }

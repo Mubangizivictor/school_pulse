@@ -16,7 +16,10 @@ const db = admin.firestore();
 // the owner actually signed in.
 const SESSIONS_COLLECTION = db.collection('owner_security_sessions');
 
-const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours - a normal owner console session
+// No TTL: an Owner security session stays valid until explicit sign-out or
+// `revokeAllOwnerSecuritySessions` (e.g. "sign out everywhere"). Chosen
+// deliberately - the owner should only ever have to log in once per device.
+const SESSION_TTL_MS = null;
 const VALID_METHODS = new Set(['password_totp', 'google_totp', 'apple_totp', 'recovery_code']);
 
 function randomSessionId() {
@@ -33,6 +36,7 @@ function isSessionValid(sessionData, ownerUid, nowMs) {
   if (!sessionData) return false;
   if (sessionData.ownerUid !== ownerUid) return false;
   if (sessionData.revoked) return false;
+  if (sessionData.expiresAt == null) return true; // no TTL - valid until revoked
   const expiresAtMs = typeof sessionData.expiresAt?.toMillis === 'function'
     ? sessionData.expiresAt.toMillis()
     : sessionData.expiresAt;
@@ -83,6 +87,7 @@ exports.establishOwnerSecuritySession = onCall({ region: 'europe-west1' }, async
 
   const sessionId = randomSessionId();
   const now = Date.now();
+  const expiresAtMs = SESSION_TTL_MS == null ? null : now + SESSION_TTL_MS;
   await SESSIONS_COLLECTION.doc(sessionId).set({
     sessionId,
     ownerUid: owner.uid,
@@ -90,14 +95,14 @@ exports.establishOwnerSecuritySession = onCall({ region: 'europe-west1' }, async
     firstFactorProvider,
     secondFactor,
     verifiedAt: admin.firestore.FieldValue.serverTimestamp(),
-    expiresAt: admin.firestore.Timestamp.fromMillis(now + SESSION_TTL_MS),
+    expiresAt: expiresAtMs == null ? null : admin.firestore.Timestamp.fromMillis(expiresAtMs),
     revoked: false,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
   await writeAuditLog(owner.uid, 'OWNER_LOGIN_SUCCESS', { authenticationMethod });
 
-  return { ok: true, sessionId, expiresAt: now + SESSION_TTL_MS };
+  return { ok: true, sessionId, expiresAt: expiresAtMs };
 });
 
 /**

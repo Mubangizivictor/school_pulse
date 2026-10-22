@@ -80,10 +80,7 @@ class _InfoTile extends StatelessWidget {
             ),
           ),
         ),
-        Divider(
-          height: 1,
-          color: AppColors.border(context).withValues(alpha: 0.5),
-        ),
+        Divider(height: 1, color: AppColors.border(context)),
       ],
     );
   }

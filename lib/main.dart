@@ -1,13 +1,18 @@
 import 'dart:async';
 
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:school_pulse/features/notifications/notification_coordinator.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 import 'package:school_pulse/app/router.dart';
+import 'package:school_pulse/core/observability/app_observability.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/firebase_options.dart';
 import 'package:school_pulse/injection_container.dart' as di;
@@ -41,10 +46,10 @@ import 'package:school_pulse/features/teacher/presentation/bloc/teacher_bloc.dar
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_attendance/class_attendance_history_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_students/class_students_bloc.dart';
+import 'package:school_pulse/features/teacher/presentation/bloc/subject_students/subject_students_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_announcements/class_announcements_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_performance/class_performance_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_reports/class_reports_bloc.dart';
-import 'package:school_pulse/features/teacher/presentation/bloc/class_tasks/class_tasks_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_work/class_work_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/class_resources/class_resource_bloc.dart';
 import 'package:school_pulse/features/teacher/presentation/bloc/marks/marks_bloc.dart';
@@ -76,9 +81,16 @@ import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.d
 import 'package:school_pulse/features/super_admin/presentation/bloc/super_admin_bloc.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_event.dart';
 import 'package:school_pulse/features/branding/presentation/screens/branding_initializer.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:school_pulse/features/portal/data/portal_tenant_resolver.dart';
+import 'package:school_pulse/features/portal/domain/portal_runtime.dart';
+import 'package:school_pulse/features/portal/domain/portal_tenant.dart';
+import 'package:school_pulse/features/portal/presentation/portal_not_found_screen.dart';
+import 'package:school_pulse/features/portal/presentation/portal_public_home_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   try {
     await Firebase.initializeApp(
@@ -90,6 +102,34 @@ void main() async {
     } else {
       rethrow;
     }
+  }
+
+  // Global error hooks (Crashlytics on mobile, console on web). Installed
+  // right after Firebase so startup failures below are captured too.
+  await AppObservability.initCrashReporting();
+
+  // Local Firebase Emulator Suite wiring, opt-in only via
+  // `--dart-define=USE_FIREBASE_EMULATOR=true` (e.g. `flutter run -d chrome
+  // --dart-define=USE_FIREBASE_EMULATOR=true`). Never active in a normal
+  // build/run - production always talks to the real project.
+  const useEmulator = bool.fromEnvironment('USE_FIREBASE_EMULATOR');
+  if (useEmulator) {
+    // 127.0.0.1 rather than 'localhost': iOS Simulator's native networking
+    // stack can prefer the IPv6 loopback (::1) for the 'localhost' hostname
+    // and fail to fall back to IPv4, which the Functions SDK then surfaces
+    // as a generic "not-found" callable error indistinguishable from a real
+    // missing function - Auth/Firestore/Storage aren't affected since their
+    // transports handle this differently. The literal IPv4 address sidesteps
+    // the DNS/IPv6 resolution question entirely on every platform.
+    const host = '127.0.0.1';
+    await FirebaseAuth.instance.useAuthEmulator(host, 9099);
+    FirebaseFirestore.instance.useFirestoreEmulator(host, 8080);
+    await FirebaseStorage.instance.useStorageEmulator(host, 9199);
+    FirebaseFunctions.instanceFor(
+      region: 'europe-west1',
+    ).useFunctionsEmulator(host, 5001);
+    FirebaseFunctions.instance.useFunctionsEmulator(host, 5001);
+    debugPrint('Using Firebase Emulator Suite at $host');
   }
 
   // App Check: monitoring-only for now, deliberately NOT enforced
@@ -129,7 +169,21 @@ void main() async {
   // here must never block runApp() (e.g. on web, where some of these
   // services may be unavailable or misconfigured).
   try {
-    await NotificationService().initialize();
+    // Bounded: on some iOS simulators the FCM plugin's getToken()/APNs
+    // registration never completes, which would otherwise wedge startup
+    // here (initialize() is awaited before runApp()). The listener wiring
+    // it does is not load-bearing for the first frame, so cap the wait and
+    // let the rest finish in the background.
+    await NotificationService().initialize().timeout(
+      const Duration(seconds: 2),
+      onTimeout: () {
+        if (kDebugMode) {
+          debugPrint(
+            'NotificationService.initialize timed out; continuing startup',
+          );
+        }
+      },
+    );
     await di.init();
 
     // Notification pipeline: register channels and bind the FCM listeners.
@@ -151,12 +205,56 @@ void main() async {
     if (kDebugMode) debugPrint('ThemeProvider initialization failed: $e');
   }
 
+  // Resolve only the public directory projection before any authenticated
+  // route builds. This avoids a hostname ever causing a read of schools/{id}.
+  PortalResolution portal;
+  try {
+    portal = await PortalTenantResolver(FirebaseFirestore.instance).resolve();
+  } catch (_) {
+    portal = const PortalResolution.notFound();
+  }
+  if (portal.kind == PortalResolutionKind.tenant) {
+    PortalRuntime.tenant = portal.tenant;
+    themeProvider.updateBranding(portal.tenant!.branding);
+  }
+  AppObservability.trackScreenViews(router);
   runApp(
     ChangeNotifierProvider.value(
       value: themeProvider,
-      child: const SchoolPulseApp(),
+      child: switch (portal.kind) {
+        PortalResolutionKind.notFound => const PortalNotFoundScreen(),
+        PortalResolutionKind.tenant => _PortalEntryGate(tenant: portal.tenant!),
+        PortalResolutionKind.platform => const SchoolPulseApp(),
+      },
     ),
   );
+}
+
+/// A school's own subdomain (e.g. greenhill.schoolpulseapp.com) shows this
+/// public branded page first, rather than dropping straight into the app
+/// shell/login - "Sign in to School Pulse" swaps to the real app. The
+/// platform host (schoolpulseapp.com itself) is unaffected and still goes
+/// straight to SchoolPulseApp() as before; this gate only exists for the
+/// tenant-resolution branch.
+class _PortalEntryGate extends StatefulWidget {
+  const _PortalEntryGate({required this.tenant});
+  final PortalTenant tenant;
+
+  @override
+  State<_PortalEntryGate> createState() => _PortalEntryGateState();
+}
+
+class _PortalEntryGateState extends State<_PortalEntryGate> {
+  bool _continued = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_continued) return const SchoolPulseApp();
+    return PortalPublicHomeScreen(
+      tenant: widget.tenant,
+      onContinue: () => setState(() => _continued = true),
+    );
+  }
 }
 
 class SchoolPulseApp extends StatelessWidget {
@@ -197,6 +295,7 @@ class SchoolPulseApp extends StatelessWidget {
         // responsibility as the others.
         BlocProvider(create: (_) => di.sl<SubjectTeacherContextBloc>()),
         BlocProvider(create: (_) => di.sl<SubjectTeacherDashboardBloc>()),
+        BlocProvider(create: (_) => di.sl<SubjectStudentsBloc>()),
         // Same reasoning for the Class Teacher panel: Home, Students,
         // Reports, Tasks and More are separate routes that must all read the
         // same active class.
@@ -211,7 +310,6 @@ class SchoolPulseApp extends StatelessWidget {
         BlocProvider(create: (_) => di.sl<ClassAnnouncementsBloc>()),
         BlocProvider(create: (_) => di.sl<ClassPerformanceBloc>()),
         BlocProvider(create: (_) => di.sl<ClassReportsBloc>()),
-        BlocProvider(create: (_) => di.sl<ClassTasksBloc>()),
         BlocProvider(create: (_) => di.sl<DirectorBloc>()),
         BlocProvider(
           create: (_) => di.sl<InventoryBloc>()..add(LoadInventory()),
@@ -236,8 +334,25 @@ class SchoolPulseApp extends StatelessWidget {
   }
 }
 
-class SchoolPulseAppView extends StatelessWidget {
+class SchoolPulseAppView extends StatefulWidget {
   const SchoolPulseAppView({super.key});
+
+  @override
+  State<SchoolPulseAppView> createState() => _SchoolPulseAppViewState();
+}
+
+class _SchoolPulseAppViewState extends State<SchoolPulseAppView> {
+  @override
+  void initState() {
+    super.initState();
+    // On web a direct, restored route (such as /super-admin) can bypass the
+    // route-level splash hand-off. Remove the generated native splash after
+    // Flutter's first frame as a safety net, so a successful app boot can
+    // never remain hidden behind the logo indefinitely.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FlutterNativeSplash.remove();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -270,6 +385,10 @@ class SchoolPulseAppView extends StatelessWidget {
               // offline read/acknowledge queue, and replays a deep link that
               // was stashed while signed out.
               di.sl<NotificationCoordinator>().onSignedIn(state.user);
+              AppObservability.onSignedIn(
+                role: state.user.role.name,
+                schoolId: state.user.schoolId,
+              );
 
               // Drains any NFC/QR/manual attendance marked while offline -
               // fires on cold-start session restore and on interactive
@@ -293,10 +412,14 @@ class SchoolPulseAppView extends StatelessWidget {
                 unawaited(di.sl<MessageOutboxService>().drain());
               }
 
-              // Load structure data once authenticated.
-              context.read<StructureBloc>().add(
-                LoadStructureData(state.user.schoolId),
-              );
+              // Load structure data once authenticated. superAdmin has no
+              // tenant to scope to - it operates platform-wide, same
+              // reasoning as the InstitutionContextCubit skip just below.
+              if (state.user.role != UserRole.superAdmin) {
+                context.read<StructureBloc>().add(
+                  LoadStructureData(state.user.schoolId),
+                );
+              }
 
               // Institution Context Engine: restore the last-active tenant
               // (for multi-institution users) or fall back to home schoolId.
@@ -323,6 +446,7 @@ class SchoolPulseAppView extends StatelessWidget {
               // the tray stops the next user of a shared device seeing the
               // previous user's alerts.
               di.sl<NotificationCoordinator>().onSignedOut();
+              AppObservability.onSignedOut();
               context.read<InstitutionContextCubit>().clear();
               context.read<StructureBloc>().add(const ClearStructureData());
               // Drops the inbox subscription and every cached conversation/

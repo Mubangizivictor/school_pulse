@@ -28,6 +28,32 @@
 		<true/>
 		<key>NFCReaderUsageDescription</key>
 		<string>School Pulse uses NFC to read student ID cards for attendance and identity verification.</string>
+		<!-- QA-only: allows plain-HTTP calls to the local Firebase Cloud
+		     Functions emulator (http://localhost:5001) from a debug build
+		     run with --dart-define=USE_FIREBASE_EMULATOR=true. Without this,
+		     iOS's default App Transport Security policy silently blocks the
+		     Functions SDK's plain-HTTP request to the emulator, which the
+		     SDK then surfaces as a generic "not-found" error indistinguishable
+		     from a real missing-callable error. Scoped to localhost only -
+		     does not weaken ATS for any other host or for release builds. -->
+		<key>NSAppTransportSecurity</key>
+		<dict>
+			<key>NSAllowsLocalNetworking</key>
+			<true/>
+			<key>NSExceptionDomains</key>
+			<dict>
+				<key>localhost</key>
+				<dict>
+					<key>NSExceptionAllowsInsecureHTTPLoads</key>
+					<true/>
+				</dict>
+				<key>127.0.0.1</key>
+				<dict>
+					<key>NSExceptionAllowsInsecureHTTPLoads</key>
+					<true/>
+				</dict>
+			</dict>
+		</dict>
 		<key>NSBluetoothAlwaysUsageDescription</key>
 		<string>School Pulse uses Bluetooth to connect to badge and ID card printers.</string>
 		<key>NSBluetoothPeripheralUsageDescription</key>

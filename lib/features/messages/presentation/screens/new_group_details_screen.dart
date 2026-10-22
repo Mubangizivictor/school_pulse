@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -54,26 +53,36 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.bgDark,
+      backgroundColor: colors.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: colors.onSurface),
           onPressed: () => context.pop(),
         ),
         title: Text(
-          _screenTitle,
+          _screenTitle.toUpperCase(),
           style: AppTypography.titleLarge.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+            color: colors.onSurface,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
           ),
         ),
       ),
+      bottomNavigationBar: MessagingUserBuilder(
+        builder: (context, user) => _buildCreateBar(context, user),
+      ),
       body: MessagingUserBuilder(
         builder: (context, user) => SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.l),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.l,
+            0,
+            AppSpacing.l,
+            112,
+          ),
           child: Column(
             children: [
               const SizedBox(height: AppSpacing.l),
@@ -86,10 +95,9 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                         height: 100,
                         width: 100,
                         decoration: BoxDecoration(
-                          color: AppColors.surfaceDark,
-                          shape: BoxShape.circle,
+                          color: colors.surface,
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: colors.onSurface,
                             width: 1,
                           ),
                           image: _photo != null
@@ -101,10 +109,10 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                         ),
                         child: _photo != null
                             ? null
-                            : const Icon(
+                            : Icon(
                                 Icons.camera_alt_outlined,
                                 size: 40,
-                                color: AppColors.electricBlue,
+                                color: colors.onSurface,
                               ),
                       ),
                       Positioned(
@@ -112,14 +120,14 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                         right: 0,
                         child: Container(
                           padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: AppColors.electricBlue,
-                            shape: BoxShape.circle,
+                          decoration: BoxDecoration(
+                            color: colors.onSurface,
+                            border: Border.all(color: colors.surface, width: 1),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.add,
                             size: 20,
-                            color: Colors.white,
+                            color: colors.surface,
                           ),
                         ),
                       ),
@@ -129,20 +137,24 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                _photo == null ? 'Add Group Photo' : 'Change Group Photo',
+                (_photo == null ? 'Add Group Photo' : 'Change Group Photo')
+                    .toUpperCase(),
                 style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.electricBlue,
-                  fontWeight: FontWeight.bold,
+                  color: colors.onSurface,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1,
                 ),
               ),
               const SizedBox(height: AppSpacing.x3l),
               _buildInputField(
-                label: 'Group Name',
+                context,
+                label: '$_typeLabel Name',
                 hint: 'P7 - Mathematics Parents',
                 controller: _nameController,
               ),
               const SizedBox(height: AppSpacing.l),
               _buildInputField(
+                context,
                 label: 'Description (Optional)',
                 hint:
                     'This group is for all P7 parents to discuss Mathematics updates and homework.',
@@ -150,19 +162,24 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: AppSpacing.xl),
+              _buildSectionLabel(context, 'SETUP'),
+              const SizedBox(height: AppSpacing.s),
               _buildSettingTile(
+                context,
                 Icons.person_add_outlined,
                 'Add Members',
                 '${_members.length} selected',
                 onTap: () => context.pop(),
               ),
               _buildSettingTile(
+                context,
                 Icons.public,
                 'Group Type',
                 _typeLabel,
                 onTap: _pickType,
               ),
               _buildSettingTile(
+                context,
                 Icons.admin_panel_settings_outlined,
                 'Who can send messages?',
                 _policy == MessagePolicy.everyone
@@ -170,41 +187,59 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
                     : 'Admins Only',
                 onTap: _pickPolicy,
               ),
-              const SizedBox(height: AppSpacing.x3l),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _canCreate ? () => _create(user) : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.electricBlue,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.disabled(context),
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: _creating
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : Text(
-                          _createLabel,
-                          style: AppTypography.titleMedium.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.x3l),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreateBar(BuildContext context, UserEntity user) {
+    final colors = Theme.of(context).colorScheme;
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(
+        AppSpacing.l,
+        AppSpacing.s,
+        AppSpacing.l,
+        AppSpacing.m,
+      ),
+      child: Container(
+        padding: const EdgeInsets.only(top: AppSpacing.m),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          border: Border(top: BorderSide(color: colors.onSurface, width: 1)),
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _canCreate ? () => _create(user) : null,
+            icon: _creating
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colors.onPrimary,
+                    ),
+                  )
+                : const Icon(Icons.check_circle_outline_rounded),
+            label: Text((_creating ? 'Creating…' : _createLabel).toUpperCase()),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colors.onSurface,
+              foregroundColor: colors.surface,
+              disabledBackgroundColor: colors.surfaceContainerHigh,
+              disabledForegroundColor: colors.onSurfaceVariant,
+              minimumSize: const Size.fromHeight(56),
+              elevation: 0,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
+              ),
+              textStyle: AppTypography.titleMedium.copyWith(
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+              ),
+            ),
           ),
         ),
       ),
@@ -261,53 +296,70 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
   void _pickType() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.zero,
       ),
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final option in [
-              ChatType.group,
-              ChatType.broadcast,
-              ChatType.channel,
-            ])
-              ListTile(
-                title: Text(
-                  option == ChatType.group
-                      ? 'Private Group'
-                      : option == ChatType.broadcast
-                      ? 'Broadcast List'
-                      : 'Announcement Channel',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                subtitle: Text(
-                  option == ChatType.group
-                      ? 'Everyone can see and reply to each other'
-                      : option == ChatType.broadcast
-                      ? 'One-way messages to many recipients'
-                      : 'An announcement feed only admins post to',
-                  style: const TextStyle(color: Colors.white60, fontSize: 12),
-                ),
-                trailing: _type == option
-                    ? const Icon(
-                        Icons.check_circle,
-                        color: AppColors.electricBlue,
-                      )
-                    : null,
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  setState(() {
-                    _type = option;
-                    _policy = _type == ChatType.group
-                        ? MessagePolicy.everyone
-                        : MessagePolicy.adminsOnly;
-                  });
-                },
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: Theme.of(sheetContext).colorScheme.onSurface,
+                width: 1,
               ),
-          ],
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final option in [
+                ChatType.group,
+                ChatType.broadcast,
+                ChatType.channel,
+              ])
+                ListTile(
+                  title: Text(
+                    (option == ChatType.group
+                            ? 'Private Group'
+                            : option == ChatType.broadcast
+                                ? 'Broadcast List'
+                                : 'Announcement Channel')
+                        .toUpperCase(),
+                    style: TextStyle(
+                      color: Theme.of(sheetContext).colorScheme.onSurface,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  subtitle: Text(
+                    option == ChatType.group
+                        ? 'Everyone can see and reply to each other'
+                        : option == ChatType.broadcast
+                            ? 'One-way messages to many recipients'
+                            : 'An announcement feed only admins post to',
+                    style: TextStyle(
+                      color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
+                  ),
+                  trailing: _type == option
+                      ? Icon(
+                          Icons.check_circle,
+                          color: Theme.of(sheetContext).colorScheme.onSurface,
+                        )
+                      : null,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    setState(() {
+                      _type = option;
+                      _policy = _type == ChatType.group
+                          ? MessagePolicy.everyone
+                          : MessagePolicy.adminsOnly;
+                    });
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -316,34 +368,48 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
   void _pickPolicy() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceDark,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.zero,
       ),
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final option in MessagePolicy.values)
-              ListTile(
-                title: Text(
-                  option == MessagePolicy.everyone
-                      ? 'All Members'
-                      : 'Admins Only',
-                  style: const TextStyle(color: Colors.white),
-                ),
-                trailing: _policy == option
-                    ? const Icon(
-                        Icons.check_circle,
-                        color: AppColors.electricBlue,
-                      )
-                    : null,
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  setState(() => _policy = option);
-                },
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border(
+              top: BorderSide(
+                color: Theme.of(sheetContext).colorScheme.onSurface,
+                width: 1,
               ),
-          ],
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final option in MessagePolicy.values)
+                ListTile(
+                  title: Text(
+                    (option == MessagePolicy.everyone
+                            ? 'All Members'
+                            : 'Admins Only')
+                        .toUpperCase(),
+                    style: TextStyle(
+                      color: Theme.of(sheetContext).colorScheme.onSurface,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  trailing: _policy == option
+                      ? Icon(
+                          Icons.check_circle,
+                          color: Theme.of(sheetContext).colorScheme.onSurface,
+                        )
+                      : null,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    setState(() => _policy = option);
+                  },
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -400,47 +466,56 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
     context.go('/messages/chat/$conversationId');
   }
 
-  Widget _buildInputField({
+  Widget _buildInputField(
+    BuildContext context, {
     required String label,
     required String hint,
     required TextEditingController controller,
     int maxLines = 1,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          label,
+          label.toUpperCase(),
           style: AppTypography.labelMedium.copyWith(
-            color: Colors.white70,
-            fontWeight: FontWeight.bold,
+            color: colors.onSurface,
+            fontWeight: FontWeight.w900,
           ),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
           maxLines: maxLines,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: colors.onSurface),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+            hintStyle: TextStyle(
+              color: colors.onSurfaceVariant,
+            ),
             filled: true,
-            fillColor: AppColors.surfaceDark,
+            fillColor: colors.surface,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.zero,
               borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: colors.onSurface,
+                width: 1,
               ),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.zero,
               borderSide: BorderSide(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: colors.onSurface,
+                width: 1,
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.electricBlue),
+              borderRadius: BorderRadius.zero,
+              borderSide: BorderSide(
+                color: colors.onSurface,
+                width: 2,
+              ),
             ),
             contentPadding: const EdgeInsets.all(16),
           ),
@@ -449,48 +524,66 @@ class _NewGroupDetailsScreenState extends State<NewGroupDetailsScreen> {
     );
   }
 
+  Widget _buildSectionLabel(BuildContext context, String label) => Text(
+        label.toUpperCase(),
+        style: AppTypography.labelMedium.copyWith(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.2,
+        ),
+      );
+
   Widget _buildSettingTile(
+    BuildContext context,
     IconData icon,
     String title,
     String value, {
     VoidCallback? onTap,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        color: colors.surface,
+        border: Border.all(color: colors.onSurface, width: 1),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(8),
+            color: colors.onSurface,
+            border: Border.all(color: colors.onSurface, width: 1),
           ),
-          child: Icon(icon, color: Colors.white70, size: 20),
+          child: Icon(
+            icon,
+            color: colors.surface,
+            size: 20,
+          ),
         ),
         title: Text(
-          title,
+          title.toUpperCase(),
           style: AppTypography.titleSmall.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
+            color: colors.onSurface,
+            fontWeight: FontWeight.w900,
           ),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              value,
+              value.toUpperCase(),
               style: AppTypography.bodySmall.copyWith(
-                color: AppColors.electricBlue,
-                fontWeight: FontWeight.w600,
+                color: colors.onSurface,
+                fontWeight: FontWeight.w900,
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, size: 20, color: Colors.white24),
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: colors.onSurface,
+            ),
           ],
         ),
         onTap: onTap,

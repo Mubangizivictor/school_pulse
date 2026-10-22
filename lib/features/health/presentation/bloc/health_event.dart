@@ -96,6 +96,24 @@ class UpdateInventoryItemEvent extends HealthEvent {
   List<Object> get props => [item];
 }
 
+class DispenseMedicalItemEvent extends HealthEvent {
+  final String itemId;
+  final String visitId;
+  final String studentId;
+  final int quantity;
+  final String schoolId;
+  const DispenseMedicalItemEvent({
+    required this.itemId,
+    required this.visitId,
+    required this.studentId,
+    required this.quantity,
+    required this.schoolId,
+  });
+
+  @override
+  List<Object> get props => [itemId, visitId, studentId, quantity, schoolId];
+}
+
 class FetchSupplyRequests extends HealthEvent {
   final String schoolId;
   const FetchSupplyRequests(this.schoolId);

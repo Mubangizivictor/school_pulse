@@ -37,9 +37,7 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryColor = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
+    final primaryColor = AppColors.textPrimary(context);
 
     return BlocBuilder<ClassTeacherContextBloc, ClassTeacherContextState>(
       builder: (context, contextState) {
@@ -52,7 +50,7 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
               ].where((e) => e != null && e.isNotEmpty).join(' ');
 
         return Scaffold(
-          backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+          backgroundColor: AppColors.background(context),
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -191,7 +189,7 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.s),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color,
                   borderRadius: BorderRadius.circular(AppSpacing.s),
                 ),
                 child: Icon(_iconFor(status), color: color, size: 20),
@@ -204,9 +202,7 @@ class _ClassAnnouncementsScreenState extends State<ClassAnnouncementsScreen> {
                     Text(
                       announcement.title,
                       style: AppTypography.titleMedium.copyWith(
-                        color: isDark
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimaryLight,
+                        color: AppColors.textPrimary(context),
                         fontWeight: FontWeight.bold,
                       ),
                     ),

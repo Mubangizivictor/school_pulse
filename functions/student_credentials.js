@@ -31,6 +31,65 @@ function mintQrToken() {
   return `${QR_PREFIX}.${token}`;
 }
 
+// Never store enough of a credential value in a history/audit row to make it
+// usable - just enough to distinguish "which card/token" was involved for
+// staff who already have legitimate credential-management access.
+function maskCredentialValue(value) {
+  if (typeof value !== "string" || value.length === 0) return null;
+  const tail = value.slice(-4);
+  return `••••${tail}`;
+}
+
+/**
+ * Appends one append-only history row (schools/{schoolId}/credential_history)
+ * and one audit_events row (institutions/{schoolId}/audit_events) inside the
+ * SAME transaction as the credential mutation it describes, so the record of
+ * "what happened" can never drift from - or be lost relative to - the state
+ * change itself. Mirrors enrollment_audit.js's recordEnrollmentAuditEvent
+ * trust model (actor/timestamp always server-derived) without a second
+ * round-trip through a separate callable.
+ */
+function recordCredentialLifecycleEvent(tx, db, {
+  schoolId, studentId, identityDocumentId, credentialType, credentialValue,
+  action, auditAction, reason, actorUid,
+}) {
+  const now = admin.firestore.FieldValue.serverTimestamp();
+
+  const historyRef = db.collection("schools").doc(schoolId)
+    .collection("credential_history").doc();
+  tx.set(historyRef, {
+    schoolId,
+    studentId,
+    identityDocumentId,
+    credentialType,
+    credentialValueMasked: maskCredentialValue(credentialValue),
+    action,
+    reason: reason || null,
+    actorId: actorUid,
+    createdAt: now,
+  });
+
+  const auditRef = db.collection("institutions").doc(schoolId)
+    .collection("audit_events").doc();
+  tx.set(auditRef, {
+    auditEventId: auditRef.id,
+    institutionId: schoolId,
+    moduleKey: "student_identity",
+    eventType: "Identity",
+    action: auditAction,
+    status: "success",
+    sensitivity: "normal",
+    source: "cloud_function",
+    actorId: actorUid,
+    targetType: "student",
+    targetId: studentId,
+    correlationId: studentId,
+    reason: reason || null,
+    metadataSafe: { credentialType, credentialValueMasked: maskCredentialValue(credentialValue) },
+    createdAt: now,
+  });
+}
+
 async function reserveSequence(tx, db, schoolId) {
   const counterRef = db.collection("schools").doc(schoolId)
     .collection("counters").doc("studentSequence");
@@ -94,6 +153,8 @@ async function issueIdentityInTransaction(tx, db, { studentId, schoolId, schoolP
     schoolStudentId,
     qrCodeData: token,
     nfcStatus: "unassigned",
+    qrCredentialStatus: "active",
+    issuedAt: now,
     createdAt: now,
     updatedAt: now,
   };
@@ -143,7 +204,7 @@ exports.issueStudentIdentity = onCall(async (request) => {
 });
 
 exports.regenerateStudentQrCredential = onCall(async (request) => {
-  const { db, schoolId: callerSchoolId } = await requireStaffCaller(request.auth);
+  const { db, schoolId: callerSchoolId, uid } = await requireStaffCaller(request.auth);
   const studentId = request.data?.studentId;
   if (typeof studentId !== "string" || !studentId) {
     throw new HttpsError("invalid-argument", "studentId is required.");
@@ -183,7 +244,12 @@ exports.regenerateStudentQrCredential = onCall(async (request) => {
     }
 
     const newToken = mintQrToken();
-    tx.update(doc.ref, { qrCodeData: newToken, schoolId: callerSchoolId, updatedAt: now });
+    tx.update(doc.ref, {
+      qrCodeData: newToken,
+      qrCredentialStatus: "active",
+      schoolId: callerSchoolId,
+      updatedAt: now,
+    });
 
     const newCredentialRef = db.collection("schools").doc(callerSchoolId)
       .collection("credentials").doc(newToken.split(".")[1]);
@@ -198,6 +264,17 @@ exports.regenerateStudentQrCredential = onCall(async (request) => {
       credentialVersion: (identity.credentialVersion || 1) + 1,
       identityDocumentId: doc.id,
       replacesToken: oldToken || null,
+    });
+
+    recordCredentialLifecycleEvent(tx, db, {
+      schoolId: callerSchoolId,
+      studentId,
+      identityDocumentId: doc.id,
+      credentialType: "qr",
+      credentialValue: newToken,
+      action: "qr_replaced",
+      auditAction: "identity_qr_replaced",
+      actorUid: uid,
     });
 
     return { qrCodeData: newToken };
@@ -291,6 +368,318 @@ exports.assignNfcCredential = onCall(async (request) => {
       updatedAt: now,
     }, { merge: true });
 
+    recordCredentialLifecycleEvent(tx, db, {
+      schoolId: callerSchoolId,
+      studentId,
+      identityDocumentId: identityDoc.id,
+      credentialType: "nfc",
+      credentialValue: normalizedCardUid,
+      action: "nfc_assigned",
+      auditAction: "enrollment_nfc_registered",
+      actorUid: uid,
+    });
+
+    return { cardUid: normalizedCardUid, identityId: studentId, status: "active" };
+  });
+
+  return result;
+});
+
+/**
+ * Revokes the currently-assigned NFC card and atomically assigns a
+ * replacement to the same student - the "lost/stolen/damaged card" flow.
+ * A replace is NOT the same as a bare revoke: the old card is marked
+ * "replaced" (not denylisted in revoked_credentials), since the intent is a
+ * routine card swap, not a security incident requiring the old UID to be
+ * actively rejected if it is ever scanned again by mistake.
+ */
+exports.replaceNfcCredential = onCall(async (request) => {
+  const { db, schoolId: callerSchoolId, uid } = await requireStaffCaller(request.auth);
+  const cardUid = request.data?.cardUid;
+  const newCardUid = request.data?.newCardUid;
+  const studentId = request.data?.studentId;
+  const reason = typeof request.data?.reason === "string" ? request.data.reason.trim().slice(0, 200) : "";
+
+  if (typeof cardUid !== "string" || !cardUid.trim()) {
+    throw new HttpsError("invalid-argument", "cardUid is required.");
+  }
+  if (typeof newCardUid !== "string" || !newCardUid.trim()) {
+    throw new HttpsError("invalid-argument", "newCardUid is required.");
+  }
+  if (typeof studentId !== "string" || !studentId) {
+    throw new HttpsError("invalid-argument", "studentId is required.");
+  }
+  const oldUid = cardUid.trim();
+  const newUid = newCardUid.trim();
+
+  const identityQuery = db.collection("student_identities")
+    .where("studentId", "==", studentId).limit(1);
+
+  const result = await db.runTransaction(async (tx) => {
+    const studentRef = db.collection("students").doc(studentId);
+    const studentSnap = await tx.get(studentRef);
+    if (!studentSnap.exists) {
+      throw new HttpsError("not-found", "Student not found.");
+    }
+    const student = studentSnap.data() || {};
+    if (student.schoolId !== callerSchoolId) {
+      throw new HttpsError("permission-denied", "Cannot replace a card for a different school's student.");
+    }
+
+    const identitySnap = await tx.get(identityQuery);
+    if (identitySnap.empty) {
+      throw new HttpsError("not-found", "No identity found for this student.");
+    }
+    const identityDoc = identitySnap.docs[0];
+    const identity = identityDoc.data() || {};
+
+    const oldCredentialRef = db.collection("schools").doc(callerSchoolId)
+      .collection("credentials").doc(oldUid);
+    const oldCredentialSnap = await tx.get(oldCredentialRef);
+    if (!oldCredentialSnap.exists) {
+      throw new HttpsError("not-found", "The card being replaced is not on file.");
+    }
+    const oldCredential = oldCredentialSnap.data() || {};
+    const belongsToThisStudent = oldCredential.identityId === studentId
+      || oldCredential.identityId === identity.uniqueSystemId;
+    if (!belongsToThisStudent) {
+      throw new HttpsError("failed-precondition", "This card is not assigned to this student.");
+    }
+
+    const newCredentialRef = db.collection("schools").doc(callerSchoolId)
+      .collection("credentials").doc(newUid);
+    const newCredentialSnap = await tx.get(newCredentialRef);
+    if (newCredentialSnap.exists) {
+      const existingNew = newCredentialSnap.data() || {};
+      const newBelongsToThisStudent = existingNew.identityId === studentId
+        || existingNew.identityId === identity.uniqueSystemId;
+      if (existingNew.status === "active" && !newBelongsToThisStudent) {
+        throw new HttpsError("already-exists", "The replacement card is already registered to another identity.", {
+          conflictingIdentityId: existingNew.identityId,
+          conflictingIdentityType: existingNew.identityType,
+        });
+      }
+    }
+
+    const now = admin.firestore.FieldValue.serverTimestamp();
+
+    tx.set(oldCredentialRef, { status: "replaced", updatedAt: now }, { merge: true });
+
+    tx.set(newCredentialRef, {
+      credentialValue: newUid,
+      credentialType: "nfc",
+      identityId: studentId,
+      identityType: "student",
+      schoolId: callerSchoolId,
+      status: "active",
+      updatedAt: now,
+      credentialVersion: (newCredentialSnap.exists ? (newCredentialSnap.data().credentialVersion || 1) + 1 : 1),
+      identityDocumentId: identityDoc.id,
+      assignedBy: uid,
+      replacesCredentialValue: oldUid,
+    }, { merge: true });
+
+    tx.set(identityDoc.ref, {
+      studentId,
+      schoolId: callerSchoolId,
+      nfcStatus: "active",
+      updatedAt: now,
+    }, { merge: true });
+
+    recordCredentialLifecycleEvent(tx, db, {
+      schoolId: callerSchoolId,
+      studentId,
+      identityDocumentId: identityDoc.id,
+      credentialType: "nfc",
+      credentialValue: newUid,
+      action: "nfc_replaced",
+      auditAction: "identity_nfc_replaced",
+      reason,
+      actorUid: uid,
+    });
+
+    return { cardUid: newUid, identityId: studentId, status: "active" };
+  });
+
+  return result;
+});
+
+/**
+ * Revokes an NFC card: marks the credential doc "revoked" and denylists the
+ * physical UID in revoked_credentials so IdentityResolver rejects it at scan
+ * time even before any replacement is assigned. Used for lost/stolen/damaged
+ * cards where the card must stop working immediately, as distinct from
+ * replaceNfcCredential's routine swap.
+ */
+exports.revokeNfcCredential = onCall(async (request) => {
+  const { db, schoolId: callerSchoolId, uid } = await requireStaffCaller(request.auth);
+  const cardUid = request.data?.cardUid;
+  const studentId = request.data?.studentId;
+  const reason = typeof request.data?.reason === "string" ? request.data.reason.trim().slice(0, 200) : "";
+
+  if (typeof cardUid !== "string" || !cardUid.trim()) {
+    throw new HttpsError("invalid-argument", "cardUid is required.");
+  }
+  if (typeof studentId !== "string" || !studentId) {
+    throw new HttpsError("invalid-argument", "studentId is required.");
+  }
+  const normalizedCardUid = cardUid.trim();
+
+  const identityQuery = db.collection("student_identities")
+    .where("studentId", "==", studentId).limit(1);
+
+  const result = await db.runTransaction(async (tx) => {
+    const studentRef = db.collection("students").doc(studentId);
+    const studentSnap = await tx.get(studentRef);
+    if (!studentSnap.exists) {
+      throw new HttpsError("not-found", "Student not found.");
+    }
+    const student = studentSnap.data() || {};
+    if (student.schoolId !== callerSchoolId) {
+      throw new HttpsError("permission-denied", "Cannot revoke a card for a different school's student.");
+    }
+
+    const identitySnap = await tx.get(identityQuery);
+    if (identitySnap.empty) {
+      throw new HttpsError("not-found", "No identity found for this student.");
+    }
+    const identityDoc = identitySnap.docs[0];
+    const identity = identityDoc.data() || {};
+
+    const credentialRef = db.collection("schools").doc(callerSchoolId)
+      .collection("credentials").doc(normalizedCardUid);
+    const credentialSnap = await tx.get(credentialRef);
+    if (!credentialSnap.exists) {
+      throw new HttpsError("not-found", "This card is not on file.");
+    }
+    const credential = credentialSnap.data() || {};
+    const belongsToThisStudent = credential.identityId === studentId
+      || credential.identityId === identity.uniqueSystemId;
+    if (!belongsToThisStudent) {
+      throw new HttpsError("failed-precondition", "This card is not assigned to this student.");
+    }
+
+    const now = admin.firestore.FieldValue.serverTimestamp();
+
+    tx.set(credentialRef, { status: "revoked", updatedAt: now }, { merge: true });
+
+    const revocationRef = db.collection("schools").doc(callerSchoolId)
+      .collection("revoked_credentials").doc(normalizedCardUid);
+    tx.set(revocationRef, {
+      credentialValue: normalizedCardUid,
+      schoolId: callerSchoolId,
+      revokedAt: now,
+      reason: reason || null,
+      revokedBy: uid,
+    });
+
+    tx.set(identityDoc.ref, {
+      studentId,
+      schoolId: callerSchoolId,
+      nfcStatus: "revoked",
+      updatedAt: now,
+    }, { merge: true });
+
+    recordCredentialLifecycleEvent(tx, db, {
+      schoolId: callerSchoolId,
+      studentId,
+      identityDocumentId: identityDoc.id,
+      credentialType: "nfc",
+      credentialValue: normalizedCardUid,
+      action: "nfc_revoked",
+      auditAction: "identity_nfc_revoked",
+      reason,
+      actorUid: uid,
+    });
+
+    return { cardUid: normalizedCardUid, identityId: studentId, status: "revoked" };
+  });
+
+  return result;
+});
+
+/**
+ * Reverses a revocation and restores the card to active for its existing
+ * identity mapping - for correcting an accidental/investigative
+ * deactivation. Fails if the card has no prior mapping to reactivate (it
+ * must have been assigned and then revoked at some point).
+ */
+exports.reactivateNfcCredential = onCall(async (request) => {
+  const { db, schoolId: callerSchoolId, uid } = await requireStaffCaller(request.auth);
+  const cardUid = request.data?.cardUid;
+  const studentId = request.data?.studentId;
+
+  if (typeof cardUid !== "string" || !cardUid.trim()) {
+    throw new HttpsError("invalid-argument", "cardUid is required.");
+  }
+  if (typeof studentId !== "string" || !studentId) {
+    throw new HttpsError("invalid-argument", "studentId is required.");
+  }
+  const normalizedCardUid = cardUid.trim();
+
+  const identityQuery = db.collection("student_identities")
+    .where("studentId", "==", studentId).limit(1);
+
+  const result = await db.runTransaction(async (tx) => {
+    const studentRef = db.collection("students").doc(studentId);
+    const studentSnap = await tx.get(studentRef);
+    if (!studentSnap.exists) {
+      throw new HttpsError("not-found", "Student not found.");
+    }
+    const student = studentSnap.data() || {};
+    if (student.schoolId !== callerSchoolId) {
+      throw new HttpsError("permission-denied", "Cannot reactivate a card for a different school's student.");
+    }
+
+    const identitySnap = await tx.get(identityQuery);
+    if (identitySnap.empty) {
+      throw new HttpsError("not-found", "No identity found for this student.");
+    }
+    const identityDoc = identitySnap.docs[0];
+    const identity = identityDoc.data() || {};
+
+    const credentialRef = db.collection("schools").doc(callerSchoolId)
+      .collection("credentials").doc(normalizedCardUid);
+    const credentialSnap = await tx.get(credentialRef);
+    if (!credentialSnap.exists) {
+      throw new HttpsError("failed-precondition", "No prior mapping found for this card - assign it instead.");
+    }
+    const credential = credentialSnap.data() || {};
+    const belongsToThisStudent = credential.identityId === studentId
+      || credential.identityId === identity.uniqueSystemId;
+    if (!belongsToThisStudent) {
+      throw new HttpsError("failed-precondition", "This card is not assigned to this student.");
+    }
+    if (credential.status !== "revoked") {
+      throw new HttpsError("failed-precondition", "This card is not currently revoked.");
+    }
+
+    const now = admin.firestore.FieldValue.serverTimestamp();
+
+    tx.set(credentialRef, { status: "active", updatedAt: now }, { merge: true });
+
+    const revocationRef = db.collection("schools").doc(callerSchoolId)
+      .collection("revoked_credentials").doc(normalizedCardUid);
+    tx.delete(revocationRef);
+
+    tx.set(identityDoc.ref, {
+      studentId,
+      schoolId: callerSchoolId,
+      nfcStatus: "active",
+      updatedAt: now,
+    }, { merge: true });
+
+    recordCredentialLifecycleEvent(tx, db, {
+      schoolId: callerSchoolId,
+      studentId,
+      identityDocumentId: identityDoc.id,
+      credentialType: "nfc",
+      credentialValue: normalizedCardUid,
+      action: "nfc_reactivated",
+      auditAction: "identity_nfc_reactivated",
+      actorUid: uid,
+    });
+
     return { cardUid: normalizedCardUid, identityId: studentId, status: "active" };
   });
 
@@ -311,6 +700,11 @@ exports.backfillStudentIdentities = onCall(async (request) => {
   const requestedSchoolId = request.data?.schoolId;
   const schoolPrefix = (request.data?.schoolPrefix || "SP").toUpperCase().slice(0, 8);
 
+  // Only genuinely-enrolled students are in scope - an applicant or an
+  // in-progress admission has no business being issued a permanent
+  // studentCode/QR identity yet.
+  const enrolledStatuses = new Set(["admitted", "enrollmentInProgress", "enrolled", "active"]);
+
   const schoolsSnap = requestedSchoolId
     ? await db.collection("schools").where(admin.firestore.FieldPath.documentId(), "==", requestedSchoolId).get()
     : await db.collection("schools").get();
@@ -318,6 +712,7 @@ exports.backfillStudentIdentities = onCall(async (request) => {
   const results = [];
   for (const schoolDoc of schoolsSnap.docs) {
     const schoolId = schoolDoc.id;
+    const runId = db.collection("institutions").doc(schoolId).collection("migration_reports").doc().id;
     const studentsSnap = await db.collection("students")
       .where("schoolId", "==", schoolId)
       .get();
@@ -332,8 +727,31 @@ exports.backfillStudentIdentities = onCall(async (request) => {
     let issued = 0;
     let skippedExisting = 0;
     let skippedOther = 0;
+    let skippedNotEnrolled = 0;
+    let missingParentLink = 0;
+    const backfilledStudents = [];
+    const errors = [];
+
     for (const studentDoc of studentsSnap.docs) {
       const studentId = studentDoc.id;
+      const student = studentDoc.data() || {};
+
+      if (!enrolledStatuses.has(student.status)) {
+        skippedNotEnrolled++;
+        continue;
+      }
+
+      // Parent-link gap is reported, never synthesized - there is no safe
+      // way to backfill a real guardian contact from nothing.
+      const relationshipSnap = await db.collection("parent_student_relationships")
+        .where("schoolId", "==", schoolId)
+        .where("studentId", "==", studentId)
+        .limit(1)
+        .get();
+      if (relationshipSnap.empty) {
+        missingParentLink++;
+      }
+
       if (studentIdsWithIdentity.has(studentId)) {
         skippedExisting++;
         continue;
@@ -346,16 +764,42 @@ exports.backfillStudentIdentities = onCall(async (request) => {
           skippedOther++;
         } else if (outcome.created) {
           issued++;
+          backfilledStudents.push({
+            studentId,
+            fieldsBackfilled: ["studentCode", "qrReference", "student_identities"],
+          });
         } else {
           skippedExisting++;
         }
       } catch (error) {
         console.error("BACKFILL_STUDENT_IDENTITY_FAILED", { schoolId, studentId, error: error.message });
         skippedOther++;
+        errors.push({ studentId, message: error.message });
       }
     }
 
-    results.push({ schoolId, studentsScanned: studentsSnap.size, issued, skippedExisting, skippedOther });
+    const report = {
+      runId,
+      schoolId,
+      requestedBy: request.auth?.uid || null,
+      studentsScanned: studentsSnap.size,
+      studentsInScope: studentsSnap.size - skippedNotEnrolled,
+      skippedNotEnrolled,
+      issued,
+      skippedExisting,
+      skippedOther,
+      missingParentLinkFollowUp: missingParentLink,
+      backfilledStudents,
+      errors,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    await db.collection("institutions").doc(schoolId)
+      .collection("migration_reports").doc(runId).set(report);
+
+    results.push({
+      schoolId, runId, studentsScanned: studentsSnap.size, issued, skippedExisting,
+      skippedOther, skippedNotEnrolled, missingParentLinkFollowUp: missingParentLink,
+    });
   }
 
   return { ok: true, schools: results };
@@ -549,4 +993,7 @@ exports.setStudentAccessCodeStatus = onCall(async (request) => {
   return { ok: true };
 });
 
-exports.__test__ = { issueIdentityInTransaction, mintQrToken, reserveSequence, isStaffRole, generateAccessCode };
+exports.__test__ = {
+  issueIdentityInTransaction, mintQrToken, reserveSequence, isStaffRole,
+  generateAccessCode, maskCredentialValue, recordCredentialLifecycleEvent,
+};

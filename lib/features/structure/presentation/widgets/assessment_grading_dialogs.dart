@@ -62,18 +62,18 @@ Future<void> showFeeCategoryFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        FeeCategory(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          code: codeController.text,
-          description: descController.text,
-          isMandatory: isMandatory,
-          isActive: isActive,
-        ),
+      final category = FeeCategory(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        code: codeController.text,
+        description: descController.text,
+        isMandatory: isMandatory,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(category);
     },
   );
 }
@@ -131,17 +131,17 @@ Future<void> showAssessmentTypeFormDialog(
     ),
     onSubmit: () {
       if (!formKey.currentState!.validate()) return;
-      onSave(
-        AssessmentTypeDef(
-          id: existing?.id ?? const Uuid().v4(),
-          schoolId: existing?.schoolId ?? schoolId,
-          name: nameController.text,
-          weightPercentage: double.tryParse(weightController.text) ?? 0,
-          description: descController.text,
-          isActive: isActive,
-        ),
+      final assessmentType = AssessmentTypeDef(
+        id: existing?.id ?? const Uuid().v4(),
+        schoolId: existing?.schoolId ?? schoolId,
+        name: nameController.text,
+        weightPercentage: double.tryParse(weightController.text) ?? 0,
+        description: descController.text,
+        isActive: isActive,
       );
+      FocusManager.instance.primaryFocus?.unfocus();
       Navigator.pop(context);
+      onSave(assessmentType);
     },
   );
 }

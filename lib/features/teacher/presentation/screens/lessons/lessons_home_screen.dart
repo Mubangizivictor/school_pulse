@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/app_components.dart';
+import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
 
 class LessonsHomeScreen extends StatelessWidget {
   const LessonsHomeScreen({super.key});
@@ -27,32 +28,7 @@ class LessonsHomeScreen extends StatelessWidget {
                       color: AppColors.textPrimary(context),
                     ),
                   ),
-                  Stack(
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          Icons.notifications_none,
-                          color: AppColors.textPrimary(context),
-                        ),
-                        onPressed: () {},
-                      ),
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: AppColors.errorRed,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text(
-                            '1',
-                            style: TextStyle(color: Colors.white, fontSize: 8),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                  const NotificationBellButton(),
                 ],
               ),
               Text(
@@ -140,7 +116,7 @@ class LessonsHomeScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary(context).withValues(alpha: 0.1),
+                  color: AppColors.primary(context),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(

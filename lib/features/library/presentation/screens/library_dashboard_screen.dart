@@ -3,11 +3,14 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/admin/presentation/screens/library_settings_screen.dart';
 import 'package:school_pulse/features/library/presentation/screens/issue_resource_screen.dart';
+import 'package:school_pulse/features/library/presentation/screens/reservations_screen.dart';
 import 'package:school_pulse/features/library/presentation/widgets/reading_trends_chart.dart';
 import 'package:school_pulse/core/services/printer/printer_service.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import '../bloc/library_bloc.dart';
 import '../bloc/library_event.dart';
@@ -37,43 +40,7 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Library Dashboard'),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search resources or borrowers...',
-                prefixIcon: const Icon(Icons.search),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              onChanged: (value) =>
-                  setState(() => _searchQuery = value.toLowerCase()),
-            ),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            style: IconButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-            ),
-            onPressed: () => _showPolicySettings(context),
-          ),
-          const SizedBox(width: 8),
-          NotificationBellButton(
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: staffDashboardAppBar(context, roleLabel: 'Librarian'),
       body: BlocBuilder<LibraryBloc, LibraryState>(
         builder: (context, state) {
           if (state is LibraryLoading && state is! LibraryHistoryLoaded) {
@@ -113,13 +80,73 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               children: [
+                StaffHeroSummaryCard(
+                  greetingNameFallback: 'Librarian',
+                  kpis: stats == null
+                      ? null
+                      : [
+                          StaffKpiData(
+                            title: 'Total Resources',
+                            valueText: '${stats['totalBooks'] ?? 0}',
+                            subtitle: 'In collection',
+                            icon: Icons.library_books_outlined,
+                            color: AppColors.information(context),
+                          ),
+                          StaffKpiData(
+                            title: 'Issued',
+                            valueText: '${stats['borrowedBooks'] ?? 0}',
+                            subtitle: 'Currently out',
+                            icon: Icons.book_outlined,
+                            color: AppColors.success(context),
+                          ),
+                          StaffKpiData(
+                            title: 'Overdue',
+                            valueText: '${stats['overdueBooks'] ?? 0}',
+                            subtitle: 'Needs follow-up',
+                            icon: Icons.warning_amber_rounded,
+                            color: AppColors.danger(context),
+                          ),
+                          StaffKpiData(
+                            title: 'Active Loans',
+                            valueText: '${borrowings.length}',
+                            subtitle: 'Not yet returned',
+                            icon: Icons.assignment_return_outlined,
+                            color: AppColors.warning(context),
+                          ),
+                        ],
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Search resources or borrowers...',
+                          prefixIcon: const Icon(Icons.search),
+                          filled: true,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onChanged: (value) =>
+                            setState(() => _searchQuery = value.toLowerCase()),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.settings_outlined),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainer,
+                      ),
+                      onPressed: () => _showPolicySettings(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
                 if (stats != null) ...[
-                  _LibraryStats(
-                    totalBooks: stats['totalBooks'] ?? 0,
-                    issuedCount: stats['borrowedBooks'] ?? 0,
-                    overdueCount: stats['overdueBooks'] ?? 0,
-                  ),
-                  const SizedBox(height: 24),
                   const SectionHeader(title: 'Borrowing Trends'),
                   const SizedBox(height: 12),
                   ReadingTrendsChart(
@@ -133,10 +160,20 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const SectionHeader(title: 'Active Borrowings'),
-                    TextButton.icon(
-                      onPressed: () => _showResourceInventory(context),
-                      icon: const Icon(Icons.inventory_2_outlined),
-                      label: const Text('Inventory & Labels'),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton.icon(
+                          onPressed: () => _showReservations(context),
+                          icon: const Icon(Icons.bookmark_added_outlined),
+                          label: const Text('Reservations'),
+                        ),
+                        TextButton.icon(
+                          onPressed: () => _showResourceInventory(context),
+                          icon: const Icon(Icons.inventory_2_outlined),
+                          label: const Text('Inventory & Labels'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -183,6 +220,19 @@ class _LibraryDashboardScreenState extends State<LibraryDashboardScreen> {
           );
           Navigator.pop(context);
         },
+      ),
+    );
+  }
+
+  void _showReservations(BuildContext context) {
+    final bloc = context.read<LibraryBloc>();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: bloc,
+          child: ReservationsScreen(schoolId: widget.schoolId),
+        ),
       ),
     );
   }
@@ -449,43 +499,6 @@ class _ReturnResourceDialogState extends State<_ReturnResourceDialog> {
             double.tryParse(_fineController.text) ?? 0,
           ),
           child: const Text('Confirm Return'),
-        ),
-      ],
-    );
-  }
-}
-
-class _LibraryStats extends StatelessWidget {
-  final int totalBooks;
-  final int overdueCount;
-  final int issuedCount;
-
-  const _LibraryStats({
-    required this.totalBooks,
-    required this.overdueCount,
-    required this.issuedCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: DashboardStatCard(
-            title: 'Issued',
-            value: issuedCount.toDouble(),
-            icon: Icons.book_outlined,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: DashboardStatCard(
-            title: 'Overdue',
-            value: overdueCount.toDouble(),
-            icon: Icons.warning_amber_rounded,
-            color: Theme.of(context).extension<SemanticColors>()!.error,
-          ),
         ),
       ],
     );

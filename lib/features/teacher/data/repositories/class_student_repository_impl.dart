@@ -6,6 +6,7 @@ import 'package:school_pulse/core/permissions/permission.dart';
 
 import '../../domain/entities/active_responsibility_context.dart';
 import '../../domain/entities/class_student_summary.dart';
+import '../../domain/entities/student_leave_application.dart';
 import '../../domain/repositories/class_student_repository.dart';
 import '../../domain/services/class_teacher_assignment_service.dart';
 import '../datasources/class_teacher_local_data_source.dart';
@@ -158,6 +159,57 @@ class ClassStudentRepositoryImpl implements ClassStudentRepository {
       academicYearId: context.academicYearId,
       streamId: context.streamId,
     );
+  }
+
+  @override
+  Future<Either<Failure, List<StudentLeaveApplication>>>
+  getStudentLeaveApplications({
+    required ActiveResponsibilityContext context,
+    required String studentId,
+  }) async {
+    final authorized = assignmentService.authorize(
+      context,
+      permission: Permission.classLeaveView,
+    );
+    if (authorized.isLeft()) {
+      return authorized.fold(
+        Left.new,
+        (_) => const Left(PermissionDeniedFailure()),
+      );
+    }
+
+    final classId = context.classId;
+    if (classId == null || classId.isEmpty) {
+      return const Left(
+        ValidationFailure('This responsibility is not tied to a class.'),
+      );
+    }
+
+    // Leave rows carry no classId, so roster membership is established
+    // against the student record first. Without this a teacher could read
+    // any student's leave by id.
+    final member = await getClassStudent(
+      context: context,
+      studentId: studentId,
+    );
+    if (member.isLeft()) {
+      return member.fold(
+        Left.new,
+        (_) => const Left(PermissionDeniedFailure()),
+      );
+    }
+
+    try {
+      final applications = await remoteDataSource.getStudentLeaveApplications(
+        schoolId: context.schoolId,
+        studentId: studentId,
+      );
+      return Right(applications);
+    } catch (_) {
+      return const Left(
+        ServerFailure('Could not load leave applications for this student.'),
+      );
+    }
   }
 
   @override

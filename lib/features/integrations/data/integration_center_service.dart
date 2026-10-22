@@ -38,12 +38,14 @@ class IntegrationCenterService {
       .httpsCallable('disconnectIntegration')
       .call({'integrationKey': key});
 
-  Future<Map<String, dynamic>> healthSummary() async => Map<String, dynamic>.from(
-    (await _functions
-            .httpsCallable('getIntegrationHealthSummary')
-            .call<Map<String, dynamic>>())
-        .data['summary'] as Map,
-  );
+  Future<Map<String, dynamic>> healthSummary() async =>
+      Map<String, dynamic>.from(
+        (await _functions
+                    .httpsCallable('getIntegrationHealthSummary')
+                    .call<Map<String, dynamic>>())
+                .data['summary']
+            as Map,
+      );
 
   Future<List<Map<String, dynamic>>> listDevices() async {
     final result = await _functions
@@ -63,11 +65,9 @@ class IntegrationCenterService {
     return result.data['deviceId'] as String;
   }
 
-  Future<void> updateDeviceStatus(String deviceId, String status) =>
-      _functions.httpsCallable('updateIntegrationDeviceStatus').call({
-        'deviceId': deviceId,
-        'status': status,
-      });
+  Future<void> updateDeviceStatus(String deviceId, String status) => _functions
+      .httpsCallable('updateIntegrationDeviceStatus')
+      .call({'deviceId': deviceId, 'status': status});
 
   Future<void> revokeDevice(String deviceId) => _functions
       .httpsCallable('revokeIntegrationDevice')

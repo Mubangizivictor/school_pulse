@@ -63,9 +63,7 @@ class BoardingDashboardHeader extends StatelessWidget {
               children: [
                 Positioned.fill(
                   child: CircleAvatar(
-                    backgroundColor: theme.colorScheme.primary.withValues(
-                      alpha: 0.15,
-                    ),
+                    backgroundColor: theme.colorScheme.primary,
                     backgroundImage: hasPhoto ? NetworkImage(photoUrl!) : null,
                     child: hasPhoto
                         ? null
@@ -228,9 +226,7 @@ class BoardingOverviewCard extends StatelessWidget {
                       VerticalDivider(
                         width: 1,
                         thickness: 1,
-                        color: theme.colorScheme.outlineVariant.withValues(
-                          alpha: 0.5,
-                        ),
+                        color: theme.colorScheme.outlineVariant,
                       ),
                     Expanded(child: _MetricTile(metric: metrics[i])),
                   ],
@@ -274,7 +270,7 @@ class _MetricTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
+                color: theme.colorScheme.onSurface,
                 fontSize: 11.5,
                 height: 1.15,
               ),
@@ -368,8 +364,13 @@ class BoardingQuickAction {
 
 class BoardingQuickActionGrid extends StatelessWidget {
   final List<BoardingQuickAction> actions;
+  final bool useGlassIconContainers;
 
-  const BoardingQuickActionGrid({super.key, required this.actions});
+  const BoardingQuickActionGrid({
+    super.key,
+    required this.actions,
+    this.useGlassIconContainers = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -396,7 +397,11 @@ class BoardingQuickActionGrid extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(action.icon, color: action.color, size: 26),
+              _QuickActionIcon(
+                icon: action.icon,
+                color: action.color,
+                useGlassContainer: useGlassIconContainers,
+              ),
               const SizedBox(height: AppSpacing.m),
               Flexible(
                 child: Text(
@@ -416,6 +421,250 @@ class BoardingQuickActionGrid extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _QuickActionIcon extends StatelessWidget {
+  const _QuickActionIcon({
+    required this.icon,
+    required this.color,
+    required this.useGlassContainer,
+  });
+
+  final IconData icon;
+  final Color color;
+  final bool useGlassContainer;
+
+  @override
+  Widget build(BuildContext context) {
+    final iconWidget = Icon(icon, color: color, size: 26);
+    if (!useGlassContainer) return iconWidget;
+
+    return Container(
+      width: 48,
+      height: 48,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.onSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface),
+      ),
+      child: iconWidget,
+    );
+  }
+}
+
+/// A single tile in the secondary metrics row - Dormitories assigned,
+/// Occupancy %, Open Discipline Cases, Welfare Concerns.
+class BoardingSecondaryMetric {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final String value;
+  final VoidCallback? onTap;
+
+  const BoardingSecondaryMetric({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.value,
+    this.onTap,
+  });
+}
+
+/// 2x2 grid of secondary boarding metrics - distinct from
+/// [BoardingOverviewCard]'s roll-total strip, this surfaces the
+/// dormitory/occupancy/discipline/welfare snapshot.
+class BoardingSecondaryMetricsRow extends StatelessWidget {
+  final List<BoardingSecondaryMetric> metrics;
+  final bool isLoading;
+
+  const BoardingSecondaryMetricsRow({
+    super.key,
+    required this.metrics,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Skeleton(height: 140, borderRadius: 16);
+    }
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: AppSpacing.l,
+        crossAxisSpacing: AppSpacing.l,
+        childAspectRatio: 1.9,
+      ),
+      itemCount: metrics.length,
+      itemBuilder: (context, index) {
+        final metric = metrics[index];
+        final theme = Theme.of(context);
+        return AppCard(
+          onTap: metric.onTap,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.l,
+            vertical: AppSpacing.m,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: metric.color.withValues(alpha: 0.12),
+                ),
+                child: Icon(metric.icon, size: 18, color: metric.color),
+              ),
+              const SizedBox(width: AppSpacing.m),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      metric.value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                      ),
+                    ),
+                    Text(
+                      metric.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// One row in the "Today's Schedule" card - Morning/Evening Roll Call only,
+/// with a time label and, when known, a real completion status derived from
+/// attendance data. [statusLabel]/[statusColor] are left null when
+/// completion can't be determined from the data available, in which case
+/// only the time label renders - never a fabricated "Completed" state.
+class BoardingScheduleItem {
+  final String title;
+  final String timeLabel;
+  final IconData icon;
+  final Color color;
+  final String? statusLabel;
+  final Color? statusColor;
+  final VoidCallback? onTap;
+
+  const BoardingScheduleItem({
+    required this.title,
+    required this.timeLabel,
+    required this.icon,
+    required this.color,
+    this.statusLabel,
+    this.statusColor,
+    this.onTap,
+  });
+}
+
+class BoardingScheduleCard extends StatelessWidget {
+  final List<BoardingScheduleItem> items;
+
+  const BoardingScheduleCard({super.key, required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _CardHeading(title: "Today's Schedule"),
+        const SizedBox(height: AppSpacing.l),
+        AppCard(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.s,
+          ),
+          child: Column(
+            children: [
+              for (var i = 0; i < items.length; i++) ...[
+                if (i > 0)
+                  Divider(height: 1, color: theme.colorScheme.outlineVariant),
+                _ScheduleRow(item: items[i]),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScheduleRow extends StatelessWidget {
+  final BoardingScheduleItem item;
+
+  const _ScheduleRow({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: item.onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.l),
+        child: Row(
+          children: [
+            Icon(item.icon, color: item.color, size: 20),
+            const SizedBox(width: AppSpacing.l),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    item.timeLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontSize: 11.5,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (item.statusLabel != null && item.statusColor != null) ...[
+              const SizedBox(width: AppSpacing.m),
+              StatusBadge(label: item.statusLabel!, color: item.statusColor!),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -503,12 +752,7 @@ class BoardingTasksCard extends StatelessWidget {
           else
             for (var i = 0; i < tasks.length; i++) ...[
               if (i > 0)
-                Divider(
-                  height: 1,
-                  color: theme.colorScheme.outlineVariant.withValues(
-                    alpha: 0.5,
-                  ),
-                ),
+                Divider(height: 1, color: theme.colorScheme.outlineVariant),
               _TaskRow(task: tasks[i]),
             ],
         ],
@@ -672,8 +916,7 @@ class _BoardingAlertsCardState extends State<BoardingAlertsCard> {
                               VerticalDivider(
                                 width: 1,
                                 thickness: 1,
-                                color: theme.colorScheme.outlineVariant
-                                    .withValues(alpha: 0.5),
+                                color: theme.colorScheme.outlineVariant,
                               ),
                             Expanded(child: _AlertTile(alert: group[i])),
                           ],
@@ -733,7 +976,7 @@ class _AlertTile extends StatelessWidget {
               height: 34,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: alert.color.withValues(alpha: 0.18),
+                color: alert.color.withValues(alpha: 0.12),
               ),
               child: Icon(alert.icon, size: 18, color: alert.color),
             ),

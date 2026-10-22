@@ -79,7 +79,7 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
                         const Icon(
                           Icons.calendar_today,
                           size: 14,
-                          color: Colors.grey,
+                          color: Colors.black,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -118,8 +118,8 @@ class _MaintenanceScreenState extends State<MaintenanceScreen> {
 }
 
 Color _maintenanceStatusColor(MaintenanceStatus status) => switch (status) {
-  MaintenanceStatus.scheduled => Colors.blue,
-  MaintenanceStatus.inProgress => Colors.orange,
-  MaintenanceStatus.completed => Colors.green,
-  MaintenanceStatus.cancelled => Colors.red,
+  MaintenanceStatus.scheduled => Colors.black,
+  MaintenanceStatus.inProgress => Colors.black,
+  MaintenanceStatus.completed => Colors.black,
+  MaintenanceStatus.cancelled => Colors.black,
 };

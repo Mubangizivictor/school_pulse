@@ -139,7 +139,7 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
           'Manage school resources from one place',
           style: Theme.of(
             context,
-          ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+          ).textTheme.bodyMedium?.copyWith(color: Colors.black),
         ),
       ],
     );
@@ -180,7 +180,7 @@ class _StoresAssetsDashboardState extends State<StoresAssetsDashboard> {
           title: 'Under Repair',
           value: state.assetsUnderRepair.toDouble(),
           icon: Icons.build_circle_outlined,
-          color: Colors.deepPurple,
+          color: Colors.black,
         ),
       ],
     );
@@ -343,9 +343,7 @@ class _QuickActionButton extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: Theme.of(context).colorScheme.primary),
@@ -377,14 +375,14 @@ class _RepairTile extends StatelessWidget {
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.orange.withValues(alpha: 0.1),
+            color: Colors.black,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
             repair.status.name.toUpperCase(),
             style: const TextStyle(
               fontSize: 10,
-              color: Colors.orange,
+              color: Colors.black,
               fontWeight: FontWeight.bold,
             ),
           ),

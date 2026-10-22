@@ -7,7 +7,6 @@ import '../../domain/entities/lesson_tracking.dart';
 import '../../domain/entities/teacher_workload.dart';
 import '../../domain/entities/homework_record.dart';
 import '../../domain/entities/assessment_moderation.dart';
-import '../../domain/entities/report_card_approval.dart';
 import '../../domain/entities/today_operations.dart';
 
 abstract class DeanState extends Equatable {
@@ -75,13 +74,6 @@ class PendingModerationAssessmentsLoaded extends DeanState {
   const PendingModerationAssessmentsLoaded(this.assessments);
   @override
   List<Object?> get props => [assessments];
-}
-
-class PendingReportApprovalsLoaded extends DeanState {
-  final List<ReportCardApproval> approvals;
-  const PendingReportApprovalsLoaded(this.approvals);
-  @override
-  List<Object?> get props => [approvals];
 }
 
 class PerformanceAnalyticsLoaded extends DeanState {

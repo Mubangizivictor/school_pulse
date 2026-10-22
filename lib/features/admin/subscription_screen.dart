@@ -27,10 +27,6 @@ class SubscriptionScreen extends StatelessWidget {
             const SizedBox(height: 16),
             _usage(context),
             const SizedBox(height: 16),
-            _details(context, sub),
-            const SizedBox(height: 16),
-            _marketplace(context, sub),
-            const SizedBox(height: 16),
             _documents(context),
             const SizedBox(height: 16),
             _history(context),
@@ -58,16 +54,14 @@ class SubscriptionScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      sub.plan,
+                      'Subscription status',
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      sub.billingCycle.isEmpty
-                          ? 'Billing cycle unavailable'
-                          : '${_label(sub.billingCycle)} billing',
+                    const Text(
+                      'All School Pulse features are included for this school.',
                     ),
                   ],
                 ),
@@ -86,12 +80,6 @@ class SubscriptionScreen extends StatelessWidget {
             runSpacing: 12,
             children: [
               _fact('Renewal', date),
-              _fact(
-                'Amount',
-                sub.amountUgx > 0
-                    ? '${sub.currency} ${NumberFormat.decimalPattern().format(sub.amountUgx)}'
-                    : 'Contact billing',
-              ),
               _fact(
                 'Auto-renewal',
                 sub.autoRenewalEnabled ? 'Enabled' : 'Manual',
@@ -125,11 +113,6 @@ class SubscriptionScreen extends StatelessWidget {
                     builder: (_) => const MtnMomoPaymentScreen(),
                   ),
                 ),
-              ),
-              SecondaryButton(
-                label: 'Compare plans',
-                icon: Icons.upgrade_outlined,
-                onPressed: () => _choosePlan(context, sub),
               ),
               SecondaryButton(
                 label: 'Contact billing',
@@ -216,94 +199,6 @@ class SubscriptionScreen extends StatelessWidget {
     },
   );
 
-  Widget _details(BuildContext context, Subscription sub) => AppCard(
-    padding: const EdgeInsets.all(18),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Plan & entitlements',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
-        ),
-        const SizedBox(height: 10),
-        if (sub.modules.isEmpty)
-          const Text(
-            'Plan entitlements have not been published for this institution.',
-          )
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: sub.modules.map((e) => Chip(label: Text(e))).toList(),
-          ),
-        const SizedBox(height: 14),
-        Text('Active add-ons', style: Theme.of(context).textTheme.titleSmall),
-        const SizedBox(height: 6),
-        if (sub.addOns.isEmpty)
-          const Text('No active add-ons.')
-        else
-          Wrap(
-            spacing: 8,
-            children: sub.addOns.map((e) => Chip(label: Text(e))).toList(),
-          ),
-        const SizedBox(height: 10),
-        Text(
-          'Entitlements are assigned by School Pulse. Local module settings cannot enable a module that is not entitled.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-      ],
-    ),
-  );
-
-  Widget _marketplace(BuildContext context, Subscription sub) => AppCard(
-    padding: const EdgeInsets.all(18),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Plans & add-ons',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Prices, availability and activation are controlled by School Pulse billing.',
-        ),
-        const SizedBox(height: 8),
-        StreamBuilder<List<Map<String, dynamic>>>(
-          stream: _repository.watchAvailableAddOns(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) return const SizedBox.shrink();
-            if (snapshot.data!.isEmpty) {
-              return const Text(
-                'No add-ons are currently available for request.',
-              );
-            }
-            return Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: snapshot.data!.map((addOn) {
-                final name =
-                    addOn['name']?.toString() ?? addOn['id'].toString();
-                final active = sub.addOns.any(
-                  (value) => value.toLowerCase() == name.toLowerCase(),
-                );
-                return ActionChip(
-                  avatar: Icon(
-                    active ? Icons.check_circle : Icons.add_circle_outline,
-                    size: 18,
-                  ),
-                  label: Text(active ? '$name · Active' : name),
-                  onPressed: active
-                      ? null
-                      : () => _confirmAddOn(context, addOn),
-                );
-              }).toList(),
-            );
-          },
-        ),
-      ],
-    ),
-  );
 
   Widget _documents(
     BuildContext context,
@@ -468,116 +363,6 @@ class SubscriptionScreen extends StatelessWidget {
     }
   }
 
-  Future<void> _confirmAddOn(
-    BuildContext context,
-    Map<String, dynamic> addOn,
-  ) async {
-    final name = addOn['name']?.toString() ?? addOn['id'].toString();
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('Request $name?'),
-        content: Text(
-          '${addOn['description'] ?? 'School Pulse will review availability, price and terms before activation.'}\n\nThis request does not activate the add-on.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Send request'),
-          ),
-        ],
-      ),
-    );
-    if (accepted != true) return;
-    try {
-      await _repository.requestChange(
-        type: 'addon',
-        addOnId: addOn['id'].toString(),
-      );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Add-on request sent to School Pulse billing.'),
-          ),
-        );
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to send the add-on request.')),
-        );
-      }
-    }
-  }
-
-  Future<void> _choosePlan(BuildContext context, Subscription current) async {
-    try {
-      final plans = await _repository.watchAvailablePlans().first;
-      if (!context.mounted) return;
-      final selected = await showModalBottomSheet<Map<String, dynamic>>(
-        context: context,
-        showDragHandle: true,
-        builder: (sheetContext) => SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              const ListTile(
-                title: Text('Available plans'),
-                subtitle: Text('Plan changes require School Pulse approval.'),
-              ),
-              ...plans.map((plan) {
-                final isCurrent = plan['id']?.toString() == current.planId;
-                return ListTile(
-                  title: Text(
-                    plan['name']?.toString() ?? plan['id'].toString(),
-                  ),
-                  subtitle: Text(
-                    '${_label(plan['billingCycle']?.toString() ?? '')} · ${plan['currency'] ?? ''} ${plan['price'] ?? 'Contact billing'}',
-                  ),
-                  trailing: isCurrent
-                      ? const Chip(label: Text('Current'))
-                      : const Icon(Icons.chevron_right),
-                  onTap: isCurrent
-                      ? null
-                      : () => Navigator.pop(sheetContext, plan),
-                );
-              }),
-            ],
-          ),
-        ),
-      );
-      if (selected == null || !context.mounted) return;
-      final price = selected['price'];
-      final isDowngrade =
-          price is num && current.amountUgx > 0 && price < current.amountUgx;
-      await _repository.requestChange(
-        type: isDowngrade ? 'downgrade' : 'upgrade',
-        planId: selected['id'].toString(),
-      );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Plan-change request sent to School Pulse billing.'),
-          ),
-        );
-      }
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Plans are unavailable right now. Please try again online.',
-            ),
-          ),
-        );
-      }
-    }
-  }
-
   static Widget _fact(String label, String value) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -597,7 +382,7 @@ class SubscriptionScreen extends StatelessWidget {
       switch (metric.status) {
         UsageStatus.hardLimitReached => Theme.of(context).colorScheme.error,
         UsageStatus.softLimitReached ||
-        UsageStatus.approachingLimit => Colors.orange,
+        UsageStatus.approachingLimit => Colors.black,
         _ => null,
       };
   static String _usageMessage(UsageMetric metric) => switch (metric.status) {

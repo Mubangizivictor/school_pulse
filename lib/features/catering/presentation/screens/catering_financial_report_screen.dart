@@ -79,28 +79,28 @@ class _CateringFinancialReportScreenState
                   _buildDetailItem(
                     'Total Revenue (Meal Fees)',
                     data['totalRevenue'],
-                    Colors.green,
+                    Colors.black,
                   ),
                   _buildDetailItem(
                     'Direct Food Costs',
                     data['foodCost'],
-                    Colors.orange,
+                    Colors.black,
                   ),
                   _buildDetailItem(
                     'Wastage Impact',
                     data['wastageCost'],
-                    Colors.red,
+                    Colors.black,
                   ),
                   _buildDetailItem(
                     'Labor & Overheads',
                     data['laborCost'],
-                    Colors.blueGrey,
+                    Colors.black,
                   ),
                   const Divider(height: 32),
                   _buildDetailItem(
                     'Net Operating Profit',
                     data['netProfit'],
-                    Colors.blue,
+                    Colors.black,
                     isBold: true,
                   ),
                   const SizedBox(height: 32),
@@ -125,14 +125,14 @@ class _CateringFinancialReportScreenState
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.blue.shade800,
+      color: Colors.black,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
             const Text(
               'Gross Profit Margin',
-              style: TextStyle(color: Colors.white70, fontSize: 16),
+              style: TextStyle(color: Colors.white, fontSize: 16),
             ),
             const SizedBox(height: 8),
             Text(
@@ -169,10 +169,7 @@ class _CateringFinancialReportScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
-        ),
+        Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
         Text(
           value,
           style: const TextStyle(
@@ -224,9 +221,9 @@ class _CateringFinancialReportScreenState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade100,
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Colors.black),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -255,7 +252,7 @@ class _CateringFinancialReportScreenState
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.black54)),
+          Text(label, style: const TextStyle(color: Colors.black)),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:dartz/dartz.dart';
 import 'package:school_pulse/core/error/failures.dart';
 
 import '../entities/active_responsibility_context.dart';
+import '../entities/canonical_report_card.dart';
 import '../entities/class_report_entry.dart';
 
 /// The class teacher's part of the report card, and nothing else.
@@ -54,5 +55,42 @@ abstract class ClassReportRepository {
   Future<Either<Failure, int>> generateReports({
     required ActiveResponsibilityContext context,
     required List<ClassReportEntry> entries,
+  });
+
+  /// Submits one or more generated report cards to the Dean for review.
+  ///
+  /// This is the academic-submission step, distinct from [submitEntry]
+  /// (which only hands the class teacher's own sections to the academic
+  /// office pre-generation). The server re-validates readiness and the
+  /// current source hash for every report before moving it - a report that
+  /// has drifted stale is reported back as a per-item failure, never
+  /// silently skipped or force-submitted.
+  Future<Either<Failure, SubmitReportCardsResult>> submitReportCardsToDean({
+    required ActiveResponsibilityContext context,
+    required List<String> reportCardIds,
+  });
+
+  /// The canonical report-card snapshot for one report id - what the Class
+  /// Teacher's "View Report" action actually opens. Visible at every
+  /// workflow stage, unsigned reports included; the caller is responsible
+  /// for showing the right watermark/status, never for hiding the report.
+  Future<Either<Failure, CanonicalReportCard>> getReportCard({
+    required ActiveResponsibilityContext context,
+    required String reportCardId,
+  });
+
+  /// Requests a rendered PDF preview of the report at its current state -
+  /// carries the DRAFT/AWAITING-SIGNATURES watermark until the report is
+  /// academically finalized. Returns the PDF bytes directly rather than a
+  /// Storage URL, since an unsigned preview is never persisted as if it
+  /// were official.
+  Future<Either<Failure, List<int>>> previewReportCardPdf({
+    required String reportCardId,
+  });
+
+  /// Requests the official, immutable PDF's short-lived signed download URL
+  /// - only valid once the report is academically finalized.
+  Future<Either<Failure, String>> getOfficialReportCardPdfUrl({
+    required String reportCardId,
   });
 }

@@ -113,7 +113,7 @@ class _NotificationPreferencesScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: Colors.black,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -135,7 +135,7 @@ class _NotificationPreferencesScreenState
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Color(0xFF6366F1),
+                    color: Colors.black,
                   ),
                 ),
               ),
@@ -148,7 +148,7 @@ class _NotificationPreferencesScreenState
           ? const Center(
               child: Text(
                 'Sign in to manage your notification preferences',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: Colors.white),
               ),
             )
           : _buildBody(_preferences!),
@@ -236,7 +236,7 @@ class _NotificationPreferencesScreenState
           const Text(
             'Emergency, medical, attendance and security alerts cannot be '
             'switched off.',
-            style: TextStyle(color: Colors.white38, fontSize: 12),
+            style: TextStyle(color: Colors.white, fontSize: 12),
           ),
           const SizedBox(height: 24),
         ],
@@ -312,7 +312,7 @@ class _NotificationPreferencesScreenState
   }) {
     return showModalBottomSheet<T>(
       context: context,
-      backgroundColor: const Color(0xFF1E293B),
+      backgroundColor: Colors.black,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -337,7 +337,7 @@ class _NotificationPreferencesScreenState
                   style: const TextStyle(color: Colors.white),
                 ),
                 trailing: option == current
-                    ? const Icon(Icons.check, color: Color(0xFF6366F1))
+                    ? const Icon(Icons.check, color: Colors.black)
                     : null,
                 onTap: () => Navigator.pop(sheetContext, option),
               ),
@@ -360,14 +360,14 @@ class _NotificationPreferencesScreenState
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.2),
+            color: color,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color, size: 20),
@@ -381,16 +381,16 @@ class _NotificationPreferencesScreenState
         ),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(color: Colors.white60, fontSize: 12),
+          style: const TextStyle(color: Colors.white, fontSize: 12),
         ),
         // A locked category shows a padlock rather than a switch that would
         // spring back, so the reason is visible instead of feeling broken.
         trailing: locked
-            ? const Icon(Icons.lock_outline, color: Colors.white38, size: 20)
+            ? const Icon(Icons.lock_outline, color: Colors.white, size: 20)
             : Switch(
                 value: value,
                 onChanged: _saving ? null : onChanged,
-                activeThumbColor: const Color(0xFF6366F1),
+                activeThumbColor: Colors.black,
               ),
       ),
     );
@@ -405,19 +405,19 @@ class _NotificationPreferencesScreenState
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
+        color: Colors.black,
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
         title: Text(title, style: const TextStyle(color: Colors.white)),
         subtitle: Text(
           subtitle,
-          style: const TextStyle(color: Colors.white60, fontSize: 12),
+          style: const TextStyle(color: Colors.white, fontSize: 12),
         ),
         trailing: Switch(
           value: value,
           onChanged: _saving ? null : onChanged,
-          activeThumbColor: const Color(0xFF6366F1),
+          activeThumbColor: Colors.black,
         ),
       ),
     );
@@ -431,7 +431,7 @@ class _NotificationPreferencesScreenState
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
+          color: Colors.black,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -440,9 +440,9 @@ class _NotificationPreferencesScreenState
             Text(title, style: const TextStyle(color: Colors.white)),
             Row(
               children: [
-                Text(value, style: const TextStyle(color: Colors.white60)),
+                Text(value, style: const TextStyle(color: Colors.white)),
                 const SizedBox(width: 8),
-                const Icon(Icons.chevron_right, color: Colors.white30),
+                const Icon(Icons.chevron_right, color: Colors.white),
               ],
             ),
           ],

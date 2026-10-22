@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Academics &amp; Report Cards — School Pulse</title>
+<meta name="description" content="Capture marks, track achievement, and share beautiful report cards with parents instantly — built for Ugandan schools.">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
+<link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+<style>
+  .arc-hero { padding: 40px 0 48px; }
+  .arc-trust { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 18px; }
+  .arc-trust-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--color-muted); font-weight: 600; }
+  .arc-trust-item svg { width: 15px; height: 15px; color: var(--color-primary); }
+
+  .arc-card { background: var(--color-card); border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+  .arc-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--color-border); }
+  .arc-card-title { font-weight: 800; font-size: 15px; }
+  .arc-card-term { font-size: 12px; color: var(--color-muted); border: 1px solid var(--color-border); border-radius: 999px; padding: 3px 10px; }
+  .arc-student { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--color-border); }
+  .arc-student .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--color-surface); flex-shrink: 0; border: 1px solid var(--color-border); }
+  .arc-student .name { font-weight: 700; font-size: 14.5px; color: var(--color-ink); }
+  .arc-student .meta { font-size: 12.5px; color: var(--color-muted); margin-top: 1px; }
+  .arc-table-wrap { padding: 6px 18px 0; overflow-x: auto; }
+  .arc-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .arc-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--color-muted); padding: 9px 4px; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
+  .arc-table td { padding: 9px 4px; border-bottom: 1px solid var(--color-border); color: var(--color-ink-soft); white-space: nowrap; }
+  .arc-table tr:last-child td { border-bottom: none; }
+  .arc-badge { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .arc-badge.green { background: var(--color-success-bg); color: var(--color-success-text); }
+  .arc-badge.blue { background: var(--color-primary-soft); color: var(--color-primary); }
+  .arc-badge.amber { background: var(--color-warning-bg); color: var(--color-warning-text); }
+  .arc-overall { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 16px; font-size: 13.5px; font-weight: 700; color: var(--color-ink); }
+
+  .arc-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; position: relative; }
+  .arc-step { display: flex; flex-direction: column; gap: 8px; }
+  .arc-step-num { width: 30px; height: 30px; border-radius: 50%; background: var(--color-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13.5px; flex-shrink: 0; }
+  .arc-step h3 { font-size: 15.5px; margin: 0; }
+  .arc-step p { font-size: 13.5px; color: var(--color-muted); margin: 0; }
+
+  .arc-roles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .arc-role-card { border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 18px; background: var(--color-card); }
+  .arc-role-card .card-icon { margin-bottom: 12px; }
+  .arc-role-card h3 { font-size: 15.5px; margin: 0 0 6px; }
+  .arc-role-card p { font-size: 13.5px; color: var(--color-muted); margin: 0 0 10px; }
+  .arc-role-card a { font-size: 13px; font-weight: 700; color: var(--color-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+
+  @media (max-width: 900px) {
+    .arc-steps { grid-template-columns: 1fr; gap: 24px; }
+    .arc-roles { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .arc-hero { padding: 24px 0 32px; }
+    .arc-table { font-size: 12.5px; }
+    .arc-student .avatar { width: 38px; height: 38px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="hero arc-hero">
+    <div class="container hero-grid">
+      <div>
+        <span class="eyebrow">Academics &amp; Report Cards</span>
+        <h1>Report cards parents will actually love.</h1>
+        <p class="lead">Capture marks, track achievement, and share beautiful report cards—instantly. Clear, accurate, and trusted by teachers, leaders, and parents.</p>
+        <div class="btn-row">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+          <a href="#how-it-works" class="btn btn-outline btn-lg">See how it works</a>
+        </div>
+        <div class="arc-trust">
+          <span class="arc-trust-item" id="trust-0"></span>
+          <span class="arc-trust-item" id="trust-1"></span>
+          <span class="arc-trust-item" id="trust-2"></span>
+        </div>
+      </div>
+
+      <div class="arc-card">
+        <div class="arc-card-head">
+          <span class="arc-card-title">Report Card</span>
+          <span class="arc-card-term">Term 1 · 2026</span>
+        </div>
+        <div class="arc-student">
+          <span class="avatar"></span>
+          <div>
+            <div class="name">Amahle Dlamini</div>
+            <div class="meta">Grade 7 · Class 7B · Riverside Secondary School</div>
+          </div>
+        </div>
+        <div class="arc-table-wrap">
+          <table class="arc-table">
+            <thead>
+              <tr><th>Subject</th><th>Marks</th><th>Achievement</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>English Home Language</td><td>89%</td><td><span class="arc-badge green">Distinction</span></td></tr>
+              <tr><td>Mathematics</td><td>82%</td><td><span class="arc-badge green">Distinction</span></td></tr>
+              <tr><td>Natural Sciences</td><td>76%</td><td><span class="arc-badge blue">Credit</span></td></tr>
+              <tr><td>Social Sciences</td><td>68%</td><td><span class="arc-badge blue">Credit</span></td></tr>
+              <tr><td>Life Orientation</td><td>61%</td><td><span class="arc-badge amber">Pass</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="arc-overall">
+          <span>Overall Achievement</span>
+          <span class="arc-badge green">Good Performance</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt" id="how-it-works">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">How it works</span>
+        <h2>Capture, review, share — in one flow</h2>
+      </div>
+      <div class="arc-steps">
+        <div class="arc-step">
+          <span class="arc-step-num">1</span>
+          <h3>Teachers capture marks</h3>
+          <p>Easily record assessments and assignments aligned to your curriculum.</p>
+        </div>
+        <div class="arc-step">
+          <span class="arc-step-num">2</span>
+          <h3>Deputy/Head reviews and approves</h3>
+          <p>Multi-level checks ensure accuracy and maintain academic integrity.</p>
+        </div>
+        <div class="arc-step">
+          <span class="arc-step-num">3</span>
+          <h3>Report cards shared instantly</h3>
+          <p>Parents get beautiful, easy-to-read reports on any device—instantly.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Benefits for every role</span>
+        <h2>Built for teachers, leaders, and parents.</h2>
+      </div>
+      <div class="arc-roles">
+        <div class="arc-role-card">
+          <div class="card-icon" id="icon-teachers"></div>
+          <h3>For Teachers</h3>
+          <p>Save time, reduce admin, and focus on what matters most—teaching.</p>
+          <a href="#how-it-works">Learn more →</a>
+        </div>
+        <div class="arc-role-card">
+          <div class="card-icon" id="icon-leaders"></div>
+          <h3>For School Leaders</h3>
+          <p>Real-time insights, compliance, and performance at your fingertips.</p>
+          <a href="platform.html">Learn more →</a>
+        </div>
+        <div class="arc-role-card">
+          <div class="card-icon" id="icon-parents"></div>
+          <h3>For Parents</h3>
+          <p>Clear progress updates so you can celebrate every win.</p>
+          <a href="parent-portal.html">Learn more →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-alt">
+    <div class="container">
+      <div class="cta-banner">
+        <h2>Ready to transform reporting at your school?</h2>
+        <p>Join thousands of schools using School Pulse.</p>
+        <div class="btn-row" style="justify-content:center;">
+          <a href="register-school.html" class="btn btn-primary btn-lg">Register your school</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/pricing-config.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script>
+  document.getElementById('icon-teachers').innerHTML = window.ICONS.user;
+  document.getElementById('icon-leaders').innerHTML = window.ICONS.secure;
+  document.getElementById('icon-parents').innerHTML = window.ICONS.parents;
+
+  function fillTrust(id, icon, text) {
+    var el = document.getElementById(id);
+    el.innerHTML = window.ICONS[icon] + '<span>' + text + '</span>';
+  }
+  fillTrust('trust-0', 'academics', 'Curriculum aligned');
+  fillTrust('trust-1', 'secure', 'Role-based approvals');
+  fillTrust('trust-2', 'key', 'Secure & compliant');
+</script>
+</body>
+</html>

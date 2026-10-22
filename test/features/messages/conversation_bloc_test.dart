@@ -229,9 +229,9 @@ void main() {
         when(
           () => repository.watchConversation('c1', 'u1'),
         ).thenAnswer((_) => Stream.value(openConversation()));
-        when(() => repository.markConversationRead(any(), any())).thenAnswer(
-          (_) async {},
-        );
+        when(
+          () => repository.markConversationRead(any(), any()),
+        ).thenAnswer((_) async {});
         when(() => repository.watchMessages('c1', 'u1', limit: 60)).thenAnswer(
           (_) => Stream.value(
             List.generate(
@@ -258,7 +258,9 @@ void main() {
       },
       verify: (bloc) {
         expect(bloc.state.messageLimit, 120);
-        verify(() => repository.watchMessages('c1', 'u1', limit: 120)).called(1);
+        verify(
+          () => repository.watchMessages('c1', 'u1', limit: 120),
+        ).called(1);
       },
     );
   });

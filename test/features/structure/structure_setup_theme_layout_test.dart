@@ -68,21 +68,46 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  for (final entry in <({String name, ThemeData theme})>[
-    (name: 'light', theme: _theme(Brightness.light)),
-    (name: 'dark', theme: _theme(Brightness.dark)),
+  for (final entry in <({String name, ThemeData theme, Size viewport})>[
+    (
+      name: 'light mobile',
+      theme: _theme(Brightness.light),
+      viewport: const Size(430, 932),
+    ),
+    (
+      name: 'dark desktop',
+      theme: _theme(Brightness.dark),
+      viewport: const Size(1440, 960),
+    ),
   ]) {
     testWidgets(
       'Structure Setup renders every step without overflow in ${entry.name} mode',
       (tester) async {
-        tester.view.physicalSize = const Size(430, 932);
+        tester.view.physicalSize = entry.viewport;
         tester.view.devicePixelRatio = 1;
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
 
         await pumpSetup(tester, theme: entry.theme);
         expect(tester.takeException(), isNull, reason: 'initial step');
-        expect(find.text('Structure Setup'), findsAtLeastNWidgets(1));
+        // Step 0 embeds InstitutionSettingsScreen with showAppBar: false
+        // (see _InstitutionProfileStep in structure_screen.dart) - the
+        // wizard supplies its own step chrome instead of that screen's
+        // AdminAppBar, so "Institution Settings" (the standalone editor's
+        // app-bar title) never renders here. The compact mobile header
+        // folds the step title into its "N of 16 · Institution profile"
+        // progress row; the wide/web layout renders it as its own heading.
+        expect(
+          find.textContaining('Institution profile'),
+          findsAtLeastNWidgets(1),
+        );
+        // Regression guard: the footer must occupy only its natural height.
+        // If it expands to the entire Scaffold bottom-navigation slot, this
+        // scroll view is laid out at height zero and the wizard looks blank.
+        expect(
+          tester.getSize(find.byType(ListView).first).height,
+          greaterThan(0),
+        );
 
         // Step through every wizard step backed purely by StructureBloc
         // state (Institution through Subjects) via Save & Continue,

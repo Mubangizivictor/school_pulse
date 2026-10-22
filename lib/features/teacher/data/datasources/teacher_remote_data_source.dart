@@ -9,7 +9,10 @@ import 'package:school_pulse/features/structure/domain/entities/assessment_gradi
 import 'package:school_pulse/features/structure/domain/services/grade_resolver.dart';
 
 abstract class TeacherRemoteDataSource {
-  Future<List<TeacherStudent>> getStudentsByClass(String className);
+  Future<List<TeacherStudent>> getStudentsByClass(
+    String schoolId,
+    String className,
+  );
   Future<void> submitAttendance({
     required String schoolId,
     required String className,
@@ -32,10 +35,11 @@ abstract class TeacherRemoteDataSource {
   Future<List<Homework>> getHomework(String schoolId, String teacherId);
   Future<void> createHomework(Homework homework);
   Future<void> updateHomework(Homework homework);
-  Future<void> deleteHomework(String homeworkId);
+  Future<void> deleteHomework(String homeworkId, {required String schoolId});
 
   // Report Comments
   Future<List<ReportComment>> getReportComments({
+    required String schoolId,
     required String className,
     required String term,
     required String year,
@@ -44,6 +48,7 @@ abstract class TeacherRemoteDataSource {
 
   // Competency Ratings
   Future<List<CompetencyRating>> getCompetencyRatings({
+    required String schoolId,
     required String className,
     required String term,
     required String year,
@@ -52,6 +57,7 @@ abstract class TeacherRemoteDataSource {
   Future<void> saveCompetencyRating(CompetencyRating rating);
 
   Future<void> generateReports({
+    required String schoolId,
     required String className,
     required String term,
     required String year,
@@ -66,9 +72,13 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
   TeacherRemoteDataSourceImpl({required this.firestore});
 
   @override
-  Future<List<TeacherStudent>> getStudentsByClass(String className) async {
+  Future<List<TeacherStudent>> getStudentsByClass(
+    String schoolId,
+    String className,
+  ) async {
     final snapshot = await firestore
         .collection('students')
+        .where('schoolId', isEqualTo: schoolId)
         .where('className', isEqualTo: className)
         .get();
 
@@ -296,38 +306,13 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
   Future<TeacherDashboardStats> getTeacherDashboardStats(
     String teacherId,
   ) async {
-    // In a real app, this would be fetched from a teacher-specific stats doc
-    // For now, let's provide some realistic default data or fetch from school_stats
-    final statsDoc = await firestore
-        .collection('school_stats')
-        .doc('teacher_$teacherId')
-        .get();
-
-    if (statsDoc.exists) {
-      final data = statsDoc.data()!;
-      return TeacherDashboardStats(
-        studentsToday: data['studentsToday'] ?? 0,
-        totalStudents: data['totalStudents'] ?? 0,
-        submissionsDue: data['submissionsDue'] ?? 0,
-        classesToday: data['classesToday'] ?? 0,
-        activeNotifications: data['activeNotifications'] ?? 0,
-        attendanceTaken: data['attendanceTaken'] ?? 0,
-        marksEntered: data['marksEntered'] ?? 0,
-        reportsGenerated: data['reportsGenerated'] ?? 0,
-        classProgress: (data['classProgress'] as List? ?? [])
-            .map(
-              (cp) => ClassProgress(
-                title: cp['title'] ?? '',
-                progress: (cp['progress'] ?? 0.0).toDouble(),
-                subtitle: cp['subtitle'] ?? '',
-                className: cp['className'] ?? '',
-              ),
-            )
-            .toList(),
-      );
-    }
-
-    // Default mock-like data but from "real" source
+    // Nothing in this app writes to a per-teacher stats doc - the previous
+    // school_stats/teacher_{id} read here was always a permission-denied
+    // trap (its rule needs resource.data.schoolId, which a document that
+    // will never exist can never satisfy) that surfaced as a raw Firestore
+    // error on the Class Analytics screen. Class-scoped analytics live in
+    // ClassTeacherDashboardBloc's real queries; this stays a safe, static
+    // default until this class actually gets a maintained aggregate.
     return const TeacherDashboardStats(
       studentsToday: 0,
       totalStudents: 0,
@@ -386,7 +371,12 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
 
   @override
   Future<void> updateHomework(Homework homework) async {
-    await firestore.collection('homework').doc(homework.id).update({
+    final docRef = firestore.collection('homework').doc(homework.id);
+    final doc = await docRef.get();
+    if (!doc.exists || doc.data()?['schoolId'] != homework.schoolId) {
+      throw Exception('Homework not found for this school.');
+    }
+    await docRef.update({
       'title': homework.title,
       'description': homework.description,
       'className': homework.className,
@@ -397,18 +387,28 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
   }
 
   @override
-  Future<void> deleteHomework(String homeworkId) async {
-    await firestore.collection('homework').doc(homeworkId).delete();
+  Future<void> deleteHomework(
+    String homeworkId, {
+    required String schoolId,
+  }) async {
+    final docRef = firestore.collection('homework').doc(homeworkId);
+    final doc = await docRef.get();
+    if (!doc.exists || doc.data()?['schoolId'] != schoolId) {
+      throw Exception('Homework not found for this school.');
+    }
+    await docRef.delete();
   }
 
   @override
   Future<List<ReportComment>> getReportComments({
+    required String schoolId,
     required String className,
     required String term,
     required String year,
   }) async {
     final snapshot = await firestore
         .collection('report_comments')
+        .where('schoolId', isEqualTo: schoolId)
         .where('className', isEqualTo: className)
         .where('term', isEqualTo: term)
         .where('year', isEqualTo: year)
@@ -418,6 +418,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
       final data = doc.data();
       return ReportComment(
         id: doc.id,
+        schoolId: data['schoolId'] ?? '',
         studentId: data['studentId'] ?? '',
         className: data['className'] ?? '',
         term: data['term'] ?? '',
@@ -438,6 +439,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
   Future<void> saveReportComment(ReportComment comment) async {
     final docId = '${comment.studentId}_${comment.term}_${comment.year}';
     await firestore.collection('report_comments').doc(docId).set({
+      'schoolId': comment.schoolId,
       'studentId': comment.studentId,
       'className': comment.className,
       'term': comment.term,
@@ -451,6 +453,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
 
   @override
   Future<List<CompetencyRating>> getCompetencyRatings({
+    required String schoolId,
     required String className,
     required String term,
     required String year,
@@ -458,6 +461,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
   }) async {
     final snapshot = await firestore
         .collection('competency_ratings')
+        .where('schoolId', isEqualTo: schoolId)
         .where('className', isEqualTo: className)
         .where('term', isEqualTo: term)
         .where('year', isEqualTo: year)
@@ -468,6 +472,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
       final data = doc.data();
       return CompetencyRating(
         id: doc.id,
+        schoolId: data['schoolId'] ?? '',
         studentId: data['studentId'] ?? '',
         className: data['className'] ?? '',
         term: data['term'] ?? '',
@@ -485,6 +490,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
     final docId =
         '${rating.studentId}_${rating.term}_${rating.year}_${rating.competency.replaceAll(' ', '_')}';
     await firestore.collection('competency_ratings').doc(docId).set({
+      'schoolId': rating.schoolId,
       'studentId': rating.studentId,
       'className': rating.className,
       'term': rating.term,
@@ -498,6 +504,7 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
 
   @override
   Future<void> generateReports({
+    required String schoolId,
     required String className,
     required String term,
     required String year,
@@ -510,10 +517,11 @@ class TeacherRemoteDataSourceImpl implements TeacherRemoteDataSource {
       // In a real app, this might trigger a Cloud Function or
       // create a 'report_card' doc that the PDF generator listens to.
       // For now, we'll create the shell record that makes it visible to parents/deans.
-      final docId = '${studentId}_${term}_$year';
+      final docId = '${schoolId}_${studentId}_${term}_$year';
       final docRef = firestore.collection('report_cards').doc(docId);
 
       batch.set(docRef, {
+        'schoolId': schoolId,
         'studentId': studentId,
         'className': className,
         'term': term,

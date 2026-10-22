@@ -40,6 +40,20 @@ void main() {
     );
 
     test(
+      'resolve marks a single-role user as current even with no persisted '
+      'selection, since there is no picker to withhold it for',
+      () async {
+        final service = AppRoleSessionServiceImpl(preferences: preferences);
+        final user = _user(roles: [UserRole.schoolAdmin]);
+
+        final resolved = await service.resolve(user);
+
+        expect(resolved, UserRole.schoolAdmin);
+        expect(service.current, UserRole.schoolAdmin);
+      },
+    );
+
+    test(
       'switchTo persists and restores the chosen role on relaunch',
       () async {
         final first = AppRoleSessionServiceImpl(preferences: preferences);

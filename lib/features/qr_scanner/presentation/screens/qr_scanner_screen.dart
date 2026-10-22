@@ -44,13 +44,13 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               builder: (context, state, child) {
                 switch (state.torchState) {
                   case TorchState.off:
-                    return const Icon(Icons.flash_off, color: Colors.grey);
+                    return const Icon(Icons.flash_off, color: Colors.black);
                   case TorchState.on:
-                    return const Icon(Icons.flash_on, color: Colors.yellow);
+                    return const Icon(Icons.flash_on, color: Colors.black);
                   case TorchState.auto:
                     return const Icon(Icons.flash_auto, color: Colors.white);
                   case TorchState.unavailable:
-                    return const Icon(Icons.flash_off, color: Colors.grey);
+                    return const Icon(Icons.flash_off, color: Colors.black);
                 }
               },
             ),
@@ -64,6 +64,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   case CameraFacing.front:
                     return const Icon(Icons.camera_front);
                   case CameraFacing.back:
+                  case CameraFacing.external:
+                  case CameraFacing.unknown:
                     return const Icon(Icons.camera_rear);
                 }
               },
@@ -110,7 +112,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black54,
+                  color: Colors.black,
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Text(

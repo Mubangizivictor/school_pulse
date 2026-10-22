@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Request a Demo — School Pulse</title>
+<meta name="description" content="See School Pulse in action. Book a live demo with our team and find out how your school can go paperless.">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16.png">
+<link rel="apple-touch-icon" href="assets/favicon/apple-touch-icon.png">
+<style>
+  .demo-wrap { padding-top: 28px; padding-bottom: 40px; }
+  .demo-head { margin-bottom: 22px; max-width: 640px; }
+  .demo-head h1 { margin: 6px 0 8px; }
+  .demo-head .lead { margin: 0; }
+
+  .demo-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .demo-grid { grid-template-columns: 1fr; }
+  }
+
+  .demo-panel {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: var(--color-card);
+    padding: 22px;
+  }
+
+  .demo-form-panel .form-row { display: flex; gap: 14px; margin-bottom: 0; }
+  .demo-form-panel .form-row .form-field { flex: 1; min-width: 0; }
+  .demo-form-panel .form-field { margin-bottom: 14px; }
+  @media (max-width: 560px) {
+    .demo-form-panel .form-row { flex-direction: column; gap: 0; }
+  }
+
+  .demo-form-panel .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .demo-form-panel .radio-option {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .demo-form-panel .radio-option:has(input:checked) {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+  }
+
+  /* Timeline */
+  .expect-panel h2 { font-size: 17px; margin: 0 0 16px; }
+  .timeline { position: relative; }
+  .timeline-step {
+    position: relative;
+    display: flex;
+    gap: 14px;
+    padding-bottom: 22px;
+  }
+  .timeline-step:last-child { padding-bottom: 0; }
+  .timeline-step::before {
+    content: '';
+    position: absolute;
+    left: 18px;
+    top: 38px;
+    bottom: 0;
+    width: 1px;
+    background: var(--color-border);
+  }
+  .timeline-step:last-child::before { display: none; }
+  .ts-icon {
+    flex: none;
+    width: 37px; height: 37px;
+    border-radius: 50%;
+    border: 1px solid var(--color-primary-soft-border);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ts-icon svg { width: 17px; height: 17px; }
+  .ts-body strong { display: block; font-size: 14.5px; margin-bottom: 3px; }
+  .ts-body p { margin: 0 0 6px; font-size: 13.5px; color: var(--color-muted); line-height: 1.45; }
+  .ts-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+  .ts-meta svg { width: 13px; height: 13px; }
+
+  @media (max-width: 640px) {
+    .demo-panel { padding: 18px; }
+    .demo-form-panel input,
+    .demo-form-panel select {
+      min-height: 48px;
+      font-size: 16px;
+    }
+    .demo-form-panel .radio-option { min-height: 48px; }
+    .demo-form-panel .btn-lg { min-height: 52px; font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="site-nav"></div>
+
+<main>
+  <section class="demo-wrap">
+    <div class="container">
+      <div class="demo-head">
+        <span class="eyebrow">Request a demo</span>
+        <h1>See School Pulse in action.</h1>
+        <p class="lead">Fill out the form and we'll show you how School Pulse can work for your school.</p>
+      </div>
+
+      <div class="demo-grid">
+        <div class="demo-panel demo-form-panel">
+          <form id="demoForm" novalidate>
+            <div class="form-field">
+              <label for="schoolName">School name</label>
+              <input type="text" id="schoolName" name="schoolName" placeholder="Enter your school name" required>
+              <span class="error-text">Please enter your school's name.</span>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="schoolType">School type</label>
+                <select id="schoolType" name="schoolType" required>
+                  <option value="">Select school type</option>
+                  <option value="Nursery">Nursery</option>
+                  <option value="Primary">Primary</option>
+                  <option value="Secondary">Secondary</option>
+                  <option value="International">International</option>
+                </select>
+                <span class="error-text">Please select a school type.</span>
+              </div>
+
+              <div class="form-field">
+                <label for="learnerCount">Learner count</label>
+                <select id="learnerCount" name="learnerCount" required>
+                  <option value="">Select learner count</option>
+                  <option value="1-300">1–300</option>
+                  <option value="301-500">301–500</option>
+                  <option value="501-800">501–800</option>
+                  <option value="801-1200">801–1200</option>
+                  <option value="1200+">1200+</option>
+                </select>
+                <span class="error-text">Please select a learner count.</span>
+              </div>
+            </div>
+
+            <div class="form-field">
+              <label for="workEmail">Work email</label>
+              <input type="email" id="workEmail" name="workEmail" placeholder="you@school.edu" required>
+              <span class="error-text">Please enter a valid work email.</span>
+            </div>
+
+            <div class="form-field">
+              <label>Preferred contact</label>
+              <div class="radio-group">
+                <label class="radio-option">
+                  <input type="radio" name="preferredContact" value="Phone call">
+                  Phone call
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="preferredContact" value="WhatsApp">
+                  WhatsApp
+                </label>
+                <label class="radio-option">
+                  <input type="radio" name="preferredContact" value="Email">
+                  Email
+                </label>
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg btn-block">Request demo</button>
+          </form>
+
+          <div id="demoSuccess" class="success-panel" style="display:none;">
+            <div class="icon-circle" id="demoSuccessIcon"></div>
+            <h3>Thanks — we'll be in touch to schedule your demo</h3>
+            <p class="muted">A member of our team will reach out shortly using your preferred contact method.</p>
+          </div>
+        </div>
+
+        <aside class="demo-panel expect-panel">
+          <h2>What to expect</h2>
+          <div class="timeline">
+            <div class="timeline-step">
+              <div class="ts-icon" id="icon-step-1"></div>
+              <div class="ts-body">
+                <strong>1. Intro call</strong>
+                <p>We'll learn about your school, your priorities, and answer any questions.</p>
+                <span class="ts-meta"><span id="icon-clock-1"></span>15 minutes</span>
+              </div>
+            </div>
+            <div class="timeline-step">
+              <div class="ts-icon" id="icon-step-2"></div>
+              <div class="ts-body">
+                <strong>2. Live demo</strong>
+                <p>See School Pulse in action and how it fits your school's needs.</p>
+                <span class="ts-meta"><span id="icon-clock-2"></span>30 minutes</span>
+              </div>
+            </div>
+            <div class="timeline-step">
+              <div class="ts-icon" id="icon-step-3"></div>
+              <div class="ts-body">
+                <strong>3. Next steps</strong>
+                <p>We'll discuss the right plan, onboarding, and implementation.</p>
+                <span class="ts-meta"><span id="icon-clock-3"></span>15 minutes</span>
+              </div>
+            </div>
+            <div class="timeline-step">
+              <div class="ts-icon" id="icon-step-4"></div>
+              <div class="ts-body">
+                <strong>4. Response time</strong>
+                <p>We typically respond to demo requests within one business day.</p>
+                <span class="ts-meta"><span id="icon-clock-4"></span>Within 1 business day</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="js/icons.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/footer.js"></script>
+<script src="js/forms.js"></script>
+<script src="js/main.js"></script>
+<script>
+  document.getElementById('demoSuccessIcon').innerHTML = window.ICONS.check;
+  document.getElementById('icon-step-1').innerHTML = window.ICONS.phone;
+  document.getElementById('icon-step-2').innerHTML = window.ICONS.academics;
+  document.getElementById('icon-step-3').innerHTML = window.ICONS.file;
+  document.getElementById('icon-step-4').innerHTML = window.ICONS.mail;
+  ['icon-clock-1','icon-clock-2','icon-clock-3','icon-clock-4'].forEach(function (id) {
+    document.getElementById(id).innerHTML = window.ICONS.clock;
+  });
+</script>
+</body>
+</html>

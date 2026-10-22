@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import 'package:uuid/uuid.dart';
 import '../../data/repositories/curriculum_assignment_repository_impl.dart';
 import '../../domain/entities/curriculum_assignment.dart';
@@ -11,7 +12,9 @@ import '../bloc/structure_bloc.dart';
 import '../bloc/structure_state.dart';
 
 class CurriculumAssignmentScreen extends StatefulWidget {
-  const CurriculumAssignmentScreen({super.key});
+  const CurriculumAssignmentScreen({super.key, this.showAppBar = true});
+
+  final bool showAppBar;
 
   @override
   State<CurriculumAssignmentScreen> createState() =>
@@ -35,7 +38,10 @@ class _CurriculumAssignmentScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Curriculum / Subject Allocation')),
+      appBar: widget.showAppBar
+          ? AppBar(title: const Text('Curriculum / Subject Allocation'))
+          : null,
+      backgroundColor: widget.showAppBar ? null : Colors.transparent,
       body: BlocBuilder<StructureBloc, StructureState>(
         builder: (context, structure) {
           final currentYear = structure.academicYears
@@ -51,7 +57,8 @@ class _CurriculumAssignmentScreenState
           if (structure.classes.where((item) => item.isActive).isEmpty) {
             return const _Message(
               title: 'Classes required',
-              body: 'Create at least one active class before curriculum allocation.',
+              body:
+                  'Create at least one active class before curriculum allocation.',
             );
           }
           if (structure.subjects.where((item) => item.isActive).isEmpty) {
@@ -74,118 +81,111 @@ class _CurriculumAssignmentScreenState
               if (!snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
-              final assignments = snapshot.data!
-                  .where((item) => item.academicYearId == currentYear.id)
-                  .toList()
-                ..sort((a, b) {
-                  final classCompare = a.classId.compareTo(b.classId);
-                  if (classCompare != 0) return classCompare;
-                  return a.displayOrder.compareTo(b.displayOrder);
-                });
+              final assignments =
+                  snapshot.data!
+                      .where((item) => item.academicYearId == currentYear.id)
+                      .toList()
+                    ..sort((a, b) {
+                      final classCompare = a.classId.compareTo(b.classId);
+                      if (classCompare != 0) return classCompare;
+                      return a.displayOrder.compareTo(b.displayOrder);
+                    });
+              final scheme = Theme.of(context).colorScheme;
 
-              return Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Text(
-                      'Define what each class/stream studies in ${currentYear.name}. Subject definitions stay reusable; these year-scoped allocations drive timetable, marks and teacher assignment.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                            height: 1.4,
-                          ),
-                    ),
-                  ),
-                  Expanded(
-                    child: assignments.isEmpty
-                        ? const _Message(
-                            title: 'No curriculum allocated yet',
-                            body:
-                                'Add the subjects taught by each class or stream for the current academic year.',
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                            itemCount: assignments.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final item = assignments[index];
-                              final schoolClass = structure.classes
-                                  .where((value) => value.id == item.classId)
-                                  .firstOrNull;
-                              final stream = structure.streams
-                                  .where((value) => value.id == item.streamId)
-                                  .firstOrNull;
-                              final subject = structure.subjects
-                                  .where((value) => value.id == item.subjectId)
-                                  .firstOrNull;
-                              return Card(
-                                child: ListTile(
-                                  title: Text(
-                                    subject?.name ?? 'Missing subject',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                    ),
+              void onAdd() => _showForm(context, structure, currentYear);
+
+              final byGroup = <String, List<CurriculumAssignment>>{};
+              for (final item in assignments) {
+                final schoolClass = structure.classes
+                    .where((value) => value.id == item.classId)
+                    .firstOrNull;
+                final stream = structure.streams
+                    .where((value) => value.id == item.streamId)
+                    .firstOrNull;
+                final label =
+                    '${schoolClass?.name ?? 'Missing class'} • ${stream?.name ?? 'Whole class'}';
+                byGroup.putIfAbsent(label, () => []).add(item);
+              }
+
+              return SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              assignments.isEmpty
+                                  ? 'Assign subjects to the classes that study them.'
+                                  : 'Subjects are assigned to each class or stream.',
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: scheme.onSurfaceVariant,
+                                    height: 1.4,
                                   ),
-                                  subtitle: Text([
-                                    schoolClass?.name ?? 'Missing class',
-                                    if (stream != null) stream.name,
-                                    item.isCompulsory
-                                        ? 'Compulsory'
-                                        : 'Elective',
-                                    if (item.periodsPerWeek > 0)
-                                      '${item.periodsPerWeek} periods/week',
-                                  ].join(' • ')),
-                                  trailing: PopupMenuButton<String>(
-                                    onSelected: (action) {
-                                      if (action == 'edit') {
-                                        _showForm(
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          OutlinedButton.icon(
+                            onPressed: onAdd,
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Add allocation'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      if (assignments.isEmpty)
+                        _CurriculumEmptyState(onAdd: onAdd)
+                      else
+                        Expanded(
+                          child: ListView(
+                            padding: EdgeInsets.zero,
+                            children: [
+                              for (final entry in byGroup.entries) ...[
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Text(
+                                    entry.key,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          color: scheme.primary,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                  ),
+                                ),
+                                for (final item in entry.value)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: AppCard(
+                                      child: _AssignmentTile(
+                                        item: item,
+                                        structure: structure,
+                                        onEdit: () => _showForm(
                                           context,
                                           structure,
                                           currentYear,
                                           existing: item,
-                                        );
-                                      } else if (action == 'deactivate') {
-                                        _repository
-                                            .deactivateAssignment(item.id);
-                                      }
-                                    },
-                                    itemBuilder: (_) => const [
-                                      PopupMenuItem(
-                                        value: 'edit',
-                                        child: Text('Edit'),
+                                        ),
+                                        onDeactivate: () => _repository
+                                            .deactivateAssignment(item.id),
                                       ),
-                                      PopupMenuItem(
-                                        value: 'deactivate',
-                                        child: Text('Deactivate'),
-                                      ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
+                                const SizedBox(height: 8),
+                              ],
+                            ],
                           ),
+                        ),
+                    ],
                   ),
-                ],
+                ),
               );
             },
-          );
-        },
-      ),
-      floatingActionButton: BlocBuilder<StructureBloc, StructureState>(
-        builder: (context, structure) {
-          final currentYear = structure.academicYears
-              .where((year) => year.isCurrent && !year.isArchived)
-              .firstOrNull;
-          final canAdd = currentYear != null &&
-              structure.classes.any((item) => item.isActive) &&
-              structure.subjects.any((item) => item.isActive);
-          return FloatingActionButton.extended(
-            onPressed: canAdd
-                ? () => _showForm(context, structure, currentYear)
-                : null,
-            icon: const Icon(Icons.add),
-            label: const Text('Add Allocation'),
           );
         },
       ),
@@ -198,10 +198,12 @@ class _CurriculumAssignmentScreenState
     AcademicYear currentYear, {
     CurriculumAssignment? existing,
   }) async {
-    final activeClasses =
-        structure.classes.where((item) => item.isActive).toList();
-    final activeSubjects =
-        structure.subjects.where((item) => item.isActive).toList();
+    final activeClasses = structure.classes
+        .where((item) => item.isActive)
+        .toList();
+    final activeSubjects = structure.subjects
+        .where((item) => item.isActive)
+        .toList();
     var classId = existing?.classId ?? activeClasses.first.id;
     var streamId = existing?.streamId ?? '';
     var subjectId = existing?.subjectId ?? activeSubjects.first.id;
@@ -213,8 +215,10 @@ class _CurriculumAssignmentScreenState
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setSheetState) {
+          final scheme = Theme.of(context).colorScheme;
           final selectedClass = activeClasses
               .where((item) => item.id == classId)
               .firstOrNull;
@@ -251,63 +255,117 @@ class _CurriculumAssignmentScreenState
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    existing == null
-                        ? 'Add Curriculum Allocation'
-                        : 'Edit Curriculum Allocation',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          existing == null
+                              ? 'Add allocation'
+                              : 'Edit allocation',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.w800),
                         ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    value: classId,
-                    decoration: const InputDecoration(labelText: 'Class *'),
-                    items: activeClasses
-                        .map(
-                          (item) => DropdownMenuItem(
-                            value: item.id,
-                            child: Text(item.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setSheetState(() {
-                          classId = value;
-                          streamId = '';
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  if (classStreams.isNotEmpty)
-                    DropdownButtonFormField<String>(
-                      value: streamId,
-                      decoration: const InputDecoration(
-                        labelText: 'Stream / Section',
                       ),
-                      items: [
-                        const DropdownMenuItem(
-                          value: '',
-                          child: Text('Whole class'),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        style: IconButton.styleFrom(
+                          backgroundColor: scheme.surfaceContainerHighest,
+                          shape: const CircleBorder(),
                         ),
-                        ...classStreams.map(
-                          (item) => DropdownMenuItem(
-                            value: item.id,
-                            child: Text(item.name),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Assign a subject to a class or stream.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  if (classStreams.isEmpty)
+                    DropdownButtonFormField<String>(
+                      initialValue: classId,
+                      decoration: const InputDecoration(
+                        labelText: 'Class or stream',
+                      ),
+                      items: activeClasses
+                          .map(
+                            (item) => DropdownMenuItem(
+                              value: item.id,
+                              child: Text('${item.name} · Whole class'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setSheetState(() {
+                            classId = value;
+                            streamId = '';
+                          });
+                        }
+                      },
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: classId,
+                            decoration: const InputDecoration(
+                              labelText: 'Class',
+                            ),
+                            items: activeClasses
+                                .map(
+                                  (item) => DropdownMenuItem(
+                                    value: item.id,
+                                    child: Text(item.name),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (value) {
+                              if (value != null) {
+                                setSheetState(() {
+                                  classId = value;
+                                  streamId = '';
+                                });
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: streamId,
+                            decoration: const InputDecoration(
+                              labelText: 'Stream',
+                            ),
+                            items: [
+                              const DropdownMenuItem(
+                                value: '',
+                                child: Text('Whole class'),
+                              ),
+                              ...classStreams.map(
+                                (item) => DropdownMenuItem(
+                                  value: item.id,
+                                  child: Text(item.name),
+                                ),
+                              ),
+                            ],
+                            onChanged: (value) =>
+                                setSheetState(() => streamId = value ?? ''),
                           ),
                         ),
                       ],
-                      onChanged: (value) =>
-                          setSheetState(() => streamId = value ?? ''),
                     ),
-                  if (classStreams.isNotEmpty) const SizedBox(height: 12),
+                  const SizedBox(height: 18),
                   DropdownButtonFormField<String>(
-                    value: eligibleSubjects.any((item) => item.id == subjectId)
+                    initialValue:
+                        eligibleSubjects.any((item) => item.id == subjectId)
                         ? subjectId
                         : null,
-                    decoration: const InputDecoration(labelText: 'Subject *'),
+                    decoration: const InputDecoration(labelText: 'Subject'),
                     items: eligibleSubjects
                         .map(
                           (item) => DropdownMenuItem(
@@ -322,23 +380,30 @@ class _CurriculumAssignmentScreenState
                       }
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 18),
                   TextField(
                     controller: periods,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: 'Periods per week',
-                      helperText: '0 means the school has not set a target.',
                     ),
                   ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Compulsory for this class/stream'),
-                    value: compulsory,
-                    onChanged: (value) =>
-                        setSheetState(() => compulsory = value),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Compulsory',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      Switch(
+                        value: compulsory,
+                        onChanged: (value) =>
+                            setSheetState(() => compulsory = value),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
@@ -375,7 +440,7 @@ class _CurriculumAssignmentScreenState
                                 }
                               }
                             },
-                      child: const Text('Save Allocation'),
+                      child: const Text('Save allocation'),
                     ),
                   ),
                 ],
@@ -386,6 +451,84 @@ class _CurriculumAssignmentScreenState
       ),
     );
     periods.dispose();
+  }
+}
+
+class _AssignmentTile extends StatelessWidget {
+  const _AssignmentTile({
+    required this.item,
+    required this.structure,
+    required this.onEdit,
+    required this.onDeactivate,
+  });
+
+  final CurriculumAssignment item;
+  final StructureState structure;
+  final VoidCallback onEdit;
+  final VoidCallback onDeactivate;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final subject = structure.subjects
+        .where((value) => value.id == item.subjectId)
+        .firstOrNull;
+    return ListTile(
+      leading: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: scheme.primary,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(
+          Icons.menu_book_outlined,
+          color: Colors.white,
+          size: 22,
+        ),
+      ),
+      title: Text(
+        subject?.name ?? 'Missing subject',
+        style: const TextStyle(fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(
+        [
+          item.isCompulsory ? 'Compulsory' : 'Elective',
+          if (item.periodsPerWeek > 0) '${item.periodsPerWeek} periods/week',
+        ].join(' • '),
+      ),
+      trailing: PopupMenuButton<String>(
+        icon: const Icon(Icons.more_vert),
+        onSelected: (action) {
+          if (action == 'edit') {
+            onEdit();
+          } else if (action == 'deactivate') {
+            onDeactivate();
+          }
+        },
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: 'edit', child: Text('Edit')),
+          PopupMenuItem(value: 'deactivate', child: Text('Deactivate')),
+        ],
+      ),
+    );
+  }
+}
+
+class _CurriculumEmptyState extends StatelessWidget {
+  final VoidCallback onAdd;
+
+  const _CurriculumEmptyState({required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    return EmptyState(
+      icon: Icons.account_tree_outlined,
+      title: 'No allocations yet',
+      message: 'Add the first subject allocation to continue.',
+      ctaLabel: 'Add allocation',
+      onCtaPressed: onAdd,
+    );
   }
 }
 
@@ -410,9 +553,9 @@ class _Message extends StatelessWidget {
               Text(
                 title,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
               Text(body, textAlign: TextAlign.center),

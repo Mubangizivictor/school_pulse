@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 
 /// Honest "coming in a later phase" placeholder for owner console sections
-/// that genuinely don't have a backing screen yet (Notifications, Settings).
-/// No fake data, no dead buttons — just a clear message.
+/// that genuinely don't have a backing screen yet. Notifications, Settings,
+/// Billing/Subscriptions and Custom Domains are all fully built now; this is
+/// kept for any future section that is announced before it ships. No fake
+/// data, no dead buttons — just a clear message.
 class SuperAdminPlaceholderScreen extends StatelessWidget {
   const SuperAdminPlaceholderScreen({
     super.key,

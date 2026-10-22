@@ -1,5 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../../core/error/friendly_error_message.dart';
+import '../../data/services/manual_payment_service.dart';
+import '../../domain/entities/manual_subscription_payment.dart';
 import '../../domain/repositories/super_admin_repository.dart';
 import '../../domain/entities/audit_log.dart';
 import '../../domain/entities/school.dart';
@@ -9,9 +12,14 @@ import 'super_admin_state.dart';
 class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
   final SuperAdminRepository repository;
   final FirebaseAuth auth;
+  final ManualPaymentService payments;
 
-  SuperAdminBloc({required this.repository, required this.auth})
-    : super(const SuperAdminState()) {
+  SuperAdminBloc({
+    required this.repository,
+    required this.auth,
+    ManualPaymentService? payments,
+  }) : payments = payments ?? ManualPaymentService(),
+       super(const SuperAdminState()) {
     on<LoadSuperAdminDashboard>(_onLoadDashboard);
     on<ApproveSchoolApplicationEvent>(_onApproveSchoolApplication);
     on<RejectSchoolApplicationEvent>(_onRejectSchoolApplication);
@@ -34,7 +42,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       final logs = await repository.getAuditLogs(schoolId: event.schoolId);
       emit(state.copyWith(auditLogs: logs, clearErrorMessage: true));
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: friendlyErrorMessage(e)));
     }
   }
 
@@ -56,7 +64,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       );
       emit(state.copyWith(supportModeSchoolId: event.schoolId));
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: friendlyErrorMessage(e)));
     }
   }
 
@@ -96,11 +104,20 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       final applicationsFuture = repository.getSchoolApplications();
       final plansFuture = repository.getSubscriptionPlans();
       final statsFuture = repository.getPlatformStats();
+      final approvedPaymentsFuture = payments.getPayments(
+        status: ManualPaymentStatus.approved,
+      );
 
       final schools = await schoolsFuture;
       final applications = await applicationsFuture;
       final plans = await plansFuture;
       final stats = await statsFuture;
+      // Real revenue collected, not an estimate from plan list prices - sums
+      // the actual amount owners submitted proof for and staff verified.
+      final approvedRevenueTotal = (await approvedPaymentsFuture).fold<int>(
+        0,
+        (total, payment) => total + payment.submittedAmount,
+      );
 
       emit(
         state.copyWith(
@@ -109,6 +126,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
           applications: applications,
           plans: plans,
           stats: stats,
+          approvedRevenueTotal: approvedRevenueTotal,
           clearErrorMessage: true,
         ),
       );
@@ -116,7 +134,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       emit(
         state.copyWith(
           status: SuperAdminStatus.failure,
-          errorMessage: e.toString(),
+          errorMessage: friendlyErrorMessage(e),
         ),
       );
     }
@@ -159,7 +177,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       emit(
         state.copyWith(
           clearReviewingApplicationId: true,
-          errorMessage: e.toString(),
+          errorMessage: friendlyErrorMessage(e),
         ),
       );
     }
@@ -199,7 +217,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
       emit(
         state.copyWith(
           clearReviewingApplicationId: true,
-          errorMessage: e.toString(),
+          errorMessage: friendlyErrorMessage(e),
         ),
       );
     }
@@ -210,6 +228,10 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
     Emitter<SuperAdminState> emit,
   ) async {
     try {
+      // The setSchoolLifecycleStatus Cloud Function writes the platform
+      // audit entry itself, atomically with the status change - no separate
+      // client-side logAction call here, to avoid a duplicate/missing audit
+      // entry if the two writes ever raced or one failed independently.
       if (event.status == SchoolStatus.suspended) {
         await repository.suspendSchool(
           event.schoolId,
@@ -224,22 +246,9 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
         );
       }
 
-      await repository.logAction(
-        AuditLog(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          ownerId: _ownerId,
-          action: 'UPDATE_SCHOOL_STATUS',
-          schoolId: event.schoolId,
-          timestamp: DateTime.now(),
-          device: 'Platform Dashboard',
-          reason: event.reason,
-          metadata: {'newStatus': event.status.name},
-        ),
-      );
-
       add(LoadSuperAdminDashboard());
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: friendlyErrorMessage(e)));
     }
   }
 
@@ -263,7 +272,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
 
       add(LoadSuperAdminDashboard());
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: friendlyErrorMessage(e)));
     }
   }
 
@@ -272,30 +281,17 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
     Emitter<SuperAdminState> emit,
   ) async {
     try {
+      // updateSchoolSubscriptionPlan writes the platform audit entry
+      // server-side, atomically with the plan/expiry change.
       await repository.updateSchoolSubscription(
         event.schoolId,
         event.planId,
         event.expiry,
       );
 
-      await repository.logAction(
-        AuditLog(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          ownerId: _ownerId,
-          action: 'UPDATE_SUBSCRIPTION',
-          schoolId: event.schoolId,
-          timestamp: DateTime.now(),
-          device: 'Platform Dashboard',
-          metadata: {
-            'planId': event.planId,
-            'expiry': event.expiry.toIso8601String(),
-          },
-        ),
-      );
-
       add(LoadSuperAdminDashboard());
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: friendlyErrorMessage(e)));
     }
   }
 
@@ -332,7 +328,7 @@ class SuperAdminBloc extends Bloc<SuperAdminEvent, SuperAdminState> {
 
       add(LoadSuperAdminDashboard());
     } catch (e) {
-      emit(state.copyWith(errorMessage: e.toString()));
+      emit(state.copyWith(errorMessage: friendlyErrorMessage(e)));
     }
   }
 }

@@ -107,9 +107,7 @@ abstract class StudentRepository {
   Future<Either<Failure, ParentAccessCode>> resolveAccessCode(String code);
 
   // Student Portal Access Codes
-  Future<Either<Failure, String>> provisionStudentAccessCode(
-    String studentId,
-  );
+  Future<Either<Failure, String>> provisionStudentAccessCode(String studentId);
   Future<Either<Failure, void>> resetStudentPin(String code);
   Future<Either<Failure, void>> setStudentAccessCodeStatus(
     String code,

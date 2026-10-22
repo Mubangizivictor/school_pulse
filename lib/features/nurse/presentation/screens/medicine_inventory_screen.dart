@@ -137,18 +137,16 @@ class _MedicineInventoryScreenState extends State<MedicineInventoryScreen>
                   margin: const EdgeInsets.only(bottom: 12),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor:
-                          (isExpired
-                                  ? Colors.red
-                                  : (isLow ? Colors.orange : Colors.green))
-                              .withValues(alpha: 0.1),
+                      backgroundColor: (isExpired
+                          ? Colors.black
+                          : (isLow ? Colors.black : Colors.black)),
                       child: Icon(
                         item.type == MedicalItemType.medication
                             ? Icons.medication
                             : Icons.medical_services,
                         color: isExpired
-                            ? Colors.red
-                            : (isLow ? Colors.orange : Colors.green),
+                            ? Colors.black
+                            : (isLow ? Colors.black : Colors.black),
                       ),
                     ),
                     title: Text(
@@ -173,7 +171,7 @@ class _MedicineInventoryScreenState extends State<MedicineInventoryScreen>
                           const Text(
                             'LOW STOCK',
                             style: TextStyle(
-                              color: Colors.orange,
+                              color: Colors.black,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -182,7 +180,7 @@ class _MedicineInventoryScreenState extends State<MedicineInventoryScreen>
                           const Text(
                             'EXPIRED',
                             style: TextStyle(
-                              color: Colors.red,
+                              color: Colors.black,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -266,15 +264,15 @@ class _MedicineInventoryScreenState extends State<MedicineInventoryScreen>
   Color _getStatusColor(SupplyRequestStatus status) {
     switch (status) {
       case SupplyRequestStatus.pending:
-        return Colors.orange;
+        return Colors.black;
       case SupplyRequestStatus.approved:
-        return Colors.green;
+        return Colors.black;
       case SupplyRequestStatus.purchased:
-        return Colors.blue;
+        return Colors.black;
       case SupplyRequestStatus.delivered:
-        return Colors.teal;
+        return Colors.black;
       case SupplyRequestStatus.rejected:
-        return Colors.red;
+        return Colors.black;
     }
   }
 

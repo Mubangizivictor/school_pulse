@@ -48,6 +48,7 @@ app.*.map.json
 /functions/node_modules/
 /functions/lib/
 /public_functions/node_modules/
+/web_marketing/node_modules/
 firebase-debug.log
 firebase-debug.*.log
 .firebase/
@@ -76,3 +77,11 @@ firebase-debug.*.log
 *.p8
 *service-account*.json
 *serviceAccountKey*.json
+
+# Isar's native binary, copied to the project root so `flutter test` can
+# dlopen() it on macOS (Isar looks in the working directory) - vendored from
+# isar_flutter_libs' own macos/ build output, never checked in.
+/libisar.dylib
+
+# Old projects kept locally (not part of this repo)
+/_old/

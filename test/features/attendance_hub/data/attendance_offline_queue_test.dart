@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:school_pulse/core/error/failures.dart';
@@ -9,6 +11,8 @@ import 'package:school_pulse/features/attendance_hub/data/repositories/attendanc
 import 'package:school_pulse/features/attendance_hub/domain/entities/attendance_category.dart';
 import 'package:school_pulse/features/attendance_hub/domain/entities/attendance_record.dart';
 import 'package:school_pulse/features/auth/domain/usecases/get_staff_members.dart';
+import 'package:school_pulse/features/student/domain/entities/student.dart';
+import 'package:school_pulse/features/student/domain/entities/student_enums.dart';
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
 import 'package:school_pulse/features/structure/domain/repositories/structure_repository.dart';
 
@@ -45,7 +49,26 @@ void main() {
     method: AttendanceMethod.nfc,
     markedBy: 'Teacher A',
     operatorId: 'staff-a',
-    createdAt: DateTime(2026, 8, 16, 8, 4),
+    // Relative to now: a fixed date ages past the 30-day retention window
+    // and the sync sweep then (correctly) blocks it as stale.
+    createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+  );
+
+  // Matches `record` above (personId student-a, classId class-a, active) so
+  // _validateStudentPlacement - which markAttendance calls unconditionally on
+  // every write - finds the record's student in the roster it expects.
+  final rosterStudent = Student(
+    id: 'student-a',
+    schoolId: 'school-a',
+    name: 'Victor Mubangizi',
+    studentCode: 'S-A-0001',
+    admissionNumber: 'A-0001',
+    dateOfBirth: DateTime(2015, 1, 1),
+    gender: Gender.male,
+    classId: 'class-a',
+    academicYearId: 'year-a',
+    status: StudentStatus.active,
+    level: EducationLevel.primary,
   );
 
   setUpAll(() {
@@ -54,18 +77,43 @@ void main() {
     );
     registerFallbackValue(record);
     registerFallbackValue(AttendanceRecordModel.fromEntity(record));
+    registerFallbackValue(const Duration(days: 30));
   });
 
   setUp(() {
     remote = _MockAttendanceRemoteDataSource();
     local = _MockAttendanceLocalDataSource();
     networkInfo = _MockNetworkInfo();
+    final studentRepository = _MockStudentRepository();
+    // markAttendance always runs _validateStudentPlacement first, which
+    // calls studentRepository.getAllStudents - without this stub, mocktail
+    // returns null for the unstubbed call and every markAttendance test
+    // fails with `type 'Null' is not a subtype of type
+    // 'Future<Either<Failure, List<Student>>>'` before reaching the
+    // behaviour actually under test.
+    when(
+      () => studentRepository.getAllStudents(schoolId: any(named: 'schoolId')),
+    ).thenAnswer((_) async => Right([rosterStudent]));
+    // Every syncPendingAttendance sweep evicts stale/blocked rows first and
+    // marks a record syncing right before the push - stub both to no-ops by
+    // default so existing tests that only assert on markSynced/push don't
+    // also have to know about lifecycle bookkeeping they aren't testing.
+    when(
+      () => local.evictStale(retention: any(named: 'retention')),
+    ).thenAnswer((_) async => 0);
+    when(() => local.markSyncing(any())).thenAnswer((_) async {});
+    when(
+      () => local.markRetryableFailure(any(), error: any(named: 'error')),
+    ).thenAnswer((_) async {});
+    when(
+      () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+    ).thenAnswer((_) async {});
     repository = AttendanceRepositoryImpl(
       remoteDataSource: remote,
       localDataSource: local,
       networkInfo: networkInfo,
       structureRepository: _MockStructureRepository(),
-      studentRepository: _MockStudentRepository(),
+      studentRepository: studentRepository,
       getStaffMembers: _MockGetStaffMembers(),
     );
   });
@@ -341,4 +389,189 @@ void main() {
       verify(() => local.markSynced(any())).called(1);
     });
   });
+
+  group('syncPendingAttendance - lifecycle (queued/syncing/completed/'
+      'retryableFailure/permanentlyBlocked/evicted)', () {
+    test('happy path: a pending record is marked syncing, then synced '
+        '(completed) - never left silently in an ambiguous state', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => true);
+      when(
+        () => local.getPending('school-a'),
+      ).thenAnswer((_) async => [record]);
+      when(
+        () => remote.pushRecord(any(), any(), any()),
+      ).thenAnswer((_) async {});
+      when(() => local.markSynced(any())).thenAnswer((_) async {});
+
+      await repository.syncPendingAttendance('school-a');
+
+      verify(() => local.markSyncing(any())).called(1);
+      verify(() => local.markSynced(any())).called(1);
+      verifyNever(
+        () => local.markRetryableFailure(any(), error: any(named: 'error')),
+      );
+      verifyNever(
+        () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+      );
+    });
+
+    test('a transient network failure marks the record retryableFailure and '
+        'still retries on the next sweep - never blocked', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => true);
+      when(
+        () => local.getPending('school-a'),
+      ).thenAnswer((_) async => [record]);
+      when(
+        () => remote.pushRecord(any(), any(), any()),
+      ).thenThrow(Exception('SocketException: Network is unreachable'));
+
+      await repository.syncPendingAttendance('school-a');
+
+      verify(
+        () => local.markRetryableFailure(any(), error: any(named: 'error')),
+      ).called(1);
+      verifyNever(
+        () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+      );
+      verifyNever(() => local.markSynced(any()));
+    });
+
+    test('a permission-denied FirebaseException (access revoked) marks the '
+        'record permanentlyBlocked, not retryableFailure', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => true);
+      when(
+        () => local.getPending('school-a'),
+      ).thenAnswer((_) async => [record]);
+      when(() => remote.pushRecord(any(), any(), any())).thenThrow(
+        FirebaseException(
+          plugin: 'cloud_firestore',
+          code: 'permission-denied',
+          message: 'Missing or insufficient permissions.',
+        ),
+      );
+
+      await repository.syncPendingAttendance('school-a');
+
+      verify(
+        () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+      ).called(1);
+      verifyNever(
+        () => local.markRetryableFailure(any(), error: any(named: 'error')),
+      );
+      verifyNever(() => local.markSynced(any()));
+    });
+
+    test('a not-found FirebaseException (target learner/scope removed) also '
+        'marks the record permanentlyBlocked - a gone target is not '
+        'retryable', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => true);
+      when(
+        () => local.getPending('school-a'),
+      ).thenAnswer((_) async => [record]);
+      when(() => remote.pushRecord(any(), any(), any())).thenThrow(
+        FirebaseException(plugin: 'cloud_firestore', code: 'not-found'),
+      );
+
+      await repository.syncPendingAttendance('school-a');
+
+      verify(
+        () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+      ).called(1);
+    });
+
+    test('a record older than the retention window is permanently blocked '
+        'as stale instead of being pushed - never retried forever', () async {
+      final staleRecord = record.copyWith().let(
+        (r) => AttendanceRecord(
+          id: r.id,
+          schoolId: r.schoolId,
+          category: r.category,
+          scopeId: r.scopeId,
+          scopeName: r.scopeName,
+          sessionType: r.sessionType,
+          date: r.date,
+          personId: r.personId,
+          personName: r.personName,
+          status: r.status,
+          method: r.method,
+          markedBy: r.markedBy,
+          operatorId: r.operatorId,
+          deviceId: r.deviceId,
+          syncStatus: r.syncStatus,
+          createdAt: DateTime.now().subtract(const Duration(days: 45)),
+        ),
+      );
+      when(() => networkInfo.isConnected).thenAnswer((_) async => true);
+      when(
+        () => local.getPending('school-a'),
+      ).thenAnswer((_) async => [staleRecord]);
+      when(
+        () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+      ).thenAnswer((_) async {});
+
+      await repository.syncPendingAttendance('school-a');
+
+      verify(
+        () => local.markPermanentlyBlocked(any(), reason: any(named: 'reason')),
+      ).called(1);
+      verifyNever(() => remote.pushRecord(any(), any(), any()));
+    });
+
+    test('every sweep evicts stale completed/blocked rows past the '
+        'retention window, even while offline', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => false);
+
+      await repository.syncPendingAttendance('school-a');
+
+      verify(
+        () => local.evictStale(retention: const Duration(days: 30)),
+      ).called(1);
+    });
+
+    test('logout clears the entire local attendance queue via '
+        'clearLocalQueue, regardless of school or user', () async {
+      when(() => local.clearAll()).thenAnswer((_) async {});
+
+      await repository.clearLocalQueue();
+
+      verify(() => local.clearAll()).called(1);
+    });
+
+    test('an account switch on the same device (a second clearLocalQueue '
+        'call, e.g. teacher B signing in after teacher A signed out) also '
+        'wipes any residue rather than assuming it is already empty', () async {
+      when(() => local.clearAll()).thenAnswer((_) async {});
+
+      await repository.clearLocalQueue();
+      await repository.clearLocalQueue();
+
+      verify(() => local.clearAll()).called(2);
+    });
+
+    test('a retried push after a transient failure uses the same '
+        'deterministic recordId, so a retry can never create a duplicate '
+        'server-side document', () async {
+      when(() => networkInfo.isConnected).thenAnswer((_) async => true);
+      when(
+        () => local.getPending('school-a'),
+      ).thenAnswer((_) async => [record]);
+      final pushedIds = <String>[];
+      when(() => remote.pushRecord(any(), any(), any())).thenAnswer((
+        invocation,
+      ) async {
+        pushedIds.add(invocation.positionalArguments[1] as String);
+      });
+      when(() => local.markSynced(any())).thenAnswer((_) async {});
+
+      await repository.syncPendingAttendance('school-a');
+      await repository.syncPendingAttendance('school-a');
+
+      expect(pushedIds.length, 2);
+      expect(pushedIds.toSet().length, 1, reason: 'same idempotent recordId');
+    });
+  });
+}
+
+extension _Let<T> on T {
+  R let<R>(R Function(T) f) => f(this);
 }

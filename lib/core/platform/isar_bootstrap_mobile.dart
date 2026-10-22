@@ -15,6 +15,7 @@ import 'package:school_pulse/features/branding/data/models/school_branding_isar.
 import 'package:school_pulse/features/biometrics/data/models/biometric_template_isar.dart';
 import 'package:school_pulse/features/gate_ops/data/models/gate_ops_isar_models.dart';
 import 'package:school_pulse/features/attendance_hub/data/models/attendance_record_isar.dart';
+import 'package:school_pulse/features/health/data/models/clinic_visit_isar.dart';
 import 'package:school_pulse/features/structure/data/models/structure_isar_models.dart';
 import 'package:school_pulse/features/exams/data/models/isar_assessment_mark.dart';
 import 'package:school_pulse/features/library/data/models/library_isar_models.dart';
@@ -24,7 +25,14 @@ import 'package:school_pulse/features/notifications/data/models/notification_isa
 import 'package:school_pulse/features/notifications/data/models/notification_token_isar.dart';
 import 'package:school_pulse/features/messages/data/models/pending_message_isar.dart';
 import 'package:school_pulse/features/teacher/data/models/class_teacher_isar_models.dart';
+import 'package:school_pulse/features/teacher/data/models/subject_resource_isar_models.dart';
 import 'package:school_pulse/features/teacher/data/models/subject_teacher_isar_models.dart';
+import 'package:school_pulse/features/shared/boarding/data/models/boarding_attendance_isar.dart';
+import 'package:school_pulse/features/student/data/enrollment_setup/models/enrollment_setup_draft_isar.dart';
+import 'package:school_pulse/features/parent_offline/data/models/parent_cache_entry_isar.dart';
+import 'package:school_pulse/features/parent_offline/data/models/parent_queue_item_isar.dart';
+import 'package:school_pulse/features/exam_factory/data/models/exam_factory_queue_item_isar.dart';
+import 'package:school_pulse/features/admin/data/models/staff_attendance_queue_item_isar.dart';
 
 /// Isar's web engine persists to IndexedDB and ignores the directory path;
 /// `getApplicationDocumentsDirectory()` has no web implementation and
@@ -78,6 +86,13 @@ Future<Isar> open() async {
     ClassStudentIsarSchema,
     ClassDashboardCacheIsarSchema,
     ClassAttendanceDraftIsarSchema,
+    ClassTaskIsarSchema,
+    ClassHomeworkIsarSchema,
+    ClassBehaviourRecordIsarSchema,
+    ClassAnnouncementIsarSchema,
+    ClassPerformanceCacheIsarSchema,
+    ClassResourceIsarSchema,
+    SubjectResourceIsarSchema,
     AttendanceTypeDefIsarSchema,
     CampusIsarSchema,
     HouseIsarSchema,
@@ -100,5 +115,12 @@ Future<Isar> open() async {
     DocumentTemplateDefIsarSchema,
     CustomFieldDefIsarSchema,
     AttendanceRecordIsarSchema,
+    ClinicVisitIsarSchema,
+    BoardingAttendanceIsarSchema,
+    EnrollmentSetupDraftIsarSchema,
+    ParentCacheEntryIsarSchema,
+    ParentQueueItemIsarSchema,
+    ExamFactoryQueueItemIsarSchema,
+    StaffAttendanceQueueItemIsarSchema,
   ], directory: dir.path);
 }

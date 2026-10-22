@@ -31,7 +31,7 @@ class ReadingTrendsChart extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black,
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -54,7 +54,7 @@ class ReadingTrendsChart extends StatelessWidget {
                         DateFormat('MMM').format(date),
                         style: const TextStyle(
                           fontSize: 10,
-                          color: Colors.grey,
+                          color: Colors.black,
                         ),
                       ),
                     );
@@ -70,7 +70,7 @@ class ReadingTrendsChart extends StatelessWidget {
                 getTitlesWidget: (value, meta) {
                   return Text(
                     value.toInt().toString(),
-                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    style: const TextStyle(fontSize: 10, color: Colors.black),
                   );
                 },
                 reservedSize: 28,
@@ -94,9 +94,7 @@ class ReadingTrendsChart extends StatelessWidget {
               dotData: const FlDotData(show: true),
               belowBarData: BarAreaData(
                 show: true,
-                color: Theme.of(
-                  context,
-                ).colorScheme.primary.withValues(alpha: 0.1),
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
           ],

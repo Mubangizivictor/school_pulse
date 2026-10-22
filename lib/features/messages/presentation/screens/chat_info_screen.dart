@@ -97,55 +97,52 @@ class _ChatInfoView extends StatelessWidget {
                     width: 100,
                     height: 100,
                     decoration: BoxDecoration(
-                      color: AppColors.royalBlue,
+                      color: AppColors.background(context),
                       shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.border(context),
+                        width: 1,
+                      ),
                       image: conversation.avatarUrl != null
                           ? DecorationImage(
                               image: NetworkImage(conversation.avatarUrl!),
                               fit: BoxFit.cover,
                             )
                           : null,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.electricBlue.withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
                     ),
                     child: conversation.avatarUrl != null
                         ? null
                         : Center(
                             child: Text(
                               _initials(conversation.title),
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: AppColors.textPrimary(context),
                                 fontSize: 36,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w900,
                               ),
                             ),
                           ),
                   ),
                   if (isGroup && amAdmin)
                     Positioned(
-                      right: 0,
-                      bottom: 0,
+                      right: -4,
+                      bottom: -4,
                       child: GestureDetector(
                         onTap: () => _changeAvatar(context, user, conversation),
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.electricBlue,
+                            color: AppColors.background(context),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: isDark ? AppColors.bgDark : Colors.white,
-                              width: 3,
+                              color: AppColors.border(context),
+                              width: 1,
                             ),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.camera_alt,
                             size: 16,
-                            color: Colors.white,
+                            color: AppColors.textPrimary(context),
                           ),
                         ),
                       ),
@@ -153,16 +150,27 @@ class _ChatInfoView extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.l),
-              Text(conversation.title, style: AppTypography.headlineSmall),
+              Text(
+                conversation.title.toUpperCase(),
+                style: AppTypography.headlineSmall.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                ),
+              ),
               const SizedBox(height: 4),
               Text(
-                isGroup
-                    ? '${_typeLabel(conversation.type)} • ${conversation.participants.length} members'
-                    : _roleLabel(
-                        _otherParticipant(conversation, user.id)?.role ?? '',
-                      ),
+                (isGroup
+                        ? '${_typeLabel(conversation.type)} • ${conversation.participants.length} members'
+                        : _roleLabel(
+                            _otherParticipant(conversation, user.id)?.role ??
+                                '',
+                          ))
+                    .toUpperCase(),
                 style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textMuted(context),
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 10,
+                  letterSpacing: 1,
                 ),
               ),
             ],
@@ -245,7 +253,10 @@ class _ChatInfoView extends StatelessWidget {
             'Archive',
             conversation.isArchived ? 'Archived' : 'Not archived',
             onTap: () => context.messagingBloc.add(
-              ConversationArchivedSet(conversation.id, !conversation.isArchived),
+              ConversationArchivedSet(
+                conversation.id,
+                !conversation.isArchived,
+              ),
             ),
           ),
           if (isGroup)
@@ -293,11 +304,13 @@ class _ChatInfoView extends StatelessWidget {
         ],
         const SizedBox(height: AppSpacing.xl),
         _buildDangerTile(
+          context,
           isGroup ? Icons.exit_to_app : Icons.delete_outline,
           isGroup ? 'Exit Group' : 'Delete Chat',
           () => _confirmLeave(context, user, conversation, isGroup),
         ),
         _buildDangerTile(
+          context,
           Icons.report_gmailerrorred,
           isGroup ? 'Report Group' : 'Report Contact',
           () => _report(context, user, conversation),
@@ -375,50 +388,68 @@ class _ChatInfoView extends StatelessWidget {
     }
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surfaceDark,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.edit_outlined, color: Colors.white70),
-              title: const Text(
-                'Edit name & description',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                _editGroup(context, conversation);
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.admin_panel_settings_outlined,
-                color: Colors.white70,
-              ),
-              title: Text(
-                conversation.messagePolicy == MessagePolicy.everyone
-                    ? 'Restrict posting to admins'
-                    : 'Let all members post',
-                style: const TextStyle(color: Colors.white),
-              ),
-              onTap: () {
-                Navigator.pop(sheetContext);
-                context.read<ConversationBloc>().add(
-                  ConversationInfoUpdated(
-                    conversation.adminIds,
-                    messagePolicy:
-                        conversation.messagePolicy == MessagePolicy.everyone
-                        ? MessagePolicy.adminsOnly
-                        : MessagePolicy.everyone,
+      backgroundColor: AppColors.background(context),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      builder: (sheetContext) => Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: AppColors.border(context), width: 1),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(
+                  Icons.edit_outlined,
+                  color: AppColors.textPrimary(context),
+                ),
+                title: Text(
+                  'EDIT NAME & DESCRIPTION',
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
                   ),
-                );
-              },
-            ),
-          ],
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _editGroup(context, conversation);
+                },
+              ),
+              Divider(height: 1, color: AppColors.border(context)),
+              ListTile(
+                leading: Icon(
+                  Icons.admin_panel_settings_outlined,
+                  color: AppColors.textPrimary(context),
+                ),
+                title: Text(
+                  (conversation.messagePolicy == MessagePolicy.everyone
+                          ? 'Restrict posting to admins'
+                          : 'Let all members post')
+                      .toUpperCase(),
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  context.read<ConversationBloc>().add(
+                    ConversationInfoUpdated(
+                      conversation.adminIds,
+                      messagePolicy:
+                          conversation.messagePolicy == MessagePolicy.everyone
+                          ? MessagePolicy.adminsOnly
+                          : MessagePolicy.everyone,
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -436,18 +467,54 @@ class _ChatInfoView extends StatelessWidget {
     final submitted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Report to the school'),
+        backgroundColor: AppColors.background(context),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        title: Text(
+          'REPORT TO THE SCHOOL',
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('A school administrator will review this conversation.'),
+            Text(
+              'A school administrator will review this conversation.',
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
             const SizedBox(height: AppSpacing.m),
             TextField(
               controller: reasonController,
               maxLines: 3,
-              decoration: const InputDecoration(
-                labelText: 'What is the problem?',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: 'WHAT IS THE PROBLEM?',
+                labelStyle: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.zero,
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.zero,
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.zero,
+                  borderSide: BorderSide(
+                    color: AppColors.textPrimary(context),
+                    width: 2,
+                  ),
+                ),
               ),
             ),
           ],
@@ -455,11 +522,23 @@ class _ChatInfoView extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(
+              'CANCEL',
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Report', style: TextStyle(color: Colors.red)),
+            child: Text(
+              'REPORT',
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
         ],
       ),
@@ -519,30 +598,73 @@ class _ChatInfoView extends StatelessWidget {
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit group'),
+        backgroundColor: AppColors.background(context),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        title: Text(
+          'EDIT GROUP',
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
+              decoration: InputDecoration(
+                labelText: 'NAME',
+                labelStyle: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.zero,
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+              ),
             ),
             const SizedBox(height: AppSpacing.m),
             TextField(
               controller: descController,
               maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Description'),
+              decoration: InputDecoration(
+                labelText: 'DESCRIPTION',
+                labelStyle: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.zero,
+                  borderSide: BorderSide(color: AppColors.border(context)),
+                ),
+              ),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(
+              'CANCEL',
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Save'),
+            child: Text(
+              'SAVE',
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
         ],
       ),
@@ -567,22 +689,46 @@ class _ChatInfoView extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(isGroup ? 'Exit group?' : 'Delete chat?'),
+        backgroundColor: AppColors.background(context),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        title: Text(
+          (isGroup ? 'Exit group?' : 'Delete chat?').toUpperCase(),
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+          ),
+        ),
         content: Text(
-          isGroup
-              ? 'You will stop receiving messages from this group.'
-              : 'This chat will be removed from your inbox.',
+          (isGroup
+                  ? 'You will stop receiving messages from this group.'
+                  : 'This chat will be removed from your inbox.')
+              .toUpperCase(),
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: Text(
+              'CANCEL',
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             child: Text(
-              isGroup ? 'Exit' : 'Delete',
-              style: const TextStyle(color: Colors.red),
+              (isGroup ? 'Exit' : 'Delete').toUpperCase(),
+              style: TextStyle(
+                color: AppColors.textPrimary(context),
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ],
@@ -595,15 +741,15 @@ class _ChatInfoView extends StatelessWidget {
   }
 
   Widget _buildInfoSection(BuildContext context, List<Widget> children) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: AppSpacing.m,
         vertical: AppSpacing.s,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.background(context),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border(context), width: 1),
       ),
       child: Column(children: children),
     );
@@ -612,15 +758,17 @@ class _ChatInfoView extends StatelessWidget {
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(
-        left: AppSpacing.xl,
+        left: AppSpacing.m,
         top: AppSpacing.l,
         bottom: AppSpacing.s,
       ),
       child: Text(
-        title,
+        title.toUpperCase(),
         style: AppTypography.labelSmall.copyWith(
-          color: AppColors.textMuted(context),
-          letterSpacing: 1,
+          color: AppColors.textPrimary(context),
+          fontWeight: FontWeight.w900,
+          letterSpacing: 2,
+          fontSize: 10,
         ),
       ),
     );
@@ -634,21 +782,44 @@ class _ChatInfoView extends StatelessWidget {
     VoidCallback? onRemove,
   }) {
     return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: AppColors.electricBlue.withValues(alpha: 0.1),
-        child: Text(
-          participant.name.isEmpty ? '?' : participant.name[0].toUpperCase(),
-          style: const TextStyle(color: AppColors.electricBlue),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: AppColors.background(context),
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border(context), width: 1),
+          image: participant.avatarUrl?.isNotEmpty == true
+              ? DecorationImage(
+                  image: NetworkImage(participant.avatarUrl!),
+                  fit: BoxFit.cover,
+                )
+              : null,
+        ),
+        child: Center(
+          child: participant.avatarUrl?.isNotEmpty == true
+              ? null
+              : Text(
+                  participant.name.isEmpty
+                      ? '?'
+                      : participant.name[0].toUpperCase(),
+                  style: TextStyle(
+                    color: AppColors.textPrimary(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
         ),
       ),
       title: Text(
-        isMe ? '${participant.name} (You)' : participant.name,
-        style: AppTypography.titleSmall,
+        (isMe ? '${participant.name} (You)' : participant.name).toUpperCase(),
+        style: AppTypography.titleSmall.copyWith(fontWeight: FontWeight.w900),
       ),
       subtitle: Text(
-        _roleLabel(participant.role),
+        _roleLabel(participant.role).toUpperCase(),
         style: AppTypography.bodySmall.copyWith(
-          color: AppColors.textMuted(context),
+          color: AppColors.textPrimary(context),
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
         ),
       ),
       trailing: Row(
@@ -658,20 +829,24 @@ class _ChatInfoView extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                border: Border.all(color: AppColors.emeraldGreen),
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.textPrimary(context)),
               ),
-              child: const Text(
-                'Admin',
-                style: TextStyle(color: AppColors.emeraldGreen, fontSize: 10),
+              child: Text(
+                'ADMIN',
+                style: TextStyle(
+                  color: AppColors.textPrimary(context),
+                  fontSize: 8,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           if (onRemove != null)
             IconButton(
-              icon: const Icon(
+              icon: Icon(
                 Icons.person_remove_outlined,
                 size: 18,
-                color: Colors.redAccent,
+                color: AppColors.textPrimary(context),
               ),
               onPressed: onRemove,
             ),
@@ -680,12 +855,21 @@ class _ChatInfoView extends StatelessWidget {
     );
   }
 
-  Widget _buildDangerTile(IconData icon, String label, VoidCallback onTap) {
+  Widget _buildDangerTile(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
     return ListTile(
-      leading: Icon(icon, color: Colors.red),
+      leading: Icon(icon, color: AppColors.textPrimary(context)),
       title: Text(
-        label,
-        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+        label.toUpperCase(),
+        style: TextStyle(
+          color: AppColors.textPrimary(context),
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
+        ),
       ),
       onTap: onTap,
     );
@@ -700,16 +884,27 @@ class _ChatInfoView extends StatelessWidget {
     bool showChevron = true,
   }) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.electricBlue, size: 22),
-      title: Text(title, style: AppTypography.titleSmall),
+      leading: Icon(icon, color: AppColors.textPrimary(context), size: 20),
+      title: Text(
+        title.toUpperCase(),
+        style: AppTypography.titleSmall.copyWith(
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
+        ),
+      ),
       subtitle: Text(
         value,
         style: AppTypography.bodySmall.copyWith(
-          color: AppColors.textMuted(context),
+          color: AppColors.textPrimary(context),
+          fontWeight: FontWeight.w700,
         ),
       ),
       trailing: showChevron && onTap != null
-          ? const Icon(Icons.chevron_right, size: 20)
+          ? Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: AppColors.textPrimary(context),
+            )
           : null,
       onTap: onTap,
     );
@@ -761,24 +956,25 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      margin: const EdgeInsets.all(AppSpacing.m),
       padding: const EdgeInsets.all(AppSpacing.m),
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.7,
       ),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: AppColors.background(context),
+        border: Border(
+          top: BorderSide(color: AppColors.border(context), width: 1),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Add members',
+            'ADD MEMBERS',
             style: AppTypography.titleMedium.copyWith(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1,
             ),
           ),
           const SizedBox(height: AppSpacing.s),
@@ -790,21 +986,35 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                 final contact = widget.candidates[index];
                 final selected = _selected.contains(contact.id);
                 return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.electricBlue.withValues(
-                      alpha: 0.1,
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.background(context),
+                      border: Border.all(
+                        color: AppColors.border(context),
+                        width: 1,
+                      ),
                     ),
-                    child: Text(
-                      contact.initials,
-                      style: const TextStyle(color: AppColors.electricBlue),
+                    child: Center(
+                      child: Text(
+                        contact.initials,
+                        style: TextStyle(
+                          color: AppColors.textPrimary(context),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
                   ),
-                  title: Text(contact.name, style: AppTypography.titleSmall),
+                  title: Text(
+                    contact.name.toUpperCase(),
+                    style: AppTypography.titleSmall.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
                   trailing: Icon(
-                    selected
-                        ? Icons.check_circle
-                        : Icons.radio_button_unchecked,
-                    color: selected ? AppColors.electricBlue : Colors.grey,
+                    selected ? Icons.check_box : Icons.check_box_outline_blank,
+                    color: AppColors.textPrimary(context),
                   ),
                   onTap: () => setState(() {
                     selected
@@ -828,17 +1038,18 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                           .toList(),
                     ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.electricBlue,
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.textPrimary(context),
+                foregroundColor: AppColors.background(context),
+                disabledBackgroundColor: AppColors.border(context),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.zero,
                 ),
                 elevation: 0,
               ),
               child: const Text(
-                'Add',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                'ADD MEMBERS',
+                style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1),
               ),
             ),
           ),

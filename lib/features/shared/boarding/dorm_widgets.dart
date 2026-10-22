@@ -89,9 +89,7 @@ class DormSearchBar extends StatelessWidget {
     final theme = Theme.of(context);
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-      ),
+      borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
     );
 
     return Row(
@@ -130,9 +128,7 @@ class DormSearchBar extends StatelessWidget {
             height: 46,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-              ),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
             ),
             child: Icon(
               Icons.tune,
@@ -160,6 +156,20 @@ class DormitoryCard extends StatelessWidget {
   final VoidCallback? onLeadership;
   final VoidCallback? onMore;
 
+  /// Compact list-display mode: drops the Room Leader/Dorm Prefect rows and
+  /// the Beds/Students/Leadership/More action-row footer, in favour of a
+  /// whole-card [onTap] for list navigation. Defaults to false so existing
+  /// call sites (`dormitory_management_screen.dart`) keep today's full
+  /// behaviour unchanged.
+  final bool compact;
+
+  /// Plain "Boys Dormitory" / "Girls Dormitory" subtitle shown under the
+  /// name in compact mode. Ignored in full mode.
+  final String? subtitle;
+
+  /// Whole-card tap target, used in compact mode for list navigation.
+  final VoidCallback? onTap;
+
   const DormitoryCard({
     super.key,
     required this.name,
@@ -172,6 +182,9 @@ class DormitoryCard extends StatelessWidget {
     this.onStudents,
     this.onLeadership,
     this.onMore,
+    this.compact = false,
+    this.subtitle,
+    this.onTap,
   });
 
   @override
@@ -186,12 +199,13 @@ class DormitoryCard extends StatelessWidget {
     final barColor = ratio >= 1.0
         ? semanticColors.error
         : ratio >= 0.85
-        ? Colors.orange
+        ? Colors.black
         : semanticColors.success;
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: AppSpacing.l),
       padding: const EdgeInsets.all(AppSpacing.l),
+      onTap: compact ? onTap : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -200,17 +214,40 @@ class DormitoryCard extends StatelessWidget {
               Icon(Icons.home_outlined, color: accent, size: 22),
               const SizedBox(width: AppSpacing.m),
               Expanded(
-                child: Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (compact && subtitle != null && subtitle!.isNotEmpty)
+                      Text(
+                        subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontSize: 12,
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               StatusBadge(label: '$occupantCount/$capacity', color: barColor),
+              if (compact && onMore != null) ...[
+                const SizedBox(width: AppSpacing.s),
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: _CardAction(icon: Icons.more_horiz, onTap: onMore),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: AppSpacing.l),
@@ -219,9 +256,7 @@ class DormitoryCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: ratio.clamp(0.0, 1.0),
               minHeight: 6,
-              backgroundColor: theme.colorScheme.outlineVariant.withValues(
-                alpha: 0.4,
-              ),
+              backgroundColor: theme.colorScheme.outlineVariant,
               valueColor: AlwaysStoppedAnimation(barColor),
             ),
           ),
@@ -245,52 +280,51 @@ class DormitoryCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.l),
-          _LeadershipRow(
-            icon: Icons.emoji_events_outlined,
-            label: 'Room Leader',
-            value: roomLeaderName,
-          ),
-          const SizedBox(height: AppSpacing.m),
-          _LeadershipRow(
-            icon: Icons.shield_outlined,
-            label: 'Dorm Prefect',
-            value: dormPrefectName,
-          ),
-          const SizedBox(height: AppSpacing.m),
-          Divider(
-            height: 1,
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: _CardAction(
-                  icon: Icons.bed_outlined,
-                  label: 'Beds',
-                  onTap: onBeds,
+          if (!compact) ...[
+            const SizedBox(height: AppSpacing.l),
+            _LeadershipRow(
+              icon: Icons.emoji_events_outlined,
+              label: 'Room Leader',
+              value: roomLeaderName,
+            ),
+            const SizedBox(height: AppSpacing.m),
+            _LeadershipRow(
+              icon: Icons.shield_outlined,
+              label: 'Dorm Prefect',
+              value: dormPrefectName,
+            ),
+            const SizedBox(height: AppSpacing.m),
+            Divider(height: 1, color: theme.colorScheme.outlineVariant),
+            Row(
+              children: [
+                Expanded(
+                  child: _CardAction(
+                    icon: Icons.bed_outlined,
+                    label: 'Beds',
+                    onTap: onBeds,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _CardAction(
-                  icon: Icons.groups_outlined,
-                  label: 'Students',
-                  onTap: onStudents,
+                Expanded(
+                  child: _CardAction(
+                    icon: Icons.groups_outlined,
+                    label: 'Students',
+                    onTap: onStudents,
+                  ),
                 ),
-              ),
-              Expanded(
-                child: _CardAction(
-                  icon: Icons.workspace_premium_outlined,
-                  label: 'Leadership',
-                  onTap: onLeadership,
+                Expanded(
+                  child: _CardAction(
+                    icon: Icons.workspace_premium_outlined,
+                    label: 'Leadership',
+                    onTap: onLeadership,
+                  ),
                 ),
-              ),
-              SizedBox(
-                width: 44,
-                child: _CardAction(icon: Icons.more_horiz, onTap: onMore),
-              ),
-            ],
-          ),
+                SizedBox(
+                  width: 44,
+                  child: _CardAction(icon: Icons.more_horiz, onTap: onMore),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -404,9 +438,7 @@ class DormFormField extends StatelessWidget {
     final theme = Theme.of(context);
     final border = OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-        color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-      ),
+      borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
     );
 
     return Column(
@@ -510,17 +542,13 @@ class DormPersonPicker extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
-          ),
+          border: Border.all(color: theme.colorScheme.outlineVariant),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundColor: theme.colorScheme.primary.withValues(
-                alpha: 0.15,
-              ),
+              backgroundColor: theme.colorScheme.primary,
               child: Icon(
                 Icons.person_outline,
                 size: 20,
@@ -650,7 +678,7 @@ class BedListTile extends StatelessWidget {
           const SizedBox(width: AppSpacing.m),
           StatusBadge(
             label: occupied ? 'Occupied' : 'Available',
-            color: occupied ? Colors.orange : semanticColors.success,
+            color: occupied ? Colors.black : semanticColors.success,
           ),
         ],
       ),
@@ -693,7 +721,7 @@ class TransferHistoryTile extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: typeColor.withValues(alpha: 0.18),
+            backgroundColor: typeColor,
             child: Icon(Icons.person_outline, size: 18, color: typeColor),
           ),
           const SizedBox(width: AppSpacing.l),

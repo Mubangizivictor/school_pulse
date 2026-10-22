@@ -28,6 +28,12 @@ class ClinicVisit extends Equatable {
   final String recordedBy;
   final String? schoolId;
 
+  /// Storage paths (not URLs) of images/PDFs attached to this visit, e.g.
+  /// `schools/{schoolId}/clinic_visits/{id}/attachments/{uuid}.png`. Read
+  /// access is nurse/leadership + same-school only (storage.rules); a
+  /// download URL is resolved on demand, never persisted.
+  final List<String> attachmentPaths;
+
   const ClinicVisit({
     required this.id,
     required this.studentId,
@@ -48,6 +54,7 @@ class ClinicVisit extends Equatable {
     required this.outcome,
     required this.recordedBy,
     this.schoolId,
+    this.attachmentPaths = const [],
   });
 
   @override
@@ -71,6 +78,7 @@ class ClinicVisit extends Equatable {
     outcome,
     recordedBy,
     schoolId,
+    attachmentPaths,
   ];
 }
 

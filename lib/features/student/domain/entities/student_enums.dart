@@ -2,6 +2,7 @@ enum StudentStatus {
   applicant,
   pendingAdmission,
   admitted,
+  enrollmentInProgress,
   enrolled,
   active,
   deferred,
@@ -38,6 +39,11 @@ StudentStatus studentStatusFromAdmissionStatus(AdmissionStatus status) {
 }
 
 enum Gender { male, female, other }
+
+/// Whether a student boards on-site or attends as a day scholar. Drives
+/// the Enrollment Setup Wizard's Finance (studentType-filtered fee
+/// structures) and Boarding/House steps.
+enum StudentBoardingType { day, boarding }
 
 enum EducationLevel {
   kindergarten,

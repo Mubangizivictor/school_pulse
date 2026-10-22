@@ -54,12 +54,18 @@ class AcademicsNavCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 12.5, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: Colors.grey[500]),
+          Icon(
+            Icons.chevron_right,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ],
       ),
     );
@@ -121,7 +127,9 @@ class AcademicsListCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
                     decoration: isActive ? null : TextDecoration.lineThrough,
-                    color: isActive ? null : Colors.grey,
+                    color: isActive
+                        ? null
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 if (subtitle.isNotEmpty) ...[
@@ -129,7 +137,10 @@ class AcademicsListCard extends StatelessWidget {
                   Text(
                     subtitle,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 12.5, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
@@ -138,11 +149,17 @@ class AcademicsListCard extends StatelessWidget {
           if (trailingLabel != null) ...[
             Text(
               trailingLabel!,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             const SizedBox(width: 6),
           ],
-          Icon(Icons.chevron_right, color: Colors.grey[500]),
+          Icon(
+            Icons.chevron_right,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ],
       ),
     );
@@ -169,7 +186,7 @@ class AcademicsSegmentedTabs extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        color: scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -344,7 +361,7 @@ class AcademicsStatusToggle extends StatelessWidget {
             decoration: BoxDecoration(
               color: selected
                   ? scheme.primaryContainer
-                  : scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                  : scheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: selected ? scheme.primary : Colors.transparent,
@@ -415,7 +432,7 @@ class AcademicsListScaffold extends StatelessWidget {
                 if (subtitle != null) ...[
                   Text(
                     subtitle!,
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -477,7 +494,7 @@ class AcademicsFormScaffold extends StatelessWidget {
                   if (subtitle != null) ...[
                     Text(
                       subtitle!,
-                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 20),
                   ],

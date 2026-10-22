@@ -1,12 +1,13 @@
 const { onRequest } = require('firebase-functions/v2/https');
 const admin = require('firebase-admin');
+const { isAllowedOrigin } = require('./allowed_origins');
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 
-const WEBSITE_ORIGIN = 'https://schoolpulse.victorbee.com';
+const WEBSITE_ORIGIN = 'https://schoolpulseapp.com';
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
-const USER_AGENT = 'SchoolPulse-Registration/1.0 (contact: support@schoolpulse.victorbee.com)';
+const USER_AGENT = 'SchoolPulse-Registration/1.0 (contact: support@schoolpulseapp.com)';
 const CACHE_COLLECTION = '_public_geocode_cache';
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days — Uganda place names don't move.
 const UGANDA_REGION_BY_DISTRICT = require('./uganda_regions.json');
@@ -30,7 +31,7 @@ const DISTRICT_ALIASES = {
 
 function cors(req, res, methods = 'GET,OPTIONS') {
   const origin = req.get('origin');
-  if (origin === WEBSITE_ORIGIN || origin === 'http://localhost:4321') {
+  if (isAllowedOrigin(origin)) {
     res.set('Access-Control-Allow-Origin', origin);
   }
   res.set('Vary', 'Origin');

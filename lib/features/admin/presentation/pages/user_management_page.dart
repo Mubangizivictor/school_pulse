@@ -4,6 +4,7 @@ import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/audit_log.dart';
 import '../../data/repositories/audit_repository.dart';
+import 'package:school_pulse/core/user_roles.dart';
 import 'package:school_pulse/features/admin/domain/usecases/get_admin_dashboard_stats.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
@@ -11,7 +12,7 @@ import 'package:school_pulse/features/admin/presentation/widgets/admin_app_bar.d
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/injection_container.dart' as di;
-import '../screens/access_codes_screen.dart';
+import 'package:school_pulse/features/admin/parent_access_workspace/presentation/screens/parents_access_workspace_screen.dart';
 
 class UserManagementPage extends StatefulWidget {
   const UserManagementPage({super.key});
@@ -50,6 +51,14 @@ class UsersOverviewView extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.read<AuthBloc>().state;
     final schoolId = auth is AuthAuthenticated ? auth.user.schoolId : null;
+    // "Add Staff" is server-verified against UserRoleDisplay.adminRoles
+    // (director/headTeacher/schoolAdmin) - narrower than the
+    // adminConsoleRoles that share this admin console UI (Deputy Head
+    // included). Omit the shortcut for a role the Cloud Function always
+    // rejects rather than let it fail at the end of the wizard.
+    final canInviteStaff =
+        auth is AuthAuthenticated &&
+        auth.user.roles.any(UserRoleDisplay.adminRoles.contains);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -59,12 +68,13 @@ class UsersOverviewView extends StatelessWidget {
         const SizedBox(height: 12),
         QuickActionGrid(
           items: [
-            QuickActionItem(
-              label: 'Add Staff',
-              icon: Icons.person_add_outlined,
-              color: AppColors.primary(context),
-              onTap: () => context.push('/staff/admin/users/add-staff'),
-            ),
+            if (canInviteStaff)
+              QuickActionItem(
+                label: 'Add Staff',
+                icon: Icons.person_add_outlined,
+                color: AppColors.primary(context),
+                onTap: () => context.push('/staff/admin/users/add-staff'),
+              ),
             QuickActionItem(
               label: 'Add Student',
               icon: Icons.school_outlined,
@@ -85,7 +95,9 @@ class UsersOverviewView extends StatelessWidget {
               color: AppColors.success(context),
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const AccessCodesScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const ParentsAccessWorkspaceScreen(),
+                ),
               ),
             ),
           ],
@@ -133,7 +145,9 @@ class UsersOverviewView extends StatelessWidget {
 
   Widget _buildStats(BuildContext context) {
     return FutureBuilder(
-      future: di.sl<GetAdminDashboardStats>()(const AdminDashboardStatsParams()),
+      future: di.sl<GetAdminDashboardStats>()(
+        const AdminDashboardStatsParams(),
+      ),
       builder: (context, snapshot) {
         final stats = snapshot.data?.getOrElse(
           () => const AdminDashboardStats(
@@ -212,9 +226,7 @@ class _ActivityItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Color(
-                int.parse('0x${log.colorHex}'),
-              ).withValues(alpha: 0.1),
+              color: Color(int.parse('0x${log.colorHex}')),
               shape: BoxShape.circle,
             ),
             child: Icon(

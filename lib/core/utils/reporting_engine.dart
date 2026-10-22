@@ -129,7 +129,7 @@ class ReportingEngine {
                     .toList(),
                 headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
                 headerDecoration: const pw.BoxDecoration(
-                  color: PdfColors.grey300,
+                  color: PdfColors.black,
                 ),
                 cellHeight: 30,
                 cellAlignments: {

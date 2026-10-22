@@ -1,4 +1,6 @@
+import 'package:dartz/dartz.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/features/student/domain/repositories/student_repository.dart';
 import 'package:school_pulse/features/matron/domain/entities/boarding_entities.dart';
 import '../../domain/usecases/health_usecases.dart';
@@ -6,18 +8,21 @@ import '../../domain/entities/clinic_visit.dart';
 import '../../domain/entities/medical_inventory.dart';
 import '../../domain/entities/emergency_incident.dart';
 import '../../domain/entities/medical_supply_request.dart';
+import '../../domain/entities/student_health_profile.dart';
 import 'health_event.dart';
 import 'health_state.dart';
 
 class HealthBloc extends Bloc<HealthEvent, HealthState> {
   final GetStudentHealthProfile getStudentHealthProfile;
   final UpdateStudentHealthProfile updateStudentHealthProfile;
+  final GetAllHealthProfiles getAllHealthProfiles;
   final GetClinicVisits getClinicVisits;
   final RecordClinicVisit recordClinicVisit;
   final GetEmergencyIncidents getEmergencyIncidents;
   final RecordEmergencyIncident recordEmergencyIncident;
   final GetMedicalInventory getMedicalInventory;
   final UpdateInventoryItem updateInventoryItem;
+  final DispenseMedicalItem dispenseMedicalItem;
   final GetMedicalSupplyRequests getMedicalSupplyRequests;
   final CreateSupplyRequest createSupplyRequest;
   final GetHealthAnalytics getHealthAnalytics;
@@ -26,12 +31,14 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
   HealthBloc({
     required this.getStudentHealthProfile,
     required this.updateStudentHealthProfile,
+    required this.getAllHealthProfiles,
     required this.getClinicVisits,
     required this.recordClinicVisit,
     required this.getEmergencyIncidents,
     required this.recordEmergencyIncident,
     required this.getMedicalInventory,
     required this.updateInventoryItem,
+    required this.dispenseMedicalItem,
     required this.getMedicalSupplyRequests,
     required this.createSupplyRequest,
     required this.getHealthAnalytics,
@@ -46,6 +53,7 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
     on<RecordNewEmergencyIncident>(_onRecordNewEmergencyIncident);
     on<FetchInventory>(_onFetchInventory);
     on<UpdateInventoryItemEvent>(_onUpdateInventoryItem);
+    on<DispenseMedicalItemEvent>(_onDispenseMedicalItem);
     on<FetchSupplyRequests>(_onFetchSupplyRequests);
     on<CreateNewSupplyRequest>(_onCreateNewSupplyRequest);
   }
@@ -69,6 +77,7 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
         schoolId: event.schoolId,
         publicOnly: true,
       ),
+      getAllHealthProfiles(event.schoolId),
     ]);
     final visitsResult = results[0];
     final incidentsResult = results[1];
@@ -76,6 +85,7 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
     final requestsResult = results[3];
     final statsResult = results[4];
     final welfareResult = results[5];
+    final profilesResult = results[6];
 
     if (visitsResult.isLeft()) {
       emit(const HealthError('Failed to fetch visits'));
@@ -90,18 +100,20 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
       return;
     }
 
-    final visits = visitsResult.fold(
+    final visits = (visitsResult as Either<Failure, List<ClinicVisit>>).fold(
       (_) => <ClinicVisit>[],
-      (dynamic value) => value as List<ClinicVisit>,
+      (value) => value,
     );
-    final inventory = inventoryResult.fold(
-      (_) => <MedicalInventoryItem>[],
-      (dynamic value) => value as List<MedicalInventoryItem>,
-    );
-    final incidents = incidentsResult.fold(
-      (_) => <EmergencyIncident>[],
-      (dynamic value) => value as List<EmergencyIncident>,
-    );
+    final inventory =
+        (inventoryResult as Either<Failure, List<MedicalInventoryItem>>).fold(
+          (_) => <MedicalInventoryItem>[],
+          (value) => value,
+        );
+    final incidents =
+        (incidentsResult as Either<Failure, List<EmergencyIncident>>).fold(
+          (_) => <EmergencyIncident>[],
+          (value) => value,
+        );
     final lowStock = inventory
         .where((item) => item.quantity <= item.reorderLevel)
         .toList();
@@ -118,14 +130,24 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
       (_) => <WelfareRecord>[],
       (records) => records.where((r) => !r.isPrivate).toList(),
     );
-    final pendingRequests = requestsResult.fold(
-      (_) => <MedicalSupplyRequest>[],
-      (dynamic value) => value as List<MedicalSupplyRequest>,
-    );
-    final stats = statsResult.fold(
+    final pendingRequests =
+        (requestsResult as Either<Failure, List<MedicalSupplyRequest>>).fold(
+          (_) => <MedicalSupplyRequest>[],
+          (value) => value,
+        );
+    final stats = (statsResult as Either<Failure, Map<String, dynamic>>).fold(
       (_) => <String, dynamic>{},
-      (dynamic value) => value as Map<String, dynamic>,
+      (value) => value,
     );
+    final profiles =
+        (profilesResult as Either<Failure, List<StudentHealthProfile>>).fold(
+          (_) => <StudentHealthProfile>[],
+          (value) => value,
+        );
+    final chronicCaseCount = profiles
+        .where((p) => p.chronicIllnesses.isNotEmpty)
+        .length;
+    final allergyCount = profiles.where((p) => p.allergies.isNotEmpty).length;
 
     emit(
       HealthDashboardLoaded(
@@ -135,6 +157,8 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
         pendingRequests: pendingRequests,
         stats: stats,
         welfareRecords: welfareRecords,
+        chronicCaseCount: chronicCaseCount,
+        allergyCount: allergyCount,
       ),
     );
   }
@@ -298,6 +322,27 @@ class HealthBloc extends Bloc<HealthEvent, HealthState> {
       (failure) => emit(const HealthError('Failed to update item')),
       (_) => emit(const HealthActionSuccess('Inventory updated successfully')),
     );
+  }
+
+  Future<void> _onDispenseMedicalItem(
+    DispenseMedicalItemEvent event,
+    Emitter<HealthState> emit,
+  ) async {
+    emit(HealthLoading());
+    final result = await dispenseMedicalItem(
+      itemId: event.itemId,
+      visitId: event.visitId,
+      studentId: event.studentId,
+      quantity: event.quantity,
+    );
+    await result.fold((failure) async => emit(HealthError(failure.message)), (
+      _,
+    ) async {
+      emit(const HealthActionSuccess('Item dispensed'));
+      // Refresh stock so the nurse sees the decremented quantity.
+      final refreshed = await getMedicalInventory(event.schoolId);
+      refreshed.fold((_) {}, (items) => emit(InventoryLoaded(items)));
+    });
   }
 
   Future<void> _onFetchSupplyRequests(

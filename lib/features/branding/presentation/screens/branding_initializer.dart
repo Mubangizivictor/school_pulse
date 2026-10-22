@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_bloc.dart';
 import 'package:school_pulse/features/branding/presentation/bloc/branding_state.dart';
+import 'package:school_pulse/features/portal/domain/portal_runtime.dart';
 
 class BrandingInitializer extends StatelessWidget {
   final Widget child;
@@ -20,7 +21,8 @@ class BrandingInitializer extends StatelessWidget {
         // prevent.
         if (state is BrandingLoaded) {
           context.read<ThemeProvider>().updateBranding(state.branding);
-        } else if (state is PlatformBranding || state is BrandingLoading) {
+        } else if ((state is PlatformBranding || state is BrandingLoading) &&
+            PortalRuntime.tenant == null) {
           context.read<ThemeProvider>().updateBranding(null);
         }
       },

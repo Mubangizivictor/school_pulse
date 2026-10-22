@@ -3,7 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
-import 'package:school_pulse/features/notifications/presentation/notification_bell_button.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/shared/staff_dashboard/staff_dashboard_widgets.dart';
 import 'bloc/transport_coordinator_bloc.dart';
 import 'bloc/transport_coordinator_event.dart';
 import 'bloc/transport_coordinator_state.dart';
@@ -43,7 +44,7 @@ class _TransportCoordinatorDashboardScreenState
               const SizedBox(height: 24),
               if (route.status != 'In Transit')
                 ListTile(
-                  leading: const Icon(Icons.play_arrow, color: Colors.green),
+                  leading: const Icon(Icons.play_arrow, color: Colors.black),
                   title: const Text('Start Trip'),
                   onTap: () {
                     context.read<TransportCoordinatorBloc>().add(
@@ -54,7 +55,7 @@ class _TransportCoordinatorDashboardScreenState
                 )
               else
                 ListTile(
-                  leading: const Icon(Icons.stop, color: Colors.red),
+                  leading: const Icon(Icons.stop, color: Colors.black),
                   title: const Text('End Trip'),
                   onTap: () {
                     context.read<TransportCoordinatorBloc>().add(
@@ -89,23 +90,11 @@ class _TransportCoordinatorDashboardScreenState
     final semanticColors = Theme.of(context).extension<SemanticColors>()!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transport Portal'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            tooltip: 'Student Route Lookup',
-            style: IconButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-            ),
-            onPressed: () => context.push('/staff/transport/lookup'),
-          ),
-          const SizedBox(width: 8),
-          NotificationBellButton(
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-          ),
-          const SizedBox(width: 8),
-        ],
+      appBar: staffDashboardAppBar(context, roleLabel: 'Transport'),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/staff/transport/lookup'),
+        icon: const Icon(Icons.search),
+        label: const Text('Route Lookup'),
       ),
       body: BlocListener<TransportCoordinatorBloc, TransportCoordinatorState>(
         listener: (context, state) {
@@ -154,40 +143,40 @@ class _TransportCoordinatorDashboardScreenState
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
         children: [
           FadeInSlide(
-            child: Text(
-              "Fleet Overview",
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            child: StaffHeroSummaryCard(
+              greetingNameFallback: 'there',
+              kpis: [
+                StaffKpiData(
+                  title: 'Active Buses',
+                  valueText: '${state.activeBuses}',
+                  subtitle: 'On the road',
+                  icon: Icons.directions_bus,
+                  color: AppColors.information(context),
+                ),
+                StaffKpiData(
+                  title: 'Students In Transit',
+                  valueText: '${state.studentsInTransit}',
+                  subtitle: 'Right now',
+                  icon: Icons.person_pin_circle_outlined,
+                  color: AppColors.success(context),
+                ),
+                StaffKpiData(
+                  title: 'Routes',
+                  valueText: '${state.routes.length}',
+                  subtitle: 'Total',
+                  icon: Icons.alt_route_rounded,
+                  color: AppColors.warning(context),
+                ),
+                StaffKpiData(
+                  title: 'En Route',
+                  valueText:
+                      '${state.routes.where((r) => r.status == 'In Transit').length}',
+                  subtitle: 'Active now',
+                  icon: Icons.directions_bus_filled_outlined,
+                  color: AppColors.danger(context),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 15),
-          Row(
-            children: [
-              Expanded(
-                child: FadeInSlide(
-                  delay: const Duration(milliseconds: 100),
-                  child: DashboardStatCard(
-                    title: 'Active Buses',
-                    value: state.activeBuses.toDouble(),
-                    icon: Icons.directions_bus,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: FadeInSlide(
-                  delay: const Duration(milliseconds: 200),
-                  child: DashboardStatCard(
-                    title: 'In Transit',
-                    value: state.studentsInTransit.toDouble(),
-                    icon: Icons.person_pin_circle_outlined,
-                    color: semanticColors.info,
-                  ),
-                ),
-              ),
-            ],
           ),
           const SizedBox(height: 24),
           const FadeInSlide(
@@ -208,8 +197,8 @@ class _TransportCoordinatorDashboardScreenState
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: isEnRoute
-                          ? semanticColors.info.withValues(alpha: 0.1)
-                          : semanticColors.success.withValues(alpha: 0.1),
+                          ? semanticColors.info
+                          : semanticColors.success,
                       child: Icon(
                         Icons.directions_bus_filled_outlined,
                         color: isEnRoute

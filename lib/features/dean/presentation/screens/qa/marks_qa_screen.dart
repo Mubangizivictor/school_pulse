@@ -4,6 +4,8 @@ import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_bloc.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_event.dart';
 import 'package:school_pulse/features/dean/presentation/bloc/dean_state.dart';
@@ -15,9 +17,14 @@ class MarksQAScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+    final schoolId = authState is AuthAuthenticated
+        ? authState.user.schoolId
+        : '';
     return BlocProvider(
       create: (context) =>
-          sl<DeanBloc>()..add(PendingModerationAssessmentsRequested()),
+          sl<DeanBloc>()
+            ..add(PendingModerationAssessmentsRequested(schoolId: schoolId)),
       child: Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(title: const Text('Marks Quality Assurance')),
@@ -28,7 +35,7 @@ class MarksQAScreen extends StatelessWidget {
                 context,
               ).showSnackBar(SnackBar(content: Text(state.message)));
               context.read<DeanBloc>().add(
-                PendingModerationAssessmentsRequested(),
+                PendingModerationAssessmentsRequested(schoolId: schoolId),
               );
             }
           },
@@ -44,7 +51,11 @@ class MarksQAScreen extends StatelessWidget {
                     message: 'No assessments pending moderation.',
                   );
                 }
-                return _buildAssessmentList(context, state.assessments);
+                return _buildAssessmentList(
+                  context,
+                  state.assessments,
+                  schoolId,
+                );
               } else if (state is DeanError) {
                 return Center(child: Text(state.message));
               }
@@ -59,6 +70,7 @@ class MarksQAScreen extends StatelessWidget {
   Widget _buildAssessmentList(
     BuildContext context,
     List<AssessmentModeration> assessments,
+    String schoolId,
   ) {
     return ListView.builder(
       padding: const EdgeInsets.all(AppSpacing.xl),
@@ -101,6 +113,7 @@ class MarksQAScreen extends StatelessWidget {
                         OutlinedButton(
                           onPressed: () => _showRejectDialog(
                             context,
+                            schoolId,
                             assessment.assessmentId,
                           ),
                           style: OutlinedButton.styleFrom(
@@ -113,7 +126,8 @@ class MarksQAScreen extends StatelessWidget {
                           onPressed: () {
                             context.read<DeanBloc>().add(
                               ApproveAssessmentMarksRequested(
-                                assessment.assessmentId,
+                                schoolId: schoolId,
+                                assessmentId: assessment.assessmentId,
                               ),
                             );
                           },
@@ -131,7 +145,11 @@ class MarksQAScreen extends StatelessWidget {
     );
   }
 
-  void _showRejectDialog(BuildContext context, String assessmentId) {
+  void _showRejectDialog(
+    BuildContext context,
+    String schoolId,
+    String assessmentId,
+  ) {
     final reasonController = TextEditingController();
     showDialog(
       context: context,
@@ -154,8 +172,9 @@ class MarksQAScreen extends StatelessWidget {
             onPressed: () {
               context.read<DeanBloc>().add(
                 RejectAssessmentMarksRequested(
-                  assessmentId,
-                  reasonController.text,
+                  schoolId: schoolId,
+                  assessmentId: assessmentId,
+                  reason: reasonController.text,
                 ),
               );
               Navigator.pop(dialogContext);

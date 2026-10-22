@@ -1,229 +1,638 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import 'package:school_pulse/core/utils.dart';
+import 'package:intl/intl.dart';
+import 'package:school_pulse/core/utils.dart' show CurrencyFormatter;
 import 'package:school_pulse/design_system/app_components.dart';
-import 'package:school_pulse/design_system/app_theme.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_bloc.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_event.dart';
-import 'package:school_pulse/features/finance/presentation/bloc/finance_state.dart';
-import 'package:school_pulse/features/finance/domain/entities/fee_item.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/design_system/responsive/app_responsive_content.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
+import 'package:school_pulse/features/finance/domain/entities/student_bill.dart';
+import 'package:school_pulse/features/finance/domain/repositories/student_billing_repository.dart';
+import 'package:school_pulse/features/finance/presentation/screens/student_billing/student_bills_screen.dart';
+import 'package:school_pulse/features/parent/how_to_pay_screen.dart';
+import 'package:school_pulse/features/parent/receipts_screen.dart';
+import 'package:school_pulse/features/parent/widgets/child_selector_sheet.dart';
+import 'package:school_pulse/features/parent_offline/domain/parent_offline_cache_service.dart';
+import 'package:school_pulse/features/parent_offline/presentation/widgets/parent_offline_banner.dart';
+import 'package:school_pulse/features/student/domain/entities/student.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_bloc.dart';
 import 'package:school_pulse/features/student/presentation/bloc/selected_student_state.dart';
-import 'package:school_pulse/features/parent/widgets/student_app_bar.dart';
+import 'package:school_pulse/injection_container.dart' as di;
 
-class FeesScreen extends StatefulWidget {
+const _feesCacheKey = 'fees_payment_code';
+
+/// Fees & payments - the redesigned Parent Payments landing screen. School
+/// Pulse never accepts money in-app: this screen shows the current balance,
+/// the learner's bursar-managed payment code (to quote at any external
+/// channel), and links to How to pay / Receipts. No checkout UI here.
+class FeesScreen extends StatelessWidget {
   const FeesScreen({super.key});
 
   @override
-  State<FeesScreen> createState() => _FeesScreenState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background(context),
+      appBar: AppBar(
+        backgroundColor: AppColors.background(context),
+        elevation: 0,
+        centerTitle: false,
+        title: Text(
+          'Fees & payments',
+          style: TextStyle(
+            color: AppColors.textPrimary(context),
+            fontSize: 22,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.5,
+          ),
+        ),
+      ),
+      body: BlocBuilder<SelectedStudentBloc, SelectedStudentState>(
+        builder: (context, studentState) {
+          if (studentState is! SelectedStudentLoaded) {
+            return const Center(child: SchoolPulseLoader());
+          }
+          return _Body(student: studentState.student);
+        },
+      ),
+    );
+  }
 }
 
-class _FeesScreenState extends State<FeesScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
+class _Body extends StatefulWidget {
+  final Student student;
+
+  const _Body({required this.student});
+
+  @override
+  State<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends State<_Body> {
+  bool _offline = false;
+  DateTime? _cachedAt;
+  int? _cachedBalanceUgx;
+  String? _cachedCode;
+  bool _checkedCache = false;
+
+  String get _tenantId => widget.student.schoolId;
+  String get _learnerId => widget.student.id;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
+    _loadFromCacheIfOffline();
+  }
+
+  Future<void> _loadFromCacheIfOffline() async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
+    final cacheService = di.sl<ParentOfflineCacheService>();
+    final online = await cacheService.isOnline;
+    final cached = await cacheService.read(
+      tenantId: _tenantId,
+      parentId: authState.user.id,
+      learnerId: _learnerId,
+      cacheKey: _feesCacheKey,
     );
-    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _controller.forward();
-
-    _fetchData();
+    if (!mounted) return;
+    setState(() {
+      _checkedCache = true;
+      _offline = !online;
+      if (cached != null) {
+        final data = jsonDecode(cached.payloadJson) as Map<String, dynamic>;
+        _cachedBalanceUgx = data['balanceUgx'] as int?;
+        _cachedCode = data['code'] as String?;
+        _cachedAt = cached.updatedAt;
+      }
+    });
   }
 
-  void _fetchData() {
-    final studentState = context.read<SelectedStudentBloc>().state;
-    if (studentState is SelectedStudentLoaded) {
-      context.read<FinanceBloc>().add(FetchFees(studentState.student.id));
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  Future<void> _saveToCache({
+    required int balanceUgx,
+    required String? code,
+  }) async {
+    final authState = context.read<AuthBloc>().state;
+    if (authState is! AuthAuthenticated) return;
+    await di.sl<ParentOfflineCacheService>().save(
+      tenantId: _tenantId,
+      parentId: authState.user.id,
+      learnerId: _learnerId,
+      cacheKey: _feesCacheKey,
+      payloadJson: jsonEncode({'balanceUgx': balanceUgx, 'code': code}),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final semanticColors = Theme.of(context).extension<SemanticColors>()!;
+    final schoolName = context.watch<AuthBloc>().state is AuthAuthenticated
+        ? (context.read<AuthBloc>().state as AuthAuthenticated)
+                  .user
+                  .schoolName ??
+              'your school'
+        : 'your school';
 
-    return Scaffold(
-      appBar: const StudentAppBar(title: 'Fees'),
-      body: BlocListener<SelectedStudentBloc, SelectedStudentState>(
-        listener: (context, state) {
-          if (state is SelectedStudentLoaded) {
-            context.read<FinanceBloc>().add(FetchFees(state.student.id));
+    return StreamBuilder<List<StudentBill>>(
+      stream: di.sl<StudentBillingRepository>().watchBills(
+        widget.student.schoolId,
+        widget.student.id,
+      ),
+      builder: (context, billsSnapshot) {
+        if (!billsSnapshot.hasData) {
+          if (_checkedCache && _cachedAt != null) {
+            return _offlineFallback(schoolName);
           }
-        },
-        child: BlocBuilder<FinanceBloc, FinanceState>(
-          builder: (context, state) {
-            if (state is FinanceLoading || state is FinanceInitial) {
-              return ListView(
-                padding: const EdgeInsets.all(16),
+          return _loadingSkeleton();
+        }
+        final bills = billsSnapshot.data!;
+        final openBills = bills.where((b) => b.status != 'paid').toList();
+        final balanceUgx = bills.fold<int>(0, (sum, b) => sum + b.balanceUgx);
+        final currentBill = openBills.isNotEmpty ? openBills.first : null;
+
+        return StreamBuilder<String?>(
+          stream: di.sl<StudentBillingRepository>().watchStudentPaymentCode(
+            widget.student.schoolId,
+            widget.student.id,
+          ),
+          builder: (context, codeSnapshot) {
+            final code = codeSnapshot.data;
+            // Write-through: every successful live read refreshes the
+            // offline cache so the next airplane-mode open shows this data
+            // instead of an empty state.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _saveToCache(balanceUgx: balanceUgx, code: code);
+            });
+
+            return AppResponsiveContent(
+              child: ListView(
+                padding: const EdgeInsets.all(20),
                 children: [
-                  const Skeleton(height: 160),
-                  const SizedBox(height: 24),
-                  const Skeleton(height: 24, width: 150),
-                  const SizedBox(height: 12),
-                  ...List.generate(
-                    3,
-                    (index) => const Padding(
-                      padding: EdgeInsets.only(bottom: 8),
-                      child: Skeleton(height: 70),
+                  if (_offline) ...[
+                    const ParentOfflineBanner(),
+                    const SizedBox(height: 12),
+                  ],
+                  _ChildSwitcherRow(student: widget.student),
+                  const SizedBox(height: 16),
+                  _BalanceCard(
+                    balanceUgx: balanceUgx,
+                    currentBill: currentBill,
+                    schoolId: widget.student.schoolId,
+                    studentId: widget.student.id,
+                  ),
+                  const SizedBox(height: 20),
+                  _PaymentCodeCard(code: code, schoolName: schoolName),
+                  const SizedBox(height: 16),
+                  _NavRow(
+                    icon: Icons.info_outline,
+                    title: 'How to pay',
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const HowToPayScreen()),
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  const SectionHeader(title: 'Recent payment'),
+                  const SizedBox(height: 8),
+                  _RecentPaymentCard(
+                    schoolId: widget.student.schoolId,
+                    studentId: widget.student.id,
+                    bills: bills,
+                  ),
                 ],
-              );
-            } else if (state is FinanceError) {
-              return EmptyState(
-                icon: Icons.cloud_off,
-                title: 'Could not load fees',
-                message: state.message,
-                ctaLabel: 'Retry',
-                onCtaPressed: _fetchData,
-              );
-            } else if (state is FinanceLoaded) {
-              final feeItems = state.fees;
-              final totalBalance = feeItems
-                  .where((item) => item.status != FeeStatus.paid)
-                  .fold(0.0, (sum, item) => sum + item.amount);
-
-              final hasOverdue = feeItems.any(
-                (item) => item.status == FeeStatus.overdue,
-              );
-
-              return FadeTransition(
-                opacity: _fadeAnimation,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    FadeInSlide(
-                      duration: const Duration(milliseconds: 600),
-                      child: AppCard(
-                        child: Column(
-                          children: [
-                            Text(
-                              'Current Balance',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            AnimatedNumberText(
-                              value: totalBalance,
-                              prefix: 'UGX ',
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: hasOverdue
-                                        ? semanticColors.error
-                                        : semanticColors.warning,
-                                  ),
-                            ),
-                            const SizedBox(height: 24),
-                            PrimaryButton(
-                              label: 'Pay Now',
-                              onPressed: () => context.push('/parent/fees/pay'),
-                            ),
-                            const SizedBox(height: 12),
-                            SecondaryButton(
-                              label: 'Query Balance',
-                              icon: Icons.chat_bubble_outline,
-                              onPressed: () => context.push('/parent/messages'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    FadeInSlide(
-                      delay: const Duration(milliseconds: 200),
-                      child: SectionHeader(
-                        title: 'Fee Breakdown',
-                        actionLabel: 'History',
-                        onActionPressed: () =>
-                            context.push('/parent/fees/history'),
-                      ),
-                    ),
-                    ...feeItems.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final item = entry.value;
-                      return FadeInSlide(
-                        delay: Duration(milliseconds: 300 + (index * 100)),
-                        child: _buildFeeItemRow(context, item, semanticColors),
-                      );
-                    }),
-                  ],
-                ),
-              );
-            }
-            return const SizedBox.shrink();
+              ),
+            );
           },
-        ),
+        );
+      },
+    );
+  }
+
+  Widget _offlineFallback(String schoolName) {
+    return AppResponsiveContent(
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: [
+          const ParentOfflineBanner(),
+          const SizedBox(height: 12),
+          _ChildSwitcherRow(student: widget.student),
+          const SizedBox(height: 16),
+          _BalanceCard(
+            balanceUgx: _cachedBalanceUgx ?? 0,
+            currentBill: null,
+            schoolId: widget.student.schoolId,
+            studentId: widget.student.id,
+          ),
+          const SizedBox(height: 20),
+          _PaymentCodeCard(code: _cachedCode, schoolName: schoolName),
+          const SizedBox(height: 8),
+          ParentLastUpdatedLabel(updatedAt: _cachedAt),
+        ],
       ),
     );
   }
 
-  Widget _buildFeeItemRow(
-    BuildContext context,
-    FeeItem item,
-    SemanticColors colors,
-  ) {
-    Color statusColor;
-    String statusLabel;
+  Widget _loadingSkeleton() {
+    return AppResponsiveContent(
+      child: ListView(
+        padding: const EdgeInsets.all(20),
+        children: const [
+          Skeleton(height: 60, borderRadius: 16),
+          SizedBox(height: 16),
+          Skeleton(height: 140, borderRadius: 16),
+          SizedBox(height: 20),
+          Skeleton(height: 160, borderRadius: 16),
+        ],
+      ),
+    );
+  }
+}
 
-    switch (item.status) {
-      case FeeStatus.paid:
-        statusColor = colors.success;
-        statusLabel = 'Paid';
-        break;
-      case FeeStatus.due:
-        statusColor = colors.warning;
-        statusLabel = 'Due';
-        break;
-      case FeeStatus.overdue:
-        statusColor = colors.error;
-        statusLabel = 'Overdue';
-        break;
-    }
+class _ChildSwitcherRow extends StatelessWidget {
+  final Student student;
 
+  const _ChildSwitcherRow({required this.student});
+
+  @override
+  Widget build(BuildContext context) {
     return AppCard(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      showShadow: false,
+      onTap: () => ChildSelectorSheet.show(context),
       child: Row(
         children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: AppColors.surfaceContainerHigh(context),
+            backgroundImage: student.photoUrl != null
+                ? NetworkImage(student.photoUrl!)
+                : null,
+            child: student.photoUrl == null
+                ? Icon(
+                    Icons.person_outline,
+                    color: AppColors.textPrimary(context),
+                  )
+                : null,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              student.name,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+          ),
+          const Icon(Icons.expand_more, color: AppColors.grey500),
+        ],
+      ),
+    );
+  }
+}
+
+class _BalanceCard extends StatelessWidget {
+  final int balanceUgx;
+  final StudentBill? currentBill;
+  final String schoolId;
+  final String studentId;
+
+  const _BalanceCard({
+    required this.balanceUgx,
+    this.currentBill,
+    required this.schoolId,
+    required this.studentId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      showShadow: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Balance',
+            style: TextStyle(fontSize: 13, color: AppColors.grey500),
+          ),
+          const SizedBox(height: 6),
+          Text.rich(
+            TextSpan(
+              text: CurrencyFormatter.ugx(balanceUgx.toDouble()),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textPrimary(context),
+              ),
+              children: balanceUgx > 0
+                  ? [
+                      TextSpan(
+                        text: ' due',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.danger(context),
+                        ),
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+          if (currentBill != null) ...[
+            const SizedBox(height: 16),
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => Scaffold(
+                    appBar: AppBar(title: const Text('Current bill')),
+                    body: StudentBillsScreen(
+                      schoolId: schoolId,
+                      studentId: studentId,
+                    ),
+                  ),
+                ),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainerHigh(context),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.description_outlined,
+                      size: 18,
+                      color: AppColors.textPrimary(context),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Current bill',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            currentBill!.termId.isNotEmpty
+                                ? currentBill!.termId
+                                : 'Current term',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.grey500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: AppColors.grey500),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentCodeCard extends StatelessWidget {
+  final String? code;
+  final String schoolName;
+
+  const _PaymentCodeCard({this.code, required this.schoolName});
+
+  String _grouped(String raw) {
+    // "VHS-P1234567" -> "VHS-P123 4567", purely cosmetic grouping so the
+    // code is easier to read/say aloud, same idea as the mockup.
+    final dashIndex = raw.indexOf('-');
+    if (dashIndex == -1 || raw.length - dashIndex <= 5) return raw;
+    final prefix = raw.substring(0, dashIndex + 1);
+    final rest = raw.substring(dashIndex + 1);
+    final mid = rest.length - 4;
+    return '$prefix${rest.substring(0, mid)} ${rest.substring(mid)}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerHigh(context),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'Your payment code',
+            style: TextStyle(fontSize: 13, color: AppColors.grey500),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            code != null ? _grouped(code!) : '—',
+            style: const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 14),
+          SecondaryButton(
+            label: 'Copy code',
+            icon: Icons.copy_outlined,
+            onPressed: code == null
+                ? null
+                : () {
+                    Clipboard.setData(ClipboardData(text: code!));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Payment code copied.')),
+                    );
+                  },
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Use this code for every payment to $schoolName.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: AppColors.grey500),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final VoidCallback onTap;
+
+  const _NavRow({required this.icon, required this.title, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      showShadow: false,
+      onTap: onTap,
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: AppColors.textPrimary(context)),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            ),
+          ),
+          const Icon(Icons.chevron_right, color: AppColors.grey500),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentPaymentCard extends StatefulWidget {
+  final String schoolId;
+  final String studentId;
+  final List<StudentBill> bills;
+
+  const _RecentPaymentCard({
+    required this.schoolId,
+    required this.studentId,
+    required this.bills,
+  });
+
+  @override
+  State<_RecentPaymentCard> createState() => _RecentPaymentCardState();
+}
+
+class _RecentPaymentCardState extends State<_RecentPaymentCard> {
+  final Map<String, List<StudentPayment>> _byBill = {};
+
+  @override
+  void initState() {
+    super.initState();
+    for (final bill in widget.bills) {
+      di
+          .sl<StudentBillingRepository>()
+          .watchPayments(widget.schoolId, widget.studentId, bill.id)
+          .listen((payments) {
+            if (!mounted) return;
+            setState(() => _byBill[bill.id] = payments);
+          });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final payments =
+        _byBill.values.expand((p) => p).where((p) => !p.isReversal).toList()
+          ..sort((a, b) {
+            final aDate = a.recordedAt ?? DateTime(0);
+            final bDate = b.recordedAt ?? DateTime(0);
+            return bDate.compareTo(aDate);
+          });
+
+    if (payments.isEmpty) {
+      return AppCard(
+        showShadow: false,
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const ReceiptsScreen())),
+        child: Row(
+          children: [
+            Icon(Icons.receipt_long_outlined, color: AppColors.grey500),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                'No payments yet',
+                style: TextStyle(color: AppColors.grey500),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final payment = payments.first;
+    return AppCard(
+      showShadow: false,
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const ReceiptsScreen())),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerHigh(context),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.receipt_outlined,
+              size: 20,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  item.category,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  'Receipt ${payment.receiptNumber}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
                 ),
                 Text(
-                  'Due: ${DateFormatter.format(item.dueDate)}',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  '${CurrencyFormatter.ugx(payment.amountUgx.toDouble())} · '
+                  '${_methodLabel(payment.method)}',
+                  style: TextStyle(fontSize: 12, color: AppColors.grey500),
+                ),
+                Text(
+                  payment.recordedAt != null
+                      ? DateFormat('d MMM yyyy').format(payment.recordedAt!)
+                      : '—',
+                  style: TextStyle(fontSize: 12, color: AppColors.grey500),
                 ),
               ],
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                CurrencyFormatter.format(item.amount),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              StatusBadge(label: statusLabel, color: statusColor),
-            ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerHigh(context),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              'Confirmed',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  String _methodLabel(String method) {
+    switch (method) {
+      case 'mobile_money':
+        return 'Mobile Money';
+      case 'bank_transfer':
+        return 'Bank';
+      case 'cash':
+        return 'Cash';
+      default:
+        return method;
+    }
   }
 }

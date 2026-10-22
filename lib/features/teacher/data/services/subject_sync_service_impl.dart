@@ -116,6 +116,27 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
       case OfflineOperationType.classAttendanceSubmit:
         return _replayClassAttendance(operation);
 
+      case OfflineOperationType.classTaskSave:
+      case OfflineOperationType.classTaskComplete:
+        return _replayClassTaskSave(operation);
+
+      case OfflineOperationType.classTaskDelete:
+        return _replayClassTaskDelete(operation);
+
+      case OfflineOperationType.classHomeworkSave:
+      case OfflineOperationType.classHomeworkPublish:
+      case OfflineOperationType.classHomeworkCancel:
+        return _replayClassHomework(operation);
+
+      case OfflineOperationType.classBehaviourRecord:
+      case OfflineOperationType.classBehaviourUpdate:
+        return _replayClassBehaviour(operation);
+
+      case OfflineOperationType.classAnnouncementSave:
+      case OfflineOperationType.classAnnouncementPublish:
+      case OfflineOperationType.classAnnouncementArchive:
+        return _replayClassAnnouncement(operation);
+
       case OfflineOperationType.auditLog:
         // Handled by the audit service's own flush, which knows the payload.
         return _ReplayOutcome.done;
@@ -174,6 +195,7 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     // server once it has moved past what this device knows about.
     final register = await classLocalDataSource.getAttendanceDraft(
       operation.entityId,
+      schoolId: operation.schoolId,
     );
     if (register == null) return _ReplayOutcome.gone;
 
@@ -196,14 +218,86 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     return _ReplayOutcome.done;
   }
 
+  Future<_ReplayOutcome> _replayClassTaskSave(
+    OfflineOperation operation,
+  ) async {
+    // As with attendance, the queue holds only the task id - the task
+    // itself is read back from the device so the replay pushes the newest
+    // local state, not a snapshot taken when the operation was queued.
+    final task = await classLocalDataSource.getTask(operation.entityId);
+    if (task == null) return _ReplayOutcome.gone;
+
+    await classRemoteDataSource.saveTask(task);
+    return _ReplayOutcome.done;
+  }
+
+  Future<_ReplayOutcome> _replayClassTaskDelete(
+    OfflineOperation operation,
+  ) async {
+    // Deletion already removed the local row, so there is nothing to read
+    // back - the operation's own schoolId/entityId are enough to replay it.
+    await classRemoteDataSource.deleteTask(
+      schoolId: operation.schoolId,
+      taskId: operation.entityId,
+    );
+    return _ReplayOutcome.done;
+  }
+
+  Future<_ReplayOutcome> _replayClassHomework(
+    OfflineOperation operation,
+  ) async {
+    // Save/publish/cancel all end up as the same saved document - the queue
+    // holds only the id, so the replay reads the newest local row and pushes
+    // it whole, regardless of which of the three calls created the entry.
+    final homework = await classLocalDataSource.getHomeworkItem(
+      operation.entityId,
+    );
+    if (homework == null) return _ReplayOutcome.gone;
+
+    await classRemoteDataSource.saveHomework(homework);
+    return _ReplayOutcome.done;
+  }
+
+  Future<_ReplayOutcome> _replayClassBehaviour(
+    OfflineOperation operation,
+  ) async {
+    final record = await classLocalDataSource.getBehaviourRecord(
+      operation.entityId,
+    );
+    if (record == null) return _ReplayOutcome.gone;
+
+    await classRemoteDataSource.saveBehaviourRecord(record);
+    return _ReplayOutcome.done;
+  }
+
+  Future<_ReplayOutcome> _replayClassAnnouncement(
+    OfflineOperation operation,
+  ) async {
+    final announcement = await classLocalDataSource.getAnnouncement(
+      operation.entityId,
+    );
+    if (announcement == null) return _ReplayOutcome.gone;
+
+    await classRemoteDataSource.saveAnnouncement(announcement);
+    return _ReplayOutcome.done;
+  }
+
   Future<void> _recordFailure(OfflineOperation operation, Object error) async {
+    final nextRetryCount = operation.retryCount + 1;
     await _mark(
       operation,
-      operation.retryCount + 1 >= OfflineOperation.maxRetries
+      nextRetryCount >= OfflineOperation.maxRetries
           ? OfflineSyncStatus.failed
           : OfflineSyncStatus.pending,
       error.toString(),
       incrementRetry: true,
+      // A permanent failure has no next attempt to wait for; a retryable one
+      // backs off so the same transient error isn't replayed next poll.
+      nextRetryAt: nextRetryCount >= OfflineOperation.maxRetries
+          ? null
+          : DateTime.now().add(
+              OfflineOperation.backoffFor(operation.retryCount),
+            ),
     );
   }
 
@@ -212,6 +306,7 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
     OfflineSyncStatus status,
     String message, {
     bool incrementRetry = false,
+    DateTime? nextRetryAt,
   }) async {
     // The operation stays in the queue either way. A permanently failing
     // write is still the teacher's work and has to remain visible on the
@@ -223,6 +318,8 @@ class SubjectSyncServiceImpl implements SubjectSyncService {
         retryCount: incrementRetry
             ? operation.retryCount + 1
             : operation.retryCount,
+        nextRetryAt: nextRetryAt,
+        clearNextRetryAt: nextRetryAt == null,
       ),
     );
   }

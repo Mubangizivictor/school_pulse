@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:school_pulse/design_system/app_components.dart';
 import '../../data/repositories/approval_repository.dart';
 import '../../domain/entities/approval_models.dart';
 import '../../../auth/presentation/bloc/auth_bloc.dart';
@@ -27,10 +28,11 @@ class _ApprovalCenterScreenState extends State<ApprovalCenterScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthBloc>().state;
-    if (auth is! AuthAuthenticated)
+    if (auth is! AuthAuthenticated) {
       return const Scaffold(
         body: Center(child: Text('Sign in to view approvals.')),
       );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title ?? 'Approval Center'),
@@ -63,13 +65,15 @@ class _ApprovalCenterScreenState extends State<ApprovalCenterScreen> {
       body: StreamBuilder<List<ApprovalRequest>>(
         stream: _repository.watchInbox(auth.user.schoolId),
         builder: (context, snapshot) {
-          if (snapshot.hasError)
+          if (snapshot.hasError) {
             return _Error(
               message: 'Could not load approvals.',
               retry: () => setState(() {}),
             );
-          if (!snapshot.hasData)
+          }
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
           final requests = snapshot.data!;
           final visible = requests
               .where(
@@ -143,13 +147,19 @@ class _ApprovalCenterScreenState extends State<ApprovalCenterScreen> {
               ),
               Expanded(
                 child: visible.isEmpty
-                    ? const Center(
-                        child: Text('No approvals match these filters.'),
+                    ? EmptyState(
+                        icon: Icons.fact_check_outlined,
+                        title: requests.isEmpty
+                            ? 'No approval requests yet'
+                            : 'No approvals match these filters',
+                        message: requests.isEmpty
+                            ? 'Requests submitted for your approval will appear here.'
+                            : 'Try a different filter or search term.',
                       )
                     : ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: visible.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (_, i) => _RequestCard(
                           request: visible[i],
                           onTap: () => Navigator.of(context).push(
@@ -194,9 +204,9 @@ class _Summary extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          _Metric('Pending', pending, Colors.orange),
-          _Metric('Urgent', urgent, Colors.red),
-          _Metric('Overdue', overdue, Colors.deepPurple),
+          _Metric('Pending', pending, Colors.black),
+          _Metric('Urgent', urgent, Colors.black),
+          _Metric('Overdue', overdue, Colors.black),
         ],
       ),
     );
@@ -251,8 +261,8 @@ class _RequestCard extends StatelessWidget {
           _Chip(
             text: request.priority.name,
             color: request.priority.index >= ApprovalPriority.urgent.index
-                ? Colors.red
-                : Colors.blueGrey,
+                ? Colors.black
+                : Colors.black,
           ),
           const SizedBox(height: 4),
           Text(
@@ -273,7 +283,7 @@ class _Chip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: .12),
+      color: color,
       borderRadius: BorderRadius.circular(12),
     ),
     child: Text(
@@ -361,10 +371,11 @@ class _ApprovalDetailScreenState extends State<ApprovalDetailScreen> {
         ).showSnackBar(const SnackBar(content: Text('Decision recorded.')));
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Decision not recorded: $e')));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -426,8 +437,8 @@ class _ApprovalDetailScreenState extends State<ApprovalDetailScreen> {
           Wrap(
             spacing: 8,
             children: [
-              _Chip(text: r.currentStatus.name, color: Colors.blue),
-              _Chip(text: r.sensitivity.name, color: Colors.purple),
+              _Chip(text: r.currentStatus.name, color: Colors.black),
+              _Chip(text: r.sensitivity.name, color: Colors.black),
             ],
           ),
           const Divider(height: 32),

@@ -83,12 +83,12 @@ class _PriorityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color color = priority == 'High'
-        ? Colors.red
-        : (priority == 'Medium' ? Colors.orange : Colors.blue);
+        ? Colors.black
+        : (priority == 'Medium' ? Colors.black : Colors.black);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

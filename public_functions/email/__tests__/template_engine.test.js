@@ -64,7 +64,7 @@ for (const id of TEMPLATE_IDS) {
       deviceLabel: 'iPhone 17 Pro Max', locationLabel2: 'Kampala, Uganda', whenLabel: '11 August 2026',
       roleLabel: 'Class Teacher', dueDateLabel: '20 August 2026', periodLabel: 'Term 1 2026',
       publishedByLabel: 'System', ticketReference: 'SP-TCK-000001', statusLabel: 'In progress',
-      userName: 'Jane Namono', verificationUrl: 'https://schoolpulse.victorbee.com/verify-email?oobCode=sample',
+      userName: 'Jane Namono', verificationUrl: 'https://schoolpulseapp.com/verify-email?oobCode=sample',
     };
     const rendered = renderer(sampleData);
     assert.ok(rendered.subject && rendered.subject.length > 0, 'subject missing');
@@ -126,7 +126,7 @@ test('renderBaseTemplate handles fully missing optional params', () => {
 
 console.log('\nPlain text output');
 test('plain text includes title and support email, excludes html tags', () => {
-  const rendered = TEMPLATES.password_reset({ email: 'user@example.com', resetUrl: 'https://schoolpulse.victorbee.com/reset' });
+  const rendered = TEMPLATES.password_reset({ email: 'user@example.com', resetUrl: 'https://schoolpulseapp.com/reset' });
   const plain = renderPlainText(rendered);
   assert.ok(plain.includes('Reset your password'));
   assert.ok(plain.includes('support@schoolpulse.victorbee.com'));

@@ -107,7 +107,7 @@ class _MealPlanningScreenState extends State<MealPlanningScreen> {
                     ? Theme.of(context).colorScheme.primary
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: Colors.black),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -115,7 +115,7 @@ class _MealPlanningScreenState extends State<MealPlanningScreen> {
                   Text(
                     ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index],
                     style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black54,
+                      color: isSelected ? Colors.white : Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -141,11 +141,11 @@ class _MealPlanningScreenState extends State<MealPlanningScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.restaurant_menu, size: 64, color: Colors.grey),
+          const Icon(Icons.restaurant_menu, size: 64, color: Colors.black),
           const SizedBox(height: 16),
           const Text(
             'No menu set for this day',
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(color: Colors.black),
           ),
           const SizedBox(height: 16),
           ElevatedButton(

@@ -1236,7 +1236,7 @@ class StructureSetupEngine {
           (item) =>
               item.academicYearId == currentYear.id &&
               item.termId == currentTerm.id &&
-              item.status == TimetableStatus.active,
+              item.status == TimetableStatus.published,
         )
         .toList(growable: false);
     var valid = true;

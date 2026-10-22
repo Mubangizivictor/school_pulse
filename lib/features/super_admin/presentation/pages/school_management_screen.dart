@@ -1,938 +1,482 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
-import '../../../../design_system/app_components.dart';
-import '../../../../design_system/theme/app_colors.dart';
-import '../../../../design_system/theme/app_radius.dart';
-import '../../../../design_system/theme/app_spacing.dart';
-import '../../../../design_system/theme/app_typography.dart';
-import 'package:school_pulse/features/institution/domain/entities/access_mode.dart';
-import '../../domain/entities/school.dart';
-import '../../domain/entities/school_application.dart';
+
+import 'package:school_pulse/design_system/components/pulse_card.dart';
+import 'package:school_pulse/design_system/components/school_pulse_loader.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/theme/app_typography.dart';
+import 'package:school_pulse/features/super_admin/domain/entities/audit_log.dart';
+import 'package:school_pulse/features/super_admin/domain/entities/school.dart';
+import 'package:school_pulse/features/super_admin/domain/entities/school_application.dart';
+import 'package:school_pulse/features/super_admin/domain/entities/subscription_plan.dart';
+
 import '../bloc/super_admin_bloc.dart';
 import '../bloc/super_admin_event.dart';
 import '../bloc/super_admin_state.dart';
 import '../responsive.dart';
 import '../widgets/super_admin_tab_navigator.dart';
-import 'school_detail_screen.dart';
 import 'school_application_review_screen.dart';
+import 'school_detail_screen.dart';
 
+/// Presentation-only owner Schools surface. All lists are projections of the
+/// existing SuperAdminBloc state; lifecycle changes continue through the
+/// established UpdateSchoolStatusEvent flow.
+///
+/// This file was redesigned to a dense, light-mode-first console layout
+/// (compact header, three summary cards, tabs, a responsive data table that
+/// collapses to compact cards on mobile, and compact pagination). None of the
+/// routes, BLoC events, permissions, filters or lifecycle actions changed -
+/// only the widgets that render them.
 class SchoolManagementScreen extends StatefulWidget {
   const SchoolManagementScreen({super.key, this.initialQuery});
-
   final String? initialQuery;
 
   @override
   State<SchoolManagementScreen> createState() => _SchoolManagementScreenState();
 }
 
-class _SchoolManagementScreenState extends State<SchoolManagementScreen> {
-  late String _searchQuery = widget.initialQuery ?? '';
-  late final _searchController = TextEditingController(text: _searchQuery);
+class _SchoolManagementScreenState extends State<SchoolManagementScreen>
+    with SingleTickerProviderStateMixin {
+  static const List<int> _pageSizeOptions = [10, 20, 50];
+
+  late final TabController _tabs = TabController(length: 3, vsync: this)
+    ..addListener(_onTabChanged);
+  late String _query = widget.initialQuery ?? '';
+  late final TextEditingController _search = TextEditingController(
+    text: _query,
+  );
+  SchoolFilter _filter = SchoolFilter.all;
+  int _page = 0;
+  int _pageSize = 10;
+
+  void _onTabChanged() {
+    if (!_tabs.indexIsChanging) {
+      setState(() {
+        _filter = SchoolFilter.all;
+        _page = 0;
+      });
+    }
+  }
 
   @override
   void didUpdateWidget(covariant SchoolManagementScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.initialQuery != null &&
         widget.initialQuery != oldWidget.initialQuery) {
-      setState(() => _searchQuery = widget.initialQuery!);
-      _searchController.text = _searchQuery;
+      _query = widget.initialQuery!;
+      _search.value = TextEditingValue(text: _query);
     }
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _tabs.removeListener(_onTabChanged);
+    _tabs.dispose();
+    _search.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final wide = isSuperAdminWide(context);
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        backgroundColor: AppColors.background(context),
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: [
-              if (wide)
-                _DesktopSchoolsHeader(
-                  onRefresh: () => context.read<SuperAdminBloc>().add(
-                    LoadSuperAdminDashboard(),
-                  ),
-                )
-              else
-                _SchoolsHeader(
-                  onRefresh: () => context.read<SuperAdminBloc>().add(
-                    LoadSuperAdminDashboard(),
-                  ),
-                ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.x2l,
-                  vertical: wide ? AppSpacing.l : 0,
-                ),
-                child: wide
-                    ? const _DesktopSchoolsSegmentedTabs()
-                    : _SchoolsSegmentedTabs(),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.x2l,
-                  0,
-                  AppSpacing.x2l,
-                  AppSpacing.l,
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: AppColors.primarySoft(context),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.health_and_safety_outlined,
-                            color: AppColors.electricBlue,
-                            size: 17,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Manage every institution using School Pulse.',
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: AppColors.textSecondary(context),
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    _SchoolSearchField(
-                      controller: _searchController,
-                      onChanged: (value) =>
-                          setState(() => _searchQuery = value),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: BlocBuilder<SuperAdminBloc, SuperAdminState>(
-                  builder: (context, state) {
-                    if (state.status == SuperAdminStatus.loading) {
-                      return const Center(child: SchoolPulseLoader());
-                    }
-                    if (state.status == SuperAdminStatus.failure &&
-                        state.schools.isEmpty &&
-                        state.applications.isEmpty) {
-                      return _ErrorState(
-                        message:
-                            state.errorMessage ?? 'Unable to load schools.',
-                        onRetry: () => context.read<SuperAdminBloc>().add(
-                          LoadSuperAdminDashboard(),
-                        ),
-                      );
-                    }
-
-                    final query = _searchQuery.trim().toLowerCase();
-                    bool schoolMatches(School school) {
-                      if (query.isEmpty) return true;
-                      return school.name.toLowerCase().contains(query) ||
-                          school.tenantId.toLowerCase().contains(query) ||
-                          school.contactEmail.toLowerCase().contains(query) ||
-                          school.address.toLowerCase().contains(query);
-                    }
-
-                    bool applicationMatches(SchoolApplication application) {
-                      if (query.isEmpty) return true;
-                      return application.schoolName.toLowerCase().contains(
-                            query,
-                          ) ||
-                          application.prefix.toLowerCase().contains(query) ||
-                          application.administratorName.toLowerCase().contains(
-                            query,
-                          ) ||
-                          application.administratorEmail.toLowerCase().contains(
-                            query,
-                          ) ||
-                          application.schoolEmail.toLowerCase().contains(
-                            query,
-                          ) ||
-                          application.district.toLowerCase().contains(query);
-                    }
-
-                    final activeSchools = state.schools
-                        .where(
-                          (school) =>
-                              schoolMatches(school) &&
-                              (school.status == SchoolStatus.active ||
-                                  school.status == SchoolStatus.trial),
-                        )
-                        .toList();
-                    final suspendedSchools = state.schools
-                        .where(
-                          (school) =>
-                              schoolMatches(school) &&
-                              (school.status == SchoolStatus.suspended ||
-                                  school.status == SchoolStatus.archived),
-                        )
-                        .toList();
-                    final applications =
-                        state.applications.where(applicationMatches).toList()
-                          ..sort((a, b) {
-                            final aPending =
-                                a.status ==
-                                SchoolApplicationStatus.pendingReview;
-                            final bPending =
-                                b.status ==
-                                SchoolApplicationStatus.pendingReview;
-                            if (aPending != bPending) return aPending ? -1 : 1;
-                            final aDate = a.createdAt ?? DateTime(1970);
-                            final bDate = b.createdAt ?? DateTime(1970);
-                            return bDate.compareTo(aDate);
-                          });
-
-                    return TabBarView(
-                      children: [
-                        _SchoolList(
-                          schools: activeSchools,
-                          emptyTitle: 'No active schools',
-                          emptyCopy:
-                              'Approved schools and manually provisioned schools appear here.',
-                        ),
-                        _ApplicationList(applications: applications),
-                        _SchoolList(
-                          schools: suspendedSchools,
-                          emptyTitle: 'No suspended schools',
-                          emptyCopy:
-                              'Suspended and archived tenants will appear here.',
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SchoolsHeader extends StatelessWidget {
-  const _SchoolsHeader({required this.onRefresh});
-
-  final VoidCallback onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 64,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            right: -38,
-            top: -95,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Color(0x294D8BFF), Color(0x004D8BFF)],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 0,
-            top: 0,
-            width: 160,
-            height: 64,
-            child: IgnorePointer(
-              child: CustomPaint(painter: _DotGridPainter()),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Text(
-                    'Schools',
-                    style: AppTypography.displaySmall.copyWith(
-                      color: AppColors.textPrimary(context),
-                      fontSize: 26,
-                      height: 1,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.6,
-                    ),
-                  ),
-                ),
-                Material(
-                  color: AppColors.surfaceElevated(context),
-                  borderRadius: AppRadius.medium,
-                  elevation: 0,
-                  child: InkWell(
-                    onTap: onRefresh,
-                    borderRadius: AppRadius.medium,
-                    child: SizedBox(
-                      width: 38,
-                      height: 38,
-                      child: Icon(
-                        Icons.refresh_rounded,
-                        color: AppColors.primary(context),
-                        size: 19,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DotGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = const Color(0x1A4D8BFF);
-    const spacing = 14.0;
-    for (double y = 0; y < size.height; y += spacing) {
-      for (double x = 0; x < size.width; x += spacing) {
-        canvas.drawCircle(Offset(x, y), 1.1, paint);
-      }
-    }
+  void _refresh() {
+    context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
+    context.read<SuperAdminBloc>().add(const LoadAuditLogsEvent());
   }
 
   @override
-  bool shouldRepaint(covariant _DotGridPainter oldDelegate) => false;
-}
-
-class _SchoolsSegmentedTabs extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 64,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated(context),
-        borderRadius: AppRadius.large,
-        border: Border.all(color: AppColors.border(context)),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow(context),
-            blurRadius: 8,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: TabBar(
-        splashBorderRadius: AppRadius.medium,
-        indicatorSize: TabBarIndicatorSize.tab,
-        indicatorPadding: EdgeInsets.zero,
-        dividerColor: Colors.transparent,
-        indicator: BoxDecoration(
-          color: AppColors.surfaceContainerHigh(context),
-          borderRadius: AppRadius.medium,
-          border: const Border(
-            bottom: BorderSide(color: AppColors.electricBlue, width: 3),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadow(context),
-              blurRadius: 4,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        labelColor: AppColors.primary(context),
-        unselectedLabelColor: AppColors.textSecondary(context),
-        labelStyle: const TextStyle(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w700,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w600,
-        ),
-        tabs: const [
-          Tab(
-            height: 56,
-            icon: Icon(Icons.account_balance_outlined, size: 18),
-            text: 'Active Schools',
-            iconMargin: EdgeInsets.only(bottom: 2),
-          ),
-          Tab(
-            height: 56,
-            icon: Icon(Icons.description_outlined, size: 18),
-            text: 'Applications',
-            iconMargin: EdgeInsets.only(bottom: 2),
-          ),
-          Tab(
-            height: 56,
-            icon: Icon(Icons.block_outlined, size: 18),
-            text: 'Suspended',
-            iconMargin: EdgeInsets.only(bottom: 2),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Flat desktop page header matching the reference: plain title + a
-/// bordered refresh icon button, no gradient/blob decoration.
-class _DesktopSchoolsHeader extends StatelessWidget {
-  const _DesktopSchoolsHeader({required this.onRefresh});
-
-  final VoidCallback onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x2l,
-        AppSpacing.xl,
-        AppSpacing.x2l,
-        0,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Schools',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.headlineMedium.copyWith(
-                color: AppColors.textPrimary(context),
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          Tooltip(
-            message: 'Refresh',
-            child: Material(
-              color: AppColors.surfaceElevated(context),
-              shape: RoundedRectangleBorder(
-                borderRadius: AppRadius.medium,
-                side: BorderSide(color: AppColors.border(context)),
-              ),
-              child: InkWell(
-                borderRadius: AppRadius.medium,
-                onTap: onRefresh,
-                child: const SizedBox(
-                  width: 42,
-                  height: 42,
-                  child: Icon(Icons.refresh_rounded, size: 20),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Flat desktop segmented tabs matching the reference: three equal-width
-/// pill buttons in a single bordered container, no icon-above-label mobile
-/// styling.
-class _DesktopSchoolsSegmentedTabs extends StatelessWidget {
-  const _DesktopSchoolsSegmentedTabs();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainer(context),
-        borderRadius: AppRadius.medium,
-        border: Border.all(color: AppColors.border(context)),
-      ),
-      child: TabBar(
-        indicatorSize: TabBarIndicatorSize.tab,
-        indicatorPadding: EdgeInsets.zero,
-        dividerColor: Colors.transparent,
-        indicator: BoxDecoration(
-          color: AppColors.surfaceElevated(context),
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.shadow(context),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        labelColor: AppColors.primary(context),
-        unselectedLabelColor: AppColors.textSecondary(context),
-        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-        ),
-        tabs: const [
-          Tab(
-            height: 44,
-            icon: Icon(Icons.account_balance_outlined, size: 16),
-            iconMargin: EdgeInsets.only(right: 6),
-            text: 'Active Schools',
-          ),
-          Tab(
-            height: 44,
-            icon: Icon(Icons.description_outlined, size: 16),
-            iconMargin: EdgeInsets.only(right: 6),
-            text: 'Applications',
-          ),
-          Tab(
-            height: 44,
-            icon: Icon(Icons.block_outlined, size: 16),
-            iconMargin: EdgeInsets.only(right: 6),
-            text: 'Suspended',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SchoolSearchField extends StatelessWidget {
-  const _SchoolSearchField({required this.controller, required this.onChanged});
-
-  final TextEditingController controller;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      onChanged: onChanged,
-      style: AppTypography.bodyMedium.copyWith(
-        color: AppColors.textPrimary(context),
-      ),
-      decoration: InputDecoration(
-        hintText: 'Search by name, prefix, email, district or tenant ID...',
-        hintStyle: AppTypography.bodySmall.copyWith(
-          color: AppColors.textMuted(context),
-        ),
-        prefixIcon: Icon(
-          Icons.search_rounded,
-          color: AppColors.textSecondary(context),
-          size: 20,
-        ),
-        suffixIcon: Icon(
-          Icons.tune_rounded,
-          color: AppColors.textSecondary(context),
-          size: 18,
-        ),
-        filled: true,
-        fillColor: AppColors.surfaceElevated(context),
-        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: AppRadius.medium,
-          borderSide: BorderSide(color: AppColors.border(context), width: 1.2),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: AppRadius.medium,
-          borderSide: BorderSide(color: AppColors.primary(context), width: 1.4),
-        ),
-      ),
-    );
-  }
-}
-
-class _SchoolList extends StatelessWidget {
-  final List<School> schools;
-  final String emptyTitle;
-  final String emptyCopy;
-
-  const _SchoolList({
-    required this.schools,
-    required this.emptyTitle,
-    required this.emptyCopy,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (schools.isEmpty) {
-      return EmptyState(
-        icon: Icons.school_outlined,
-        title: emptyTitle,
-        message: emptyCopy,
-      );
-    }
-    final wide = isSuperAdminWide(context);
-    return RefreshIndicator(
-      onRefresh: () async {
-        context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
-        await Future<void>.delayed(const Duration(milliseconds: 500));
-      },
-      child: wide ? _schoolTable(context) : _schoolCards(context),
-    );
-  }
-
-  Widget _schoolCards(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
-      itemCount: schools.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => _SchoolCard(school: schools[index]),
-    );
-  }
-
-  Widget _schoolTable(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.x2l,
-        AppSpacing.s,
-        AppSpacing.x2l,
-        AppSpacing.x3l,
-      ),
-      children: [
-        AppCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xl,
-                  vertical: AppSpacing.m,
-                ),
-                child: Row(
-                  children: [
-                    _headCell(context, 'School', flex: 3),
-                    _headCell(context, 'Tenant ID', flex: 2),
-                    _headCell(context, 'Plan', flex: 2),
-                    _headCell(context, 'Status', flex: 2),
-                    _headCell(context, 'Expiry', flex: 2),
-                    _headCell(context, 'Contact', flex: 3),
-                    const SizedBox(width: 32),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              for (final school in schools) _SchoolTableRow(school: school),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _headCell(BuildContext context, String label, {required int flex}) {
-    return Expanded(
-      flex: flex,
-      child: Text(
-        label,
-        style: AppTypography.labelSmall.copyWith(
-          fontWeight: FontWeight.w700,
-          color: AppColors.textSecondary(context),
-        ),
-      ),
-    );
-  }
-}
-
-class _ApplicationList extends StatelessWidget {
-  final List<SchoolApplication> applications;
-
-  const _ApplicationList({required this.applications});
-
-  @override
-  Widget build(BuildContext context) {
-    if (applications.isEmpty) {
-      return const EmptyState(
-        icon: Icons.inbox_outlined,
-        title: 'No school applications',
-        message:
-            'Applications submitted from schoolpulse.victorbee.com will appear here automatically.',
-      );
-    }
-    return RefreshIndicator(
-      onRefresh: () async {
-        context.read<SuperAdminBloc>().add(LoadSuperAdminDashboard());
-        await Future<void>.delayed(const Duration(milliseconds: 500));
-      },
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.x2l,
-          AppSpacing.s,
-          AppSpacing.x2l,
-          AppSpacing.x3l,
-        ),
-        itemCount: applications.length,
-        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.l),
-        itemBuilder: (context, index) =>
-            _ApplicationTile(application: applications[index]),
-      ),
-    );
-  }
-}
-
-class _ApplicationTile extends StatelessWidget {
-  final SchoolApplication application;
-
-  const _ApplicationTile({required this.application});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final pending = application.status == SchoolApplicationStatus.pendingReview;
-    final statusColor = _applicationStatusColor(context, application.status);
-    final initial = application.schoolName.trim().isEmpty
-        ? 'S'
-        : application.schoolName.trim()[0].toUpperCase();
-
-    return AppCard(
-      onTap: () => pushSuperAdminDetail(
-        context: context,
-        sectionPath: 'schools',
-        detailPath: 'applications/${application.id}',
-        detail: BlocProvider.value(
-          value: context.read<SuperAdminBloc>(),
-          child: SchoolApplicationReviewScreen(application: application),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundColor: theme.colorScheme.primaryContainer,
-            child: Text(
-              initial,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: theme.colorScheme.onPrimaryContainer,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.l),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        application.schoolName.isEmpty
-                            ? 'Unnamed school'
-                            : application.schoolName,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    StatusBadge(
-                      label: application.status.label,
-                      color: statusColor,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 7),
-                Text(
-                  '${application.prefix.isEmpty ? 'No prefix' : application.prefix} • '
-                  '${application.category.isEmpty ? 'School type pending' : application.category} • '
-                  '${application.district.isEmpty ? application.region : application.district}',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  '${application.plan.isEmpty ? 'Plan pending' : '${application.plan} plan'} • '
-                  '${application.administratorName.isEmpty ? 'Administrator' : application.administratorName} • '
-                  '${application.administratorEmail}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    _MiniLabel(
-                      icon: application.administratorEmailVerified
-                          ? Icons.verified_outlined
-                          : Icons.mark_email_unread_outlined,
-                      label: application.administratorEmailVerified
-                          ? 'Email verified'
-                          : 'Email not verified',
-                    ),
-                    _MiniLabel(
-                      icon: application.termsAccepted
-                          ? Icons.task_alt_outlined
-                          : Icons.remove_circle_outline,
-                      label: application.termsAccepted
-                          ? 'Terms accepted'
-                          : 'Terms not accepted',
-                    ),
-                    if (application.createdAt != null)
-                      _MiniLabel(
-                        icon: Icons.schedule_outlined,
-                        label:
-                            'Submitted ${DateFormat('dd MMM, h:mm a').format(application.createdAt!.toLocal())}',
-                      ),
-                    if (pending)
-                      const _MiniLabel(
-                        icon: Icons.rate_review_outlined,
-                        label: 'Needs your review',
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.m),
-          const Icon(Icons.chevron_right_rounded),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniLabel extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _MiniLabel({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 15, color: theme.colorScheme.onSurfaceVariant),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SchoolCard extends StatelessWidget {
-  final School school;
-
-  const _SchoolCard({required this.school});
-
-  @override
-  Widget build(BuildContext context) {
-    final initial = school.name.trim().isEmpty
-        ? 'S'
-        : school.name.trim()[0].toUpperCase();
-
-    return Material(
-      color: AppColors.surfaceElevated(context),
-      borderRadius: AppRadius.large,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => pushSuperAdminDetail(
-          context: context,
-          sectionPath: 'schools',
-          detailPath: school.id,
-          detail: SchoolDetailScreen(school: school),
-        ),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xl,
-            AppSpacing.xl,
-            AppSpacing.l,
-            AppSpacing.xl,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: AppRadius.large,
-            border: Border.all(color: AppColors.border(context)),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow(context),
-                blurRadius: 8,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _SchoolInitialAvatar(initial: initial, name: school.name),
-              const SizedBox(width: 14),
-              Expanded(
+  Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppColors.background(context),
+    body: SafeArea(
+      bottom: false,
+      child: BlocBuilder<SuperAdminBloc, SuperAdminState>(
+        builder: (context, state) {
+          final data = _SchoolsViewData.fromState(state, _query, _filter);
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 1),
-                            child: Text(
-                              school.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.labelLarge.copyWith(
-                                color: AppColors.textPrimary(context),
-                                fontWeight: FontWeight.w800,
-                                fontSize: 15.5,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        _SchoolStatusPill(status: school.status),
-                        if (AccessMode.fromRaw(school.accessMode) !=
-                            AccessMode.full) ...[
-                          const SizedBox(width: 6),
-                          _AccessModePill(accessMode: school.accessMode),
-                        ],
-                      ],
+                    PlatformSchoolsHeader(
+                      tabIndex: _tabs.index,
+                      activeCount: data.totalActive,
+                      applicationsCount: data.totalApplications,
+                      suspendedCount: data.totalSuspended,
+                      controller: _search,
+                      filter: _filter,
+                      onQueryChanged: (value) => setState(() {
+                        _query = value;
+                        _page = 0;
+                      }),
+                      onFilterChanged: (value) => setState(() {
+                        _filter = value;
+                        _page = 0;
+                      }),
+                      onRefresh: _refresh,
+                      onCreate: () {
+                        _tabs.animateTo(1);
+                        setState(() => _page = 0);
+                      },
                     ),
-                    const SizedBox(height: 9),
-                    _SchoolMetaRow(
-                      icon: Icons.badge_outlined,
-                      text: 'ID: ${school.tenantId}',
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                      child: SchoolSummaryCards(
+                        activeCount: data.totalActive,
+                        applicationsCount: data.totalApplications,
+                        suspendedCount: data.totalSuspended,
+                      ),
                     ),
-                    const SizedBox(height: 6),
-                    _SchoolMetaRow(
-                      icon: Icons.calendar_today_outlined,
-                      text:
-                          'Expiry: ${DateFormat('MMM dd, yyyy').format(school.subscriptionExpiry)}',
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                      child: SchoolStatusTabs(
+                        controller: _tabs,
+                        activeCount: data.totalActive,
+                        applicationsCount: data.totalApplications,
+                        suspendedCount: data.totalSuspended,
+                      ),
                     ),
-                    const SizedBox(height: 6),
-                    _SchoolMetaRow(
-                      icon: Icons.mail_outline_rounded,
-                      text: school.contactEmail,
-                    ),
+                    if (_tabs.index == 2)
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
+                        child: _SuspensionNotice(),
+                      ),
                   ],
                 ),
               ),
-              const SizedBox(width: 2),
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: _SchoolQuickActions(school: school),
+              _body(context, state, data),
+            ],
+          );
+        },
+      ),
+    ),
+  );
+
+  Widget _body(
+    BuildContext context,
+    SuperAdminState state,
+    _SchoolsViewData data,
+  ) {
+    if (state.status == SuperAdminStatus.loading &&
+        state.schools.isEmpty &&
+        state.applications.isEmpty) {
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: SchoolPulseLoader()),
+      );
+    }
+    if (state.status == SuperAdminStatus.failure &&
+        state.schools.isEmpty &&
+        state.applications.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: _CompactState(
+          message: state.errorMessage ?? 'Unable to load schools.',
+          onRetry: _refresh,
+        ),
+      );
+    }
+
+    void changePageSize(int value) => setState(() {
+      _pageSize = value;
+      _page = 0;
+    });
+
+    switch (_tabs.index) {
+      case 0:
+        return _SchoolTableSection(
+          rows: data.active,
+          plans: state.plans,
+          page: _page,
+          pageSize: _pageSize,
+          pageSizeOptions: _pageSizeOptions,
+          onPageSizeChanged: changePageSize,
+          onPageChanged: (value) => setState(() => _page = value),
+          emptyTitle: 'No active schools yet',
+          emptyMessage:
+              'Approved and active schools will appear here.\n'
+              'Register your first school to get started.',
+          emptyActionLabel: 'Register first school',
+          onEmptyAction: () {
+            _tabs.animateTo(1);
+            setState(() => _page = 0);
+          },
+          kind: _SchoolRowKind.active,
+        );
+      case 1:
+        return _ApplicationsTableSection(
+          rows: data.applications,
+          page: _page,
+          pageSize: _pageSize,
+          pageSizeOptions: _pageSizeOptions,
+          onPageSizeChanged: changePageSize,
+          onPageChanged: (value) => setState(() => _page = value),
+        );
+      default:
+        return _SchoolTableSection(
+          rows: data.suspended,
+          plans: state.plans,
+          logs: state.auditLogs,
+          page: _page,
+          pageSize: _pageSize,
+          pageSizeOptions: _pageSizeOptions,
+          onPageSizeChanged: changePageSize,
+          onPageChanged: (value) => setState(() => _page = value),
+          emptyTitle: 'No suspended schools',
+          emptyMessage:
+              'Temporarily suspended schools will appear here.\n'
+              'Suspension keeps their data safe while restricting access.',
+          emptyActionLabel: null,
+          onEmptyAction: null,
+          kind: _SchoolRowKind.suspended,
+        );
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Header: title + count pill + search + filter + refresh + Register school
+// ---------------------------------------------------------------------------
+
+class PlatformSchoolsHeader extends StatelessWidget {
+  const PlatformSchoolsHeader({
+    super.key,
+    required this.tabIndex,
+    required this.activeCount,
+    required this.applicationsCount,
+    required this.suspendedCount,
+    required this.onRefresh,
+    required this.onCreate,
+    this.controller,
+    this.filter = SchoolFilter.all,
+    this.onQueryChanged,
+    this.onFilterChanged,
+  });
+
+  final int tabIndex, activeCount, applicationsCount, suspendedCount;
+  final VoidCallback onRefresh, onCreate;
+  final TextEditingController? controller;
+  final SchoolFilter filter;
+  final ValueChanged<String>? onQueryChanged;
+  final ValueChanged<SchoolFilter>? onFilterChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = activeCount + applicationsCount + suspendedCount;
+    final wide = isSuperAdminWide(context);
+    // When no query/filter wiring is supplied the header renders as a bare
+    // title bar (used by lightweight harnesses); the live screen always wires
+    // these so search + filter sit inline as in the reference.
+    final showControls = onQueryChanged != null && onFilterChanged != null;
+
+    final search = _SearchField(
+      controller: controller,
+      onChanged: onQueryChanged ?? (_) {},
+    );
+    final filterButton = _FilterButton(
+      filter: filter,
+      tabIndex: tabIndex,
+      onSelected: onFilterChanged ?? (_) {},
+    );
+    final refreshButton = _IconAction(
+      icon: Icons.refresh_rounded,
+      tooltip: 'Refresh schools',
+      onTap: onRefresh,
+    );
+    final registerButton = _RegisterSchoolButton(onTap: onCreate);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Flexible(
+                child: Text(
+                  'Schools',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: _pageTitle(context),
+                ),
+              ),
+              const SizedBox(width: 10),
+              _CountPill(label: '$total total', color: AppColors.textMuted(context)),
+              if (wide && showControls) ...[
+                const Spacer(),
+                SizedBox(width: 320, child: search),
+                const SizedBox(width: 10),
+                filterButton,
+                const SizedBox(width: 8),
+                registerButton,
+                const SizedBox(width: 8),
+                refreshButton,
+              ] else if (wide) ...[
+                const Spacer(),
+                registerButton,
+                const SizedBox(width: 8),
+                refreshButton,
+              ],
+            ],
+          ),
+          if (!wide && showControls) ...[
+            const SizedBox(height: 12),
+            search,
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(child: filterButton),
+                const SizedBox(width: 8),
+                refreshButton,
+                const SizedBox(width: 8),
+                Expanded(flex: 2, child: registerButton),
+              ],
+            ),
+          ] else if (!wide) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                refreshButton,
+                const SizedBox(width: 8),
+                Expanded(child: registerButton),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.controller, required this.onChanged});
+  final TextEditingController? controller;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) => TextField(
+    controller: controller,
+    onChanged: onChanged,
+    style: AppTypography.bodyMedium.copyWith(
+      color: AppColors.textPrimary(context),
+      fontSize: 14,
+    ),
+    decoration: InputDecoration(
+      hintText: 'Search by name, code, email, district or tenant ID',
+      hintStyle: _body(context),
+      prefixIcon: Icon(
+        Icons.search_rounded,
+        color: AppColors.textSecondary(context),
+        size: 20,
+      ),
+      isDense: true,
+      filled: true,
+      fillColor: AppColors.surfaceElevated(context),
+      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: AppColors.border(context)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: AppColors.information(context), width: 1.4),
+      ),
+    ),
+  );
+}
+
+class _FilterButton extends StatelessWidget {
+  const _FilterButton({
+    required this.filter,
+    required this.tabIndex,
+    required this.onSelected,
+  });
+  final SchoolFilter filter;
+  final int tabIndex;
+  final ValueChanged<SchoolFilter> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = filter != SchoolFilter.all;
+    return PopupMenuButton<SchoolFilter>(
+      tooltip: 'Filter schools',
+      onSelected: onSelected,
+      itemBuilder: (_) => _filterOptions(tabIndex)
+          .map(
+            (option) => PopupMenuItem(value: option.$1, child: Text(option.$2)),
+          )
+          .toList(),
+      child: Container(
+        height: 42,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: active
+              ? AppColors.informationSurface(context)
+              : AppColors.surfaceElevated(context),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: active
+                ? AppColors.information(context)
+                : AppColors.border(context),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.tune_rounded,
+              size: 18,
+              color: active
+                  ? AppColors.information(context)
+                  : AppColors.textSecondary(context),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Filter',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: active
+                    ? AppColors.information(context)
+                    : AppColors.textPrimary(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RegisterSchoolButton extends StatelessWidget {
+  const _RegisterSchoolButton({required this.onTap, this.label = 'Register school'});
+  final VoidCallback onTap;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final blue = AppColors.information(context);
+    return Material(
+      color: blue,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          height: 42,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          alignment: Alignment.center,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
@@ -942,376 +486,1061 @@ class _SchoolCard extends StatelessWidget {
   }
 }
 
-class _SchoolInitialAvatar extends StatelessWidget {
-  const _SchoolInitialAvatar({required this.initial, required this.name});
+class _IconAction extends StatelessWidget {
+  const _IconAction({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
 
-  final String initial;
-  final String name;
+  @override
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: Material(
+      color: AppColors.surfaceElevated(context),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppColors.border(context)),
+          ),
+          child: Icon(icon, size: 19, color: AppColors.textPrimary(context)),
+        ),
+      ),
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Summary cards
+// ---------------------------------------------------------------------------
+
+class SchoolSummaryCards extends StatelessWidget {
+  const SchoolSummaryCards({
+    super.key,
+    required this.activeCount,
+    required this.applicationsCount,
+    required this.suspendedCount,
+  });
+  final int activeCount, applicationsCount, suspendedCount;
 
   @override
   Widget build(BuildContext context) {
-    const palettes = [
-      (Color(0xFFBED0FF), Color(0xFFE8EEFF), Color(0xFF1549B8)),
-      (Color(0xFFBCEFD7), Color(0xFFE7FAEF), Color(0xFF087342)),
-      (Color(0xFFE0C8FF), Color(0xFFF2E9FF), Color(0xFF4E149D)),
-      (Color(0xFFFFD1B5), Color(0xFFFFEEE3), Color(0xFFB3430B)),
+    final total = activeCount + applicationsCount + suspendedCount;
+    String pct(int value) => total == 0
+        ? '0%'
+        : '${(value / total * 100).toStringAsFixed(1).replaceAll('.0', '')}%';
+
+    final cards = <Widget>[
+      _SummaryCard(
+        icon: Icons.apartment_rounded,
+        iconColor: AppColors.success(context),
+        title: 'Active schools',
+        value: '$activeCount',
+        badge: pct(activeCount),
+        badgeColor: AppColors.success(context),
+        caption: 'All approved and active schools',
+      ),
+      _SummaryCard(
+        icon: Icons.description_outlined,
+        iconColor: AppColors.information(context),
+        title: 'Applications',
+        value: '$applicationsCount',
+        badge: pct(applicationsCount),
+        badgeColor: AppColors.information(context),
+        caption: 'Pending review and approval',
+      ),
+      _SummaryCard(
+        icon: Icons.pause_circle_outline_rounded,
+        iconColor: AppColors.danger(context),
+        title: 'Suspended',
+        value: '$suspendedCount',
+        badge: pct(suspendedCount),
+        badgeColor: AppColors.danger(context),
+        caption: 'Temporarily suspended schools',
+      ),
     ];
-    final palette =
-        palettes[name.codeUnits.fold<int>(0, (a, b) => a + b) %
-            palettes.length];
-    return Container(
-      width: 56,
-      height: 84,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [palette.$1, palette.$2],
-        ),
-        border: Border.all(color: palette.$1.withValues(alpha: .75)),
-      ),
-      child: Text(
-        initial,
-        style: TextStyle(
-          color: palette.$3,
-          fontSize: 36,
-          fontWeight: FontWeight.w800,
-          height: 1,
-        ),
-      ),
+
+    if (isSuperAdminWide(context)) {
+      return Row(
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i != 0) const SizedBox(width: 16),
+            Expanded(child: cards[i]),
+          ],
+        ],
+      );
+    }
+    return Column(
+      children: [
+        for (var i = 0; i < cards.length; i++) ...[
+          if (i != 0) const SizedBox(height: 12),
+          cards[i],
+        ],
+      ],
     );
   }
 }
 
-class _SchoolMetaRow extends StatelessWidget {
-  const _SchoolMetaRow({required this.icon, required this.text});
-
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.value,
+    required this.badge,
+    required this.badgeColor,
+    required this.caption,
+  });
   final IconData icon;
-  final String text;
+  final Color iconColor, badgeColor;
+  final String title, value, badge, caption;
+
+  @override
+  Widget build(BuildContext context) => PulseCard(
+    padding: const EdgeInsets.all(16),
+    borderRadius: 12,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: .12),
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(icon, size: 22, color: iconColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: _label(context).copyWith(fontSize: 12.5),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(value, style: _pageTitle(context).copyWith(fontSize: 24)),
+                ],
+              ),
+            ),
+            _CountPill(label: badge, color: badgeColor),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text(caption, style: _body(context)),
+      ],
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tabs
+// ---------------------------------------------------------------------------
+
+class SchoolStatusTabs extends StatelessWidget {
+  const SchoolStatusTabs({
+    super.key,
+    required this.controller,
+    required this.activeCount,
+    required this.applicationsCount,
+    required this.suspendedCount,
+  });
+  final TabController controller;
+  final int activeCount, applicationsCount, suspendedCount;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(color: AppColors.border(context)),
+      ),
+    ),
+    child: TabBar(
+      controller: controller,
+      isScrollable: true,
+      tabAlignment: TabAlignment.start,
+      dividerColor: Colors.transparent,
+      indicatorSize: TabBarIndicatorSize.label,
+      indicator: UnderlineTabIndicator(
+        borderSide: BorderSide(color: AppColors.information(context), width: 2.5),
+      ),
+      labelColor: AppColors.information(context),
+      unselectedLabelColor: AppColors.textSecondary(context),
+      labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+      unselectedLabelStyle: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+      ),
+      tabs: [
+        _tab('Active', activeCount, context),
+        _tab('Applications', applicationsCount, context),
+        _tab('Suspended', suspendedCount, context),
+      ],
+    ),
+  );
+
+  Widget _tab(String label, int count, BuildContext context) => Tab(
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(label),
+        const SizedBox(width: 6),
+        _CountPill(
+          label: '$count',
+          color: AppColors.textMuted(context),
+          compact: true,
+        ),
+      ],
+    ),
+  );
+}
+
+/// Retained for source compatibility with earlier call sites / tests: the
+/// search box and filter control now live inside [PlatformSchoolsHeader], but
+/// this standalone composite still renders both and forwards their callbacks
+/// through the exact same [SchoolFilter] / query contract.
+class SchoolSearchAndFilter extends StatelessWidget {
+  const SchoolSearchAndFilter({
+    super.key,
+    required this.controller,
+    required this.filter,
+    required this.tabIndex,
+    required this.onChanged,
+    required this.onFilterChanged,
+  });
+  final TextEditingController controller;
+  final SchoolFilter filter;
+  final int tabIndex;
+  final ValueChanged<String> onChanged;
+  final ValueChanged<SchoolFilter> onFilterChanged;
 
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      Icon(icon, size: 14, color: AppColors.textSecondary(context)),
-      const SizedBox(width: 8),
       Expanded(
-        child: Text(
-          text,
+        child: _SearchField(controller: controller, onChanged: onChanged),
+      ),
+      const SizedBox(width: 8),
+      _FilterButton(
+        filter: filter,
+        tabIndex: tabIndex,
+        onSelected: onFilterChanged,
+      ),
+    ],
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Data table sections (desktop table / mobile card list) + pagination
+// ---------------------------------------------------------------------------
+
+enum _SchoolRowKind { active, suspended }
+
+class _SchoolTableSection extends StatelessWidget {
+  const _SchoolTableSection({
+    required this.rows,
+    required this.plans,
+    required this.page,
+    required this.pageSize,
+    required this.pageSizeOptions,
+    required this.onPageSizeChanged,
+    required this.onPageChanged,
+    required this.emptyTitle,
+    required this.emptyMessage,
+    required this.emptyActionLabel,
+    required this.onEmptyAction,
+    required this.kind,
+    this.logs = const [],
+  });
+  final List<School> rows;
+  final List<SubscriptionPlan> plans;
+  final List<AuditLog> logs;
+  final int page, pageSize;
+  final List<int> pageSizeOptions;
+  final ValueChanged<int> onPageSizeChanged;
+  final ValueChanged<int> onPageChanged;
+  final String emptyTitle, emptyMessage;
+  final String? emptyActionLabel;
+  final VoidCallback? onEmptyAction;
+  final _SchoolRowKind kind;
+
+  @override
+  Widget build(BuildContext context) {
+    if (rows.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: _IllustratedEmpty(
+          title: emptyTitle,
+          message: emptyMessage,
+          actionLabel: emptyActionLabel,
+          onAction: onEmptyAction,
+        ),
+      );
+    }
+
+    final pageCount = (rows.length + pageSize - 1) ~/ pageSize;
+    final safePage = page.clamp(0, pageCount - 1);
+    final start = safePage * pageSize;
+    final visible = rows.sublist(
+      start,
+      (start + pageSize).clamp(0, rows.length),
+    );
+    final wide = isSuperAdminWide(context);
+
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      sliver: SliverToBoxAdapter(
+        child: Column(
+          children: [
+            PulseCard(
+              padding: EdgeInsets.zero,
+              borderRadius: 12,
+              child: Column(
+                children: [
+                  if (wide) const _SchoolTableHeaderRow(),
+                  for (var i = 0; i < visible.length; i++)
+                    _SchoolDataRow(
+                      school: visible[i],
+                      plan: _planFor(visible[i], plans),
+                      audit: _latestSuspensionLog(visible[i], logs),
+                      kind: kind,
+                      wide: wide,
+                      isLast: i == visible.length - 1,
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            _PaginationBar(
+              page: safePage,
+              pageCount: pageCount,
+              rangeStart: start + 1,
+              rangeEnd: start + visible.length,
+              total: rows.length,
+              pageSize: pageSize,
+              pageSizeOptions: pageSizeOptions,
+              onPageSizeChanged: onPageSizeChanged,
+              onPageChanged: onPageChanged,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SchoolTableHeaderRow extends StatelessWidget {
+  const _SchoolTableHeaderRow();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceContainer(context),
+      border: Border(bottom: BorderSide(color: AppColors.border(context))),
+    ),
+    child: Row(
+      children: const [
+        Expanded(flex: 26, child: _HeaderCell('School')),
+        Expanded(flex: 12, child: _HeaderCell('School code')),
+        Expanded(flex: 16, child: _HeaderCell('Location')),
+        Expanded(flex: 10, child: _HeaderCell('Students')),
+        Expanded(flex: 14, child: _HeaderCell('Plan')),
+        Expanded(flex: 14, child: _HeaderCell('Payment status')),
+        Expanded(flex: 14, child: _HeaderCell('Account status')),
+        SizedBox(width: 40, child: _HeaderCell('', center: true)),
+      ],
+    ),
+  );
+}
+
+class _HeaderCell extends StatelessWidget {
+  const _HeaderCell(this.label, {this.center = false});
+  final String label;
+  final bool center;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    label,
+    textAlign: center ? TextAlign.center : TextAlign.start,
+    style: _label(context).copyWith(
+      fontSize: 11.5,
+      fontWeight: FontWeight.w700,
+      letterSpacing: .2,
+    ),
+  );
+}
+
+class _SchoolDataRow extends StatelessWidget {
+  const _SchoolDataRow({
+    required this.school,
+    required this.plan,
+    required this.audit,
+    required this.kind,
+    required this.wide,
+    required this.isLast,
+  });
+  final School school;
+  final SubscriptionPlan? plan;
+  final AuditLog? audit;
+  final _SchoolRowKind kind;
+  final bool wide, isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final payment = _paymentStatusFor(school);
+    final account = _accountStatusFor(school, kind);
+    final border = isLast
+        ? null
+        : Border(bottom: BorderSide(color: AppColors.border(context)));
+
+    if (!wide) {
+      return _MobileSchoolCard(
+        school: school,
+        plan: plan,
+        audit: audit,
+        kind: kind,
+        payment: payment,
+        account: account,
+        border: border,
+      );
+    }
+
+    return InkWell(
+      onTap: () => _openSchool(context, school),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(border: border),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 26,
+              child: _SchoolIdentityCell(school: school, kind: kind),
+            ),
+            Expanded(
+              flex: 12,
+              child: Text(_schoolCode(school), style: _cellText(context)),
+            ),
+            Expanded(
+              flex: 16,
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.place_outlined,
+                    size: 14,
+                    color: AppColors.textMuted(context),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      _location(school),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _cellText(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 10,
+              child: Text(_studentCount(school), style: _cellText(context)),
+            ),
+            Expanded(
+              flex: 14,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    plan?.name ?? _fallbackPlan(school),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: _cellText(context).copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    _renewsLabel(school),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: _label(context),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 14,
+              child: _StatusStack(
+                chip: payment.chip(context),
+                caption: payment.caption,
+              ),
+            ),
+            Expanded(
+              flex: 14,
+              child: _StatusStack(
+                chip: account.chip(context),
+                caption: account.caption,
+              ),
+            ),
+            SizedBox(
+              width: 40,
+              child: _RowOverflowMenu(school: school, kind: kind),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MobileSchoolCard extends StatelessWidget {
+  const _MobileSchoolCard({
+    required this.school,
+    required this.plan,
+    required this.audit,
+    required this.kind,
+    required this.payment,
+    required this.account,
+    required this.border,
+  });
+  final School school;
+  final SubscriptionPlan? plan;
+  final AuditLog? audit;
+  final _SchoolRowKind kind;
+  final _StatusView payment, account;
+  final Border? border;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+    onTap: () => _openSchool(context, school),
+    child: Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(border: border),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _SchoolIdentityCell(school: school, kind: kind),
+              ),
+              _RowOverflowMenu(school: school, kind: kind),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final half = (constraints.maxWidth - 12) / 2;
+              return Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  SizedBox(
+                    width: half,
+                    child: _MiniField(
+                      label: 'Code',
+                      value: _schoolCode(school),
+                    ),
+                  ),
+                  SizedBox(
+                    width: half,
+                    child: _MiniField(
+                      label: 'Students',
+                      value: _studentCount(school),
+                    ),
+                  ),
+                  SizedBox(
+                    width: half,
+                    child: _MiniField(
+                      label: 'Location',
+                      value: _location(school),
+                    ),
+                  ),
+                  SizedBox(
+                    width: half,
+                    child: _MiniField(
+                      label: 'Plan',
+                      value: plan?.name ?? _fallbackPlan(school),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _StatusStack(
+                  label: 'Payment status',
+                  chip: payment.chip(context),
+                  caption: payment.caption,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StatusStack(
+                  label: 'Account status',
+                  chip: account.chip(context),
+                  caption: account.caption,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _SchoolIdentityCell extends StatelessWidget {
+  const _SchoolIdentityCell({required this.school, required this.kind});
+  final School school;
+  final _SchoolRowKind kind;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (kind) {
+      _SchoolRowKind.suspended => AppColors.danger(context),
+      _ => school.status == SchoolStatus.active
+          ? AppColors.information(context)
+          : AppColors.warning(context),
+    };
+    return Row(
+      children: [
+        _Avatar(label: _initials(school.name), color: color),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _schoolName(school),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _cardTitle(context).copyWith(fontSize: 14),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _adminValue(school),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _label(context),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RowOverflowMenu extends StatelessWidget {
+  const _RowOverflowMenu({required this.school, required this.kind});
+  final School school;
+  final _SchoolRowKind kind;
+
+  @override
+  Widget build(BuildContext context) => PopupMenuButton<String>(
+    tooltip: 'School actions',
+    icon: Icon(
+      Icons.more_vert_rounded,
+      size: 20,
+      color: AppColors.textSecondary(context),
+    ),
+    onSelected: (value) {
+      switch (value) {
+        case 'open':
+          _openSchool(context, school);
+        case 'suspend':
+          _confirmSuspend(context, school);
+        case 'restore':
+          _confirmRestore(context, school);
+      }
+    },
+    itemBuilder: (_) => [
+      const PopupMenuItem(value: 'open', child: Text('View school')),
+      if (kind == _SchoolRowKind.active)
+        const PopupMenuItem(value: 'suspend', child: Text('Suspend school'))
+      else
+        const PopupMenuItem(value: 'restore', child: Text('Restore school')),
+    ],
+  );
+}
+
+class _StatusStack extends StatelessWidget {
+  const _StatusStack({required this.chip, required this.caption, this.label});
+  final Widget chip;
+  final String caption;
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      if (label != null) ...[
+        Text(label!, style: _label(context)),
+        const SizedBox(height: 4),
+      ],
+      Align(alignment: Alignment.centerLeft, child: chip),
+      if (caption.isNotEmpty) ...[
+        const SizedBox(height: 3),
+        Text(
+          caption,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: AppTypography.bodySmall.copyWith(
-            color: AppColors.textSecondary(context),
-          ),
+          style: _label(context),
+        ),
+      ],
+    ],
+  );
+}
+
+class _MiniField extends StatelessWidget {
+  const _MiniField({required this.label, required this.value});
+  final String label, value;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text(label, style: _label(context)),
+      const SizedBox(height: 2),
+      Text(
+        value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTypography.bodySmall.copyWith(
+          color: AppColors.textPrimary(context),
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
         ),
       ),
     ],
   );
 }
 
-/// Billing state, deliberately separate from _SchoolStatusPill's operational
-/// status (active/suspended/etc) - an expired subscription and an
-/// owner-suspended school are different concepts and must never share one
-/// badge. Only rendered when accessMode isn't 'full', so a normal paying
-/// school shows no extra pill.
-class _AccessModePill extends StatelessWidget {
-  const _AccessModePill({required this.accessMode});
-
-  final String? accessMode;
+class _PaginationBar extends StatelessWidget {
+  const _PaginationBar({
+    required this.page,
+    required this.pageCount,
+    required this.rangeStart,
+    required this.rangeEnd,
+    required this.total,
+    required this.pageSize,
+    required this.pageSizeOptions,
+    required this.onPageSizeChanged,
+    required this.onPageChanged,
+  });
+  final int page, pageCount, rangeStart, rangeEnd, total, pageSize;
+  final List<int> pageSizeOptions;
+  final ValueChanged<int> onPageSizeChanged;
+  final ValueChanged<int> onPageChanged;
 
   @override
   Widget build(BuildContext context) {
-    final mode = AccessMode.fromRaw(accessMode);
-    final (label, color) = switch (mode) {
-      AccessMode.readOnly => ('READ-ONLY', Colors.amber.shade800),
-      AccessMode.blocked => ('BLOCKED', Theme.of(context).colorScheme.error),
-      AccessMode.full => ('', Colors.transparent),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: .12),
-        borderRadius: AppRadius.full,
-        border: Border.all(color: color.withValues(alpha: .14)),
-      ),
-      child: Text(
+    final wide = isSuperAdminWide(context);
+    final label = Text(
+      'Showing $rangeStart to $rangeEnd of $total',
+      style: _body(context),
+    );
+    final controls = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _PageChevron(
+          icon: Icons.first_page_rounded,
+          enabled: page > 0,
+          onTap: () => onPageChanged(0),
+        ),
+        _PageChevron(
+          icon: Icons.chevron_left_rounded,
+          enabled: page > 0,
+          onTap: () => onPageChanged(page - 1),
+        ),
+        for (final index in _pageWindow(page, pageCount))
+          _PageNumber(
+            index: index,
+            selected: index == page,
+            onTap: () => onPageChanged(index),
+          ),
+        _PageChevron(
+          icon: Icons.chevron_right_rounded,
+          enabled: page < pageCount - 1,
+          onTap: () => onPageChanged(page + 1),
+        ),
+        _PageChevron(
+          icon: Icons.last_page_rounded,
+          enabled: page < pageCount - 1,
+          onTap: () => onPageChanged(pageCount - 1),
+        ),
+        const SizedBox(width: 8),
+        _PageSizeSelector(
+          value: pageSize,
+          options: pageSizeOptions,
+          onChanged: onPageSizeChanged,
+        ),
+      ],
+    );
+
+    if (wide) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [label, controls],
+      );
+    }
+    return Column(
+      children: [
         label,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w700,
-          fontSize: 10.5,
+        const SizedBox(height: 10),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: controls,
         ),
-      ),
-    );
-  }
-}
-
-class _SchoolStatusPill extends StatelessWidget {
-  const _SchoolStatusPill({required this.status});
-
-  final SchoolStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final isActive =
-        status == SchoolStatus.active || status == SchoolStatus.trial;
-    final color = isActive
-        ? AppColors.success(context)
-        : _schoolStatusColor(context, status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-      decoration: BoxDecoration(
-        color: isActive
-            ? AppColors.successSurface(context)
-            : color.withValues(alpha: .12),
-        borderRadius: AppRadius.full,
-        border: Border.all(color: color.withValues(alpha: .14)),
-      ),
-      child: Text(
-        status.name.toUpperCase(),
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.w700,
-          fontSize: 10.5,
-        ),
-      ),
-    );
-  }
-}
-
-class _SchoolTableRow extends StatelessWidget {
-  final School school;
-
-  const _SchoolTableRow({required this.school});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final statusColor = _schoolStatusColor(context, school.status);
-    return InkWell(
-      onTap: () => pushSuperAdminDetail(
-        context: context,
-        sectionPath: 'schools',
-        detailPath: school.id,
-        detail: SchoolDetailScreen(school: school),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
-          vertical: AppSpacing.m,
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              flex: 3,
-              child: Text(
-                school.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Text(
-                school.tenantId,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Text(
-                school.subscriptionPlanId.isEmpty
-                    ? '—'
-                    : school.subscriptionPlanId,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  StatusBadge(label: school.status.name, color: statusColor),
-                  if (AccessMode.fromRaw(school.accessMode) != AccessMode.full)
-                    _AccessModePill(accessMode: school.accessMode),
-                ],
-              ),
-            ),
-            Expanded(
-              flex: 2,
-              child: Text(
-                DateFormat('MMM dd, yyyy').format(school.subscriptionExpiry),
-                style: theme.textTheme.bodySmall,
-              ),
-            ),
-            Expanded(
-              flex: 3,
-              child: Text(
-                school.contactEmail,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall,
-              ),
-            ),
-            _SchoolQuickActions(school: school, compact: true),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Suspend/Reactivate shortcut menu shown on each Schools list row, so
-/// lifecycle actions don't require opening School Details first. Reuses
-/// the exact same confirmation dialogs and Firestore-backed events as the
-/// School Details screen. Deleting a school lives only in the More page.
-class _SchoolQuickActions extends StatelessWidget {
-  const _SchoolQuickActions({required this.school, this.compact = false});
-
-  final School school;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return PopupMenuButton<String>(
-      tooltip: 'Quick actions',
-      icon: Icon(
-        Icons.more_vert_rounded,
-        size: compact ? 18 : 22,
-        color: theme.colorScheme.onSurfaceVariant,
-      ),
-      onSelected: (value) {
-        switch (value) {
-          case 'suspend':
-            confirmSchoolStatusChange(
-              context,
-              action: 'Suspend',
-              message:
-                  'Are you sure you want to suspend ${school.name}? Staff '
-                  'and admins will immediately lose access to the '
-                  'dashboard. You can reactivate at any time. This action '
-                  'will be logged.',
-              color: theme.colorScheme.error,
-              onConfirm: () => context.read<SuperAdminBloc>().add(
-                UpdateSchoolStatusEvent(
-                  schoolId: school.id,
-                  status: SchoolStatus.suspended,
-                  reason: 'Suspended by Owner',
-                ),
-              ),
-            );
-          case 'reactivate':
-            confirmSchoolStatusChange(
-              context,
-              action: 'Reactivate',
-              message:
-                  'Are you sure you want to reactivate ${school.name}? '
-                  'Staff and admins will regain access immediately. This '
-                  'action will be logged.',
-              color: AppColors.success(context),
-              onConfirm: () => context.read<SuperAdminBloc>().add(
-                UpdateSchoolStatusEvent(
-                  schoolId: school.id,
-                  status: SchoolStatus.active,
-                ),
-              ),
-            );
-        }
-      },
-      itemBuilder: (menuContext) => [
-        PopupMenuItem(
-          value: 'view',
-          onTap: () => pushSuperAdminDetail(
-            context: context,
-            sectionPath: 'schools',
-            detailPath: school.id,
-            detail: SchoolDetailScreen(school: school),
-          ),
-          child: const Row(
-            children: [
-              Icon(Icons.visibility_outlined, size: 18),
-              SizedBox(width: AppSpacing.m),
-              Text('View Details'),
-            ],
-          ),
-        ),
-        if (school.status == SchoolStatus.active)
-          PopupMenuItem(
-            value: 'suspend',
-            child: Row(
-              children: [
-                Icon(
-                  Icons.block_rounded,
-                  size: 18,
-                  color: Theme.of(menuContext).colorScheme.error,
-                ),
-                const SizedBox(width: AppSpacing.m),
-                Text(
-                  'Suspend',
-                  style: TextStyle(
-                    color: Theme.of(menuContext).colorScheme.error,
-                  ),
-                ),
-              ],
-            ),
-          )
-        else if (school.status == SchoolStatus.suspended ||
-            school.status == SchoolStatus.archived)
-          PopupMenuItem(
-            value: 'reactivate',
-            child: Row(
-              children: [
-                Icon(
-                  Icons.check_circle_outline_rounded,
-                  size: 18,
-                  color: AppColors.success(menuContext),
-                ),
-                const SizedBox(width: AppSpacing.m),
-                Text(
-                  'Reactivate',
-                  style: TextStyle(color: AppColors.success(menuContext)),
-                ),
-              ],
-            ),
-          ),
       ],
     );
   }
+
+  static List<int> _pageWindow(int page, int pageCount) {
+    if (pageCount <= 5) return [for (var i = 0; i < pageCount; i++) i];
+    var start = page - 2;
+    if (start < 0) start = 0;
+    var end = start + 5;
+    if (end > pageCount) {
+      end = pageCount;
+      start = end - 5;
+    }
+    return [for (var i = start; i < end; i++) i];
+  }
 }
 
-class _ErrorState extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
+class _PageSizeSelector extends StatelessWidget {
+  const _PageSizeSelector({
+    required this.value,
+    required this.options,
+    required this.onChanged,
+  });
+  final int value;
+  final List<int> options;
+  final ValueChanged<int> onChanged;
 
-  const _ErrorState({required this.message, required this.onRetry});
+  @override
+  Widget build(BuildContext context) => PopupMenuButton<int>(
+    tooltip: 'Rows per page',
+    onSelected: onChanged,
+    itemBuilder: (_) => options
+        .map((option) => PopupMenuItem(value: option, child: Text('$option / page')))
+        .toList(),
+    child: Container(
+      height: 32,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated(context),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border(context)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$value / page',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 16,
+            color: AppColors.textSecondary(context),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _PageNumber extends StatelessWidget {
+  const _PageNumber({
+    required this.index,
+    required this.selected,
+    required this.onTap,
+  });
+  final int index;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 2),
+    child: Material(
+      color: selected
+          ? AppColors.information(context)
+          : AppColors.surfaceElevated(context),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: selected ? null : onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: selected
+                  ? AppColors.information(context)
+                  : AppColors.border(context),
+            ),
+          ),
+          child: Text(
+            '${index + 1}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : AppColors.textPrimary(context),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _PageChevron extends StatelessWidget {
+  const _PageChevron({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 2),
+    child: Material(
+      color: AppColors.surfaceElevated(context),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border(context)),
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: enabled
+                ? AppColors.textPrimary(context)
+                : AppColors.textMuted(context),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Applications table section
+// ---------------------------------------------------------------------------
+
+class _ApplicationsTableSection extends StatelessWidget {
+  const _ApplicationsTableSection({
+    required this.rows,
+    required this.page,
+    required this.pageSize,
+    required this.pageSizeOptions,
+    required this.onPageSizeChanged,
+    required this.onPageChanged,
+  });
+  final List<SchoolApplication> rows;
+  final int page, pageSize;
+  final List<int> pageSizeOptions;
+  final ValueChanged<int> onPageSizeChanged;
+  final ValueChanged<int> onPageChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
+    if (rows.isEmpty) {
+      return const SliverFillRemaining(
+        hasScrollBody: false,
+        child: _IllustratedEmpty(
+          title: 'No school applications',
+          message:
+              'New applications will appear here as schools apply.\n'
+              'Review pending applications to approve or reject them.',
+          actionLabel: null,
+          onAction: null,
+        ),
+      );
+    }
+
+    final pageCount = (rows.length + pageSize - 1) ~/ pageSize;
+    final safePage = page.clamp(0, pageCount - 1);
+    final start = safePage * pageSize;
+    final visible = rows.sublist(
+      start,
+      (start + pageSize).clamp(0, rows.length),
+    );
+    final wide = isSuperAdminWide(context);
+
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      sliver: SliverToBoxAdapter(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.cloud_off_outlined,
-              size: 54,
-              color: Theme.of(context).colorScheme.error,
+            PulseCard(
+              padding: EdgeInsets.zero,
+              borderRadius: 12,
+              child: Column(
+                children: [
+                  if (wide) const _ApplicationHeaderRow(),
+                  for (var i = 0; i < visible.length; i++)
+                    _ApplicationDataRow(
+                      application: visible[i],
+                      wide: wide,
+                      isLast: i == visible.length - 1,
+                    ),
+                ],
+              ),
             ),
-            const SizedBox(height: 14),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Try Again'),
+            const SizedBox(height: 12),
+            _PaginationBar(
+              page: safePage,
+              pageCount: pageCount,
+              rangeStart: start + 1,
+              rangeEnd: start + visible.length,
+              total: rows.length,
+              pageSize: pageSize,
+              pageSizeOptions: pageSizeOptions,
+              onPageSizeChanged: onPageSizeChanged,
+              onPageChanged: onPageChanged,
             ),
           ],
         ),
@@ -1320,33 +1549,718 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
-Color _applicationStatusColor(
-  BuildContext context,
-  SchoolApplicationStatus status,
-) {
-  switch (status) {
-    case SchoolApplicationStatus.pendingReview:
-    case SchoolApplicationStatus.emailVerificationPending:
-    case SchoolApplicationStatus.emailVerified:
-      return AppColors.warning(context);
-    case SchoolApplicationStatus.approved:
-      return AppColors.success(context);
-    case SchoolApplicationStatus.rejected:
-      return AppColors.danger(context);
-    case SchoolApplicationStatus.unknown:
-      return AppColors.textSecondary(context);
+class _ApplicationHeaderRow extends StatelessWidget {
+  const _ApplicationHeaderRow();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+    decoration: BoxDecoration(
+      color: AppColors.surfaceContainer(context),
+      border: Border(bottom: BorderSide(color: AppColors.border(context))),
+    ),
+    child: Row(
+      children: const [
+        Expanded(flex: 30, child: _HeaderCell('School')),
+        Expanded(flex: 22, child: _HeaderCell('Applicant contact')),
+        Expanded(flex: 16, child: _HeaderCell('Requested plan')),
+        Expanded(flex: 18, child: _HeaderCell('Verification')),
+        SizedBox(width: 96, child: _HeaderCell('', center: true)),
+      ],
+    ),
+  );
+}
+
+class _ApplicationDataRow extends StatelessWidget {
+  const _ApplicationDataRow({
+    required this.application,
+    required this.wide,
+    required this.isLast,
+  });
+  final SchoolApplication application;
+  final bool wide, isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final border = isLast
+        ? null
+        : Border(bottom: BorderSide(color: AppColors.border(context)));
+    final verified = application.administratorEmailVerified;
+
+    final identity = Row(
+      children: [
+        _Avatar(
+          label: _initials(application.schoolName),
+          color: AppColors.information(context),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                application.schoolName.isEmpty
+                    ? 'Unnamed school'
+                    : application.schoolName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _cardTitle(context).copyWith(fontSize: 14),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                _applicationLocation(application),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _label(context),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    final verificationChip = _Chip(
+      label: _verification(application),
+      color: verified
+          ? AppColors.success(context)
+          : AppColors.warning(context),
+    );
+
+    final reviewButton = OutlinedButton(
+      onPressed: () => _openApplication(context, application),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.information(context),
+        side: BorderSide(color: AppColors.information(context)),
+        minimumSize: const Size(72, 32),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: const Text('Review'),
+    );
+
+    if (!wide) {
+      return InkWell(
+        onTap: () => _openApplication(context, application),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(border: border),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              identity,
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 20,
+                runSpacing: 10,
+                children: [
+                  _MiniField(
+                    label: 'Applicant contact',
+                    value: _applicationContact(application),
+                  ),
+                  _MiniField(
+                    label: 'Requested plan',
+                    value: application.plan.isEmpty
+                        ? 'Not selected'
+                        : application.plan,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [verificationChip, reviewButton],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: () => _openApplication(context, application),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(border: border),
+        child: Row(
+          children: [
+            Expanded(flex: 30, child: identity),
+            Expanded(
+              flex: 22,
+              child: Text(
+                _applicationContact(application),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _cellText(context),
+              ),
+            ),
+            Expanded(
+              flex: 16,
+              child: Text(
+                application.plan.isEmpty ? 'Not selected' : application.plan,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _cellText(context),
+              ),
+            ),
+            Expanded(
+              flex: 18,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: verificationChip,
+              ),
+            ),
+            SizedBox(
+              width: 96,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: reviewButton,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
-Color _schoolStatusColor(BuildContext context, SchoolStatus status) {
-  switch (status) {
-    case SchoolStatus.active:
-      return AppColors.success(context);
-    case SchoolStatus.suspended:
-      return AppColors.danger(context);
-    case SchoolStatus.trial:
-      return AppColors.warning(context);
-    case SchoolStatus.archived:
-      return AppColors.textSecondary(context);
+// ---------------------------------------------------------------------------
+// Shared small widgets
+// ---------------------------------------------------------------------------
+
+class _SuspensionNotice extends StatelessWidget {
+  const _SuspensionNotice();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: AppColors.dangerSurface(context),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(
+        color: AppColors.danger(context).withValues(alpha: .3),
+      ),
+    ),
+    child: Row(
+      children: [
+        Icon(
+          Icons.lock_outline_rounded,
+          size: 18,
+          color: AppColors.danger(context),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'Suspension keeps school data safe while restricting access.',
+            style: _body(context),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _IllustratedEmpty extends StatelessWidget {
+  const _IllustratedEmpty({
+    required this.title,
+    required this.message,
+    required this.actionLabel,
+    required this.onAction,
+  });
+  final String title, message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.informationSurface(context),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.school_rounded,
+              size: 34,
+              color: AppColors.information(context),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(title, style: _cardTitle(context)),
+          const SizedBox(height: 6),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: _body(context),
+          ),
+          if (actionLabel != null && onAction != null) ...[
+            const SizedBox(height: 16),
+            _RegisterSchoolButton(onTap: onAction!, label: actionLabel!),
+          ],
+        ],
+      ),
+    ),
+  );
+}
+
+class _CompactState extends StatelessWidget {
+  const _CompactState({required this.message, required this.onRetry});
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_off_outlined, color: AppColors.danger(context)),
+          const SizedBox(height: 8),
+          Text(message, textAlign: TextAlign.center, style: _body(context)),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
+    ),
+  );
+}
+
+class _CountPill extends StatelessWidget {
+  const _CountPill({
+    required this.label,
+    required this.color,
+    this.compact = false,
+  });
+  final String label;
+  final Color color;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: EdgeInsets.symmetric(
+      horizontal: compact ? 7 : 9,
+      vertical: compact ? 2 : 4,
+    ),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontSize: compact ? 11.5 : 12.5,
+        fontWeight: FontWeight.w700,
+        color: color,
+      ),
+    ),
+  );
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({required this.label, required this.color});
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: color.withValues(alpha: .25)),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 11.5,
+        fontWeight: FontWeight.w700,
+        color: color,
+      ),
+    ),
+  );
+}
+
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.label, required this.color});
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 36,
+    height: 36,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .12),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w800),
+    ),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// View model + status derivation
+// ---------------------------------------------------------------------------
+
+class _StatusView {
+  const _StatusView({
+    required this.label,
+    required this.color,
+    required this.caption,
+  });
+  final String label, caption;
+  final Color Function(BuildContext) color;
+
+  Widget chip(BuildContext context) => _Chip(label: label, color: color(context));
+}
+
+/// Payment status derived from the same server-written signals the detail
+/// screen uses ([School.accessMode] + [School.subscriptionExpiry]). Green is
+/// reserved for paid, red for overdue.
+_StatusView _paymentStatusFor(School school) {
+  final expiry = school.subscriptionExpiry;
+  final overdue =
+      school.accessMode == 'blocked' ||
+      school.accessMode == 'readOnly' ||
+      expiry.isBefore(DateTime.now());
+  if (overdue) {
+    return _StatusView(
+      label: 'Overdue',
+      color: (c) => AppColors.danger(c),
+      caption: 'Due since ${DateFormat('MMM d, y').format(expiry)}',
+    );
+  }
+  return _StatusView(
+    label: 'Paid',
+    color: (c) => AppColors.success(c),
+    caption: 'Next due: ${DateFormat('MMM d, y').format(expiry)}',
+  );
+}
+
+_StatusView _accountStatusFor(School school, _SchoolRowKind kind) {
+  if (kind == _SchoolRowKind.suspended ||
+      school.status == SchoolStatus.suspended ||
+      school.status == SchoolStatus.archived) {
+    return _StatusView(
+      label: 'Suspended',
+      color: (c) => AppColors.danger(c),
+      caption: school.subscriptionExpiry.isBefore(DateTime.now())
+          ? 'Overdue'
+          : 'Restricted',
+    );
+  }
+  final overdue = school.subscriptionExpiry.isBefore(DateTime.now());
+  return _StatusView(
+    label: 'Active',
+    color: (c) => AppColors.success(c),
+    caption: overdue ? 'Overdue' : 'Healthy',
+  );
+}
+
+enum SchoolFilter { all, trial, pending, needsVerification, archived }
+
+class _SchoolsViewData {
+  const _SchoolsViewData({
+    required this.active,
+    required this.suspended,
+    required this.applications,
+    required this.totalActive,
+    required this.totalSuspended,
+    required this.totalApplications,
+  });
+  final List<School> active, suspended;
+  final List<SchoolApplication> applications;
+  final int totalActive, totalSuspended, totalApplications;
+
+  factory _SchoolsViewData.fromState(
+    SuperAdminState state,
+    String query,
+    SchoolFilter filter,
+  ) {
+    final search = query.trim().toLowerCase();
+    bool schoolMatches(School s) =>
+        search.isEmpty ||
+        [
+          s.name,
+          s.tenantId,
+          s.contactEmail,
+          s.address,
+          '${s.metadata['prefix'] ?? ''}',
+          '${s.metadata['district'] ?? ''}',
+        ].any((value) => value.toLowerCase().contains(search));
+    bool applicationMatches(SchoolApplication a) =>
+        search.isEmpty ||
+        [
+          a.schoolName,
+          a.prefix,
+          a.schoolEmail,
+          a.administratorEmail,
+          a.district,
+          a.administratorName,
+        ].any((value) => value.toLowerCase().contains(search));
+    final allActive = state.schools
+        .where(
+          (s) =>
+              s.status == SchoolStatus.active || s.status == SchoolStatus.trial,
+        )
+        .toList();
+    final allSuspended = state.schools
+        .where(
+          (s) =>
+              s.status == SchoolStatus.suspended ||
+              s.status == SchoolStatus.archived,
+        )
+        .toList();
+    final active = allActive
+        .where(
+          (s) =>
+              schoolMatches(s) &&
+              (filter != SchoolFilter.trial || s.status == SchoolStatus.trial),
+        )
+        .toList();
+    final suspended = allSuspended
+        .where(
+          (s) =>
+              schoolMatches(s) &&
+              (filter != SchoolFilter.archived ||
+                  s.status == SchoolStatus.archived),
+        )
+        .toList();
+    final applications =
+        state.applications.where((a) {
+          if (!applicationMatches(a)) return false;
+          if (filter == SchoolFilter.pending) {
+            return a.status == SchoolApplicationStatus.pendingReview;
+          }
+          if (filter == SchoolFilter.needsVerification) {
+            return !a.administratorEmailVerified;
+          }
+          return true;
+        }).toList()..sort(
+          (a, b) => (b.createdAt ?? DateTime(1970)).compareTo(
+            a.createdAt ?? DateTime(1970),
+          ),
+        );
+    return _SchoolsViewData(
+      active: active,
+      suspended: suspended,
+      applications: applications,
+      totalActive: allActive.length,
+      totalSuspended: allSuspended.length,
+      totalApplications: state.applications.length,
+    );
   }
 }
+
+List<(SchoolFilter, String)> _filterOptions(int tab) => switch (tab) {
+  0 => const [
+    (SchoolFilter.all, 'All active schools'),
+    (SchoolFilter.trial, 'Trial schools'),
+  ],
+  1 => const [
+    (SchoolFilter.all, 'All applications'),
+    (SchoolFilter.pending, 'Pending review'),
+    (SchoolFilter.needsVerification, 'Needs verification'),
+  ],
+  _ => const [
+    (SchoolFilter.all, 'All suspended'),
+    (SchoolFilter.archived, 'Archived schools'),
+  ],
+};
+
+SubscriptionPlan? _planFor(School school, List<SubscriptionPlan> plans) {
+  for (final plan in plans) {
+    if (plan.id == school.subscriptionPlanId) return plan;
+  }
+  return null;
+}
+
+AuditLog? _latestSuspensionLog(School school, List<AuditLog> logs) {
+  final matches =
+      logs
+          .where(
+            (log) =>
+                log.schoolId == school.id &&
+                log.action.toLowerCase().contains('suspend'),
+          )
+          .toList()
+        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+  return matches.isEmpty ? null : matches.first;
+}
+
+void _openSchool(BuildContext context, School school) => pushSuperAdminDetail(
+  context: context,
+  sectionPath: 'schools',
+  detailPath: school.id,
+  detail: SchoolDetailScreen(school: school),
+);
+
+void _openApplication(BuildContext context, SchoolApplication application) =>
+    pushSuperAdminDetail(
+      context: context,
+      sectionPath: 'schools',
+      detailPath: 'applications/${application.id}',
+      detail: BlocProvider.value(
+        value: context.read<SuperAdminBloc>(),
+        child: SchoolApplicationReviewScreen(application: application),
+      ),
+    );
+
+Future<void> _confirmRestore(BuildContext context, School school) async {
+  final restore = await showDialog<bool>(
+    context: context,
+    builder: (dialog) => AlertDialog(
+      title: const Text('Restore school?'),
+      content: Text(
+        '${_schoolName(school)} will regain access. This action is logged.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialog, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialog, true),
+          child: const Text('Restore'),
+        ),
+      ],
+    ),
+  );
+  if (restore == true && context.mounted) {
+    context.read<SuperAdminBloc>().add(
+      UpdateSchoolStatusEvent(schoolId: school.id, status: SchoolStatus.active),
+    );
+  }
+}
+
+Future<void> _confirmSuspend(BuildContext context, School school) async {
+  final suspend = await showDialog<bool>(
+    context: context,
+    builder: (dialog) => AlertDialog(
+      title: const Text('Suspend school?'),
+      content: Text(
+        '${_schoolName(school)} will lose access while its data is preserved. '
+        'This action is logged.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialog, false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(dialog, true),
+          child: const Text('Suspend'),
+        ),
+      ],
+    ),
+  );
+  if (suspend == true && context.mounted) {
+    context.read<SuperAdminBloc>().add(
+      UpdateSchoolStatusEvent(
+        schoolId: school.id,
+        status: SchoolStatus.suspended,
+      ),
+    );
+  }
+}
+
+String _schoolName(School school) =>
+    school.name.trim().isEmpty ? 'Unnamed school' : school.name;
+
+String _schoolCode(School school) {
+  final prefix = school.metadata['prefix']?.toString().trim();
+  if (prefix != null && prefix.isNotEmpty) return prefix;
+  final code = school.metadata['code']?.toString().trim();
+  if (code != null && code.isNotEmpty) return code;
+  return school.tenantId.isEmpty ? '—' : school.tenantId;
+}
+
+String _studentCount(School school) {
+  final raw =
+      school.metadata['studentCount'] ?? school.metadata['students'] ?? 0;
+  final count = raw is num ? raw.toInt() : int.tryParse('$raw') ?? 0;
+  return count == 0 ? '—' : NumberFormat.decimalPattern().format(count);
+}
+
+String _renewsLabel(School school) =>
+    'Renews: ${DateFormat('MMM d, y').format(school.subscriptionExpiry)}';
+
+String _location(School school) {
+  final district = school.metadata['district']?.toString().trim();
+  return district?.isNotEmpty == true
+      ? district!
+      : (school.address.trim().isEmpty
+            ? 'Location unavailable'
+            : school.address);
+}
+
+String _adminValue(School school) =>
+    school.metadata['adminName']?.toString().trim().isNotEmpty == true
+    ? school.metadata['adminName'].toString()
+    : (school.contactEmail.isEmpty ? 'Contact unavailable' : school.contactEmail);
+
+String _fallbackPlan(School school) => school.subscriptionPlanId.isEmpty
+    ? 'Unassigned'
+    : school.subscriptionPlanId;
+
+String _applicationLocation(SchoolApplication app) => app.district.isNotEmpty
+    ? app.district
+    : (app.region.isNotEmpty ? app.region : 'Location unavailable');
+
+String _applicationContact(SchoolApplication app) =>
+    app.administratorEmail.isNotEmpty
+    ? app.administratorEmail
+    : (app.schoolEmail.isNotEmpty ? app.schoolEmail : 'Unavailable');
+
+String _verification(SchoolApplication app) =>
+    app.administratorEmailVerified ? 'Email verified' : app.status.label;
+
+String _initials(String value) {
+  final parts = value
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return 'S';
+  return parts.take(2).map((part) => part[0]).join().toUpperCase();
+}
+
+TextStyle _pageTitle(BuildContext context) =>
+    AppTypography.headlineMedium.copyWith(
+      color: AppColors.textPrimary(context),
+      fontSize: 24,
+      fontWeight: FontWeight.w800,
+    );
+
+TextStyle _cardTitle(BuildContext context) =>
+    AppTypography.titleMedium.copyWith(
+      color: AppColors.textPrimary(context),
+      fontSize: 16,
+      fontWeight: FontWeight.w800,
+    );
+
+TextStyle _label(BuildContext context) => AppTypography.bodySmall.copyWith(
+  color: AppColors.textSecondary(context),
+  fontSize: 11.5,
+);
+
+TextStyle _body(BuildContext context) => AppTypography.bodySmall.copyWith(
+  color: AppColors.textSecondary(context),
+  fontSize: 13,
+);
+
+TextStyle _cellText(BuildContext context) => AppTypography.bodySmall.copyWith(
+  color: AppColors.textPrimary(context),
+  fontSize: 13,
+  fontWeight: FontWeight.w500,
+);

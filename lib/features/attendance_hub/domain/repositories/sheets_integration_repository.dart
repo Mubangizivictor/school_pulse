@@ -29,4 +29,10 @@ abstract class SheetsIntegrationRepository {
     String schoolId,
     List<String> recordIds,
   );
+
+  /// Exports the school's current student roster (identity/credential
+  /// status, never a raw credential value) to the "Student Roster" tab of
+  /// the same connected spreadsheet. Manual-only - there is no auto-sync
+  /// trigger for this, unlike attendance.
+  Future<Either<Failure, int>> exportRoster(String schoolId);
 }

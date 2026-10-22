@@ -39,13 +39,16 @@ class AppRoleSessionServiceImpl implements AppRoleSessionService {
     }
     final valid = restored != null && user.roles.contains(restored);
     final resolved = valid ? restored : user.roles.first;
-    // Only a genuinely-restored choice is emitted as `current`. A bare
-    // roles.first fallback (no persisted choice yet, or it was revoked) is
-    // returned to the caller but deliberately NOT emitted - a multi-role
-    // caller (SchoolSplashScreen) uses "current is still null after
-    // resolve" to tell "nothing to restore, show the picker" apart from
-    // "restored, skip straight to the dashboard".
-    if (valid) _emit(resolved);
+    // A genuinely-restored choice is always emitted. A bare roles.first
+    // fallback (no persisted choice yet, or it was revoked) is only
+    // withheld from `current` when there is more than one role to choose
+    // from - a multi-role caller (SchoolSplashScreen) uses "current is
+    // still null after resolve" to tell "nothing to restore, show the
+    // picker" apart from "restored, skip straight to the dashboard". A
+    // single-role user has no picker to show, so withholding it here would
+    // leave `current` permanently null and every role-gated UI (shell nav,
+    // admin console routes) would fail its role check forever.
+    if (valid || user.roles.length == 1) _emit(resolved);
     return resolved;
   }
 

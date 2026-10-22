@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:dartz/dartz.dart';
+import 'package:school_pulse/core/error/failures.dart';
 import 'package:school_pulse/core/notification/notification_service.dart';
 import 'package:school_pulse/core/usecases/usecase.dart';
 import 'package:school_pulse/features/auth/domain/entities/user_entity.dart';
@@ -16,8 +20,14 @@ import 'package:school_pulse/features/auth/data/datasources/remembered_login_sto
 import 'package:school_pulse/features/auth/domain/usecases/logout.dart';
 import 'package:school_pulse/features/student/domain/usecases/resolve_parent_access_code.dart';
 import 'package:school_pulse/features/verification/data/datasources/verification_local_data_source.dart';
+import 'package:school_pulse/features/attendance_hub/domain/repositories/attendance_repository.dart';
+import 'package:school_pulse/features/teacher/data/datasources/class_teacher_local_data_source.dart';
+import 'package:school_pulse/features/teacher/data/datasources/subject_teacher_local_data_source.dart';
+import 'package:school_pulse/features/teacher/domain/services/active_responsibility_service.dart';
 import 'package:school_pulse/core/utils/device_id_service.dart';
 import 'package:school_pulse/core/utils/device_info_service.dart';
+import 'package:school_pulse/features/parent_offline/domain/parent_offline_cache_service.dart';
+import 'package:school_pulse/features/parent_offline/domain/parent_offline_queue_service.dart';
 import 'package:school_pulse/injection_container.dart' as di;
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -40,6 +50,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final ExitSupportMode exitSupportMode;
   final BrandingBloc brandingBloc;
   final VerificationLocalDataSource verificationLocalDataSource;
+  final ClassTeacherLocalDataSource classTeacherLocalDataSource;
+  final SubjectTeacherLocalDataSource subjectTeacherLocalDataSource;
+  final ActiveResponsibilityService activeResponsibilityService;
   final RememberedLoginStore _rememberedLoginStore = RememberedLoginStore();
 
   AuthBloc({
@@ -57,6 +70,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.exitSupportMode,
     required this.brandingBloc,
     required this.verificationLocalDataSource,
+    required this.classTeacherLocalDataSource,
+    required this.subjectTeacherLocalDataSource,
+    required this.activeResponsibilityService,
   }) : super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<LoginWithEmailPressed>(_onLoginWithEmail);
@@ -76,7 +92,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    final result = await getCurrentUser(NoParams());
+    // A completed MFA sign-in must never leave the router on
+    // `/school-splash` indefinitely. On web, a stalled Firestore/profile
+    // read used to keep this event in flight forever, which also meant the
+    // router quite correctly kept treating the session as AuthLoading.
+    // Fail closed with a recoverable sign-in error instead.
+    final Either<Failure, UserEntity?> result;
+    try {
+      result = await getCurrentUser(
+        NoParams(),
+      ).timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      emit(
+        const AuthFailureState(
+          'We could not finish restoring your session. Please sign in again.',
+        ),
+      );
+      return;
+    }
     final resolved = await result.fold<Future<UserEntity?>>(
       (failure) async => null,
       (user) async => user,
@@ -91,7 +124,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // server-side owner authorization here so the check still gates every
     // such session, not just the Platform Owner Access screen's own logins.
     if (resolved.roles.contains(UserRole.superAdmin)) {
-      final ownerCheck = await verifyOwnerSession(NoParams());
+      final Either<Failure, void> ownerCheck;
+      try {
+        ownerCheck = await verifyOwnerSession(
+          NoParams(),
+        ).timeout(const Duration(seconds: 15));
+      } on TimeoutException {
+        emit(
+          const AuthFailureState(
+            'Owner verification timed out. Please sign in again.',
+          ),
+        );
+        return;
+      }
       final denied = ownerCheck.fold((failure) => true, (_) => false);
       if (denied) {
         emit(AuthUnauthenticated());
@@ -190,6 +235,19 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
     result.fold((failure) => emit(AuthFailureState(failure.message)), (user) {
       _syncNotifications(user);
+      // Every successful online parent login is a real network-verified
+      // identity check - piggyback it to (re)set the mobile local
+      // PIN/biometric re-entry gate so this parent can reopen the Parent
+      // Portal offline afterward. Mirrors their just-typed server PIN
+      // rather than asking them to choose a second one; a device-local
+      // salted hash only, never the server PIN itself (see
+      // ParentLocalPinStore doc). No-ops on web.
+      unawaited(
+        di.sl<ParentOfflineCacheService>().setOfflineGatePin(
+          parentId: user.id,
+          pin: event.pin,
+        ),
+      );
       emit(AuthAuthenticated(user));
     });
   }
@@ -239,9 +297,49 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         );
       } catch (_) {}
     }
+    // Class/Subject Teacher caches (roster, dashboard figures, attendance
+    // drafts, the offline sync queue, the resolved responsibility) are keyed
+    // to the device, not the session - left uncleared, they would hand the
+    // next person to sign in on this device the previous teacher's class
+    // data until every cache entry happened to be overwritten.
+    try {
+      await classTeacherLocalDataSource.clear();
+    } catch (_) {}
+    try {
+      await subjectTeacherLocalDataSource.clearAll();
+    } catch (_) {}
+    try {
+      await activeResponsibilityService.clear();
+    } catch (_) {}
+    // Attendance's own local queue (student/staff/gate/hostel marks awaiting
+    // sync) is keyed to the device, not the session, same reasoning as the
+    // class/subject teacher caches above - left uncleared it would let the
+    // next person to sign in on this device see or resume the previous
+    // operator's queued marks.
+    try {
+      await di.sl<AttendanceRepository>().clearLocalQueue();
+    } catch (_) {}
     try {
       await NotificationService().unsubscribeAllTopics();
     } catch (_) {}
+    // Parent Portal offline cache + queue + local PIN gate are all keyed
+    // to (tenantId, parentId) but stored on-device - clear them on logout
+    // so a subsequent parent/user on this device can never read the
+    // previous parent's cached data or unlock with their offline PIN.
+    if (previousUser != null && previousUser.roles.contains(UserRole.parent)) {
+      try {
+        await di.sl<ParentOfflineCacheService>().clearAllForParent(
+          tenantId: previousUser.schoolId,
+          parentId: previousUser.id,
+        );
+      } catch (_) {}
+      try {
+        await di.sl<ParentOfflineQueueService>().clearAllForParent(
+          tenantId: previousUser.schoolId,
+          parentId: previousUser.id,
+        );
+      } catch (_) {}
+    }
 
     emit(AuthUnauthenticated());
   }

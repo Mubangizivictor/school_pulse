@@ -43,7 +43,7 @@ class _ExamsOverviewScreenState extends State<ExamsOverviewScreen>
       child: Scaffold(
         backgroundColor: AppColors.background(context),
         appBar: AppBar(
-          backgroundColor: AppColors.surface(context),
+          backgroundColor: AppColors.surfaceContainer(context),
           automaticallyImplyLeading: false,
           title: Text('Exams Overview', style: AppTypography.titleLarge),
           bottom: TabBar(
@@ -279,7 +279,7 @@ class _StatRow extends StatelessWidget {
         vertical: AppSpacing.l,
       ),
       decoration: BoxDecoration(
-        color: AppColors.surface(context),
+        color: AppColors.surfaceContainer(context),
         border: Border(top: BorderSide(color: AppColors.border(context))),
       ),
       child: Row(

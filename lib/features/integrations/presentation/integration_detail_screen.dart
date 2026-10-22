@@ -306,7 +306,7 @@ class _SyncStatusCard extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
                         latest['lastError'] as String,
-                        style: const TextStyle(color: Colors.red),
+                        style: const TextStyle(color: Colors.black),
                       ),
                     ),
                 ],

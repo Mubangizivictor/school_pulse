@@ -180,6 +180,7 @@ class _SecurityOverviewBodyState extends State<_SecurityOverviewBody> {
                 : 'password_totp',
           );
         }
+        if (!mounted) return;
         await context.read<SecuritySettingsCubit>().logSecurityEvent(
           action: 'REVOKE_SESSION',
           reason: 'Owner-initiated sign-out of other devices from Security',
@@ -474,7 +475,7 @@ class _SecurityOverviewBodyState extends State<_SecurityOverviewBody> {
           ),
           const SizedBox(height: AppSpacing.m),
           AppCard(
-            borderColor: AppColors.danger(context).withValues(alpha: 0.3),
+            borderColor: AppColors.danger(context),
             showShadow: false,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -546,16 +547,16 @@ class _SecureStatusBanner extends StatelessWidget {
         ? AppColors.success(context)
         : AppColors.warning(context);
     return AppCard(
-      color: color.withValues(alpha: 0.08),
+      color: color.withValues(alpha: 0.12),
       showBorder: true,
-      borderColor: color.withValues(alpha: 0.25),
+      borderColor: color,
       showShadow: false,
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(AppSpacing.l),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
+              color: color.withValues(alpha: 0.16),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -582,7 +583,7 @@ class _SecureStatusBanner extends StatelessWidget {
                       ? 'Two-step verification is protecting your account.'
                       : 'Enable two-step verification to secure your account.',
                   style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary(context),
+                    color: AppColors.textPrimary(context),
                   ),
                 ),
               ],
@@ -664,7 +665,7 @@ class _SecurityRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.l),
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.1),
+              color: iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: iconColor, size: 22),
@@ -779,7 +780,7 @@ class _SuspiciousActivityCard extends StatelessWidget {
               AppCard(
                 margin: const EdgeInsets.only(bottom: AppSpacing.s),
                 showShadow: false,
-                borderColor: AppColors.warning(context).withValues(alpha: 0.3),
+                borderColor: AppColors.warning(context),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
