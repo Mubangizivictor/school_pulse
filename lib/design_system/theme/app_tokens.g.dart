@@ -307,3 +307,66 @@ class AppText {
     letterSpacing: 0.6,
   );
 }
+
+class AppColorValues {
+  AppColorValues._();
+  static const Color transparent = Color(0x00000000);
+  static const Color lightPrimary = Color(0xFF1F4FD1);
+  static const Color lightOnPrimary = Color(0xFFFFFFFF);
+  static const Color lightPrimaryHover = Color(0xFF1A42B0);
+  static const Color lightPrimarySoft = Color(0xFFE8EEFC);
+  static const Color lightOnPrimarySoft = Color(0xFF163A9C);
+  static const Color lightSecondary = Color(0xFF0E1B3D);
+  static const Color lightOnSecondary = Color(0xFFFFFFFF);
+  static const Color lightAccent = Color(0xFFD4A017);
+  static const Color lightOnAccent = Color(0xFF0E1B3D);
+  static const Color lightAccentSoft = Color(0xFFFBF3DC);
+  static const Color lightOnAccentSoft = Color(0xFF7A5A06);
+  static const Color lightBackground = Color(0xFFF6F6F2);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightSurfaceAlt = Color(0xFFEFEFEA);
+  static const Color lightBorder = Color(0xFFDCDCD4);
+  static const Color lightBorderStrong = Color(0xFFC3C3BA);
+  static const Color lightText = Color(0xFF141B2D);
+  static const Color lightTextMuted = Color(0xFF535B6C);
+  static const Color lightTextSubtle = Color(0xFF6E7585);
+  static const Color lightTextOnDark = Color(0xFFFFFFFF);
+  static const Color lightSuccess = Color(0xFF13703A);
+  static const Color lightSuccessSoft = Color(0xFFE6F4EA);
+  static const Color lightWarning = Color(0xFFA14A07);
+  static const Color lightWarningSoft = Color(0xFFFDF0E1);
+  static const Color lightError = Color(0xFFB42318);
+  static const Color lightErrorSoft = Color(0xFFFCE9E7);
+  static const Color lightInfo = Color(0xFF1F4FD1);
+  static const Color lightInfoSoft = Color(0xFFE8EEFC);
+  static const Color lightFocusRing = Color(0xFF1F4FD1);
+  static const Color darkPrimary = Color(0xFF7A9BFF);
+  static const Color darkOnPrimary = Color(0xFF0A1330);
+  static const Color darkPrimaryHover = Color(0xFF94AFFF);
+  static const Color darkPrimarySoft = Color(0xFF1B2A55);
+  static const Color darkOnPrimarySoft = Color(0xFFC6D4FF);
+  static const Color darkSecondary = Color(0xFFE9EDF7);
+  static const Color darkOnSecondary = Color(0xFF0E1B3D);
+  static const Color darkAccent = Color(0xFFE5B536);
+  static const Color darkOnAccent = Color(0xFF0E1B3D);
+  static const Color darkAccentSoft = Color(0xFF3A2F12);
+  static const Color darkOnAccentSoft = Color(0xFFF3D98A);
+  static const Color darkBackground = Color(0xFF0A0F1F);
+  static const Color darkSurface = Color(0xFF111933);
+  static const Color darkSurfaceAlt = Color(0xFF18223F);
+  static const Color darkBorder = Color(0xFF27324F);
+  static const Color darkBorderStrong = Color(0xFF3A4668);
+  static const Color darkText = Color(0xFFEDF0F7);
+  static const Color darkTextMuted = Color(0xFFA6AEC2);
+  static const Color darkTextSubtle = Color(0xFF8790A6);
+  static const Color darkTextOnDark = Color(0xFFFFFFFF);
+  static const Color darkSuccess = Color(0xFF4ADE80);
+  static const Color darkSuccessSoft = Color(0xFF123222);
+  static const Color darkWarning = Color(0xFFFBBF24);
+  static const Color darkWarningSoft = Color(0xFF3A2A0B);
+  static const Color darkError = Color(0xFFF87171);
+  static const Color darkErrorSoft = Color(0xFF3D1517);
+  static const Color darkInfo = Color(0xFF7A9BFF);
+  static const Color darkInfoSoft = Color(0xFF1B2A55);
+  static const Color darkFocusRing = Color(0xFF7A9BFF);
+}

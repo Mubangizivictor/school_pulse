@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:school_pulse/design_system/theme/app_tokens.g.dart' as tokens;
 import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/responsive/responsive_builder.dart';
@@ -75,7 +75,7 @@ class WelcomeScreen extends StatelessWidget {
                           Text(
                             '© 2024 School Pulse. All rights reserved.',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.manrope(
+                            style: tokens.AppText.body.copyWith(
                               color: AppColors.textMuted(context),
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
@@ -152,7 +152,7 @@ class _WelcomeBrandState extends State<_WelcomeBrand> {
             Text(
               schoolName.toUpperCase(),
               textAlign: TextAlign.center,
-              style: GoogleFonts.manrope(
+              style: tokens.AppText.body.copyWith(
                 color: foreground,
                 fontSize: 23,
                 fontWeight: FontWeight.w800,
@@ -163,7 +163,7 @@ class _WelcomeBrandState extends State<_WelcomeBrand> {
             Text(
               motto,
               textAlign: TextAlign.center,
-              style: GoogleFonts.manrope(
+              style: tokens.AppText.body.copyWith(
                 color: AppColors.textSecondary(context),
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -230,7 +230,7 @@ class _RoleCard extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: GoogleFonts.manrope(
+                        style: tokens.AppText.body.copyWith(
                           color: AppColors.textPrimary(context),
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
@@ -240,7 +240,7 @@ class _RoleCard extends StatelessWidget {
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         subtitle,
-                        style: GoogleFonts.manrope(
+                        style: tokens.AppText.body.copyWith(
                           color: AppColors.textSecondary(context),
                           fontSize: 12.5,
                           height: 1.3,
@@ -325,7 +325,7 @@ class _TrustItem extends StatelessWidget {
           const SizedBox(height: AppSpacing.s),
           Text(
             label,
-            style: GoogleFonts.manrope(
+            style: tokens.AppText.body.copyWith(
               color: color,
               fontSize: 10.5,
               fontWeight: FontWeight.w600,

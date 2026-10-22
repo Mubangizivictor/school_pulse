@@ -70,6 +70,20 @@ String _flutter(Map<String, dynamic> json) {
         return '  static const ${_camel(e.key)} = TextStyle(fontFamily: ${jsonEncode(family)}, fontSize: ${_double(v['size'] as num)}, height: ${v['lineHeight'] / v['size']}, fontWeight: FontWeight.w${v['weight']}, letterSpacing: ${_double(v['letterSpacing'] as num)});';
       })
       .join('\n');
+  final colorValues = [
+    ...light.entries
+        .where((entry) => entry.key != 'shadow')
+        .map(
+          (entry) =>
+              '  static const Color light${entry.key[0].toUpperCase()}${entry.key.substring(1)} = ${_color(entry.value as String)};',
+        ),
+    ...dark.entries
+        .where((entry) => entry.key != 'shadow')
+        .map(
+          (entry) =>
+              '  static const Color dark${entry.key[0].toUpperCase()}${entry.key.substring(1)} = ${_color(entry.value as String)};',
+        ),
+  ].join('\n');
   return '''// GENERATED, DO NOT EDIT. Run: dart run tool/generate_theme.dart
 import 'package:flutter/material.dart';
 
@@ -112,6 +126,12 @@ $spacingValues
 class AppText {
   AppText._();
 $typeValues
+}
+
+class AppColorValues {
+  AppColorValues._();
+  static const Color transparent = Color(0x00000000);
+$colorValues
 }
 ''';
 }
