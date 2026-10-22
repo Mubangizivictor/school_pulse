@@ -4032,12 +4032,15 @@ class ParentShell extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                       vertical: AppSpacing.x4l,
                     ),
-                    child: PulseLogo(
-                      size: 40,
-                      variant: MediaQuery.of(context).size.width > 1200
-                          ? PulseLogoVariant.full
-                          : PulseLogoVariant.shield,
-                    ),
+                    child: MediaQuery.of(context).size.width > 1200
+                        ? const PulseLogo(
+                            size: 28,
+                            variant: PulseLogoVariant.header,
+                          )
+                        : const PulseLogo(
+                            size: 40,
+                            variant: PulseLogoVariant.shield,
+                          ),
                   ),
                   Expanded(
                     child: NavigationRail(

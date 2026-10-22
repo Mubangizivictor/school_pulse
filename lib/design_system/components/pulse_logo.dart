@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/brand/brand_assets.dart';
+import 'package:school_pulse/design_system/brand/brand_assets.dart';
 
 enum PulseLogoVariant {
   /// 16:9 Horizontal format with text and mark
@@ -47,34 +48,43 @@ class PulseLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String assetPath;
     final useDarkLogo =
         isDark || Theme.of(context).brightness == Brightness.dark;
 
     switch (variant) {
-      case PulseLogoVariant.full:
-      case PulseLogoVariant.splash:
-      case PulseLogoVariant.auth:
+      // Cropped horizontal lockup: `size` is its height so the wordmark stays
+      // legible (the lockup is ~6:1, so a square box would shrink it to a line).
       case PulseLogoVariant.header:
-        assetPath = useDarkLogo
-            ? BrandAssets.logoForDarkMode
-            : BrandAssets.logoForLightMode;
-        break;
+        return Image.asset(
+          useDarkLogo
+              ? BrandAssets.logoHorizontalDark
+              : BrandAssets.logoHorizontalLight,
+          width: size == null ? width : null,
+          height: size ?? height,
+          fit: fit,
+        );
+      // Mark only, for compact square slots such as a collapsed sidebar.
       case PulseLogoVariant.vertical:
       case PulseLogoVariant.shield:
       case PulseLogoVariant.compact:
       case PulseLogoVariant.sidebar:
-        assetPath = useDarkLogo
-            ? BrandAssets.logoForDarkMode
-            : BrandAssets.logoForLightMode;
-        break;
+        return Image.asset(
+          useDarkLogo ? BrandAssets.logoMarkDark : BrandAssets.logoMarkLight,
+          width: size ?? width,
+          height: size ?? height,
+          fit: fit,
+        );
+      case PulseLogoVariant.full:
+      case PulseLogoVariant.splash:
+      case PulseLogoVariant.auth:
+        return Image.asset(
+          useDarkLogo
+              ? BrandAssets.logoForDarkMode
+              : BrandAssets.logoForLightMode,
+          width: size ?? width,
+          height: size ?? height,
+          fit: fit,
+        );
     }
-
-    return Image.asset(
-      assetPath,
-      width: size ?? width,
-      height: size ?? height,
-      fit: fit,
-    );
   }
 }
