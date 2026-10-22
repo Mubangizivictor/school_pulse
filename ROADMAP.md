@@ -144,15 +144,24 @@ Weekly habit: Friday, review this file and the Parking Lot.
 ### Step 1 — Website and school registration
 Status: `[~]` in progress (started 2026-10-22)
 
-- [ ] Claude: put the A1 prices into the website and the register-school plan step (Growth = "up to 700"); apply the website copy; remove the "payments save offline" claim until Step 15 ships offline payment capture.
-- [ ] Claude: check the 6-step `/register-school` wizard end to end (school info → owner account → contact → plan → payment/trial → confirmation) and the verification + welcome emails.
-- [ ] Claude: check Super Admin can approve and reject a new school.
+- [x] Claude: put the A1 prices into the website and the register-school plan step (Growth = "up to 700"); apply the website copy; remove the "payments save offline" claim until Step 15 ships offline payment capture.
+- [x] Claude: check the 6-step `/register-school` wizard end to end (school info → owner account → contact → plan → payment/trial → confirmation) and the verification + welcome emails.
+- [x] Claude: check Super Admin can approve and reject a new school.
 - [ ] Victor: read the site in Chrome and approve the wording.
 - [ ] Claude: deploy with `tool/deploy_web.sh` once approved.
 
 Note (2026-10-22): prices done in `web_marketing/public/js/pricing-config.js` (single source; tiers carry the backend `plan`). The Pricing page had been deleted in b088f053 and nav/footer links 404'd on the live site; restored as `pages-html/pricing.html`. Offline claim now says attendance only. Not deployed yet.
-Note: backend trial is 14 days (`public_functions/portal_domains.js` `TRIAL_DAYS`) but A1 says 30; the site now says 30. Align the backend in Step 18 (or sooner if Victor wants).
-Remaining in Step 1: website copy (headline etc. from the pricing doc), wizard + emails E2E, Super Admin approve/reject, Victor's approval, deploy.
+Note (2026-10-22): the app's /register-school plan step had the old 5-tier list and multiplied the per-term price by the student count (450 students showed UGX 247.5M); now mirrors pricing-config.js (bb76e405).
+Note: Victor chose to build the 30-day trial now (was planned for Step 18). Approval now starts a 30-day full-access trial with no payment (TRIAL_DAYS 14 -> 30); expiry reuses the hourly sweep -> accessMode readOnly, data kept; paying during the trial starts the paid term at trial end; a rejected payment keeps the trial (c17f9d62, 112c0b13, a19a86ac). Step 18 still owns the billing screens E2E.
+Note: bug fixed: approval never set `approvedAt`, so the approval email + PDF were never sent in production (da5b5a8a).
+Note: E2E passed in Chrome (desktop 1440px + phone 430px) against the emulator: 6 steps, verification link, submit, received email, approve -> trial + welcome email with PDF, reject -> email, no school created. Emails are queued only (no Resend key locally); real delivery needs Victor's check after deploy.
+Note: the live approval email is the Resend hosted template `application-approved`; its wording still says "pay to activate". Victor must edit it in the Resend dashboard.
+Note: blocker for local testing only: firebase-tools 15 emulator loses `admin.firestore.FieldValue` (proxy uses .bind), so public_functions crash in the Functions emulator; production is unaffected. Ran E2E with a scratch preload shim. JDK 21: `export JAVA_HOME=/opt/homebrew/opt/openjdk@21` (`java_home -v 21` doesn't find it).
+Note: the Firestore emulator uses port 8080, so run Flutter web on another port (e.g. `--web-port=8081`).
+Note: A3: emails already use support@schoolpulseapp.com; A2 still open (no plan includes boarding/health/library/transport on the site).
+Note: the app's welcome screen has no "Register your school" entry; on phones the app wizard is only reachable by URL.
+Note: the app's Super Admin approve/reject screens were not clicked through (owner login needs MFA); the same callables were tested over HTTP + emulator suites.
+Remaining in Step 1: Victor's wording approval in Chrome, Resend template edit, deploy (website + functions).
 
 Commands: `cd web_marketing && npm run dev && npm test`; deploy `tool/deploy_web.sh`.
 Done when: the live site shows the final prices, and a test school can register, get the email, and be approved in Super Admin.
@@ -467,3 +476,6 @@ Partly built but NOT needed to launch. Don't touch until Step 33 is done. New id
 - Parked worktrees (`.claude/worktrees/`): `agent-a040b126` owner security settings, `agent-a4dedd7b` notification settings (+ `firestore.rules`), `agent-a76df3e0` help/support module, `agent-a64ad55c` dean router + structure, `agent-ab1f35fe` inline Structure setup + dean + tests, `agent-aea8c764` functions (1 file)
 - Old logo/launcher assets: `~/Desktop/school_pulse_stash_backup/stash_7.patch`
 - Product question: should communication campaigns publish into announcements?
+- Next.js dev shows React hydration-mismatch warnings on every static page (vanilla JS rewrites the HTML); harmless, dev only
+- `integration_registry.dart` still uses the old 'Standard' plan name as minimumEntitlement
+- Plan-based feature limits don't exist yet (every plan/trial gets every feature)
