@@ -124,7 +124,7 @@ class WizardStepCaption extends StatelessWidget {
           child: Text(
             '$number',
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.pureWhite,
               fontSize: 12,
               fontWeight: FontWeight.bold,
             ),
@@ -198,7 +198,7 @@ class WizardFooterButtons extends StatelessWidget {
                     width: 18,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: AppColors.pureWhite,
                     ),
                   )
                 : Text(nextLabel),
@@ -255,7 +255,7 @@ class WizardStageStepper extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: (isDone || isCurrent) ? black : Colors.transparent,
+                color: (isDone || isCurrent) ? black : AppColors.transparent,
                 border: Border.all(
                   color: (isDone || isCurrent) ? black : border,
                   width: 1.4,

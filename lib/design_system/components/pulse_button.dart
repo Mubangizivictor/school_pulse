@@ -84,7 +84,7 @@ class PulseButton extends StatelessWidget {
           ],
         ),
         child: Material(
-          color: Colors.transparent,
+          color: AppColors.transparent,
           child: InkWell(
             onTap: onPressed,
             borderRadius: AppRadius.medium,

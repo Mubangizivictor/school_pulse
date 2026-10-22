@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 
 /// The global School Pulse loading indicator.
 ///
@@ -113,7 +114,7 @@ class _SchoolPulseLoaderState extends State<SchoolPulseLoader>
             decoration: BoxDecoration(
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(
+                  color: AppColors.black.withValues(
                     alpha: _reducedMotion == true
                         ? 0.10
                         : 0.06 + (_pulseController.value * 0.06),

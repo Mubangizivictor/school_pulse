@@ -58,7 +58,7 @@ class AppConfirmationDialog extends StatelessWidget {
           style: destructive
               ? FilledButton.styleFrom(
                   backgroundColor: AppColors.danger(context),
-                  foregroundColor: Colors.white,
+                  foregroundColor: AppColors.pureWhite,
                 )
               : null,
           onPressed: () => Navigator.of(context).pop(true),

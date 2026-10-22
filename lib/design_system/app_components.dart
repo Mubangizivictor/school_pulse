@@ -262,7 +262,7 @@ class PrimaryButton extends StatelessWidget {
                 width: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: Colors.white,
+                  color: AppColors.pureWhite,
                 ),
               )
             : Icon(icon, size: 20),
@@ -277,7 +277,7 @@ class PrimaryButton extends StatelessWidget {
               width: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.white,
+                color: AppColors.pureWhite,
               ),
             )
           : Text(label),
@@ -795,7 +795,7 @@ class _AnalyticalStatCardState extends State<AnalyticalStatCard>
     return AppCard(
       padding: EdgeInsets.zero,
       showShadow: false,
-      color: Colors.transparent,
+      color: AppColors.transparent,
       borderColor: widget.color,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1113,7 +1113,7 @@ Future<bool?> confirmActionDialog(
           onPressed: () => Navigator.pop(context, true),
           child: Text(
             confirmLabel,
-            style: TextStyle(color: isDestructive ? Colors.black : null),
+            style: TextStyle(color: isDestructive ? AppColors.black : null),
           ),
         ),
       ],
@@ -1211,7 +1211,7 @@ class CircularPercentGauge extends StatelessWidget {
                 strokeWidth: strokeWidth,
                 strokeCap: StrokeCap.round,
                 color: activeColor,
-                backgroundColor: Colors.transparent,
+                backgroundColor: AppColors.transparent,
               ),
             ),
           ),
@@ -1534,7 +1534,7 @@ class SegmentedTabControl extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: i == selectedIndex
                         ? colors.primary
-                        : Colors.transparent,
+                        : AppColors.transparent,
                     borderRadius: BorderRadius.circular(9),
                   ),
                   alignment: Alignment.center,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/app_components.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
 
@@ -41,8 +42,8 @@ class GatekeeperActionTile extends StatelessWidget {
                 child: Icon(
                   icon,
                   color: color.computeLuminance() > 0.5
-                      ? Colors.black
-                      : Colors.white,
+                      ? AppColors.black
+                      : AppColors.pureWhite,
                   size: 34,
                 ),
               ),
@@ -72,7 +73,7 @@ class GatekeeperActionTile extends StatelessWidget {
                 child: Text(
                   badgeCount! > 99 ? '99+' : '$badgeCount',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppColors.pureWhite,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
@@ -132,7 +133,7 @@ class GatekeeperPrimaryButton extends StatelessWidget {
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          foregroundColor: Colors.white,
+          foregroundColor: AppColors.pureWhite,
           disabledBackgroundColor: color,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -145,7 +146,7 @@ class GatekeeperPrimaryButton extends StatelessWidget {
                 width: 22,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: Colors.white,
+                  color: AppColors.pureWhite,
                 ),
               )
             : Icon(icon, size: 26),
