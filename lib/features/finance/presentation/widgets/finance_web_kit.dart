@@ -10,6 +10,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_radius.dart';
+import 'package:school_pulse/design_system/theme/app_spacing.dart';
 import 'package:school_pulse/features/finance/presentation/widgets/finance_kit.dart';
 
 /// Max content width for a workspace body — keeps wide monitors readable.
@@ -527,11 +528,14 @@ class FinanceDataTable<T> extends StatelessWidget {
                   for (final c in columns)
                     Expanded(
                       flex: c.flex,
-                      child: Align(
-                        alignment: c.align == TextAlign.right
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        child: c.cell(rows[i]),
+                      child: Padding(
+                        padding: _cellGutter,
+                        child: Align(
+                          alignment: c.align == TextAlign.right
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
+                          child: c.cell(rows[i]),
+                        ),
                       ),
                     ),
                 ],
@@ -613,6 +617,10 @@ class _Row extends StatelessWidget {
   }
 }
 
+/// Gap between adjacent table columns so right- and left-aligned cells
+/// never touch.
+const _cellGutter = EdgeInsets.symmetric(horizontal: AppSpacing.s);
+
 class _HeaderCell extends StatelessWidget {
   final String label;
   final int flex;
@@ -627,14 +635,17 @@ class _HeaderCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       flex: flex,
-      child: Text(
-        label,
-        textAlign: align,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.3,
-          color: AppColors.textMuted(context),
+      child: Padding(
+        padding: _cellGutter,
+        child: Text(
+          label,
+          textAlign: align,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.3,
+            color: AppColors.textMuted(context),
+          ),
         ),
       ),
     );
