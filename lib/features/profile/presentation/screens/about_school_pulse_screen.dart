@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:school_pulse/core/constants/support_contact.dart';
+import 'package:school_pulse/design_system/brand/brand_assets.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/features/profile/presentation/screens/terms_of_service_screen.dart';
 import 'package:school_pulse/features/super_admin/presentation/pages/privacy_policy_screen.dart';
@@ -85,7 +86,7 @@ class _AboutSchoolPulseScreenState extends State<AboutSchoolPulseScreen> {
         : '${_packageInfo!.version} (${_packageInfo!.buildNumber})',
     applicationIcon: Padding(
       padding: const EdgeInsets.only(top: 12),
-      child: Image.asset('assets/logos/icon_dark_mode.png', width: 48),
+      child: Image.asset(BrandAssets.iconDarkMode, width: 48),
     ),
   );
 
@@ -119,8 +120,8 @@ class _AboutSchoolPulseScreenState extends State<AboutSchoolPulseScreen> {
     final textPrimary = AppColors.textPrimary(context);
     final textSecondary = AppColors.textSecondary(context);
     final logoAsset = isDark
-        ? 'assets/logos/logo_for_dark_mode.png'
-        : 'assets/logos/logo_for_light_mode.png';
+        ? BrandAssets.logoForDarkMode
+        : BrandAssets.logoForLightMode;
 
     return Scaffold(
       backgroundColor: AppColors.background(context),
@@ -162,8 +163,8 @@ class _AboutSchoolPulseScreenState extends State<AboutSchoolPulseScreen> {
                     _BrandHero(
                       logoAsset: logoAsset,
                       iconAsset: isDark
-                          ? 'assets/logos/icon_dark_mode.png'
-                          : 'assets/logos/icon_light_Mode.png',
+                          ? BrandAssets.iconDarkMode
+                          : BrandAssets.iconLightMode,
                     ),
                     const SizedBox(height: 20),
                     Text(

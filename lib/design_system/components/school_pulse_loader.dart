@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:school_pulse/design_system/theme/app_colors.dart';
+import 'package:school_pulse/design_system/brand/brand_assets.dart';
 
 /// The global School Pulse loading indicator.
 ///
-/// It uses the approved SP mark, adapts to the active color scheme, and
-/// automatically reduces motion when the platform requests it.
+/// It plays the brand loading animation (the pulse travelling along the
+/// mark), adapts to the active color scheme, and falls back to a still frame
+/// with a gentle fade when the platform requests reduced motion.
 class SchoolPulseLoader extends StatefulWidget {
   static const double smallSize = 40;
   static const double mediumSize = 72;
@@ -25,33 +26,18 @@ class SchoolPulseLoader extends StatefulWidget {
 }
 
 class _SchoolPulseLoaderState extends State<SchoolPulseLoader>
-    with TickerProviderStateMixin {
-  late final AnimationController _rotationController;
-  late final AnimationController _pulseController;
+    with SingleTickerProviderStateMixin {
   late final AnimationController _fadeController;
-  late final Animation<double> _scaleAnimation;
   late final Animation<double> _fadeAnimation;
   bool? _reducedMotion;
 
   @override
   void initState() {
     super.initState();
-    _rotationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    );
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    );
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     );
-    _scaleAnimation = Tween<double>(
-      begin: 0.95,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.linear));
     _fadeAnimation = Tween<double>(
       begin: 0.9,
       end: 1,
@@ -66,37 +52,32 @@ class _SchoolPulseLoaderState extends State<SchoolPulseLoader>
     _reducedMotion = reducedMotion;
 
     if (reducedMotion) {
-      _rotationController.stop();
-      _pulseController.stop();
       _fadeController.repeat(reverse: true);
     } else {
       _fadeController.stop();
       _fadeController.value = 1;
-      _rotationController.repeat();
-      _pulseController.repeat(reverse: true);
     }
   }
 
   @override
   void dispose() {
-    _rotationController.dispose();
-    _pulseController.dispose();
     _fadeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final reducedMotion = _reducedMotion == true;
     final logo = RepaintBoundary(
       child: Image.asset(
-        isDark
-            ? 'assets/logos/icon_dark_mode.png'
-            : 'assets/logos/icon_light_Mode.png',
+        reducedMotion
+            ? BrandAssets.loadingFrame(context)
+            : BrandAssets.loadingGif(context),
         width: widget.size,
         height: widget.size,
         fit: BoxFit.contain,
         filterQuality: FilterQuality.medium,
+        gaplessPlayback: true,
       ),
     );
 
@@ -104,32 +85,10 @@ class _SchoolPulseLoaderState extends State<SchoolPulseLoader>
       label: 'Loading',
       liveRegion: true,
       child: FadeTransition(
-        opacity: _reducedMotion == true
+        opacity: reducedMotion
             ? _fadeAnimation
             : const AlwaysStoppedAnimation<double>(1),
-        child: AnimatedBuilder(
-          animation: _pulseController,
-          child: logo,
-          builder: (context, child) => DecoratedBox(
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.black.withValues(
-                    alpha: _reducedMotion == true
-                        ? 0.10
-                        : 0.06 + (_pulseController.value * 0.06),
-                  ),
-                  blurRadius: widget.size * 0.18,
-                  spreadRadius: widget.size * 0.015,
-                ),
-              ],
-            ),
-            child: RotationTransition(
-              turns: _rotationController,
-              child: ScaleTransition(scale: _scaleAnimation, child: child),
-            ),
-          ),
-        ),
+        child: logo,
       ),
     );
   }

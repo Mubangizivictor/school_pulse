@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../brand/brand_assets.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
@@ -13,7 +14,11 @@ class AppErrorState extends StatelessWidget {
   final String? title;
   final VoidCallback? onRetry;
   final String retryLabel;
+
+  /// Picks the brand illustration (see [BrandState.fromIcon]) unless
+  /// [state] is given.
   final IconData icon;
+  final BrandState? state;
 
   const AppErrorState({
     super.key,
@@ -22,6 +27,7 @@ class AppErrorState extends StatelessWidget {
     this.onRetry,
     this.retryLabel = 'Try again',
     this.icon = Icons.error_outline_rounded,
+    this.state,
   });
 
   @override
@@ -33,7 +39,12 @@ class AppErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 44, color: AppColors.danger(context)),
+            BrandStateImage(
+              state:
+                  state ??
+                  BrandState.fromIcon(icon, fallback: BrandState.error),
+              size: 96,
+            ),
             const SizedBox(height: AppSpacing.m),
             if (title != null) ...[
               Text(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:school_pulse/design_system/brand/brand_assets.dart';
 
 enum PulseLogoVariant {
   /// 16:9 Horizontal format with text and mark
@@ -56,16 +57,16 @@ class PulseLogo extends StatelessWidget {
       case PulseLogoVariant.auth:
       case PulseLogoVariant.header:
         assetPath = useDarkLogo
-            ? 'assets/logos/logo_for_dark_mode.png'
-            : 'assets/logos/logo_for_light_mode.png';
+            ? BrandAssets.logoForDarkMode
+            : BrandAssets.logoForLightMode;
         break;
       case PulseLogoVariant.vertical:
       case PulseLogoVariant.shield:
       case PulseLogoVariant.compact:
       case PulseLogoVariant.sidebar:
         assetPath = useDarkLogo
-            ? 'assets/logos/logo_for_dark_mode.png'
-            : 'assets/logos/logo_for_light_mode.png';
+            ? BrandAssets.logoForDarkMode
+            : BrandAssets.logoForLightMode;
         break;
     }
 

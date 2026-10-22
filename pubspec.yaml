@@ -82,24 +82,6 @@ dev_dependencies:
   flutter_launcher_icons: ^0.13.1
   firebase_core_platform_interface: ^6.0.0
 
-flutter_native_splash:
-  # The OS selects the dark variant before Flutter has restored the saved
-  # in-app theme preference.
-  color: "#FFFFFF"
-  image: assets/splash/splash_light_mode.png
-  color_dark: "#000000"
-  image_dark: assets/splash/splash_dark_mode.png
-
-flutter_launcher_icons:
-  android: "ic_launcher"
-  ios: true
-  image_path_android: "assets/launcher_icons/launcher_icon.png"
-  image_path_ios: "assets/launcher_icons/launcher_icon.png"
-  adaptive_icon_background: "#03113B"
-  adaptive_icon_foreground: "assets/launcher_icons/launcher_icon.png"
-  min_sdk_android: 21
-  remove_alpha_ios: true
-
 dependency_overrides:
   analyzer: 5.13.0
 
@@ -109,12 +91,12 @@ flutter:
 
   assets:
     - assets/fonts/
-    - assets/loading_icon/loading_for_dark_mode.png
-    - assets/loading_icon/loading_for_light_mode.png
-    - assets/logos/
-    - assets/launcher_icons/
-    - assets/splash/splash_dark_mode.png
-    - assets/splash/splash_light_mode.png
+    - assets/branding/
+    - assets/branding/2.0x/
+    - assets/branding/3.0x/
+    - assets/branding/states/
+    - assets/branding/loading/light/
+    - assets/branding/loading/dark/
 
   fonts:
     - family: Inter

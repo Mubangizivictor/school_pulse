@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:school_pulse/design_system/brand/brand_assets.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 import 'package:school_pulse/features/super_admin/domain/entities/manual_subscription_payment.dart';
@@ -128,7 +129,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         nav?.popUntil((route) {
           if (route.isFirst) return true;
           final name = route.settings.name;
-          final isStalePushedDetail = name != null &&
+          final isStalePushedDetail =
+              name != null &&
               name.startsWith('/super-admin/') &&
               name != location &&
               !location.startsWith('$name/');
@@ -418,7 +420,7 @@ class _SidebarBrand extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Image.asset(
-          'assets/logos/icon_dark_mode.png',
+          BrandAssets.iconDarkMode,
           width: 34,
           height: 34,
           fit: BoxFit.contain,

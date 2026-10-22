@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:school_pulse/core/theme_provider.dart';
 import 'package:school_pulse/design_system/app_theme.dart';
+import 'package:school_pulse/design_system/brand/brand_assets.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 
 class Skeleton extends StatelessWidget {
@@ -311,7 +312,10 @@ class SecondaryButton extends StatelessWidget {
 }
 
 class EmptyState extends StatelessWidget {
+  /// Picks the brand illustration (see [BrandState.fromIcon]) unless
+  /// [state] is given.
   final IconData icon;
+  final BrandState? state;
   final String title;
   final String message;
   final String? ctaLabel;
@@ -324,6 +328,7 @@ class EmptyState extends StatelessWidget {
     required this.message,
     this.ctaLabel,
     this.onCtaPressed,
+    this.state,
   });
 
   @override
@@ -334,7 +339,7 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 64, color: Theme.of(context).disabledColor),
+            BrandStateImage(state: state ?? BrandState.fromIcon(icon)),
             const SizedBox(height: 16),
             Text(
               title,
