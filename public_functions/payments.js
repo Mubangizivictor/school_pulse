@@ -3,7 +3,7 @@ const admin = require('firebase-admin');
 const crypto = require('crypto');
 const { requirePlatformOwner, OwnerAuthorizationError } = require('./vendor/owner-auth');
 const { ROOT: PORTAL_ROOT, validSlug: validPortalSlug } = require('./portal_slug');
-const { publicDomain: portalPublicDomain } = require('./portal_domains');
+const { publicDomain: portalPublicDomain, TRIAL_DAYS } = require('./portal_domains');
 const { isAllowedOrigin } = require('./allowed_origins');
 
 if (!admin.apps.length) admin.initializeApp();
@@ -90,6 +90,18 @@ function asIso(value) {
   if (value instanceof Date) return value.toISOString();
   if (typeof value === 'number') return new Date(value).toISOString();
   return null;
+}
+
+// An application whose free trial (set on approval) has not run out yet.
+function inActiveTrial(application, nowMs = Date.now()) {
+  return Number(application?.trialEndsAt || 0) > nowMs;
+}
+
+// A school still inside its unexpired free trial: full access, never paid.
+function schoolInActiveTrial(school, nowMs = Date.now()) {
+  return school?.status === 'trial' &&
+    school?.accessMode !== 'readOnly' &&
+    Number(school?.subscriptionExpiry || 0) > nowMs;
 }
 
 function normalizedModules(value) {
@@ -448,6 +460,7 @@ exports.approveSchoolApplication = onCall(
     const slugReservationRef = db.doc(`portal_slug_reservations/${slug}`);
     const enabledFeatures = normalizedModules(application.selectedModules);
     const nowMs = Date.now();
+    const trialEndsMs = nowMs + TRIAL_DAYS * 24 * 60 * 60 * 1000;
     const administratorName = `${text(administrator.firstName, 100)} ${text(administrator.lastName, 100)}`.trim() || authUser.displayName || 'School Administrator';
     const address = [text(location.address, 240), text(location.district, 100), text(location.region, 40)].filter(Boolean).join(', ');
     const schoolRef = db.collection('schools').doc(schoolId);
@@ -475,7 +488,11 @@ exports.approveSchoolApplication = onCall(
       status: 'trial',
       subscriptionPlanId: plan.id,
       createdAt: nowMs,
-      subscriptionExpiry: nowMs,
+      // Free trial: full access, no payment, for TRIAL_DAYS. When it runs out
+      // the hourly subscription_lifecycle.js sweep sets accessMode 'readOnly';
+      // nothing is deleted. Paying during the trial activates the chosen plan.
+      subscriptionExpiry: trialEndsMs,
+      accessMode: 'full',
       enabledFeatures,
       metadata: {
         source: 'public_website_application',
@@ -487,7 +504,8 @@ exports.approveSchoolApplication = onCall(
         district: text(location.district, 100),
         selectedPlanLabel: text(plan.name || application.plan, 40),
         selectedModules: Array.isArray(application.selectedModules) ? application.selectedModules : CORE_MODULES,
-        subscriptionStatus: 'awaiting_payment',
+        subscriptionStatus: 'trial',
+        trialEndsAt: trialEndsMs,
         hasEverActivated: false,
         approvedBy: owner.uid,
         approvedAt: nowMs,
@@ -576,8 +594,9 @@ exports.approveSchoolApplication = onCall(
       tx.set(applicationRef, {
         status: 'approved',
         schoolId,
-        paymentStatus: 'awaiting_payment',
-        appReady: false,
+        paymentStatus: 'trial',
+        appReady: true,
+        trialEndsAt: trialEndsMs,
         appUrl: APP_URL,
         reviewedAt: serverTime,
         reviewedBy: owner.uid,
@@ -588,7 +607,7 @@ exports.approveSchoolApplication = onCall(
       tx.set(auditRef, {
         id: auditRef.id,
         ownerId: owner.uid,
-        action: 'APPROVE_SCHOOL_APPLICATION_AWAITING_PAYMENT',
+        action: 'APPROVE_SCHOOL_APPLICATION_TRIAL',
         schoolId,
         affectedUserId: applicantUid,
         timestamp: serverTime,
@@ -598,6 +617,7 @@ exports.approveSchoolApplication = onCall(
           schoolName,
           planId: plan.id,
           planPrice: Number(plan.price || 0),
+          trialEndsAt: trialEndsMs,
           billingCycle: text(plan.billingCycle, 20),
           enabledFeatures,
         },
@@ -616,7 +636,7 @@ exports.approveSchoolApplication = onCall(
       console.error('School approved but custom claims update failed', error);
     }
 
-    return { ok: true, schoolId, status: 'approved', paymentStatus: 'awaiting_payment', appReady: false, portalUrl: `https://${portalHost}` };
+    return { ok: true, schoolId, status: 'approved', paymentStatus: 'trial', appReady: true, trialEndsAt: trialEndsMs, portalUrl: `https://${portalHost}` };
   },
 );
 
@@ -652,7 +672,8 @@ exports.getSchoolApplicationStatus = onRequest({ region: 'europe-west1' }, async
     schoolId: text(data.schoolId, 180),
     schoolName: text(data.school?.name, 160),
     plan: text(data.plan, 40),
-    appReady: data.appReady === true && data.paymentStatus === 'paid',
+    appReady: data.appReady === true && (data.paymentStatus === 'paid' || inActiveTrial(data)),
+    trialEndsAt: asIso(data.trialEndsAt),
     appUrl: text(data.appUrl, 300) || APP_URL,
     paymentUrl: `${WEBSITE_ORIGIN}/payment`,
     rejectionReason: text(data.rejectionReason, 500),
@@ -867,7 +888,8 @@ exports.submitManualPayment = onRequest({ region: 'europe-west1' }, async (req, 
         tx.set(subscriber.applicationRef, {
           paymentStatus: 'under_review',
           paymentRejectionReason: admin.firestore.FieldValue.delete(),
-          appReady: false,
+          // Paying early must not cut the free trial short.
+          appReady: schoolInActiveTrial(subscriber.school),
           updatedAt: serverTime,
         }, { merge: true });
       }
@@ -1029,7 +1051,11 @@ exports.approveManualPayment = onCall({ region: 'europe-west1' }, async (request
     const targetCycleRef = eligibleCycleSnap.empty ? null : eligibleCycleSnap.docs[0].ref;
     const termLengthDays = Math.max(1, Math.round(Number(payment.termLengthDays || 120)));
     const existingExpiry = Number(school.subscriptionExpiry || 0);
-    const startMs = payment.paymentType === 'renewal' && existingExpiry > nowMs ? existingExpiry : nowMs;
+    // A renewal extends the current term; paying during the free trial starts
+    // the paid term when the trial ends, so no trial days are lost.
+    const startMs = existingExpiry > nowMs && (payment.paymentType === 'renewal' || schoolInActiveTrial(school, nowMs))
+      ? existingExpiry
+      : nowMs;
     const expiryMs = startMs + termLengthDays * 24 * 60 * 60 * 1000;
 
     // Activation snapshot: the commercial agreement as it stood when this
@@ -1174,20 +1200,24 @@ exports.rejectManualPayment = onCall({ region: 'europe-west1' }, async (request)
     if (!schoolSnap.exists) throw new HttpsError('failed-precondition', 'The school linked to this payment no longer exists.');
     const school = schoolSnap.data() || {};
     const metadata = school.metadata && typeof school.metadata === 'object' ? school.metadata : {};
-    const nextSubscriptionStatus = payment.paymentType === 'renewal' ? 'payment_due' : 'awaiting_payment';
+    const trialActive = schoolInActiveTrial(school);
+    const nextSubscriptionStatus = trialActive
+      ? 'trial'
+      : payment.paymentType === 'renewal' ? 'payment_due' : 'awaiting_payment';
     tx.set(paymentRef, { status: 'rejected', reviewedByUid: owner.uid, reviewedAt: serverTime, rejectionReason: reason }, { merge: true });
     // A renewal rejection leaves the school exactly as it already was
     // (readOnly, set by the prior lifecycle sweep) - only an activation
     // rejection needs an explicit write, keeping the server-authoritative
     // field in sync with what isInitialPaymentRequired already implies.
     const schoolUpdate = { metadata: { ...metadata, subscriptionStatus: nextSubscriptionStatus } };
-    if (payment.paymentType !== 'renewal') schoolUpdate.accessMode = 'blocked';
+    // A rejected payment during the free trial leaves the trial running.
+    if (payment.paymentType !== 'renewal' && !trialActive) schoolUpdate.accessMode = 'blocked';
     tx.set(schoolRef, schoolUpdate, { merge: true });
     if (payment.applicationId) {
       tx.set(db.collection('public_school_applications').doc(text(payment.applicationId, 180)), {
         paymentStatus: 'rejected',
         paymentRejectionReason: reason,
-        appReady: false,
+        appReady: trialActive,
         updatedAt: serverTime,
       }, { merge: true });
     }

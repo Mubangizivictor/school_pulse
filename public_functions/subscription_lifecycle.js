@@ -10,6 +10,9 @@ const db = admin.firestore();
 // remaining is the one tier fired per run. 1 day is the last warning before
 // "expired" (day 0) takes over via the separate expiry branch below.
 const EXPIRING_TIERS_DAYS = [30, 14, 7, 3, 1];
+// A 30-day free trial would hit the 30/14-day tiers on its first days, so
+// trials only get the last-week reminders.
+const TRIAL_EXPIRING_TIERS_DAYS = [7, 3, 1];
 
 function text(value, max = 200) {
   return String(value ?? '').trim().slice(0, max);
@@ -66,7 +69,8 @@ exports.checkSubscriptionLifecycle = onSchedule(
       try {
         if (expiryMs > nowMs) {
           const daysUntilExpiry = Math.ceil((expiryMs - nowMs) / (24 * 60 * 60 * 1000));
-          const tier = EXPIRING_TIERS_DAYS.find((tierDays) => daysUntilExpiry <= tierDays);
+          const tiers = school.status === 'trial' ? TRIAL_EXPIRING_TIERS_DAYS : EXPIRING_TIERS_DAYS;
+          const tier = tiers.find((tierDays) => daysUntilExpiry <= tierDays);
           if (tier) {
             const recipient = await schoolAdminEmail(schoolId);
             await enqueueTemplatedEmail({

@@ -36,7 +36,12 @@ const {
 } = require('../owner');
 // approveSchoolApplication is exported by BOTH owner.js and payments.js;
 // bootstrap.js spreads payments last, so the payments.js one is what deploys.
-const { approveSchoolApplication } = require('../payments');
+const {
+  approveSchoolApplication,
+  approveManualPayment,
+  rejectManualPayment,
+} = require('../payments');
+const { TRIAL_DAYS } = require('../portal_domains');
 
 const admin = require('firebase-admin');
 const db = admin.firestore();
@@ -268,6 +273,103 @@ describe('Super Admin - Schools: lifecycle + applications', () => {
     await assert.rejects(
       approveSchoolApplication.run(request(OWNER_UID, { applicationId: 'app1' })),
       /not accepted the School Pulse terms|failed-precondition/i,
+    );
+  });
+  // --- approveSchoolApplication happy path: free trial -----------------------
+
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const APPLICANT_UID = 'applicantUid1';
+
+  async function seedPendingApplication() {
+    await admin.auth().deleteUser(APPLICANT_UID).catch(() => {});
+    await admin.auth().createUser({
+      uid: APPLICANT_UID, email: 'head@trial.test', emailVerified: true, password: 'Passw0rd!',
+    });
+    await db.doc('public_school_applications/appTrial').set({
+      id: APPLICANT_UID, authUid: APPLICANT_UID, status: 'pending_review', termsAccepted: true,
+      plan: 'Growth', studentCount: 450,
+      school: { name: 'Trial High School', prefix: 'THS', slug: 'trial-high', email: 'info@trial.test', phone: '+256700000001', category: 'Secondary' },
+      location: { region: 'Central', district: 'Wakiso', address: 'Plot 1' },
+      administrator: { firstName: 'Ada', lastName: 'Head', email: 'head@trial.test', phone: '+256700000002' },
+    });
+  }
+
+  test('approveSchoolApplication starts a 30-day free trial with full access and no payment', async () => {
+    await seedPendingApplication();
+    const before = Date.now();
+    const result = await approveSchoolApplication.run(request(OWNER_UID, { applicationId: 'appTrial' }));
+    assert.equal(TRIAL_DAYS, 30);
+    assert.equal(result.paymentStatus, 'trial');
+    assert.equal(result.appReady, true);
+
+    const schoolDoc = (await db.doc(`schools/${result.schoolId}`).get()).data();
+    assert.equal(schoolDoc.status, 'trial');
+    assert.equal(schoolDoc.accessMode, 'full');
+    assert.equal(schoolDoc.subscriptionPlanId, 'growth');
+    assert.equal(schoolDoc.metadata.subscriptionStatus, 'trial');
+    assert.equal(schoolDoc.metadata.hasEverActivated, false);
+    assert.ok(schoolDoc.subscriptionExpiry >= before + 30 * DAY_MS - 1000);
+    assert.ok(schoolDoc.subscriptionExpiry <= Date.now() + 30 * DAY_MS);
+
+    const app = (await db.doc('public_school_applications/appTrial').get()).data();
+    assert.equal(app.status, 'approved');
+    assert.equal(app.paymentStatus, 'trial');
+    assert.equal(app.appReady, true);
+    assert.equal(app.trialEndsAt, schoolDoc.subscriptionExpiry);
+
+    const user = (await db.doc(`users/${APPLICANT_UID}`).get()).data();
+    assert.equal(user.role, 'schoolAdmin');
+    assert.equal(user.schoolId, result.schoolId);
+    const membership = (await db.doc(`institution_memberships/${APPLICANT_UID}_${result.schoolId}`).get()).data();
+    assert.equal(membership.status, 'active');
+    assert.ok((await auditActions()).includes('APPROVE_SCHOOL_APPLICATION_TRIAL'));
+  });
+
+  async function seedTrialPayment(schoolId, overrides = {}) {
+    await db.doc('manual_subscription_payments/pay1').set({
+      schoolId, applicationId: 'appTrial', status: 'pending_verification', paymentType: 'activation',
+      planId: 'growth', planName: 'Growth', expectedAmount: 550000, submittedAmount: 550000,
+      termLengthDays: 120, method: 'mtn', reference: 'REF1', submittedByUid: APPLICANT_UID, ...overrides,
+    });
+  }
+
+  test('a rejected payment during the trial leaves the trial running', async () => {
+    await seedPendingApplication();
+    const { schoolId } = await approveSchoolApplication.run(request(OWNER_UID, { applicationId: 'appTrial' }));
+    await seedTrialPayment(schoolId);
+    await rejectManualPayment.run(request(OWNER_UID, { paymentId: 'pay1', reason: 'Reference not found' }));
+
+    const schoolDoc = (await db.doc(`schools/${schoolId}`).get()).data();
+    assert.equal(schoolDoc.accessMode, 'full');
+    assert.equal(schoolDoc.metadata.subscriptionStatus, 'trial');
+    const app = (await db.doc('public_school_applications/appTrial').get()).data();
+    assert.equal(app.paymentStatus, 'rejected');
+    assert.equal(app.appReady, true);
+  });
+
+  test('paying during the trial starts the paid term when the trial ends', async () => {
+    await seedPendingApplication();
+    const { schoolId } = await approveSchoolApplication.run(request(OWNER_UID, { applicationId: 'appTrial' }));
+    const trialEnds = (await db.doc(`schools/${schoolId}`).get()).data().subscriptionExpiry;
+    await seedTrialPayment(schoolId);
+    await approveManualPayment.run(request(OWNER_UID, { paymentId: 'pay1' }));
+
+    const schoolDoc = (await db.doc(`schools/${schoolId}`).get()).data();
+    assert.equal(schoolDoc.status, 'active');
+    assert.equal(schoolDoc.accessMode, 'full');
+    assert.equal(schoolDoc.metadata.hasEverActivated, true);
+    assert.equal(schoolDoc.subscriptionExpiry, trialEnds + 120 * DAY_MS);
+  });
+
+  test('rejectSchoolApplication after submission sends no school into existence', async () => {
+    await seedPendingApplication();
+    await rejectSchoolApplication.run(request(OWNER_UID, { applicationId: 'appTrial', reason: 'Could not verify the school' }));
+    const app = (await db.doc('public_school_applications/appTrial').get()).data();
+    assert.equal(app.status, 'rejected');
+    assert.equal((await db.collection('schools').get()).size, 0);
+    await assert.rejects(
+      approveSchoolApplication.run(request(OWNER_UID, { applicationId: 'appTrial' })),
+      /Only pending|failed-precondition/i,
     );
   });
 });

@@ -36,7 +36,7 @@ module.exports = {
         { label: 'School', value: data.schoolName },
         { label: 'Application reference', value: reference },
       ],
-      secondaryText: 'Complete your subscription payment to activate your School Pulse environment.',
+      secondaryText: 'Your 30-day free trial has started. Sign in to School Pulse to set up your school, and choose a plan any time before the trial ends.',
       cta: { label: 'Continue Setup', url: STATUS_URL },
     };
   },

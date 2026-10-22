@@ -7,7 +7,9 @@ const { ROOT, RESERVED, validSlug } = require('./portal_slug');
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
 const TARGET = 'ghs.googlehosted.com';
-const TRIAL_DAYS = 14;
+// Free trial length for every new school (ROADMAP.md Step A1: 30 days, all
+// features, no payment; read-only afterwards via subscription_lifecycle.js).
+const TRIAL_DAYS = 30;
 const LIFECYCLE_STATUSES = new Set(['active', 'suspended', 'archived', 'trial']);
 const clean = v => String(v || '').trim().toLowerCase();
 const validHost = v => /^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$/.test(v) && v.includes('.') && !v.endsWith(`.${ROOT}`);
@@ -616,4 +618,5 @@ exports.syncPortalDomainProjection = onDocumentWritten({ region: 'europe-west1',
 // (schoolName/logoUrl/colors/address/phone/email) defined in exactly one
 // place instead of hand-duplicated per caller.
 exports.publicDomain = publicDomain;
+exports.TRIAL_DAYS = TRIAL_DAYS;
 exports.__test__ = { validSlug, validHost, RESERVED, LIFECYCLE_STATUSES, TRIAL_DAYS, SUPPORT_ACCESS_MAX_MINUTES, ADMIN_ACTIONS, ACCESS_MODE_FOR_STATUS };

@@ -107,7 +107,7 @@ exports.notifyOwnerOfSchoolApplication = onDocumentWritten(
           applicationId,
           type: 'application_approved',
           title: 'Application approved',
-          body: `${schoolName} has been approved. Complete your subscription payment to activate your School Pulse environment.`,
+          body: `${schoolName} has been approved. Your 30-day free trial has started.`,
         }).catch((error) => console.error('Applicant push notification failed', applicationId, error));
       }
       return;
