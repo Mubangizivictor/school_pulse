@@ -27,10 +27,12 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color warning;
   final Color warningSoft;
   final Color error;
+  final Color onError;
   final Color errorSoft;
   final Color info;
   final Color infoSoft;
   final Color focusRing;
+  final Color shadow;
 
   const AppColors({
     required this.primary,
@@ -58,10 +60,12 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.warning,
     required this.warningSoft,
     required this.error,
+    required this.onError,
     required this.errorSoft,
     required this.info,
     required this.infoSoft,
     required this.focusRing,
+    required this.shadow,
   });
 
   static const light = AppColors(
@@ -83,17 +87,19 @@ class AppColors extends ThemeExtension<AppColors> {
     borderStrong: Color(0xFFC3C3BA),
     text: Color(0xFF141B2D),
     textMuted: Color(0xFF535B6C),
-    textSubtle: Color(0xFF6E7585),
+    textSubtle: Color(0xFF656C7C),
     textOnDark: Color(0xFFFFFFFF),
     success: Color(0xFF13703A),
     successSoft: Color(0xFFE6F4EA),
     warning: Color(0xFFA14A07),
     warningSoft: Color(0xFFFDF0E1),
     error: Color(0xFFB42318),
+    onError: Color(0xFFFFFFFF),
     errorSoft: Color(0xFFFCE9E7),
     info: Color(0xFF1F4FD1),
     infoSoft: Color(0xFFE8EEFC),
     focusRing: Color(0xFF1F4FD1),
+    shadow: Color(0x140e1b3d),
   );
   static const dark = AppColors(
     primary: Color(0xFF7A9BFF),
@@ -121,10 +127,12 @@ class AppColors extends ThemeExtension<AppColors> {
     warning: Color(0xFFFBBF24),
     warningSoft: Color(0xFF3A2A0B),
     error: Color(0xFFF87171),
+    onError: Color(0xFF0A1330),
     errorSoft: Color(0xFF3D1517),
     info: Color(0xFF7A9BFF),
     infoSoft: Color(0xFF1B2A55),
     focusRing: Color(0xFF7A9BFF),
+    shadow: Color(0x66000000),
   );
 
   @override
@@ -154,10 +162,12 @@ class AppColors extends ThemeExtension<AppColors> {
     Color? warning,
     Color? warningSoft,
     Color? error,
+    Color? onError,
     Color? errorSoft,
     Color? info,
     Color? infoSoft,
     Color? focusRing,
+    Color? shadow,
   }) => AppColors(
     primary: primary ?? this.primary,
     onPrimary: onPrimary ?? this.onPrimary,
@@ -184,10 +194,12 @@ class AppColors extends ThemeExtension<AppColors> {
     warning: warning ?? this.warning,
     warningSoft: warningSoft ?? this.warningSoft,
     error: error ?? this.error,
+    onError: onError ?? this.onError,
     errorSoft: errorSoft ?? this.errorSoft,
     info: info ?? this.info,
     infoSoft: infoSoft ?? this.infoSoft,
     focusRing: focusRing ?? this.focusRing,
+    shadow: shadow ?? this.shadow,
   );
 
   @override
@@ -219,10 +231,12 @@ class AppColors extends ThemeExtension<AppColors> {
       warning: Color.lerp(warning, other.warning, t)!,
       warningSoft: Color.lerp(warningSoft, other.warningSoft, t)!,
       error: Color.lerp(error, other.error, t)!,
+      onError: Color.lerp(onError, other.onError, t)!,
       errorSoft: Color.lerp(errorSoft, other.errorSoft, t)!,
       info: Color.lerp(info, other.info, t)!,
       infoSoft: Color.lerp(infoSoft, other.infoSoft, t)!,
       focusRing: Color.lerp(focusRing, other.focusRing, t)!,
+      shadow: Color.lerp(shadow, other.shadow, t)!,
     );
   }
 }
@@ -329,13 +343,14 @@ class AppColorValues {
   static const Color lightBorderStrong = Color(0xFFC3C3BA);
   static const Color lightText = Color(0xFF141B2D);
   static const Color lightTextMuted = Color(0xFF535B6C);
-  static const Color lightTextSubtle = Color(0xFF6E7585);
+  static const Color lightTextSubtle = Color(0xFF656C7C);
   static const Color lightTextOnDark = Color(0xFFFFFFFF);
   static const Color lightSuccess = Color(0xFF13703A);
   static const Color lightSuccessSoft = Color(0xFFE6F4EA);
   static const Color lightWarning = Color(0xFFA14A07);
   static const Color lightWarningSoft = Color(0xFFFDF0E1);
   static const Color lightError = Color(0xFFB42318);
+  static const Color lightOnError = Color(0xFFFFFFFF);
   static const Color lightErrorSoft = Color(0xFFFCE9E7);
   static const Color lightInfo = Color(0xFF1F4FD1);
   static const Color lightInfoSoft = Color(0xFFE8EEFC);
@@ -365,6 +380,7 @@ class AppColorValues {
   static const Color darkWarning = Color(0xFFFBBF24);
   static const Color darkWarningSoft = Color(0xFF3A2A0B);
   static const Color darkError = Color(0xFFF87171);
+  static const Color darkOnError = Color(0xFF0A1330);
   static const Color darkErrorSoft = Color(0xFF3D1517);
   static const Color darkInfo = Color(0xFF7A9BFF);
   static const Color darkInfoSoft = Color(0xFF1B2A55);

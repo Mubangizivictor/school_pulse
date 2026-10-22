@@ -26,10 +26,10 @@
     "accent": "#D4A017", "onAccent": "#0E1B3D", "accentSoft": "#FBF3DC", "onAccentSoft": "#7A5A06",
     "background": "#F6F6F2", "surface": "#FFFFFF", "surfaceAlt": "#EFEFEA",
     "border": "#DCDCD4", "borderStrong": "#C3C3BA",
-    "text": "#141B2D", "textMuted": "#535B6C", "textSubtle": "#6E7585", "textOnDark": "#FFFFFF",
+    "text": "#141B2D", "textMuted": "#535B6C", "textSubtle": "#656C7C", "textOnDark": "#FFFFFF",
     "success": "#13703A", "successSoft": "#E6F4EA",
     "warning": "#A14A07", "warningSoft": "#FDF0E1",
-    "error": "#B42318", "errorSoft": "#FCE9E7",
+    "error": "#B42318", "onError": "#FFFFFF", "errorSoft": "#FCE9E7",
     "info": "#1F4FD1", "infoSoft": "#E8EEFC",
     "focusRing": "#1F4FD1", "shadow": "rgba(14, 27, 61, 0.08)"
   },
@@ -42,7 +42,7 @@
     "text": "#EDF0F7", "textMuted": "#A6AEC2", "textSubtle": "#8790A6", "textOnDark": "#FFFFFF",
     "success": "#4ADE80", "successSoft": "#123222",
     "warning": "#FBBF24", "warningSoft": "#3A2A0B",
-    "error": "#F87171", "errorSoft": "#3D1517",
+    "error": "#F87171", "onError": "#0A1330", "errorSoft": "#3D1517",
     "info": "#7A9BFF", "infoSoft": "#1B2A55",
     "focusRing": "#7A9BFF", "shadow": "rgba(0, 0, 0, 0.40)"
   },

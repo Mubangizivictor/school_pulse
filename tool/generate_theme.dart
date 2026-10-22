@@ -33,7 +33,7 @@ String _color(String value) {
 String _flutter(Map<String, dynamic> json) {
   final light = Map<String, dynamic>.from(json['light']);
   final dark = Map<String, dynamic>.from(json['dark']);
-  final keys = light.keys.where((key) => key != 'shadow').toList();
+  final keys = light.keys.toList();
   final fields = keys.map((key) => '  final Color ${_camel(key)};').join('\n');
   final params = keys.map((key) => 'required this.${_camel(key)}').join(', ');
   String instance(Map<String, dynamic> colours) => keys
@@ -141,6 +141,7 @@ String _css(Map<String, dynamic> json) {
   final dark = Map<String, dynamic>.from(json['dark']);
   final radius = Map<String, dynamic>.from(json['radius']);
   final spacing = Map<String, dynamic>.from(json['spacing']);
+  final typeScale = Map<String, dynamic>.from(json['typeScale']);
   String vars(Map<String, dynamic> values) => values.entries
       .map((e) => '  --sp-${_kebab(e.key)}: ${e.value};')
       .join('\n');
@@ -152,12 +153,34 @@ String _css(Map<String, dynamic> json) {
     ...spacing.entries.map(
       (e) => '  --sp-space-${_kebab(e.key)}: ${e.value}px;',
     ),
-    '  --sp-font-display: ${json['fonts']['display']}, sans-serif;',
-    '  --sp-font-body: ${json['fonts']['body']}, sans-serif;',
+    '  --sp-font-display: "${json['fonts']['display']}", sans-serif;',
+    '  --sp-font-body: "${json['fonts']['body']}", sans-serif;',
+    ...typeScale.entries
+        .where((e) => e.value is Map && (e.value as Map).containsKey('size'))
+        .expand((e) {
+          final v = Map<String, dynamic>.from(e.value as Map);
+          final name = _kebab(e.key);
+          return [
+            '  --sp-text-$name-font: var(--sp-font-${v['font']});',
+            '  --sp-text-$name-size: ${v['size']}px;',
+            '  --sp-text-$name-line-height: ${v['lineHeight']}px;',
+            '  --sp-text-$name-weight: ${v['weight']};',
+            '  --sp-text-$name-letter-spacing: ${v['letterSpacing']}px;',
+          ];
+        }),
+  ].join('\n');
+  // Fixed brand and dark-palette values for surfaces that stay dark in both
+  // modes (footer, CTA banners).
+  final fixed = [
+    ...Map<String, dynamic>.from(
+      json['brand'],
+    ).entries.map((e) => '  --sp-brand-${_kebab(e.key)}: ${e.value};'),
+    ...dark.entries.map((e) => '  --sp-dark-${_kebab(e.key)}: ${e.value};'),
   ].join('\n');
   return '''/* GENERATED, DO NOT EDIT. Run: dart run tool/generate_theme.dart */
 :root {
 ${vars(light)}
+$fixed
 $extras
 }
 
@@ -173,11 +196,18 @@ ${vars(dark)}
 ''';
 }
 
+const _dartOut = 'lib/design_system/theme/app_tokens.g.dart';
+const _cssOut = 'web_marketing/public/css/tokens.css';
+
 void main() {
   final json =
       jsonDecode(File(_source).readAsStringSync()) as Map<String, dynamic>;
-  File(
-    'lib/design_system/theme/app_tokens.g.dart',
-  ).writeAsStringSync(_flutter(json));
-  File('web_marketing/public/css/tokens.css').writeAsStringSync(_css(json));
+  File(_dartOut).writeAsStringSync(_flutter(json));
+  File(_cssOut).writeAsStringSync(_css(json));
+  // Format so regenerating is deterministic and matches committed output.
+  final format = Process.runSync('dart', ['format', _dartOut]);
+  if (format.exitCode != 0) {
+    stderr.write(format.stderr);
+    exit(format.exitCode);
+  }
 }
