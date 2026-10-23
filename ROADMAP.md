@@ -148,13 +148,14 @@ Status: `[~]` in progress (started 2026-10-22)
 
 - [ ] Claude: put the A1 prices into the website and the register-school plan step (Growth = "up to 700"); apply the website copy; remove the "payments save offline" claim until Step 15 ships offline payment capture.
 - [ ] Claude: check the 6-step `/register-school` wizard end to end (school info → owner account → contact → plan → payment/trial → confirmation) and the verification + welcome emails.
-- [ ] Claude: check Super Admin can approve and reject a new school.
+- [x] Claude: check Super Admin can approve and reject a new school. (2026-10-23: `npm run test:school-lifecycle-applications:emulator` 21/21 green; Flutter Super Admin calls the same callables.)
 - [ ] Victor: read the site in Chrome and approve the wording.
 - [ ] Claude: deploy with `tool/deploy_web.sh` once approved.
 
 Note (2026-10-22): prices done in `web_marketing/public/js/pricing-config.js` (single source; tiers carry the backend `plan`). The Pricing page had been deleted in b088f053 and nav/footer links 404'd on the live site; restored as `pages-html/pricing.html`. Offline claim now says attendance only. Not deployed yet.
-Note: backend trial is 14 days (`public_functions/portal_domains.js` `TRIAL_DAYS`) but A1 says 30; the site now says 30. Align the backend in Step 18 (or sooner if Victor wants).
-Remaining in Step 1: website copy (headline etc. from the pricing doc), wizard + emails E2E, Super Admin approve/reject, Victor's approval, deploy.
+Note (2026-10-23): backend `TRIAL_DAYS` is already 30, matching A1 and the site; nothing to align.
+Note (2026-10-23): wizard automated checks pass (`web_marketing` `npm test` 3/3, `public_functions` `npm test`); application_received/approved/rejected and email_verification templates render. NOT yet done: a live click-through of `/register-school` with a real inbox (needs a real email verification), so the wizard/email item stays unticked.
+Remaining in Step 1: website copy (headline etc. from the pricing doc), live wizard + email run, Victor's approval, deploy.
 
 Commands: `cd web_marketing && npm run dev && npm test`; deploy `tool/deploy_web.sh`.
 Done when: the live site shows the final prices, and a test school can register, get the email, and be approved in Super Admin.
