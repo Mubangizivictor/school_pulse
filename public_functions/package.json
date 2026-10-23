@@ -10,6 +10,7 @@
     "test:portal-domains-lifecycle:emulator": "firebase emulators:exec --only firestore,auth --project demo-portal-domains-lifecycle-test \"node --test test/portal_domains_lifecycle.emulator.test.cjs\"",
     "test:owner-console-callables:emulator": "firebase emulators:exec --only firestore,auth --project demo-owner-console-callables-test \"node --test test/owner_console_callables.emulator.test.cjs\"",
     "test:subscription-plans-lifecycle:emulator": "firebase emulators:exec --only firestore,auth --project demo-subscription-plans-lifecycle-test \"node --test test/subscription_plans_lifecycle.emulator.test.cjs\"",
+    "test:registration-flow:emulator": "firebase emulators:exec --only firestore,auth,storage --project demo-registration-flow-test \"node --test test/registration_flow.emulator.test.cjs\"",
     "test:school-lifecycle-applications:emulator": "firebase emulators:exec --only firestore,auth --project demo-school-lifecycle-applications-test \"node --test test/school_lifecycle_and_applications.emulator.test.cjs\"",
     "test:manual-payments-owner:emulator": "firebase emulators:exec --only firestore,auth --project demo-manual-payments-owner-test \"node --test test/manual_payments_owner.emulator.test.cjs\"",
     "test:custom-portal-domains:emulator": "firebase emulators:exec --only firestore,auth --project demo-custom-portal-domains-test \"node --test test/custom_portal_domains.emulator.test.cjs\"",
