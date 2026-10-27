@@ -139,7 +139,9 @@ final List<RouteBase> superAdminRoutes = [
   // segment past the section (:rest) exists only so the address bar
   // reflects that a detail screen is open and Back/Forward has a history
   // entry to land on - nothing here reads :rest as a path parameter.
+  _superAdminShellRoute('/super-admin/schools'),
   _superAdminShellRoute('/super-admin/schools/:rest(.*)'),
+  _superAdminShellRoute('/super-admin/payments'),
   _superAdminShellRoute('/super-admin/payments/:rest(.*)'),
   _superAdminShellRoute('/super-admin/plans'),
   GoRoute(

@@ -129,7 +129,7 @@ These take days or weeks to come through, and later steps wait on them.
 - [ ] A4. Mobile money provider chosen (Flutterwave / Pesapal / MTN MoMo) and merchant registration submitted. *Needed by Step 17.* Done when you have sandbox API keys.
 - [ ] A5. Apple Developer account ($99/yr). *Needed by Step 13 (iOS push) and Step 31.*
 - [ ] A6. Google Play Console account ($25 once). *Needed by Step 31.*
-- [ ] A7. Firebase Blaze plan + budget alert (Firebase Console → Usage and billing). *Needed by Step 15 (first production deploy).*
+- [x] A7. Firebase Blaze plan + budget alert (Firebase Console → Usage and billing). *Needed by Step 15 (first production deploy).* Done 2026-10-23.
 - [ ] A8. Company registration with URSB decided and started. *Needed before taking money from schools.*
 - [ ] A9. Privacy policy + terms drafted (Claude can draft); PDPO registration (Uganda Data Protection and Privacy Act). *Needed by Step 31.*
 - [ ] A10. Pilot school found and agreed. *Needed by Step 32.*
@@ -468,6 +468,7 @@ Done when: a school Victor has never met registers, pays and starts using School
 
 Partly built but NOT needed to launch. Don't touch until Step 33 is done. New ideas go here.
 
+- Roof beat brand pack (logos, launcher icons, splash) is complete on `theme/parent-theme` (HEAD `8c5e61d3`) but never merged into `structure-module` — the app built from `structure-module` (the live backend's branch) shows no branding. Needs merging before/at Step 5.
 - Gate operations (pickup release and dashboard "coming soon")
 - Health / Nurse sick bay (fold `nurse/` into `health/presentation` later)
 - Boarding (matron, dorms), Transport, Catering / meals

@@ -845,8 +845,27 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/auth/mfa-challenge',
-      builder: (context, state) =>
-          MfaChallengeScreen(resolver: state.extra as MultiFactorResolver),
+      builder: (context, state) {
+        // `extra` can be dropped by a redirect re-evaluation that races the
+        // AuthBloc emission carrying it (the router's refreshListenable
+        // fires on every AuthBloc state, including the AuthLoading emitted
+        // just before AuthMfaChallengeRequired) - fall back to the bloc's
+        // own state, which still holds the resolver, instead of crashing
+        // on a null cast.
+        final extra = state.extra;
+        final resolver = extra is MultiFactorResolver
+            ? extra
+            : switch (context.read<AuthBloc>().state) {
+                AuthMfaChallengeRequired(:final resolver) => resolver,
+                _ => null,
+              };
+        if (resolver == null) {
+          // No pending MFA challenge to resolve (e.g. a stale/direct
+          // navigation to this route) - there is nothing to verify.
+          return const WelcomeScreen();
+        }
+        return MfaChallengeScreen(resolver: resolver);
+      },
     ),
     GoRoute(
       path: '/auth/forgot-password',
