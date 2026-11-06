@@ -103,32 +103,26 @@ class _SplashScreenState extends State<SplashScreen> {
       backgroundColor: isDark
           ? AppColorValues.lightSecondary
           : AppColorValues.lightSurface,
-      body: Stack(
-        children: [
-          Center(
-            child: AnimatedPulseMark(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedPulseMark(
               size: AnimatedPulseMark.splashSize,
               brightness: brightness,
               semanticsLabel: 'Loading School Pulse',
               // web/index.html already played the intro in its HTML splash.
               skipIntro: kIsWeb,
             ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            // Must match flutter_native_splash.yaml `branding_bottom_padding`.
-            bottom: 48,
-            child: Center(
-              child: Image.asset(
-                isDark ? BrandAssets.wordmarkDark : BrandAssets.wordmarkLight,
-                // The wordmark is a 4x asset, like the native branding image.
-                width: 731 / 4,
-                excludeFromSemantics: true,
-              ),
+            const SizedBox(height: 20),
+            Image.asset(
+              isDark ? BrandAssets.wordmarkDark : BrandAssets.wordmarkLight,
+              // The wordmark is a 4x asset, like the native branding image.
+              width: 731 / 4,
+              excludeFromSemantics: true,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
