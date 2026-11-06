@@ -1868,3 +1868,27 @@ input[type="range"] { width: 100%; accent-color: var(--color-primary); height: 2
   .fs-help-card { flex-direction: column; align-items: stretch; text-align: center; padding: 20px; }
   .fs-help-card .btn { width: 100%; }
 }
+
+/* Animated School Pulse loader (brand/pulse-loader-*.svg): light/dark
+   images toggled exactly like .brand-mark above. */
+.pulse-loader { display: inline-flex; margin: 8px auto 4px; }
+.pulse-loader img { width: 96px; height: auto; display: block; }
+.pulse-loader .loader-dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .pulse-loader .loader-light { display: none; }
+  :root:not([data-theme="light"]) .pulse-loader .loader-dark { display: block; }
+}
+:root[data-theme="dark"] .pulse-loader .loader-light { display: none; }
+:root[data-theme="dark"] .pulse-loader .loader-dark { display: block; }
+
+/* Busy buttons (aria-busy="true" while submitting) show the pulse in the
+   button's own text colour. */
+button[aria-busy="true"] { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+button[aria-busy="true"]::before {
+  content: "";
+  width: 1.4em; height: 1.1em;
+  flex: 0 0 auto;
+  background: currentColor;
+  -webkit-mask: url("../brand/pulse-loader-mask.svg") center / contain no-repeat;
+  mask: url("../brand/pulse-loader-mask.svg") center / contain no-repeat;
+}

@@ -48,6 +48,7 @@
 
       <!-- Loading -->
       <div class="card" id="loadingPanel" style="display:none; text-align:center;">
+        <span class="pulse-loader" role="img" aria-label="Loading"><img class="loader-light" src="brand/pulse-loader-light.svg" alt="" width="96" height="73"><img class="loader-dark" src="brand/pulse-loader-dark.svg" alt="" width="96" height="73"></span>
         <p>Checking your application status…</p>
       </div>
 
@@ -232,6 +233,7 @@
     var btn = document.getElementById('signInBtn');
     btn.disabled = true;
     btn.textContent = 'Signing in…';
+    btn.setAttribute('aria-busy', 'true');
 
     SPAuth.signIn(email, password).then(function () {
       fetchStatus();
@@ -241,6 +243,7 @@
     }).finally(function () {
       btn.disabled = false;
       btn.textContent = 'Sign in';
+      btn.removeAttribute('aria-busy');
     });
   });
 

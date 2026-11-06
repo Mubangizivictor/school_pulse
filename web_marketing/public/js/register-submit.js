@@ -255,6 +255,7 @@
       createBtn.disabled = true;
       var createLabel = createBtn.innerHTML;
       createBtn.textContent = 'Creating account…';
+      createBtn.setAttribute('aria-busy', 'true');
 
       SPAuth.ensureFirebase().then(function (firebase) {
         return firebase.auth().createUserWithEmailAndPassword(email, password).catch(function (err) {
@@ -295,6 +296,7 @@
       }).finally(function () {
         createBtn.disabled = false;
         createBtn.innerHTML = createLabel;
+        createBtn.removeAttribute('aria-busy');
       });
     });
 
@@ -302,6 +304,7 @@
       resendBtn.disabled = true;
       var label = resendBtn.textContent;
       resendBtn.textContent = 'Sending…';
+      resendBtn.setAttribute('aria-busy', 'true');
       SPAuth.callFunction('requestEmailVerification', { method: 'POST' }).then(function () {
         setVerifyMsg('Verification link sent again to ' + val('adminEmail') + '.', false);
       }).catch(function () {
@@ -311,6 +314,7 @@
       }).finally(function () {
         resendBtn.disabled = false;
         resendBtn.textContent = label;
+        resendBtn.removeAttribute('aria-busy');
         startCountdown();
       });
     });
@@ -336,6 +340,7 @@
       checkBtn.disabled = true;
       var label = checkBtn.innerHTML;
       checkBtn.textContent = 'Checking…';
+      checkBtn.setAttribute('aria-busy', 'true');
       SPAuth.ensureFirebase().then(function (firebase) {
         var user = firebase.auth().currentUser;
         if (!user) return Promise.reject(new Error('not_signed_in'));
@@ -356,6 +361,7 @@
         checkBtn.disabled = false;
       }).finally(function () {
         checkBtn.innerHTML = label;
+        checkBtn.removeAttribute('aria-busy');
       });
     });
 
@@ -494,6 +500,7 @@
       submitting = true;
       submitBtn.disabled = true;
       submitBtn.textContent = 'Submitting…';
+      submitBtn.setAttribute('aria-busy', 'true');
 
       // Re-check verification live against Firebase Auth rather than
       // trusting the module-level `verified` flag set by initAccountGate -
@@ -521,6 +528,7 @@
           submitting = false;
           submitBtn.disabled = false;
           submitBtn.textContent = 'Submit registration';
+          submitBtn.removeAttribute('aria-busy');
           verifyNotice.style.display = 'block';
           // Send the visitor back to the account step rather than just
           // showing a message they might not connect to Step 2.
@@ -542,6 +550,7 @@
           submitting = false;
           submitBtn.disabled = false;
           submitBtn.textContent = 'Submit registration';
+          submitBtn.removeAttribute('aria-busy');
         });
       });
     });
