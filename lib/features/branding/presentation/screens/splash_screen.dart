@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -5,10 +6,16 @@ import 'package:go_router/go_router.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/core/user_roles.dart';
+import 'package:school_pulse/design_system/brand/animated_pulse_mark.dart';
+import 'package:school_pulse/design_system/brand/brand_assets.dart';
+import 'package:school_pulse/design_system/theme/app_tokens.g.dart';
 
-/// The auth-check hand-off from the native splash. Renders nothing visible
-/// so it reads as a continuation of the native splash rather than a second,
-/// different-looking screen, and resolves as soon as the auth state is known.
+/// The auth-check hand-off from the native splash.
+///
+/// It repeats the native splash layout exactly (same background, same mark
+/// at the same size and position, same wordmark at the bottom) so the
+/// hand-off is invisible, then animates the mark with the brand pulse while
+/// the auth state resolves. It navigates as soon as that state is known.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -84,7 +91,41 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(backgroundColor: isDark ? Colors.black : Colors.white);
+    // The native splash follows the OS theme, not the saved in-app theme.
+    final brightness = MediaQuery.platformBrightnessOf(context);
+    final isDark = brightness == Brightness.dark;
+    return Scaffold(
+      // Must match flutter_native_splash.yaml `color` / `color_dark`.
+      backgroundColor: isDark
+          ? AppColorValues.lightSecondary
+          : AppColorValues.lightSurface,
+      body: Stack(
+        children: [
+          Center(
+            child: AnimatedPulseMark(
+              size: AnimatedPulseMark.splashSize,
+              brightness: brightness,
+              semanticsLabel: 'Loading School Pulse',
+              // web/index.html already played the intro in its HTML splash.
+              skipIntro: kIsWeb,
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            // Must match flutter_native_splash.yaml `branding_bottom_padding`.
+            bottom: 48,
+            child: Center(
+              child: Image.asset(
+                isDark ? BrandAssets.wordmarkDark : BrandAssets.wordmarkLight,
+                // The wordmark is a 4x asset, like the native branding image.
+                width: 731 / 4,
+                excludeFromSemantics: true,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

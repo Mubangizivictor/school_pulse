@@ -147,6 +147,55 @@
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
       <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
   </picture>
+
+  <!--
+    Animated School Pulse boot splash. Kept outside the blocks that
+    `dart run flutter_native_splash:create` regenerates (#splash,
+    #splash-branding, #splash-screen-style/-script), so it survives a
+    regeneration. It draws the same mark as the static splash image at the
+    same size and position, then animates it like
+    assets/branding/loading_*.gif. Geometry and timing are shared with
+    lib/design_system/brand/animated_pulse_mark.dart - change both together.
+  -->
+  <style id="splash-pulse-style">
+    #splash-pulse { width: 313.5px; height: 313.5px; pointer-events: none; }
+    /* The animated mark replaces the static image at the same spot. */
+    #splash { visibility: hidden; }
+    /* Match the native splash's branding_bottom_padding (48). */
+    #splash-branding img.bottom { bottom: 48px; }
+    #splash-pulse .sp-line { fill: none; stroke: #1F4FD1; stroke-width: 50; stroke-linecap: round; stroke-linejoin: round; }
+    #splash-pulse .sp-dot { fill: #D4A017; transform-box: fill-box; transform-origin: center; }
+    #splash-pulse .sp-track { animation: sp-track .32s ease-out forwards; }
+    #splash-pulse .sp-pulse { opacity: 0; stroke-dasharray: 412 1600; stroke-dashoffset: 440;
+      animation: sp-fade-in .32s ease-out forwards, sp-travel .96s linear infinite; }
+    #splash-pulse .sp-dot { animation: sp-swell .96s linear infinite; }
+    @keyframes sp-track { to { opacity: .2; } }
+    @keyframes sp-fade-in { to { opacity: 1; } }
+    @keyframes sp-travel { from { stroke-dashoffset: 440; } to { stroke-dashoffset: -1030; } }
+    @keyframes sp-swell { 0%, 50%, 100% { transform: scale(1); } 25% { transform: scale(1.2); } }
+    @media (prefers-color-scheme: dark) {
+      #splash-pulse .sp-line { stroke: #FFFFFF; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #splash-pulse .sp-track, #splash-pulse .sp-dot { animation: none; }
+      #splash-pulse .sp-pulse { display: none; }
+    }
+  </style>
+  <svg id="splash-pulse" class="center" viewBox="0 0 1254 1254" aria-hidden="true">
+    <polyline class="sp-line sp-track" points="389,744.5 483.5,744.5 519,798.5 626,563.5 733,744.5 864,744.5"></polyline>
+    <polyline class="sp-line sp-pulse" pathLength="1000" points="389,744.5 483.5,744.5 519,798.5 626,563.5 733,744.5 864,744.5"></polyline>
+    <circle class="sp-dot" cx="626.5" cy="474.5" r="40.5"></circle>
+  </svg>
+  <script id="splash-pulse-script">
+    (function () {
+      var removeGenerated = window.removeSplashFromWeb;
+      window.removeSplashFromWeb = function () {
+        if (typeof removeGenerated === "function") removeGenerated();
+        var pulse = document.getElementById("splash-pulse");
+        if (pulse) pulse.remove();
+      };
+    })();
+  </script>
   
   
   
