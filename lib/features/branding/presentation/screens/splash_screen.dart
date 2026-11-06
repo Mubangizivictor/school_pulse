@@ -110,18 +110,20 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Use a compact size so the icon + wordmark fit together as one
+            // centred unit. splashSize (≈314 dp) is designed for the native
+            // splash where it fills most of the screen; here we want a logo
+            // lockup, not a full-screen mark.
             AnimatedPulseMark(
-              size: AnimatedPulseMark.splashSize,
+              size: 96,
               brightness: brightness,
               semanticsLabel: 'Loading School Pulse',
-              // web/index.html already played the intro in its HTML splash.
               skipIntro: kIsWeb,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             Image.asset(
               isDark ? BrandAssets.wordmarkDark : BrandAssets.wordmarkLight,
-              // The wordmark is a 4x asset, like the native branding image.
-              width: 731 / 4,
+              width: 160,
               excludeFromSemantics: true,
             ),
           ],
