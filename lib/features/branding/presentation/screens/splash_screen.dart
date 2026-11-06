@@ -10,12 +10,10 @@ import 'package:school_pulse/design_system/brand/animated_pulse_mark.dart';
 import 'package:school_pulse/design_system/brand/brand_assets.dart';
 import 'package:school_pulse/design_system/theme/app_tokens.g.dart';
 
-/// The auth-check hand-off from the native splash.
-///
-/// It repeats the native splash layout exactly (same background, same mark
-/// at the same size and position, same wordmark at the bottom) so the
-/// hand-off is invisible, then animates the mark with the brand pulse while
-/// the auth state resolves. It navigates as soon as that state is known.
+/// Minimum time (ms) the splash is shown so the animation always plays
+/// even on a warm/cached auth start where Firebase resolves instantly.
+const _kMinSplashMs = 1600;
+
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -23,51 +21,57 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _wordmarkCtrl;
+  late final Animation<double> _wordmarkFade;
+
   @override
   void initState() {
     super.initState();
+    _wordmarkCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _wordmarkFade = CurvedAnimation(parent: _wordmarkCtrl, curve: Curves.easeOut);
+
+    // Fade the wordmark in after the mark has had a moment to animate.
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) _wordmarkCtrl.forward();
+    });
+
     _checkAuth();
+  }
+
+  @override
+  void dispose() {
+    _wordmarkCtrl.dispose();
+    super.dispose();
   }
 
   void _checkAuth() async {
     final authBloc = context.read<AuthBloc>();
     final authState = authBloc.state;
 
-    // When the auth state is already resolved at first build (e.g. a warm
-    // start, or a test that signs in before pumping), navigating straight
-    // from initState runs router redirects against a not-yet-stable element
-    // tree ("deactivated widget's ancestor"). Defer to after the first
-    // frame; the async branch below is already post-frame by construction.
-    if (authState is AuthAuthenticated) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        FlutterNativeSplash.remove();
-        if (mounted) _navigate(authState);
-      });
-      return;
-    }
-    if (authState is AuthUnauthenticated) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        FlutterNativeSplash.remove();
-        if (mounted) context.go('/welcome');
-      });
-      return;
+    // Always enforce the minimum display time so the animation is visible.
+    final minDelay = Future.delayed(const Duration(milliseconds: _kMinSplashMs));
+
+    AuthState resolvedState;
+
+    if (authState is AuthAuthenticated || authState is AuthUnauthenticated) {
+      resolvedState = authState;
+    } else {
+      resolvedState = await authBloc.stream.firstWhere(
+        (s) => s is AuthAuthenticated || s is AuthUnauthenticated,
+      );
     }
 
-    // The initial AuthCheckRequested read (Firebase session + Firestore
-    // profile fetch, plus a live verifyOwnerSession round trip for a
-    // superAdmin session) may still be in flight, e.g. on a slow network or
-    // cold start - routinely well over a second before a cold Cloud
-    // Function instance responds. Resolving that as "unauthenticated" would
-    // force a valid, still-persisted session back to the login screen, so
-    // wait for the real result instead of racing a fixed timer. AuthBloc's
-    // own internal timeouts (15s per network step) are the actual backstop
-    // against a stuck check stranding the user here.
-    final resolvedState = await authBloc.stream.firstWhere(
-      (state) => state is AuthAuthenticated || state is AuthUnauthenticated,
-    );
+    // Wait for both: auth resolved AND minimum time elapsed.
+    await minDelay;
+
     FlutterNativeSplash.remove();
     if (!mounted) return;
+
     if (resolvedState is AuthAuthenticated) {
       _navigate(resolvedState);
     } else {
@@ -76,10 +80,6 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _navigate(AuthAuthenticated state) {
-    // superAdmin is the SaaS platform owner, not a school tenant - they have
-    // no schoolId to resolve and must never enter the tenant-branding
-    // pipeline. On mobile the console is unavailable; redirect to /welcome
-    // so the super admin sees a clear message rather than a redirect loop.
     if (state.user.role == UserRole.superAdmin) {
       if (!kIsWeb) {
         context.go('/welcome');
@@ -88,21 +88,15 @@ class _SplashScreenState extends State<SplashScreen> {
       context.go(UserRoleRouting.dashboardPath(UserRole.superAdmin));
       return;
     }
-    // SchoolSplashScreen resolves tenant membership and Structure-owned
-    // branding itself before any protected dashboard is allowed to render.
     context.go('/school-splash');
   }
 
   @override
   Widget build(BuildContext context) {
-    // The native splash follows the OS theme, not the saved in-app theme.
     final brightness = MediaQuery.platformBrightnessOf(context);
     final isDark = brightness == Brightness.dark;
+
     return Scaffold(
-      // Must match flutter_native_splash.yaml `color` / `color_dark`.
-      // The native splash shows the icon only (no branding wordmark at the
-      // bottom); this widget mirrors that then adds the wordmark beneath the
-      // animated mark once Flutter takes over.
       backgroundColor: isDark
           ? AppColorValues.lightSecondary
           : AppColorValues.lightSurface,
@@ -110,21 +104,20 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Use a compact size so the icon + wordmark fit together as one
-            // centred unit. splashSize (≈314 dp) is designed for the native
-            // splash where it fills most of the screen; here we want a logo
-            // lockup, not a full-screen mark.
             AnimatedPulseMark(
               size: 96,
               brightness: brightness,
               semanticsLabel: 'Loading School Pulse',
               skipIntro: kIsWeb,
             ),
-            const SizedBox(height: 16),
-            Image.asset(
-              isDark ? BrandAssets.wordmarkDark : BrandAssets.wordmarkLight,
-              width: 160,
-              excludeFromSemantics: true,
+            const SizedBox(height: 14),
+            FadeTransition(
+              opacity: _wordmarkFade,
+              child: Image.asset(
+                isDark ? BrandAssets.wordmarkDark : BrandAssets.wordmarkLight,
+                width: 160,
+                excludeFromSemantics: true,
+              ),
             ),
           ],
         ),
