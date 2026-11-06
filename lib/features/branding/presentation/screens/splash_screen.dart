@@ -100,6 +100,9 @@ class _SplashScreenState extends State<SplashScreen> {
     final isDark = brightness == Brightness.dark;
     return Scaffold(
       // Must match flutter_native_splash.yaml `color` / `color_dark`.
+      // The native splash shows the icon only (no branding wordmark at the
+      // bottom); this widget mirrors that then adds the wordmark beneath the
+      // animated mark once Flutter takes over.
       backgroundColor: isDark
           ? AppColorValues.lightSecondary
           : AppColorValues.lightSurface,
