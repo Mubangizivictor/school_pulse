@@ -78,9 +78,13 @@ class _SplashScreenState extends State<SplashScreen> {
   void _navigate(AuthAuthenticated state) {
     // superAdmin is the SaaS platform owner, not a school tenant - they have
     // no schoolId to resolve and must never enter the tenant-branding
-    // pipeline. The router's own redirect already exempts every superAdmin
-    // route from the tenant check (see router.dart).
+    // pipeline. On mobile the console is unavailable; redirect to /welcome
+    // so the super admin sees a clear message rather than a redirect loop.
     if (state.user.role == UserRole.superAdmin) {
+      if (!kIsWeb) {
+        context.go('/welcome');
+        return;
+      }
       context.go(UserRoleRouting.dashboardPath(UserRole.superAdmin));
       return;
     }

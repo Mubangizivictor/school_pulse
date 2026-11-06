@@ -1,5 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
@@ -30,6 +30,10 @@ import 'package:school_pulse/features/super_admin/presentation/pages/privacy_pol
 /// The synchronous role check (`role != superAdmin`) still lives in the
 /// global redirect so a wrong-role user never even reaches this subtree.
 Future<String?> _superAdminRedirect(GoRouterState state) async {
+  // Super admin console is web-only. Redirect any mobile/desktop-app visitor
+  // to /welcome before the MFA and security-session checks below.
+  if (!kIsWeb) return '/welcome';
+
   // DEV-ONLY local emulator bypass. The Firebase Auth Emulator cannot
   // generate a TOTP secret, so the mandatory-MFA + owner-security-session
   // gates below can never be satisfied against emulators. Triple-guarded:

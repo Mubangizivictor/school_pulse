@@ -837,10 +837,13 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/owner-login',
+      // Super admin is web-only: redirect mobile visitors to /welcome.
+      redirect: (context, state) => kIsWeb ? null : '/welcome',
       builder: (context, state) => const PlatformOwnerAccessScreen(),
     ),
     GoRoute(
       path: '/owner/mfa-setup',
+      redirect: (context, state) => kIsWeb ? null : '/welcome',
       builder: (context, state) => const TwoFactorAuthScreen(),
     ),
     GoRoute(

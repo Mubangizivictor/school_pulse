@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:school_pulse/design_system/theme/app_colors.dart';
 import 'package:school_pulse/design_system/theme/app_spacing.dart';
+import 'package:school_pulse/features/auth/login_flow/auth_chrome.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_event.dart';
+import 'package:school_pulse/features/auth/presentation/bloc/auth_state.dart';
 import 'package:school_pulse/design_system/theme/app_typography.dart';
 
-/// Student Hub access screen.
-///
-/// This remains deliberately presentation-only until a student authentication
-/// use case is introduced; it provides only local input validation.
+/// Student Hub sign-in screen. Students receive a school-issued email
+/// address and a temporary password from their school administrator; they
+/// sign in here using those credentials.
 class StudentHubScreen extends StatefulWidget {
   const StudentHubScreen({super.key});
 
@@ -17,509 +20,262 @@ class StudentHubScreen extends StatefulWidget {
 }
 
 class _StudentHubScreenState extends State<StudentHubScreen> {
-  static const _pinLength = 4;
+  static const _accent = AppColors.successGreen;
 
-  final _codeController = TextEditingController();
-  final _pinControllers = List.generate(
-    _pinLength,
-    (_) => TextEditingController(),
-  );
-  final _pinFocusNodes = List.generate(_pinLength, (_) => FocusNode());
-  String? _codeError;
-  String? _pinError;
-
-  @override
-  void initState() {
-    super.initState();
-    for (final node in _pinFocusNodes) {
-      node.addListener(_refresh);
-    }
-  }
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _obscure = true;
 
   @override
   void dispose() {
-    _codeController.dispose();
-    for (final controller in _pinControllers) {
-      controller.dispose();
-    }
-    for (final node in _pinFocusNodes) {
-      node
-        ..removeListener(_refresh)
-        ..dispose();
-    }
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  void _refresh() {
-    if (mounted) setState(() {});
-  }
-
-  void _submit() {
-    final code = _codeController.text.trim();
-    final pin = _pinControllers.map((controller) => controller.text).join();
-    setState(() {
-      _codeError = code.isEmpty ? 'Enter your access code.' : null;
-      _pinError = pin.length == _pinLength ? null : 'Enter your 4-digit PIN.';
-    });
-  }
-
-  void _onPinChanged(int index, String value) {
-    if (value.length > 1) {
-      _distributePin(value);
-      return;
-    }
-    if (value.isNotEmpty && index < _pinLength - 1) {
-      _pinFocusNodes[index + 1].requestFocus();
-    } else if (value.isEmpty && index > 0) {
-      _pinFocusNodes[index - 1].requestFocus();
-    }
-    if (_pinError != null) _pinError = null;
-    _refresh();
-  }
-
-  void _distributePin(String value) {
-    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
-    for (var i = 0; i < _pinLength; i++) {
-      _pinControllers[i].text = i < digits.length ? digits[i] : '';
-    }
-    _pinFocusNodes[digits.length.clamp(1, _pinLength) - 1].requestFocus();
-    _pinError = null;
-    _refresh();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Scaffold(
-      backgroundColor: colors.brightness == Brightness.dark
-          ? colors.surface
-          : AppColors.surfaceLight,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          onPressed: () =>
-              context.canPop() ? context.pop() : context.go('/welcome'),
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: colors.onSurface),
-          tooltip: 'Back',
-        ),
-        title: Text(
-          'Student Hub',
-          style: AppTypography.titleLarge.copyWith(
-            color: colors.onSurface,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, viewport) => SingleChildScrollView(
-            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: const EdgeInsets.fromLTRB(28, 4, 28, AppSpacing.x4l),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: viewport.maxHeight - 36),
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 480),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: AppSpacing.m),
-                      Text(
-                        'Enter the code and PIN issued by your school to get started.',
-                        textAlign: TextAlign.center,
-                        style: AppTypography.bodyMedium.copyWith(
-                          color: colors.onSurfaceVariant,
-                          fontSize: 14,
-                          height: 1.45,
-                          letterSpacing: 0.1,
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      _AccessCodeCard(
-                        controller: _codeController,
-                        errorText: _codeError,
-                        onChanged: (_) {
-                          if (_codeError != null) {
-                            setState(() => _codeError = null);
-                          }
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.x4l),
-                      _PinCard(
-                        controllers: _pinControllers,
-                        focusNodes: _pinFocusNodes,
-                        errorText: _pinError,
-                        onChanged: _onPinChanged,
-                      ),
-                      const SizedBox(height: AppSpacing.x4l),
-                      _ContinueButton(onPressed: _submit),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+  void _handleLogin() {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    if (email.isEmpty || password.isEmpty) return;
+    context.read<AuthBloc>().add(
+      LoginWithEmailPressed(email: email, password: password),
     );
   }
-}
-
-class _AccessCodeCard extends StatelessWidget {
-  const _AccessCodeCard({
-    required this.controller,
-    required this.errorText,
-    required this.onChanged,
-  });
-  final TextEditingController controller;
-  final String? errorText;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) => _StepCard(
-    step: 1,
-    title: 'Access Code',
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 35),
-          child: Text(
-            'Enter the access code provided by your school.',
-            style: _descriptionStyle(context),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.l),
-        TextField(
-          controller: controller,
-          onChanged: onChanged,
-          textCapitalization: TextCapitalization.characters,
-          style: AppTypography.bodyLarge.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 16,
-          ),
-          decoration: _fieldDecoration(
-            context,
-            hint: 'e.g. STU12345',
-            icon: Icons.vpn_key_outlined,
-            errorText: errorText,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _PinCard extends StatelessWidget {
-  const _PinCard({
-    required this.controllers,
-    required this.focusNodes,
-    required this.errorText,
-    required this.onChanged,
-  });
-  final List<TextEditingController> controllers;
-  final List<FocusNode> focusNodes;
-  final String? errorText;
-  final void Function(int, String) onChanged;
-
-  @override
-  Widget build(BuildContext context) => _StepCard(
-    step: 2,
-    title: 'Your PIN',
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 35),
-          child: Text(
-            'Enter the 4-digit PIN issued with your access code.',
-            style: _descriptionStyle(context),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.l),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            // Keep the four-cell rhythm identical on wide browser windows;
-            // only use the full available width when a mobile viewport needs it.
-            final pinRowWidth = constraints.maxWidth > 320
-                ? 320.0
-                : constraints.maxWidth;
-            final cellWidth = ((pinRowWidth - 72) / 4).clamp(44.0, 50.0);
-            return SizedBox(
-              width: pinRowWidth,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(
-                  4,
-                  (index) => _PinCell(
-                    width: cellWidth,
-                    controller: controllers[index],
-                    focusNode: focusNodes[index],
-                    onChanged: (value) => onChanged(index, value),
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        if (errorText != null) ...[
-          const SizedBox(height: AppSpacing.m),
-          Text(
-            errorText!,
-            style: AppTypography.bodySmall.copyWith(
-              color: Theme.of(context).colorScheme.error,
-            ),
-          ),
-        ],
-      ],
-    ),
-  );
-}
-
-class _StepCard extends StatelessWidget {
-  const _StepCard({
-    required this.step,
-    required this.title,
-    required this.child,
-  });
-  final int step;
-  final String title;
-  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final accent = AppColors.textPrimary(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: accent),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black,
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: accent, width: 2),
+    return BlocConsumer<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated) {
+          if (state.user.mustChangePassword) {
+            context.go('/auth/force-setup', extra: state.user);
+          } else {
+            context.go('/school-splash');
+          }
+        } else if (state is AuthMfaChallengeRequired) {
+          context.go('/auth/mfa-challenge', extra: state.resolver);
+        } else if (state is AuthFailureState) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is AuthLoading;
+        final colorScheme = Theme.of(context).colorScheme;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
+        return AuthPortalScaffold(
+          accent: _accent,
+          alignToTop: true,
+          title: 'Student Hub',
+          backgroundColor: isDark
+              ? Theme.of(context).scaffoldBackgroundColor
+              : AppColors.surfaceLight,
+          children: [
+            const SizedBox(height: AppSpacing.x3l),
+            Text(
+              'Sign in with the email and password\nprovided by your school.',
+              textAlign: TextAlign.center,
+              style: AppTypography.bodyMedium.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 14,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x6l),
+            _StudentField(
+              label: 'School Email',
+              hint: 'student@school.edu',
+              icon: Icons.school_rounded,
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              accent: _accent,
+            ),
+            const SizedBox(height: AppSpacing.x3l),
+            _StudentField(
+              label: 'Password',
+              hint: '••••••••',
+              icon: Icons.lock_outline_rounded,
+              controller: _passwordController,
+              isPassword: _obscure,
+              accent: _accent,
+              suffix: IconButton(
+                icon: Icon(
+                  _obscure
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: colorScheme.onSurfaceVariant,
                 ),
+                onPressed: () => setState(() => _obscure = !_obscure),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Align(
+              alignment: Alignment.centerRight,
+              child: GestureDetector(
+                onTap: () => context.push('/auth/forgot-password'),
                 child: Text(
-                  '$step',
-                  style: AppTypography.titleLarge.copyWith(
-                    color: accent,
+                  'Forgot Password?',
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: colorScheme.onSurface,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.m),
-              Text(
-                title,
-                style: AppTypography.headlineSmall.copyWith(
-                  color: colors.onSurface,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+            ),
+            const SizedBox(height: AppSpacing.x3l),
+            AuthCtaButton(
+              label: 'Sign In',
+              gradient: const [Colors.black, Colors.black],
+              filled: !isDark,
+              isLoading: isLoading,
+              onPressed: isLoading ? null : _handleLogin,
+            ),
+            const SizedBox(height: AppSpacing.x4l),
+            _StudentContactNote(),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _StudentField extends StatelessWidget {
+  final String label;
+  final String hint;
+  final IconData icon;
+  final TextEditingController controller;
+  final bool isPassword;
+  final TextInputType keyboardType;
+  final Widget? suffix;
+  final Color accent;
+
+  const _StudentField({
+    required this.label,
+    required this.hint,
+    required this.icon,
+    required this.controller,
+    this.isPassword = false,
+    this.keyboardType = TextInputType.text,
+    this.suffix,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.titleMedium.copyWith(
+            color: colors.onSurface,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.l),
+        Container(
+          height: 56,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.textPrimary(context), width: 1.25),
+          ),
+          child: TextField(
+            controller: controller,
+            obscureText: isPassword,
+            keyboardType: keyboardType,
+            cursorColor: accent,
+            autofillHints: isPassword
+                ? const [AutofillHints.password]
+                : const [AutofillHints.username, AutofillHints.email],
+            style: AppTypography.bodyLarge.copyWith(
+              color: colors.onSurface,
+              fontSize: 15,
+            ),
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              fillColor: Colors.transparent,
+              filled: true,
+              hintText: hint,
+              hintStyle: AppTypography.bodyLarge.copyWith(
+                color: colors.onSurfaceVariant,
+                fontSize: 15,
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 15),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.only(left: 12, right: 14),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: AppColors.textPrimary(context),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(icon, color: colors.surface, size: 23),
+                  ),
                 ),
               ),
-            ],
+              prefixIconConstraints: const BoxConstraints.tightFor(
+                width: 64,
+                height: 56,
+              ),
+              suffixIcon: suffix,
+            ),
           ),
-          const SizedBox(height: 4),
-          child,
+        ),
+      ],
+    );
+  }
+}
+
+class _StudentContactNote extends StatelessWidget {
+  const _StudentContactNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.l),
+      decoration: BoxDecoration(
+        color: AppColors.successGreen.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.successGreen.withOpacity(0.25),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.info_outline_rounded,
+            color: AppColors.successGreen,
+            size: 20,
+          ),
+          const SizedBox(width: AppSpacing.l),
+          Expanded(
+            child: Text(
+              "Your sign-in details are issued by your school. Contact your class teacher or school admin if you haven't received them.",
+              style: AppTypography.bodyMedium.copyWith(
+                color: colors.onSurfaceVariant,
+                fontSize: 12.5,
+                height: 1.45,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
-
-class _PinCell extends StatelessWidget {
-  const _PinCell({
-    required this.width,
-    required this.controller,
-    required this.focusNode,
-    required this.onChanged,
-  });
-  final double width;
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final ValueChanged<String> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final focused = focusNode.hasFocus;
-    final filled = controller.text.isNotEmpty;
-    final accent = AppColors.textPrimary(context);
-    return SizedBox(
-      width: width,
-      height: 52,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: focused ? accent : accent,
-            width: focused ? 1.8 : 1.4,
-          ),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            TextField(
-              controller: controller,
-              focusNode: focusNode,
-              onChanged: onChanged,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              maxLength: 4,
-              obscureText: true,
-              showCursor: false,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.transparent, fontSize: 16),
-              decoration: const InputDecoration(
-                counterText: '',
-                isCollapsed: true,
-                filled: false,
-                fillColor: Colors.transparent,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                errorBorder: InputBorder.none,
-                focusedErrorBorder: InputBorder.none,
-                disabledBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-            IgnorePointer(
-              child: Text(
-                '•',
-                style: TextStyle(
-                  color: filled
-                      ? Theme.of(context).colorScheme.onSurface
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 22,
-                  height: 1,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ContinueButton extends StatelessWidget {
-  const _ContinueButton({required this.onPressed});
-  final VoidCallback onPressed;
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final fill = isDark ? Colors.white : Colors.black;
-    final foreground = isDark ? Colors.black : Colors.white;
-    return SizedBox(
-      height: 58,
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            color: fill,
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: onPressed,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Text(
-                  'Continue',
-                  style: AppTypography.headlineSmall.copyWith(
-                    color: foreground,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Positioned(
-                  right: AppSpacing.x2l,
-                  child: Icon(
-                    Icons.arrow_forward_rounded,
-                    color: foreground,
-                    size: 28,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-TextStyle _descriptionStyle(BuildContext context) =>
-    AppTypography.bodyLarge.copyWith(
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
-      fontSize: 11,
-      height: 1.45,
-      letterSpacing: 0,
-    );
-
-InputDecoration _fieldDecoration(
-  BuildContext context, {
-  required String hint,
-  required IconData icon,
-  String? errorText,
-}) => InputDecoration(
-  hintText: hint,
-  errorText: errorText,
-  prefixIcon: Icon(
-    icon,
-    color: Theme.of(context).colorScheme.onSurfaceVariant,
-    size: 24,
-  ),
-  hintStyle: AppTypography.bodyLarge.copyWith(
-    color: Theme.of(context).colorScheme.onSurfaceVariant,
-    fontSize: 14,
-    letterSpacing: 0,
-  ),
-  contentPadding: const EdgeInsets.symmetric(
-    horizontal: AppSpacing.x2l,
-    vertical: 13,
-  ),
-  enabledBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide(color: AppColors.textPrimary(context), width: 1.4),
-  ),
-  focusedBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide(color: AppColors.textPrimary(context), width: 1.8),
-  ),
-  errorBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide(color: Theme.of(context).colorScheme.error),
-  ),
-  focusedErrorBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: BorderSide(
-      color: Theme.of(context).colorScheme.error,
-      width: 1.8,
-    ),
-  ),
-);
